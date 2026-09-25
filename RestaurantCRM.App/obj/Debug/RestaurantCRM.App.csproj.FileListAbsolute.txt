@@ -1,0 +1,10 @@
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\obj\Debug\RestaurantCRM.App.csproj.AssemblyReference.cache
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\obj\Debug\RestaurantCRM.AdminApp.Properties.Resources.resources
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\obj\Debug\RestaurantCRM.App.csproj.GenerateResource.cache
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\obj\Debug\RestaurantCRM.App.csproj.CoreCompileInputs.cache
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\bin\Debug\RestaurantCRM.AdminApp.exe.config
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\bin\Debug\RestaurantCRM.AdminApp.exe
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\bin\Debug\RestaurantCRM.AdminApp.pdb
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\obj\Debug\RestaurantCRM.AdminApp.exe
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\obj\Debug\RestaurantCRM.AdminApp.pdb
+D:\HTTT Doanh Nghiep\RestaurantCRM\RestaurantCRM.AdminApp\obj\Debug\RestaurantCRM.AdminApp.exe.config

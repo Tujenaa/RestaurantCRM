@@ -1,0 +1,228 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|d:\\httt doanh nghiep\\restaurantcrm\\restaurantcrm.adminapp\\helpers\\validationhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:helpers\\validationhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\helpers\\thememanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:helpers\\thememanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\helpers\\permissionhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:helpers\\permissionhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\phanhoi\\phanhoidto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\phanhoi\\phanhoidto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\monan\\monanrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\monan\\monanrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\monan\\monandto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\monan\\monandto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\khaosat\\khaosatdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\khaosat\\khaosatdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\khachhang\\khachhangdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\khachhang\\khachhangdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\donhang\\donhangdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\donhang\\donhangdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\auth\\loginresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\auth\\loginresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\dtos\\auth\\loginrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:dtos\\auth\\loginrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\forms\\nhacungcap\\nhacungcapform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{278B2C7A-FDC4-4BE2-B596-9486C5360F27}|RestaurantCRM.App.csproj|solutionrelative:forms\\nhacungcap\\nhacungcapform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ValidationHelper.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Helpers\\ValidationHelper.cs",
+              "RelativeDocumentMoniker": "Helpers\\ValidationHelper.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Helpers\\ValidationHelper.cs",
+              "RelativeToolTip": "Helpers\\ValidationHelper.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:56.041Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ThemeManager.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Helpers\\ThemeManager.cs",
+              "RelativeDocumentMoniker": "Helpers\\ThemeManager.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Helpers\\ThemeManager.cs",
+              "RelativeToolTip": "Helpers\\ThemeManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:52.254Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "PermissionHelper.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Helpers\\PermissionHelper.cs",
+              "RelativeDocumentMoniker": "Helpers\\PermissionHelper.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Helpers\\PermissionHelper.cs",
+              "RelativeToolTip": "Helpers\\PermissionHelper.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:50.239Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "PhanHoiDto.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\PhanHoi\\PhanHoiDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\PhanHoi\\PhanHoiDto.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\PhanHoi\\PhanHoiDto.cs",
+              "RelativeToolTip": "DTOs\\PhanHoi\\PhanHoiDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:40.194Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "MonAnRequest.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\MonAn\\MonAnRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\MonAn\\MonAnRequest.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\MonAn\\MonAnRequest.cs",
+              "RelativeToolTip": "DTOs\\MonAn\\MonAnRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:36.914Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "MonAnDto.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\MonAn\\MonAnDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\MonAn\\MonAnDto.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\MonAn\\MonAnDto.cs",
+              "RelativeToolTip": "DTOs\\MonAn\\MonAnDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:32.961Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "KhaoSatDto.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\KhaoSat\\KhaoSatDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\KhaoSat\\KhaoSatDto.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\KhaoSat\\KhaoSatDto.cs",
+              "RelativeToolTip": "DTOs\\KhaoSat\\KhaoSatDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:27.963Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "KhachHangDto.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\KhachHang\\KhachHangDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\KhachHang\\KhachHangDto.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\KhachHang\\KhachHangDto.cs",
+              "RelativeToolTip": "DTOs\\KhachHang\\KhachHangDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:22.454Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "DonHangDto.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\DonHang\\DonHangDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\DonHang\\DonHangDto.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\DonHang\\DonHangDto.cs",
+              "RelativeToolTip": "DTOs\\DonHang\\DonHangDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:19.31Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "LoginResponse.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\Auth\\LoginResponse.cs",
+              "RelativeDocumentMoniker": "DTOs\\Auth\\LoginResponse.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\Auth\\LoginResponse.cs",
+              "RelativeToolTip": "DTOs\\Auth\\LoginResponse.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:13.947Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "LoginRequest.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\Auth\\LoginRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\Auth\\LoginRequest.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\DTOs\\Auth\\LoginRequest.cs",
+              "RelativeToolTip": "DTOs\\Auth\\LoginRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:35:10.787Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAAwAkAAAA4AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:31:30.875Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "NhaCungCapForm.cs [Design]",
+              "DocumentMoniker": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Forms\\NhaCungCap\\NhaCungCapForm.cs",
+              "RelativeDocumentMoniker": "Forms\\NhaCungCap\\NhaCungCapForm.cs",
+              "ToolTip": "D:\\HTTT Doanh Nghiep\\RestaurantCRM\\RestaurantCRM.AdminApp\\Forms\\NhaCungCap\\NhaCungCapForm.cs [Design]",
+              "RelativeToolTip": "Forms\\NhaCungCap\\NhaCungCapForm.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-25T17:30:55.141Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
