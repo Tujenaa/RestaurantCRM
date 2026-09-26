@@ -1,0 +1,22 @@
+@inject RestaurantCRM.Web.Services.GioHangService CartService
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var menuPage = Context.Request.Query["menu"].ToString() == "true";
+    var cartCount = CartService.Get(Context.Session).Items.Sum(item => item.SoLuong);
+}
+<header class="top">
+    <div class="top-inner">
+        <a class="brand" asp-controller="TrangChu" asp-action="Index">🍲 Lẩu <span>Phố</span><small>NGON TẠI NHÀ</small></a>
+        <nav class="nav" aria-label="Điều hướng chính">
+            <a class="@(currentController == "TrangChu" && !menuPage ? "active" : "")" asp-controller="TrangChu" asp-action="Index">Trang chủ</a>
+            <a class="@(menuPage ? "active" : "")" asp-controller="TrangChu" asp-action="Index" asp-route-menu="true">Thực đơn</a>
+            <a class="@(currentController == "DonHang" ? "active" : "")" asp-controller="DonHang" asp-action="Index">Đơn hàng</a>
+            <a class="@(currentController == "PhanHoi" ? "active" : "")" asp-controller="PhanHoi" asp-action="Index">Đánh giá</a>
+            <a class="@(currentController == "KhaoSat" ? "active" : "")" asp-controller="KhaoSat" asp-action="Index">Khảo sát</a>
+        </nav>
+        <div class="top-actions">
+            <a class="icon-btn" asp-controller="GioHang" asp-action="Index" aria-label="Giỏ hàng">🛒 <span class="count">@cartCount</span></a>
+            <a class="icon-btn" asp-controller="TaiKhoan" asp-action="DangNhap" aria-label="Đăng nhập">👤 Đăng nhập</a>
+        </div>
+    </div>
+</header>

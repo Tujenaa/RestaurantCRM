@@ -1,0 +1,45 @@
+@model GioHangPageViewModel
+@{
+    ViewData["Title"] = "Giỏ hàng — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+<div class="page-intro"><h1 class="page-title">Giỏ hàng của bạn</h1><p>Kiểm tra món ăn và số lượng trước khi đặt hàng.</p></div>
+@if (Model.GioHang.Items.Count == 0)
+{
+    <div class="panel empty"><div class="big">🛒</div><h3>Giỏ hàng đang trống</h3><p>Thêm vài món ngon để bắt đầu đơn hàng nhé.</p><a class="btn" asp-controller="TrangChu" asp-action="Index" asp-route-menu="true">Xem thực đơn</a></div>
+}
+else
+{
+    <div class="layout">
+        <section class="panel">
+            <h3>Món đã chọn (@Model.GioHang.Items.Count)</h3>
+            @foreach (var item in Model.GioHang.Items)
+            {
+                <div class="cart-item">
+                    <div class="mini-art">@item.BieuTuong</div>
+                    <div><h4>@item.TenMon</h4><small>@item.DonGia.ToString("N0")đ / phần</small><div class="price cart-line-total">@item.ThanhTien.ToString("N0")đ</div></div>
+                    <div>
+                        <form asp-action="CapNhat" method="post" class="qty">
+                            <input type="hidden" name="MaMon" value="@item.MaMon" />
+                            <button type="submit" name="SoLuong" value="@(item.SoLuong - 1)" aria-label="Giảm số lượng">−</button><strong>@item.SoLuong</strong><button type="submit" name="SoLuong" value="@(item.SoLuong + 1)" aria-label="Tăng số lượng">＋</button>
+                        </form>
+                        <form asp-action="CapNhat" method="post"><input type="hidden" name="MaMon" value="@item.MaMon" /><input type="hidden" name="SoLuong" value="0" /><button type="submit" class="remove">Xóa</button></form>
+                    </div>
+                </div>
+            }
+            <a class="btn secondary small" asp-controller="TrangChu" asp-action="Index" asp-route-menu="true">＋ Chọn thêm món</a>
+        </section>
+        <aside class="panel summary">
+            <h3>Tóm tắt đơn hàng</h3>
+            <div class="summary-line"><span>Tạm tính</span><strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong></div>
+            <div class="summary-line"><span>Phí giao hàng</span><strong>@Model.GioHang.PhiGiaoHang.ToString("N0")đ</strong></div>
+            <div class="summary-line"><span>Ưu đãi demo</span><strong class="discount-value">−@Model.GioHang.GiamGia.ToString("N0")đ</strong></div>
+            <div class="summary-line total"><span>Tổng cộng</span><span>@Model.GioHang.TongThanhToan.ToString("N0")đ</span></div>
+            <form asp-action="Voucher" method="post" class="field">
+                <label for="MaVoucher">Mã ưu đãi</label><div class="voucher-entry"><input id="MaVoucher" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã giảm giá" /><button class="btn secondary small" type="submit">Áp dụng</button></div>
+                <small class="muted">Mã demo: LAUPHO20</small>
+            </form>
+            <a class="btn" asp-action="Checkout">Tiến hành đặt hàng →</a>
+        </aside>
+    </div>
+}

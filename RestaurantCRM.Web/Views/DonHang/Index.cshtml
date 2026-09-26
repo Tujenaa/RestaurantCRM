@@ -1,0 +1,59 @@
+@model DonHangDanhSachViewModel
+@{
+    ViewData["Title"] = "Đơn hàng — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+    var filters = new[] { ("all", "Tất cả"), ("active", "Đang xử lý"), ("done", "Đã hoàn tất"), ("cancel", "Đã hủy") };
+    var steps = new[] { "Đã đặt", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Hoàn tất" };
+}
+<div class="page-intro"><h1 class="page-title">Đơn hàng của tôi</h1><p>Theo dõi đơn đang giao và xem lại lịch sử mua hàng.</p></div>
+<div class="tabs">
+    @foreach (var filter in filters)
+    {
+        <a class="@(Model.TrangThaiDangChon == filter.Item1 ? "active" : "")" asp-action="Index" asp-route-trangThai="@filter.Item1">@filter.Item2</a>
+    }
+</div>
+@if (Model.DonHangs.Count == 0)
+{
+    <div class="empty">Không có đơn hàng ở mục này.</div>
+}
+@foreach (var order in Model.DonHangs)
+{
+    <article class="order-card">
+        <div class="order-top"><div><h3>Đơn hàng #@order.MaDonHang</h3><p>Đặt lúc @order.NgayDat.ToString("dd/MM/yyyy · HH:mm")</p></div><span class="status @(order.TrangThaiLoc == "done" ? "done" : "")">@order.TrangThai</span></div>
+        @foreach (var item in order.ChiTiet)
+        {
+            <div class="order-products"><span>@item.TenMon × @item.SoLuong</span><strong>@((item.DonGia * item.SoLuong).ToString("N0"))đ</strong></div>
+        }
+        <div class="summary-line total"><span>Tổng thanh toán</span><span>@order.TongThanhToan.ToString("N0")đ</span></div>
+        @if (order.TrangThaiLoc == "active")
+        {
+            var progress = Math.Clamp((order.BuocHienTai - 1) * 20, 0, 80);
+            var notes = new[] { "Đơn hàng đã được tiếp nhận", "Nhà hàng đang xử lý đơn hàng.", "Món ăn đang được chuẩn bị tại bếp.", "Vui lòng giữ điện thoại để tài xế liên hệ khi đến.", "Cảm ơn bạn đã đặt hàng tại Lẩu Phố." };
+            <div class="order-progress">
+                <div class="progress-heading"><strong>📦 Tiến trình đơn hàng</strong><small>Bước @(Math.Min(order.BuocHienTai + 1, 5))/5</small></div>
+                <div class="track-steps" style="--progress:@(progress)%">
+                    @for (var i = 0; i < steps.Length; i++)
+                    {
+                        <div class="track-step @(i < order.BuocHienTai ? "complete" : "") @(i == order.BuocHienTai ? "current" : "")"><div class="track-dot">@(i < order.BuocHienTai ? "✓" : (i + 1).ToString())</div><span>@steps[i]</span></div>
+                    }
+                </div>
+                <div class="track-note"><span>ℹ️</span><div><b>@notes[Math.Clamp(order.BuocHienTai, 0, notes.Length - 1)]</b></div></div>
+            </div>
+        }
+        <div class="order-actions">
+            @if (order.TrangThaiLoc == "done")
+            {
+                <form asp-action="MuaLai" method="post"><input type="hidden" name="id" value="@order.MaDonHang" /><button class="btn secondary small" type="submit">Mua lại</button></form>
+                <a class="btn small" asp-controller="PhanHoi" asp-action="Index">Đánh giá món</a>
+            }
+            else if (order.TrangThaiLoc == "active")
+            {
+                <button class="btn secondary small" type="button" data-toast="Vui lòng liên hệ nhà hàng để hỗ trợ đơn hàng demo">Yêu cầu hỗ trợ</button>
+            }
+            else
+            {
+                <form asp-action="MuaLai" method="post"><input type="hidden" name="id" value="@order.MaDonHang" /><button class="btn secondary small" type="submit">Đặt lại đơn này</button></form>
+            }
+        </div>
+    </article>
+}
