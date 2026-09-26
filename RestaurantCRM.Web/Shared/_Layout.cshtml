@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>@(ViewData["Title"] ?? "Lẩu Phố — Cổng khách hàng")</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <partial name="/Shared/_Header.cshtml" />
+    <main>
+        @if (TempData["ThongBao"] is string message)
+        {
+            <div class="notice" role="status">@message</div>
+        }
+        @RenderBody()
+    </main>
+    <partial name="/Shared/_Footer.cshtml" />
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

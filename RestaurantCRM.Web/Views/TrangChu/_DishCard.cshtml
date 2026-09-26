@@ -1,0 +1,15 @@
+@model MonAnViewModel
+<article class="dish">
+    <div class="dish-art @Model.Tone">
+        @if (!String.IsNullOrWhiteSpace(Model.Tag)) { <span class="tag">@Model.Tag</span> }
+        <span>@Model.BieuTuong</span>
+    </div>
+    <div class="dish-body"><h3>@Model.TenMon</h3><p>@Model.MoTa</p>
+        <div class="dish-bottom"><span class="price">@Model.DonGia.ToString("N0")đ</span>
+            <form asp-controller="GioHang" asp-action="Them" method="post">
+                <input type="hidden" name="MaMon" value="@Model.MaMon" /><input type="hidden" name="SoLuong" value="1" />
+                <button class="plus" type="submit" aria-label="Thêm @Model.TenMon vào giỏ">+</button>
+            </form>
+        </div>
+    </div>
+</article>

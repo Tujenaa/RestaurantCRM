@@ -1,0 +1,30 @@
+@model PhanHoiViewModel
+@{
+    ViewData["Title"] = "Đánh giá & phản hồi — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+<div class="page-intro"><h1 class="page-title">Đánh giá & phản hồi</h1><p>Ý kiến của bạn giúp Lẩu Phố phục vụ tốt hơn.</p></div>
+<div class="layout">
+    <form class="panel" asp-action="Gui" method="post">
+        <div asp-validation-summary="All" class="validation"></div>
+        <h3>Gửi đánh giá của bạn</h3>
+        <div class="field"><label for="MaDonHang">Đơn hàng đã hoàn tất</label><select id="MaDonHang" name="MaDonHang" required>
+            @foreach (var order in Model.DonHangs) { <option value="@order.MaDonHang" selected="@(Model.MaDonHang == order.MaDonHang)">#@order.MaDonHang · Đơn hàng hoàn tất</option> }
+        </select></div>
+        <div class="field"><label asp-for="MaMon">Món ăn muốn đánh giá</label><select asp-for="MaMon">
+            @foreach (var dish in Model.MonAns.Take(6)) { <option value="@dish.MaMon">@dish.TenMon</option> }
+        </select></div>
+        <div class="field"><label>Mức độ hài lòng</label><div class="rating" id="ratingStars" role="group" aria-label="Chọn số sao">
+            @for (var i = 1; i <= 5; i++) { <button type="button" class="@(i <= Model.DanhGia ? "on" : "")" data-rating="@i" aria-label="@i sao">★</button> }
+        </div><input type="hidden" asp-for="DanhGia" id="DanhGia" /><small class="muted" id="ratingLabel">@Model.DanhGia/5</small><span asp-validation-for="DanhGia" class="validation"></span></div>
+        <div class="field"><label asp-for="NoiDung">Nội dung phản hồi</label><textarea asp-for="NoiDung" rows="4" placeholder="Chia sẻ cảm nhận về món ăn, đóng gói hoặc giao hàng..."></textarea><span asp-validation-for="NoiDung" class="validation"></span></div>
+        <button class="btn" type="submit">Gửi đánh giá</button>
+    </form>
+    <section class="panel"><h3>Đánh giá đã gửi</h3>
+        @foreach (var review in Model.PhanHois)
+        {
+            <article class="review"><div class="review-head"><strong>@review.TenMon</strong><span class="stars">@String.Concat(Enumerable.Repeat("★", review.DanhGia))@String.Concat(Enumerable.Repeat("☆", 5 - review.DanhGia))</span></div><p class="review-copy">@review.NoiDung</p><small class="muted">@review.NgayGui.ToString("dd/MM/yyyy") · Đã gửi</small></article>
+        }
+    </section>
+</div>
+@section Scripts { <partial name="/Shared/_ValidationScriptsPartial.cshtml" /> }

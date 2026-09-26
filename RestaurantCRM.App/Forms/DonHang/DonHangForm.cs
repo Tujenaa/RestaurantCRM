@@ -1,31 +1,11 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Forms.DonHang {
-    public partial class DonHangForm : Form {
-        public DonHangForm() {
-            this.Text = "Quản lý DonHang";
-            this.Size = new Size(1000, 600);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = ThemeManager.Bg;
-            this.Font = new Font("Segoe UI", 10F);
-
-            Label title = new Label { Text = "Quản lý DonHang", Font = new Font("Segoe UI", 18F, FontStyle.Bold), AutoSize = true, Location = new Point(20, 20) };
-            this.Controls.Add(title);
-
-            Button btnAdd = new Button { Text = "＋ Thêm mới", BackColor = ThemeManager.Blue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(120, 35), Location = new Point(840, 20) };
-            btnAdd.FlatAppearance.BorderSize = 0;
-            this.Controls.Add(btnAdd);
-
-            DataGridView dgv = new DataGridView {
-                Location = new Point(20, 80),
-                Size = new Size(940, 450),
-                BackgroundColor = ThemeManager.Paper,
-                BorderStyle = BorderStyle.None,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-            };
-            this.Controls.Add(dgv);
-        }
+    public class DonHangForm : ModuleFormBase {
+        public DonHangForm() : base("Đơn hàng", "Theo dõi đơn hàng, khách hàng, thanh toán và trạng thái xử lý.",
+            new[] { "Mã đơn", "Khách hàng", "Ngày đặt", "Tổng tiền", "Thanh toán", "Trạng thái" },
+            new[] { new ModuleField("id", "Mã đơn hàng", true), new ModuleField("customer", "Khách hàng", true), new ModuleField("date", "Ngày đặt", true), new ModuleField("total", "Tổng tiền", true), new ModuleField("payment", "Phương thức thanh toán", false), new ModuleField("status", "Trạng thái", false) },
+            new[] { new[] { "DH001", "Nguyễn Minh Anh", "26/09/2026", "145000", "Tiền mặt", "Chờ xác nhận" }, new[] { "DH002", "Trần Quốc Bảo", "26/09/2026", "210000", "Chuyển khoản", "Đang chuẩn bị" }, new[] { "DH003", "Lê Thu Hà", "25/09/2026", "95000", "Tiền mặt", "Hoàn tất" } }, ThemeManager.Blue) { }
     }
 }

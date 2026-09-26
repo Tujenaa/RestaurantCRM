@@ -1,31 +1,11 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Forms.TaiKhoan {
-    public partial class TaiKhoanForm : Form {
-        public TaiKhoanForm() {
-            this.Text = "Quản lý TaiKhoan";
-            this.Size = new Size(1000, 600);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = ThemeManager.Bg;
-            this.Font = new Font("Segoe UI", 10F);
-
-            Label title = new Label { Text = "Quản lý TaiKhoan", Font = new Font("Segoe UI", 18F, FontStyle.Bold), AutoSize = true, Location = new Point(20, 20) };
-            this.Controls.Add(title);
-
-            Button btnAdd = new Button { Text = "＋ Thêm mới", BackColor = ThemeManager.Blue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(120, 35), Location = new Point(840, 20) };
-            btnAdd.FlatAppearance.BorderSize = 0;
-            this.Controls.Add(btnAdd);
-
-            DataGridView dgv = new DataGridView {
-                Location = new Point(20, 80),
-                Size = new Size(940, 450),
-                BackgroundColor = ThemeManager.Paper,
-                BorderStyle = BorderStyle.None,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-            };
-            this.Controls.Add(dgv);
-        }
+    public class TaiKhoanForm : ModuleFormBase {
+        public TaiKhoanForm() : base("Tài khoản", "Quản lý tài khoản nhân viên và trạng thái truy cập.",
+            new[] { "Mã NV", "Họ tên", "Tên đăng nhập", "Vai trò", "Trạng thái" },
+            new[] { new ModuleField("id", "Mã nhân viên", true), new ModuleField("name", "Họ tên", true), new ModuleField("username", "Tên đăng nhập", true), new ModuleField("role", "Vai trò", true), new ModuleField("status", "Trạng thái", false) },
+            new[] { new[] { "NV001", "Trần An", "admin", "Quản trị viên", "Hoạt động" }, new[] { "NV002", "Lê Thu", "le.thu", "Thu ngân", "Hoạt động" }, new[] { "NV003", "Đặng Quốc Huy", "huy.dq", "Giao hàng", "Đã khóa" } }, ThemeManager.Blue) { }
     }
 }

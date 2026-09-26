@@ -1,31 +1,11 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
-    public partial class NhaCungCapForm : Form {
-        public NhaCungCapForm() {
-            this.Text = "Quản lý NhaCungCap";
-            this.Size = new Size(1000, 600);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = ThemeManager.Bg;
-            this.Font = new Font("Segoe UI", 10F);
-
-            Label title = new Label { Text = "Quản lý NhaCungCap", Font = new Font("Segoe UI", 18F, FontStyle.Bold), AutoSize = true, Location = new Point(20, 20) };
-            this.Controls.Add(title);
-
-            Button btnAdd = new Button { Text = "＋ Thêm mới", BackColor = ThemeManager.Blue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(120, 35), Location = new Point(840, 20) };
-            btnAdd.FlatAppearance.BorderSize = 0;
-            this.Controls.Add(btnAdd);
-
-            DataGridView dgv = new DataGridView {
-                Location = new Point(20, 80),
-                Size = new Size(940, 450),
-                BackgroundColor = ThemeManager.Paper,
-                BorderStyle = BorderStyle.None,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-            };
-            this.Controls.Add(dgv);
-        }
+    public class NhaCungCapForm : ModuleFormBase {
+        public NhaCungCapForm() : base("Nhà cung cấp", "Quản lý đối tác cung ứng và thông tin liên hệ.",
+            new[] { "Mã NCC", "Tên nhà cung cấp", "Điện thoại", "Email", "Địa chỉ" },
+            new[] { new ModuleField("id", "Mã nhà cung cấp", true), new ModuleField("name", "Tên nhà cung cấp", true), new ModuleField("phone", "Số điện thoại", false), new ModuleField("email", "Email", false), new ModuleField("address", "Địa chỉ", false) },
+            new[] { new[] { "NCC001", "Thực phẩm An Toàn", "02838123456", "lienhe@antoan.vn", "Quận 3, TP. Hồ Chí Minh" }, new[] { "NCC002", "Nông sản Xanh", "02838765432", "kinhdoanh@nongsan.vn", "Thủ Đức, TP. Hồ Chí Minh" } }, ThemeManager.Blue) { }
     }
 }

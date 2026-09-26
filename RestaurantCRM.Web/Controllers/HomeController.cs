@@ -15,12 +15,12 @@ namespace RestaurantCRM.Web.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            return RedirectToAction("Index", "TrangChu");
         }
 
         public IActionResult Privacy()
         {
-            return View();
+            return RedirectToAction("Index", "TrangChu");
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

@@ -1,0 +1,18 @@
+@{
+    ViewData["Title"] = "Đăng nhập — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+<div class="page-intro"><h1 class="page-title">Chào mừng trở lại!</h1><p>Đăng nhập để đặt món nhanh hơn và theo dõi đơn hàng của bạn.</p></div>
+<div class="login-wrap">
+    <div class="login-art"><div class="login-bowl">🍲</div><span class="eyebrow">LẨU PHỐ · NGON TẠI NHÀ</span><h2>Món ngon đang chờ bạn.</h2><p>Lưu địa chỉ giao hàng, xem lịch sử đơn và nhận ưu đãi dành riêng cho thành viên.</p></div>
+    <form class="panel login-form" asp-action="DangNhap" method="post">
+        <h2>Đăng nhập</h2><p class="muted" class="muted login-subtitle">Sử dụng email hoặc số điện thoại của bạn.</p>
+        <div class="field"><label for="lienHe">Email hoặc số điện thoại</label><input id="lienHe" name="lienHe" required autocomplete="username" placeholder="Nhập email / số điện thoại" /></div>
+        <div class="field"><div class="login-password-heading"><label for="matKhau">Mật khẩu</label><button class="text-btn" type="button" data-toast="Vui lòng liên hệ bộ phận hỗ trợ để đặt lại mật khẩu (demo).">Quên mật khẩu?</button></div><input id="matKhau" name="matKhau" required type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" /></div>
+        <label class="choice"><input type="checkbox" /> Ghi nhớ đăng nhập</label>
+        <button class="btn" type="submit" class="btn login-submit">Đăng nhập →</button>
+        <div class="login-sep"><span>hoặc</span></div>
+        <a class="btn secondary login-register" asp-controller="TaiKhoan" asp-action="Index" asp-route-tab="register">Tạo tài khoản mới</a>
+        <p class="muted" class="muted login-demo-note">Bản demo: đăng nhập chỉ mô phỏng giao diện, chưa xác thực tài khoản.</p>
+    </form>
+</div>

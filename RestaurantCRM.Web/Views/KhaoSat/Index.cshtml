@@ -1,0 +1,31 @@
+@model KhaoSatViewModel
+@{
+    ViewData["Title"] = "Khảo sát khách hàng — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+    var showForm = ViewBag.ShowForm is bool value && value;
+}
+<div class="page-intro"><h1 class="page-title">Khảo sát khách hàng</h1><p>Chia sẻ trải nghiệm để chúng tôi hiểu bạn hơn.</p></div>
+<div id="surveyListing" hidden="@showForm">
+    <div class="survey-card"><div class="survey-icon">💬</div><div><h3>Khảo sát trải nghiệm mua hàng</h3><p>Đánh giá món ăn, giao hàng và chất lượng dịch vụ.</p><p class="survey-meta">⏱ Khoảng 2 phút &nbsp;·&nbsp; 5 câu hỏi</p></div><div class="survey-right"><span class="status">Đang mở</span><p class="survey-action"><a class="btn small" asp-action="Index" asp-route-form="true">Bắt đầu →</a></p></div></div>
+    <div class="survey-card"><div class="survey-icon">🌶️</div><div><h3>Khẩu vị món ăn yêu thích</h3><p>Giúp Lẩu Phố phát triển thực đơn phù hợp hơn.</p><p class="survey-meta">⏱ Khoảng 1 phút &nbsp;·&nbsp; 3 câu hỏi</p></div><div class="survey-right"><span class="status done">Đã tham gia</span><p class="survey-action"><button class="btn secondary small" type="button" data-toast="Bạn đã hoàn thành khảo sát này.">Xem trạng thái</button></p></div></div>
+    <h2 class="survey-history-title">Lịch sử khảo sát</h2>
+    <div class="panel"><div class="order-top"><div><strong>Khẩu vị món ăn yêu thích</strong><p>Đã gửi ngày 20/09/2026</p></div><span class="status done">Đã hoàn thành</span></div></div>
+</div>
+<form class="panel" asp-action="Gui" method="post" id="surveyForm" hidden="@(!showForm)" class="panel survey-form">
+    <div asp-validation-summary="All" class="validation"></div>
+    <a class="text-btn" asp-action="Index">← Quay lại danh sách</a>
+    <h2 class="survey-form-title">Khảo sát trải nghiệm mua hàng</h2><p class="muted" class="muted survey-form-intro">Các câu trả lời được dùng để cải thiện dịch vụ.</p><div class="progress"><span></span></div>
+    <div class="survey-q"><h4>1. Bạn mua hàng tại Lẩu Phố với tần suất nào? *</h4>
+        @foreach (var item in new[] { ("weekly", "Hàng tuần"), ("monthly", "Hàng tháng"), ("first", "Đây là lần đầu tiên") }) { <label class="choice"><input asp-for="TanSuat" type="radio" value="@item.Item1" /> @item.Item2</label> }
+        <span asp-validation-for="TanSuat" class="validation"></span>
+    </div>
+    <div class="survey-q"><h4>2. Bạn quan tâm đến yếu tố nào nhất? (Có thể chọn nhiều) *</h4>
+        @foreach (var item in new[] { ("taste", "Hương vị món ăn"), ("fresh", "Độ tươi nguyên liệu"), ("delivery", "Tốc độ giao hàng"), ("price", "Giá cả"), ("service", "Chất lượng phục vụ") }) { <label class="choice"><input type="checkbox" name="YeuToQuanTam" value="@item.Item1" checked="@(Model.YeuToQuanTam.Contains(item.Item1))" /> @item.Item2</label> }
+        <span asp-validation-for="YeuToQuanTam" class="validation"></span>
+    </div>
+    <div class="survey-q"><h4>3. Bạn đánh giá trải nghiệm gần nhất thế nào? *</h4><select asp-for="MucDoHaiLong"><option value="">Chọn mức đánh giá</option><option>Rất hài lòng</option><option>Hài lòng</option><option>Bình thường</option><option>Chưa hài lòng</option><option>Không hài lòng</option></select><span asp-validation-for="MucDoHaiLong" class="validation"></span></div>
+    <div class="survey-q"><h4>4. Bạn muốn Lẩu Phố bổ sung món gì?</h4><textarea asp-for="MonMongMuon" rows="3" placeholder="Món ăn hoặc hương vị bạn mong muốn..."></textarea></div>
+    <div class="survey-q"><h4>5. Góp ý thêm</h4><textarea asp-for="GopY" rows="3" placeholder="Chia sẻ ý kiến của bạn..."></textarea></div>
+    <div class="notice">Đây là bản demo giao diện. Dữ liệu khảo sát chưa được lưu vào hệ thống.</div><button class="btn" type="submit">Gửi khảo sát</button>
+</form>
+@section Scripts { <partial name="/Shared/_ValidationScriptsPartial.cshtml" /> }

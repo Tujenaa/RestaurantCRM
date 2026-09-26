@@ -70,13 +70,25 @@
     <Compile Include="Forms\Auth\LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\BanHang\TaoDonHangForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\BaoCao\BaoCaoBanHangForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\Dashboard\DashboardForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\DonHang\DonHangForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\DanhGia\DanhGiaForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\KhachHang\KhachHangForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\KhuyenMai\KhuyenMaiForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\KhaoSat\KhaoSatForm.cs">
@@ -88,12 +100,22 @@
     <Compile Include="Forms\NhaCungCap\NhaCungCapForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\PhanTich\PhanTichForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\PhanHoi\PhanHoiForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\PhieuNhap\PhieuNhapForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\TaiKhoan\TaiKhoanForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\VaiTro\VaiTroForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\ModuleFormBase.cs" />
     <Compile Include="Helpers\PermissionHelper.cs" />
     <Compile Include="Helpers\ThemeManager.cs" />
     <Compile Include="Helpers\TokenHelper.cs" />

@@ -1,0 +1,39 @@
+@model CheckoutPageViewModel
+@{
+    ViewData["Title"] = "Xác nhận đặt hàng — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+<div class="page-intro"><h1 class="page-title">Xác nhận đặt hàng</h1><p>Thông tin giao hàng và phương thức thanh toán.</p></div>
+<div class="steps"><span class="step done">1. Giỏ hàng</span><span class="step current">2. Giao hàng</span><span class="step">3. Hoàn tất</span></div>
+<div class="layout">
+    <form class="panel" asp-action="DatHang" method="post">
+        <div asp-validation-summary="All" class="validation"></div>
+        <h3>Thông tin người nhận</h3>
+        <div class="two">
+            <div class="field"><label asp-for="DatHang.HoTen">Họ và tên *</label><input asp-for="DatHang.HoTen" placeholder="Nguyễn Văn A" /></div>
+            <div class="field"><label asp-for="DatHang.SoDienThoai">Số điện thoại *</label><input asp-for="DatHang.SoDienThoai" type="tel" pattern="[0-9 +().-]{9,15}" placeholder="0901 234 567" /></div>
+        </div>
+        <div class="field"><label asp-for="DatHang.DiaChiGiao">Địa chỉ giao hàng *</label><input asp-for="DatHang.DiaChiGiao" placeholder="Số nhà, đường, phường/xã..." /></div>
+        <div class="two">
+            <div class="field"><label asp-for="DatHang.TinhThanh">Tỉnh / Thành phố *</label><select asp-for="DatHang.TinhThanh"><option value="">Chọn tỉnh / thành</option><option>TP. Hồ Chí Minh</option><option>Vĩnh Long</option><option>Cần Thơ</option><option>Đồng Nai</option><option>Tỉnh khác</option></select></div>
+            <div class="field"><label asp-for="DatHang.ThoiGianNhan">Thời gian nhận</label><select asp-for="DatHang.ThoiGianNhan"><option>Giao sớm nhất có thể</option><option>Trong 1 giờ</option><option>Đặt lịch sau</option></select></div>
+        </div>
+        <div class="field"><label asp-for="DatHang.GhiChu">Ghi chú cho nhà hàng</label><textarea asp-for="DatHang.GhiChu" rows="3" placeholder="Ví dụ: ít cay, gọi trước khi giao..."></textarea></div>
+        <h3>Phương thức thanh toán</h3>
+        <label class="choice"><input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="cod" /> 💵 Thanh toán khi nhận hàng (COD)</label>
+        <label class="choice"><input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="transfer" /> 🏦 Chuyển khoản (demo)</label>
+        <button class="btn" type="submit">Xác nhận đặt hàng →</button>
+    </form>
+    <aside class="panel summary">
+        <h3>Đơn hàng của bạn</h3>
+        @foreach (var item in Model.GioHang.Items)
+        {
+            <div class="summary-line"><span>@item.TenMon × @item.SoLuong</span><strong>@item.ThanhTien.ToString("N0")đ</strong></div>
+        }
+        <div class="summary-line"><span>Phí giao hàng</span><strong>@Model.GioHang.PhiGiaoHang.ToString("N0")đ</strong></div>
+        <div class="summary-line"><span>Ưu đãi demo</span><strong>−@Model.GioHang.GiamGia.ToString("N0")đ</strong></div>
+        <div class="summary-line total"><span>Tổng thanh toán</span><span>@Model.GioHang.TongThanhToan.ToString("N0")đ</span></div>
+        <div class="notice">Đơn hàng và thanh toán chỉ mô phỏng trên giao diện.</div>
+    </aside>
+</div>
+@section Scripts { <partial name="/Shared/_ValidationScriptsPartial.cshtml" /> }

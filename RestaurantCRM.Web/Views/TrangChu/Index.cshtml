@@ -1,0 +1,63 @@
+@model MonAnDanhSachViewModel
+@{
+    ViewData["Title"] = Model.MenuMode ? "Thực đơn — Lẩu Phố" : "Lẩu Phố — Website khách hàng";
+    Layout = "/Shared/_Layout.cshtml";
+}
+
+@if (Model.MenuMode)
+{
+    <section id="menu">
+        <div class="page-intro"><h1 class="page-title">Thực đơn Lẩu Phố</h1><p>Chọn món ngon, thêm vào giỏ và đặt giao tận nhà.</p></div>
+        <div class="section-head">
+            <div class="filters">
+                @foreach (var category in Model.LoaiMons)
+                {
+                    var active = String.IsNullOrEmpty(Model.LoaiDangChon) ? category == "Tất cả" : Model.LoaiDangChon == category;
+                    <a class="chip @(active ? "active" : "")" asp-controller="TrangChu" asp-action="Index" asp-route-menu="true" asp-route-loai="@(category == "Tất cả" ? null : category)" asp-route-q="@Model.TuKhoa">@category</a>
+                }
+            </div>
+            <form class="search" asp-controller="TrangChu" asp-action="Index" method="get">
+                <input type="hidden" name="menu" value="true" />
+                <input name="q" value="@Model.TuKhoa" placeholder="Tìm món ăn..." aria-label="Tìm món ăn" />
+            </form>
+        </div>
+        <div class="grid">
+            @if (Model.MonAns.Count == 0)
+            {
+                <div class="empty" class="empty grid-empty">Không tìm thấy món phù hợp.</div>
+            }
+            @foreach (var dish in Model.MonAns)
+            {
+                <partial name="_DishCard" model="@dish" />
+            }
+        </div>
+    </section>
+}
+else
+{
+    <section class="page active" id="page-home">
+        <div class="hero">
+            <div class="hero-copy">
+                <span class="eyebrow">✦ Bữa ngon bắt đầu từ đây</span>
+                <h1>Nồi lẩu nóng,<br />giao tận cửa.</h1>
+                <p>Nguyên liệu tươi ngon, nước lẩu đậm vị. Chọn món yêu thích và để Lẩu Phố lo phần còn lại.</p>
+                <a class="btn" asp-controller="TrangChu" asp-action="Index" asp-route-menu="true">Khám phá thực đơn&nbsp; →</a>
+                <a class="btn secondary" asp-controller="DonHang" asp-action="Index">Theo dõi đơn</a>
+            </div>
+            <div class="hero-art"><div class="floating one">⭐ 4.9/5 · Khách yêu thích</div><div class="hotpot">🍲</div><div class="floating two">🔥 Nóng hổi · Tươi ngon</div></div>
+        </div>
+        <div class="section-head"><div><h2>Món được yêu thích</h2><p>Lựa chọn nổi bật từ gian bếp Lẩu Phố</p></div><a class="text-btn" asp-controller="TrangChu" asp-action="Index" asp-route-menu="true">Xem toàn bộ thực đơn →</a></div>
+        <div class="grid">
+            @foreach (var dish in Model.MonNoiBat)
+            {
+                <partial name="_DishCard" model="@dish" />
+            }
+        </div>
+        <div class="promo-row">
+            <div class="promo"><div class="emoji">🛵</div><div><strong>Giao hàng tiện lợi</strong><span>Đến tận cửa nhà bạn</span></div></div>
+            <div class="promo"><div class="emoji">🥬</div><div><strong>Nguyên liệu tươi</strong><span>Chuẩn bị trong ngày</span></div></div>
+            <div class="promo"><div class="emoji">🎁</div><div><strong>Ưu đãi thành viên</strong><span>Nhiều ưu đãi hấp dẫn</span></div></div>
+        </div>
+        <div class="section-head"><div><h2>Lắng nghe bạn mỗi ngày</h2><p>Đánh giá món ăn hoặc tham gia khảo sát trải nghiệm.</p></div><a class="btn small" asp-controller="KhaoSat" asp-action="Index">Tham gia khảo sát</a></div>
+    </section>
+}

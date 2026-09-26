@@ -1,0 +1,38 @@
+@model KhachHangViewModel
+@{
+    ViewData["Title"] = "Tài khoản — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+    var activeTab = (ViewBag.Tab as string) ?? "profile";
+}
+<div class="page-intro"><h1 class="page-title">Tài khoản của bạn</h1><p>Quản lý thông tin và trải nghiệm tại Lẩu Phố.</p></div>
+<div class="account-layout" data-account-root data-current-tab="@activeTab">
+    <aside class="side-menu">
+        <div class="user-mini"><div class="avatar">NA</div><div><strong>Nguyễn An</strong><div class="muted" class="muted account-caption">Thành viên Lẩu Phố</div></div></div>
+        <button class="@(activeTab == "profile" ? "active" : "")" type="button" data-account="profile">👤 Thông tin cá nhân</button>
+        <button class="@(activeTab == "login" ? "active" : "")" type="button" data-account="login">🔐 Đăng nhập</button>
+        <button class="@(activeTab == "register" ? "active" : "")" type="button" data-account="register">✨ Tạo tài khoản</button>
+        <button class="@(activeTab == "addresses" ? "active" : "")" type="button" data-account="addresses">📍 Địa chỉ giao hàng</button>
+    </aside>
+    <section class="panel" id="accountPanel">
+        <div data-account-panel="profile" hidden="@(activeTab != "profile")">
+            <h3>Thông tin cá nhân</h3>
+            <form asp-action="CapNhat" method="post">
+                <div class="two"><div class="field"><label asp-for="HoTen">Họ và tên</label><input asp-for="HoTen" required /></div><div class="field"><label asp-for="SoDienThoai">Số điện thoại</label><input asp-for="SoDienThoai" required /></div></div>
+                <div class="two"><div class="field"><label asp-for="Email">Email</label><input asp-for="Email" type="email" /></div><div class="field"><label asp-for="NgaySinh">Ngày sinh</label><input asp-for="NgaySinh" type="date" value="2003-05-18" /></div></div>
+                <div class="field"><label asp-for="GioiTinh">Giới tính</label><select asp-for="GioiTinh"><option>Không muốn tiết lộ</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
+                <button class="btn" type="submit">Lưu thay đổi</button>
+            </form>
+            <hr class="account-divider" />
+            <h3>Đổi mật khẩu</h3><div class="two"><div class="field"><label>Mật khẩu hiện tại</label><input type="password" placeholder="••••••••" /></div><div class="field"><label>Mật khẩu mới</label><input type="password" placeholder="Tối thiểu 8 ký tự" /></div></div><button class="btn secondary" type="button" data-toast="Chức năng đổi mật khẩu là bản demo">Cập nhật mật khẩu</button>
+        </div>
+        <div data-account-panel="login" hidden="@(activeTab != "login")"><h3>Đăng nhập</h3><p class="muted">Đăng nhập để xem lịch sử đơn và thông tin thành viên.</p><a class="btn" asp-action="DangNhap">Mở trang đăng nhập →</a><p class="account-register-prompt"><button class="text-btn" type="button" data-account="register">Chưa có tài khoản? Đăng ký</button></p></div>
+        <div data-account-panel="register" hidden="@(activeTab != "register")">
+            <h3>Tạo tài khoản Lẩu Phố</h3><form asp-action="DangKy" method="post">
+                <div class="field"><label for="regName">Họ và tên *</label><input id="regName" name="hoTen" required maxlength="100" placeholder="Nguyễn Văn A" /></div>
+                <div class="two"><div class="field"><label for="regPhone">Số điện thoại *</label><input id="regPhone" name="soDienThoai" required type="tel" placeholder="0901 234 567" /></div><div class="field"><label for="regEmail">Email</label><input id="regEmail" name="email" type="email" placeholder="ban@email.com" /></div></div>
+                <div class="field"><label for="regPassword">Mật khẩu *</label><input id="regPassword" name="matKhau" type="password" required minlength="8" placeholder="Ít nhất 8 ký tự" /></div><button class="btn" type="submit">Tạo tài khoản</button>
+            </form><p class="muted" class="muted account-caption">Form demo, chưa tạo tài khoản trên máy chủ.</p>
+        </div>
+        <div data-account-panel="addresses" hidden="@(activeTab != "addresses")"><h3>Địa chỉ giao hàng</h3><div class="notice">📍 Nhà riêng · 12 Lê Lợi, Quận 1, TP. Hồ Chí Minh<br /><small>Người nhận: Nguyễn An · 0901 234 567</small></div><button class="btn" type="button" data-toast="Biểu mẫu thêm địa chỉ mới đang ở chế độ demo">＋ Thêm địa chỉ mới</button></div>
+    </section>
+</div>

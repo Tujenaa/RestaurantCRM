@@ -1,31 +1,11 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Forms.PhanHoi {
-    public partial class PhanHoiForm : Form {
-        public PhanHoiForm() {
-            this.Text = "Quản lý PhanHoi";
-            this.Size = new Size(1000, 600);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = ThemeManager.Bg;
-            this.Font = new Font("Segoe UI", 10F);
-
-            Label title = new Label { Text = "Quản lý PhanHoi", Font = new Font("Segoe UI", 18F, FontStyle.Bold), AutoSize = true, Location = new Point(20, 20) };
-            this.Controls.Add(title);
-
-            Button btnAdd = new Button { Text = "＋ Thêm mới", BackColor = ThemeManager.Blue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(120, 35), Location = new Point(840, 20) };
-            btnAdd.FlatAppearance.BorderSize = 0;
-            this.Controls.Add(btnAdd);
-
-            DataGridView dgv = new DataGridView {
-                Location = new Point(20, 80),
-                Size = new Size(940, 450),
-                BackgroundColor = ThemeManager.Paper,
-                BorderStyle = BorderStyle.None,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-            };
-            this.Controls.Add(dgv);
-        }
+    public class PhanHoiForm : ModuleFormBase {
+        public PhanHoiForm() : base("Phản hồi", "Tiếp nhận ý kiến khách hàng và theo dõi việc chăm sóc.",
+            new[] { "Mã phản hồi", "Khách hàng", "Ngày gửi", "Đánh giá", "Nội dung", "Trạng thái" },
+            new[] { new ModuleField("id", "Mã phản hồi", true), new ModuleField("customer", "Khách hàng", true), new ModuleField("date", "Ngày gửi", false), new ModuleField("rating", "Đánh giá /5", false), new ModuleField("content", "Nội dung", true), new ModuleField("status", "Trạng thái", false) },
+            new[] { new[] { "PH001", "Nguyễn Minh Anh", "26/09/2026", "5", "Món ăn ngon, phục vụ nhanh.", "Mới" }, new[] { "PH002", "Trần Quốc Bảo", "25/09/2026", "3", "Thời gian chờ hơi lâu.", "Đang xử lý" } }, ThemeManager.Purple) { }
     }
 }
