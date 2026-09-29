@@ -1,42 +1,59 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace RestaurantCRM.AdminApp.Controls {
-    public partial class UcSidebar : UserControl {
+    public class UcSidebar : UserControl {
         public event Action<string> MenuSelected;
-        private readonly Color _accent;
-        private readonly string _role;
-
-        public UcSidebar(string role) {
-            _role = role; _accent = role == "CRM" ? Color.FromArgb(105, 65, 165) : role == "Bán hàng" ? Color.FromArgb(14, 124, 134) : Color.FromArgb(36, 87, 167);
-            Width = 250; Dock = DockStyle.Left; BackColor = role == "CRM" ? Color.FromArgb(56, 35, 77) : role == "Bán hàng" ? Color.FromArgb(11, 77, 71) : Color.FromArgb(23, 61, 114);
-            var brand = new Label { Text = (role == "CRM" ? "●  " : role == "Bán hàng" ? "▣  " : "◆  ") + role + ".WinForms\nRestaurantCRM", ForeColor = Color.White, Font = new Font("Segoe UI", 12F, FontStyle.Bold), AutoSize = true, Location = new Point(16, 18) };
+        public event Action<string> WorkspaceSelected;
+        public UcSidebar(string role, IList<string> roles, string displayName) {
+            Width = 252; Dock = DockStyle.Left; AutoScroll = true;
+            BackColor = role == "CRM" ? Color.FromArgb(56, 35, 77) : role == "Bán hàng" ? Color.FromArgb(11, 77, 71) : Color.FromArgb(23, 61, 114);
+            var brand = new Label { Text = "◆  RestaurantCRM\n    " + role, ForeColor = Color.White, Font = new Font("Segoe UI", 12F, FontStyle.Bold), AutoSize = true, Location = new Point(22, 24) };
             Controls.Add(brand);
-            AddSection("TỔNG QUAN", new[] { "Dashboard" }, 82);
-            if (role == "Admin") {
-                AddSection("BÁN HÀNG & KHO", new[] { "Món ăn", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi" }, 158);
-                AddSection("HỆ THỐNG", new[] { "Tài khoản", "Vai trò & phân quyền" }, 370);
-            } else if (role == "Bán hàng") {
-                AddSection("BÁN HÀNG", new[] { "Tạo đơn hàng", "Đơn hàng" }, 158);
-                AddSection("TRA CỨU", new[] { "Thực đơn", "Khuyến mãi", "Báo cáo bán hàng" }, 278);
-            } else {
-                AddSection("KHÁCH HÀNG", new[] { "Khách hàng", "Đánh giá", "Phản hồi" }, 158);
-                AddSection("KHẢO SÁT & BÁO CÁO", new[] { "Khảo sát", "Phân tích khách hàng" }, 338);
+            int top = 92;
+            if (roles != null && roles.Count > 1) {
+                Controls.Add(new Label { Text = "CHUYỂN PHÂN HỆ", ForeColor = Color.FromArgb(194, 212, 239), Font = new Font("Segoe UI", 8F, FontStyle.Bold), AutoSize = true, Location = new Point(20, top) });
+                top += 21;
+                foreach (string permittedRole in roles) {
+                    var switchButton = MakeButton("↔  " + permittedRole, top);
+                    switchButton.Height = 31;
+                    switchButton.BackColor = permittedRole == role ? Color.FromArgb(65, 255, 255, 255) : Color.Transparent;
+                    switchButton.Click += (s, e) => WorkspaceSelected?.Invoke(permittedRole);
+                    Controls.Add(switchButton); top += 34;
+                }
+                top += 11;
             }
-            var foot = new Panel { Dock = DockStyle.Bottom, Height = 76, Padding = new Padding(12), BackColor = Color.Transparent };
-            foot.Controls.Add(new Label { Text = role.ToUpperInvariant() + " WORKSPACE", ForeColor = Color.FromArgb(194, 212, 239), AutoSize = true, Location = new Point(2, 6), Font = new Font("Segoe UI", 8F, FontStyle.Bold) });
+
+            AddSection("TỔNG QUAN", new[] { "Dashboard" }, top); top += 61;
+            if (role == "Admin") {
+                AddSection("BÁN HÀNG & KHO", new[] { "Món ăn", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi" }, top); top += 165;
+                AddSection("HỆ THỐNG", new[] { "Tài khoản", "Vai trò & phân quyền" }, top);
+            } else if (role == "Bán hàng") {
+                AddSection("BÁN HÀNG & KHO", new[] { "Tạo đơn hàng", "Đơn hàng", "Thực đơn", "Món ăn", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi", "Báo cáo bán hàng" }, top);
+            } else {
+                AddSection("KHÁCH HÀNG", new[] { "Khách hàng", "Đánh giá", "Phản hồi" }, top); top += 127;
+                AddSection("KHẢO SÁT & BÁO CÁO", new[] { "Khảo sát", "Phân tích khách hàng" }, top);
+            }
+
+            var foot = new Panel { Dock = DockStyle.Bottom, Height = 82, Padding = new Padding(16, 8, 12, 8), BackColor = Color.Transparent };
+            foot.Controls.Add(new Label { Text = displayName + "\n" + role, ForeColor = Color.FromArgb(220, 233, 255), AutoSize = true, Location = new Point(4, 3), Font = new Font("Segoe UI", 9F, FontStyle.Bold) });
             var logout = new Button { Text = "Đăng xuất", ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, TextAlign = ContentAlignment.MiddleLeft, Dock = DockStyle.Bottom, Height = 34, Cursor = Cursors.Hand };
-            logout.FlatAppearance.BorderColor = Color.FromArgb(100, 255, 255, 255); logout.Click += (s, e) => MenuSelected?.Invoke("Đăng xuất"); foot.Controls.Add(logout); Controls.Add(foot);
+            logout.FlatAppearance.BorderSize = 0; logout.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 255, 255, 255); logout.Click += (s, e) => MenuSelected?.Invoke("Đăng xuất"); foot.Controls.Add(logout); Controls.Add(foot);
         }
 
+        private Button MakeButton(string text, int y) {
+            var button = new Button { Text = "  " + text, ForeColor = Color.FromArgb(235, 241, 255), BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, TextAlign = ContentAlignment.MiddleLeft, Size = new Size(228, 32), Location = new Point(12, y), Cursor = Cursors.Hand, Font = new Font("Segoe UI", 9F) };
+            button.FlatAppearance.BorderSize = 0; button.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 255, 255, 255); return button;
+        }
         private void AddSection(string title, string[] items, int top) {
-            Controls.Add(new Label { Text = title, ForeColor = Color.FromArgb(194, 212, 239), Font = new Font("Segoe UI", 8F, FontStyle.Bold), AutoSize = true, Location = new Point(18, top) });
-            int y = top + 24;
+            Controls.Add(new Label { Text = title, ForeColor = Color.FromArgb(194, 212, 239), Font = new Font("Segoe UI", 8F, FontStyle.Bold), AutoSize = true, Location = new Point(20, top) });
+            int y = top + 22;
             foreach (string item in items) {
-                var button = new Button { Text = "  " + item, Tag = item, ForeColor = Color.FromArgb(224, 234, 255), BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, TextAlign = ContentAlignment.MiddleLeft, Size = new Size(226, 36), Location = new Point(12, y), Cursor = Cursors.Hand, Font = new Font("Segoe UI", 9F) };
-                button.FlatAppearance.BorderSize = 0; button.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 255, 255, 255);
-                button.Click += (s, e) => MenuSelected?.Invoke((string)((Button)s).Tag); Controls.Add(button); y += 39;
+                var button = MakeButton(item, y); button.Tag = item;
+                button.Click += (s, e) => MenuSelected?.Invoke((string)((Button)s).Tag);
+                Controls.Add(button); y += 35;
             }
         }
     }

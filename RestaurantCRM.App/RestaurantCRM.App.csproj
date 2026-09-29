@@ -79,6 +79,15 @@
     <Compile Include="Forms\Dashboard\DashboardForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\Dashboard\AdminShellForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Dashboard\BanHangKhoShellForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Dashboard\CrmShellForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\DonHang\DonHangForm.cs">
       <SubType>Form</SubType>
     </Compile>

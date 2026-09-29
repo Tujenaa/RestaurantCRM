@@ -7,7 +7,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich {
     public class PhanTichForm : Form {
         public PhanTichForm() {
             Text = "Phân tích khách hàng | RestaurantCRM"; StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(1080, 680); MinimumSize = new Size(850, 560); BackColor = ThemeManager.Bg; Font = new Font("Segoe UI", 9.5F);
+            Size = new Size(960, 640); BackColor = ThemeManager.Bg; Font = new Font("Segoe UI", 9.5F);
             var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), BackColor = ThemeManager.Bg }; Controls.Add(content);
             content.Controls.Add(new Label { Text = "Phân tích khách hàng", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = ThemeManager.Ink, AutoSize = true, Location = new Point(24, 18) });
             content.Controls.Add(new Label { Text = "Tổng hợp chỉ số từ dữ liệu minh họa hiện có.", ForeColor = ThemeManager.Muted, AutoSize = true, Location = new Point(26, 56) });

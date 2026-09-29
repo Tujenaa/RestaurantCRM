@@ -6,7 +6,7 @@ using RestaurantCRM.AdminApp.Helpers;
 namespace RestaurantCRM.AdminApp.Forms.BaoCao {
     public class BaoCaoBanHangForm : Form {
         public BaoCaoBanHangForm() {
-            Text = "Báo cáo bán hàng | RestaurantCRM"; StartPosition = FormStartPosition.CenterParent; Size = new Size(1080, 680); MinimumSize = new Size(850, 560); BackColor = ThemeManager.Bg; Font = new Font("Segoe UI", 9.5F);
+            Text = "Báo cáo bán hàng | RestaurantCRM"; StartPosition = FormStartPosition.CenterParent; Size = new Size(960, 640); BackColor = ThemeManager.Bg; Font = new Font("Segoe UI", 9.5F);
             var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), BackColor = ThemeManager.Bg }; Controls.Add(content);
             content.Controls.Add(new Label { Text = "Báo cáo bán hàng", Location = new Point(24, 18), AutoSize = true, Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = ThemeManager.Ink });
             content.Controls.Add(new Label { Text = "Theo dõi doanh thu và trạng thái đơn hàng.", Location = new Point(26, 56), AutoSize = true, ForeColor = ThemeManager.Muted });
