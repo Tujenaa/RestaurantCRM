@@ -23,6 +23,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             Font = new Font("Segoe UI", 9.5F);
             ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 254);
             ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Muted;
+            ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(250, 251, 254);
+            ColumnHeadersDefaultCellStyle.SelectionForeColor = ThemeManager.Muted;
             ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
             DefaultCellStyle.SelectionBackColor = Color.FromArgb(234, 241, 255);
             DefaultCellStyle.SelectionForeColor = ThemeManager.Ink;

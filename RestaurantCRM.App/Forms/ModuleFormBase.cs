@@ -10,8 +10,10 @@ namespace RestaurantCRM.AdminApp.Forms {
         public string Name;
         public string Label;
         public bool Required;
-        public ModuleField(string name, string label, bool required) {
-            Name = name; Label = label; Required = required;
+        public string[] Options;
+        public bool IsImage;
+        public ModuleField(string name, string label, bool required, string[] options = null, bool isImage = false) {
+            Name = name; Label = label; Required = required; Options = options; IsImage = isImage;
         }
     }
 
@@ -20,6 +22,12 @@ namespace RestaurantCRM.AdminApp.Forms {
         private readonly DataTable _table = new DataTable();
         private readonly UcDataGridView _grid = new UcDataGridView();
         private readonly TextBox _search = new TextBox();
+        private readonly ComboBox _filterColumn = new ComboBox();
+        private readonly ComboBox _filterMode = new ComboBox();
+        private readonly TextBox _filterValue = new TextBox();
+        private string _advancedFilter = "";
+        private int _sortColumn = -1;
+        private bool _sortAscending = true;
         private readonly ModuleField[] _fields;
         private readonly Color _accent;
         private readonly string _moduleTitle;
@@ -28,8 +36,8 @@ namespace RestaurantCRM.AdminApp.Forms {
             _moduleTitle = title; _fields = fields; _accent = accent;
             Text = title + " | RestaurantCRM";
             StartPosition = FormStartPosition.CenterParent;
-            MinimumSize = new Size(900, 580);
-            Size = new Size(1120, 700);
+
+            Size = new Size(960, 640);
             BackColor = ThemeManager.Bg;
             Font = new Font("Segoe UI", 9.5F);
 
@@ -47,7 +55,7 @@ namespace RestaurantCRM.AdminApp.Forms {
             intro.Controls.Add(titleLabel); intro.Controls.Add(descLabel);
 
             panel.Paint += (s, e) => { using (var pen = new Pen(ThemeManager.Line)) e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1); };
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = Color.FromArgb(250, 251, 254), Padding = new Padding(14, 10, 14, 8) };
+            var toolbar = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.FromArgb(250, 251, 254), Padding = new Padding(14, 10, 14, 8) };
             panel.Controls.Add(toolbar);
             _search.Width = 270; _search.Location = new Point(14, 13); _search.Font = Font;
             _search.ForeColor = ThemeManager.Muted; _search.Text = "Tìm kiếm...";
@@ -55,19 +63,44 @@ namespace RestaurantCRM.AdminApp.Forms {
             _search.LostFocus += (s, e) => { if (_search.Text.Length == 0) { _search.Text = "Tìm kiếm..."; _search.ForeColor = ThemeManager.Muted; } };
             _search.TextChanged += (s, e) => ApplySearch();
             toolbar.Controls.Add(_search);
-            var btnDelete = MakeButton("Xóa", false); btnDelete.Anchor = AnchorStyles.Top | AnchorStyles.Right; btnDelete.Location = new Point(toolbar.Width - 230, 11); btnDelete.Click += (s, e) => DeleteSelected();
-            var btnEdit = MakeButton("Sửa", false); btnEdit.Anchor = AnchorStyles.Top | AnchorStyles.Right; btnEdit.Location = new Point(toolbar.Width - 145, 11); btnEdit.Click += (s, e) => EditSelected();
-            var btnAdd = MakeButton("＋ Thêm mới", true); btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right; btnAdd.Location = new Point(toolbar.Width - 60, 11); btnAdd.Width = 130; btnAdd.Click += (s, e) => EditRow(null);
-            toolbar.Controls.Add(btnDelete); toolbar.Controls.Add(btnEdit); toolbar.Controls.Add(btnAdd);
-            toolbar.Resize += (s, e) => { btnDelete.Left = toolbar.ClientSize.Width - 315; btnEdit.Left = toolbar.ClientSize.Width - 230; btnAdd.Left = toolbar.ClientSize.Width - 145; };
+            var btnAdd = MakeButton("＋ Thêm mới", true); btnAdd.Width = 130; btnAdd.Click += (s, e) => EditRow(null);
+            var btnEdit = MakeButton("Sửa", false); btnEdit.Click += (s, e) => EditSelected();
+            var btnDelete = MakeButton("Xóa", false); btnDelete.Click += (s, e) => DeleteSelected();
+            var buttonsPanel = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, WrapContents = false };
+            buttonsPanel.Controls.Add(btnAdd); buttonsPanel.Controls.Add(btnEdit); buttonsPanel.Controls.Add(btnDelete);
+            buttonsPanel.Location = new Point(toolbar.Width - buttonsPanel.Width - 14, 11);
+            buttonsPanel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            toolbar.Controls.Add(buttonsPanel);
+
+            var filterbar = new Panel { Dock = DockStyle.Top, Height = 48, BackColor = Color.White, Padding = new Padding(14, 7, 14, 5) };
+            panel.Controls.Add(filterbar);
+            _filterColumn.DropDownStyle = ComboBoxStyle.DropDownList; _filterColumn.Width = 190; _filterColumn.Location = new Point(14, 8);
+            foreach (string column in columns) _filterColumn.Items.Add(column);
+            if (_filterColumn.Items.Count > 0) _filterColumn.SelectedIndex = 0;
+            filterbar.Controls.Add(_filterColumn);
+            _filterMode.DropDownStyle = ComboBoxStyle.DropDownList; _filterMode.Width = 105; _filterMode.Location = new Point(212, 8);
+            _filterMode.Items.AddRange(new object[] { "Chứa", "Bằng" }); _filterMode.SelectedIndex = 0; filterbar.Controls.Add(_filterMode);
+            _filterValue.Width = 230; _filterValue.Location = new Point(324, 8); _filterValue.Font = Font; filterbar.Controls.Add(_filterValue);
+            var applyFilter = MakeButton("Lọc", false); applyFilter.Location = new Point(562, 6); applyFilter.Click += (s, e) => ApplyAdvancedFilter(); filterbar.Controls.Add(applyFilter);
+            var clearFilter = MakeButton("Xóa lọc", false); clearFilter.Width = 90; clearFilter.Location = new Point(650, 6); clearFilter.Click += (s, e) => { _advancedFilter = ""; _filterValue.Clear(); ApplySearch(); }; filterbar.Controls.Add(clearFilter);
 
             _grid.Dock = DockStyle.Fill;
             _grid.AutoGenerateColumns = false;
-            for (int i = 0; i < columns.Length; i++) _grid.Columns.Add("col" + i, columns[i]);
+            for (int i = 0; i < columns.Length; i++) {
+                if (i < _fields.Length && _fields[i].IsImage) _grid.Columns.Add(new DataGridViewImageColumn { Name = "col" + i, HeaderText = columns[i], ImageLayout = DataGridViewImageCellLayout.Zoom });
+                else _grid.Columns.Add("col" + i, columns[i]);
+            }
             _grid.DataSource = _table;
             for (int i = 0; i < columns.Length; i++) _grid.Columns[i].DataPropertyName = "C" + i;
-            _grid.DataBindingComplete += (s, e) => { foreach (DataGridViewColumn c in _grid.Columns) c.SortMode = DataGridViewColumnSortMode.NotSortable; };
-            panel.Controls.Add(_grid); _grid.SendToBack();
+            _grid.DataBindingComplete += (s, e) => { foreach (DataGridViewColumn c in _grid.Columns) c.SortMode = DataGridViewColumnSortMode.Programmatic; };
+            _grid.ColumnHeaderMouseClick += (s, e) => SortByColumn(e.ColumnIndex);
+            _grid.CellFormatting += (s, e) => {
+                if (e.ColumnIndex >= 0 && e.ColumnIndex < _fields.Length && _fields[e.ColumnIndex].IsImage && e.Value != null) {
+                    string path = e.Value.ToString();
+                    if (!string.IsNullOrEmpty(path)) { try { e.Value = Image.FromFile(path); } catch { e.Value = null; } } else e.Value = null;
+                }
+            };
+            panel.Controls.Add(_grid); _grid.BringToFront();
         }
 
         private Button MakeButton(string text, bool primary) {
@@ -82,6 +115,24 @@ namespace RestaurantCRM.AdminApp.Forms {
             string filter = "";
             foreach (DataColumn column in _table.Columns) filter += (filter.Length == 0 ? "" : " OR ") + "Convert([" + column.ColumnName + "], 'System.String') LIKE '%" + query + "%'";
             _table.DefaultView.RowFilter = filter;
+        }
+
+        private void ApplyAdvancedFilter() {
+            if (_filterColumn.SelectedIndex < 0 || String.IsNullOrWhiteSpace(_filterValue.Text)) { ApplySearch(); return; }
+            string value = _filterValue.Text.Trim().Replace("'", "''");
+            string column = "C" + _filterColumn.SelectedIndex;
+            string extra = _filterMode.SelectedIndex == 1
+                ? "Convert([" + column + "], 'System.String') = '" + value + "'"
+                : "Convert([" + column + "], 'System.String') LIKE '%" + value.Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]") + "%" + "'";
+            _table.DefaultView.RowFilter = extra;
+        }
+
+        private void SortByColumn(int index) {
+            if (index < 0 || index >= _table.Columns.Count) return;
+            _sortAscending = _sortColumn == index ? !_sortAscending : true;
+            _sortColumn = index;
+            _table.DefaultView.Sort = "[C" + index + "] " + (_sortAscending ? "ASC" : "DESC");
+            for (int i = 0; i < _grid.Columns.Count; i++) _grid.Columns[i].HeaderCell.SortGlyphDirection = i == index ? (_sortAscending ? SortOrder.Ascending : SortOrder.Descending) : SortOrder.None;
         }
 
         private DataRow SelectedRow() {
@@ -107,17 +158,59 @@ namespace RestaurantCRM.AdminApp.Forms {
                 dialog.Text = row == null ? "Thêm " + _moduleTitle : "Sửa " + _moduleTitle;
                 dialog.StartPosition = FormStartPosition.CenterParent; dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false; dialog.MinimizeBox = false; dialog.ShowInTaskbar = false;
-                dialog.BackColor = ThemeManager.Paper; dialog.Font = Font; dialog.ClientSize = new Size(520, Math.Max(240, 100 + _fields.Length * 66));
+                dialog.BackColor = ThemeManager.Paper; dialog.Font = Font;
                 var heading = new Label { Text = dialog.Text, Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = ThemeManager.Ink, Location = new Point(22, 18), AutoSize = true };
                 dialog.Controls.Add(heading);
-                var editors = new TextBox[_fields.Length];
+                var editors = new Control[_fields.Length];
+                int currentY = 62;
                 for (int i = 0; i < _fields.Length; i++) {
-                    int y = 62 + i * 62;
-                    dialog.Controls.Add(new Label { Text = _fields[i].Label + (_fields[i].Required ? " *" : ""), Location = new Point(24, y), ForeColor = ThemeManager.Muted, AutoSize = true });
-                    editors[i] = new TextBox { Location = new Point(24, y + 21), Width = 470, Font = Font };
-                    if (row != null && i < _table.Columns.Count) editors[i].Text = Convert.ToString(row[i]);
-                    dialog.Controls.Add(editors[i]);
+                    var f = _fields[i];
+                    dialog.Controls.Add(new Label { Text = f.Label + (f.Required ? " *" : ""), Location = new Point(24, currentY), ForeColor = ThemeManager.Muted, AutoSize = true });
+                    Control editor;
+                    if (f.IsImage) {
+                        var panel = new Panel { Location = new Point(24, currentY + 21), Width = 470, Height = 95 };
+                        var thumbsPanel = new FlowLayoutPanel { Location = new Point(0, 0), Size = new Size(350, 95), WrapContents = false, AutoScroll = true };
+                        var btn = new Button { Text = "Chọn ảnh", Location = new Point(360, 30), Size = new Size(100, 30), FlatStyle = FlatStyle.Flat, BackColor = Color.White, Cursor = Cursors.Hand };
+                        var txtPath = new TextBox { Visible = false };
+                        Action<string> loadThumbs = (paths) => {
+                            thumbsPanel.Controls.Clear();
+                            if (string.IsNullOrEmpty(paths)) return;
+                            foreach(string p in paths.Split('|')) {
+                                if(string.IsNullOrEmpty(p)) continue;
+                                var pic = new PictureBox { Size = new Size(75, 75), BorderStyle = BorderStyle.FixedSingle, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White, Margin = new Padding(0, 0, 10, 0) };
+                                try { pic.ImageLocation = p; } catch {}
+                                thumbsPanel.Controls.Add(pic);
+                            }
+                        };
+                        btn.Click += (s, e) => {
+                            using (var ofd = new OpenFileDialog { Filter = "Ảnh|*.jpg;*.png;*.jpeg", Multiselect = true }) {
+                                if (ofd.ShowDialog() == DialogResult.OK) { txtPath.Text = string.Join("|", ofd.FileNames); loadThumbs(txtPath.Text); }
+                            }
+                        };
+                        if (row != null && i < _table.Columns.Count) {
+                            string paths = Convert.ToString(row[i]);
+                            txtPath.Text = paths; loadThumbs(paths);
+                        }
+                        panel.Controls.Add(thumbsPanel); panel.Controls.Add(btn); panel.Controls.Add(txtPath);
+                        editor = txtPath; dialog.Controls.Add(panel);
+                        currentY += 125;
+                    } else if (f.Options != null && f.Options.Length > 0) {
+                        var cbo = new ComboBox { Location = new Point(24, currentY + 21), Width = 470, Font = Font, DropDownStyle = ComboBoxStyle.DropDownList };
+                        cbo.Items.AddRange(f.Options);
+                        if (row != null && i < _table.Columns.Count) {
+                            string val = Convert.ToString(row[i]);
+                            if (cbo.Items.Contains(val)) cbo.SelectedItem = val;
+                        }
+                        if (cbo.SelectedIndex < 0 && cbo.Items.Count > 0) cbo.SelectedIndex = 0;
+                        editor = cbo; currentY += 62;
+                    } else {
+                        var txt = new TextBox { Location = new Point(24, currentY + 21), Width = 470, Font = Font };
+                        if (row != null && i < _table.Columns.Count) txt.Text = Convert.ToString(row[i]);
+                        editor = txt; currentY += 62;
+                    }
+                    dialog.Controls.Add(editor); editors[i] = editor;
                 }
+                dialog.ClientSize = new Size(520, Math.Max(240, currentY + 70));
                 var save = new Button { Text = "Lưu thay đổi", DialogResult = DialogResult.None, BackColor = _accent, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 36), Location = new Point(364, dialog.ClientSize.Height - 52) };
                 save.Click += (s, e) => {
                     for (int i = 0; i < _fields.Length; i++) {
