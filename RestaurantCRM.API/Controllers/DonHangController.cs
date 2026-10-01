@@ -35,7 +35,7 @@ namespace RestaurantCRM.API.Controllers
                 MaKhachHang = request.MaKhachHang,
                 DiaChiGiao = request.DiaChiGiao,
                 NgayDat = DateTime.Now,
-                TrangThai = "Pending", // Đang chờ xác nhận
+                TrangThai = "PendingConfirmation", // Đang chờ xác nhận
                 TongTienHang = 0,
                 TongThanhToan = 0
             };
@@ -58,6 +58,12 @@ namespace RestaurantCRM.API.Controllers
 
                     // Trừ tồn kho
                     monAn.SoLuong -= item.SoLuong;
+
+                    // Nếu số lượng về 0 (hoặc bé hơn 0) và không phải là hàng đã ngừng kinh doanh, tự động chuyển trạng thái thành hết hàng
+                    if (monAn.SoLuong <= 0 && monAn.TrangThai != "Discontinued")
+                    {
+                        monAn.TrangThai = "OutOfStock";
+                    }
 
                     var maChiTiet = "CT" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
                     var chiTiet = new ChiTietDonHang

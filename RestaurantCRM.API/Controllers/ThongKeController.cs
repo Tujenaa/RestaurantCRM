@@ -78,7 +78,7 @@ namespace RestaurantCRM.API.Controllers
             var query = await _context.ChiTietDonHangs
                 .Where(c => c.MaDonHangNavigation != null 
                             && (c.MaDonHangNavigation.TrangThai == "Completed" || c.MaDonHangNavigation.TrangThai == "Hoàn thành"))
-                .Select(c => new { c.MaMon, TenMon = c.MaMonNavigation.TenMon, c.SoLuong })
+                .Select(c => new { c.MaMon, TenMon = c.MaMonNavigation != null ? c.MaMonNavigation.TenMon : "Không xác định", c.SoLuong })
                 .ToListAsync();
 
             var monBanChay = query

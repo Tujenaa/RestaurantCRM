@@ -44,6 +44,19 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost]
         public async Task<ActionResult<MonAn>> PostMonAn(MonAn monAn)
         {
+            // Tự động điều chỉnh trạng thái dựa trên số lượng (nếu không phải là hàng đã ngừng kinh doanh)
+            if (monAn.TrangThai != "Discontinued")
+            {
+                if (monAn.SoLuong <= 0)
+                {
+                    monAn.TrangThai = "OutOfStock";
+                }
+                else if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
+                {
+                    monAn.TrangThai = "InStock";
+                }
+            }
+
             _context.MonAns.Add(monAn);
             try
             {
@@ -71,6 +84,19 @@ namespace RestaurantCRM.API.Controllers
             if (id != monAn.MaMon)
             {
                 return BadRequest("Mã món ăn không khớp.");
+            }
+
+            // Tự động điều chỉnh trạng thái dựa trên số lượng (nếu không phải là hàng đã ngừng kinh doanh)
+            if (monAn.TrangThai != "Discontinued")
+            {
+                if (monAn.SoLuong <= 0)
+                {
+                    monAn.TrangThai = "OutOfStock";
+                }
+                else if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
+                {
+                    monAn.TrangThai = "InStock";
+                }
             }
 
             _context.Entry(monAn).State = EntityState.Modified;

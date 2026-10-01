@@ -75,7 +75,7 @@ namespace RestaurantCRM.API.Controllers
 
             // Logic hoàn kho: Chỉ cộng lại số lượng nếu đơn vừa chuyển sang Hủy và trạng thái cũ là Pending hoặc Processing
             if ((request.TrangThaiMoi == "Cancelled" || request.TrangThaiMoi == "Đã hủy" || request.TrangThaiMoi == "Hủy") && 
-                (trangThaiCu == "Pending" || trangThaiCu == "Processing" || trangThaiCu == "Đang chờ xác nhận" || trangThaiCu == "Đang xử lý"))
+                (trangThaiCu == "Pending" || trangThaiCu == "Processing" || trangThaiCu == "PendingConfirmation" || trangThaiCu == "Preparing" || trangThaiCu == "Đang chờ xác nhận" || trangThaiCu == "Đang xử lý"))
             {
                 foreach (var chiTiet in donHang.ChiTietDonHangs)
                 {
@@ -83,6 +83,12 @@ namespace RestaurantCRM.API.Controllers
                     if (monAn != null && monAn.SoLuong.HasValue)
                     {
                         monAn.SoLuong += chiTiet.SoLuong;
+
+                        // Nếu hoàn lại kho làm số lượng > 0 và món đang ở trạng thái hết hàng (không phải Discontinued), mở lại InStock
+                        if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
+                        {
+                            monAn.TrangThai = "InStock";
+                        }
                     }
                 }
             }
