@@ -1,6 +1,6 @@
 ﻿-- ============================================
 -- CSDL: Hệ thống quản lý đặt món & CRM khách hàng
--- SQL Server
+-- SQL Server | Các cột trạng thái/loại đã được cố định bằng CHECK constraint
 -- ============================================
 
 CREATE DATABASE RestaurantCRM;
@@ -28,7 +28,7 @@ CREATE TABLE NHAN_VIEN (
     tenDangNhap NVARCHAR(50),
     matKhau NVARCHAR(100),
     hoTen NVARCHAR(100),
-    trangThai NVARCHAR(20)
+    trangThai NVARCHAR(20) CONSTRAINT CK_NHAN_VIEN_trangThai CHECK (trangThai IN ('Active', 'Inactive'))
 );
 
 CREATE TABLE KHACH_HANG (
@@ -40,7 +40,7 @@ CREATE TABLE KHACH_HANG (
     ngaySinh DATE,
     gioiTinh NVARCHAR(10),
     soThich NVARCHAR(255),
-    trangThai NVARCHAR(20)
+    trangThai NVARCHAR(20) CONSTRAINT CK_KHACH_HANG_trangThai CHECK (trangThai IN ('Active', 'Locked'))
 );
 
 -- 2. Thực đơn
@@ -56,7 +56,7 @@ CREATE TABLE MON_AN (
     moTa NVARCHAR(MAX),
     donGia FLOAT,
     soLuong INT,
-    trangThai NVARCHAR(20)
+    trangThai NVARCHAR(20) CONSTRAINT CK_MON_AN_trangThai CHECK (trangThai IN ('InStock', 'OutOfStock', 'Discontinued'))
 );
 
 CREATE TABLE HINH_ANH_MON_AN (
@@ -98,13 +98,13 @@ CREATE TABLE CHI_TIET_PHIEU_NHAP (
 CREATE TABLE CHUONG_TRINH_KHUYEN_MAI (
     maChuongTrinh VARCHAR(20) PRIMARY KEY,
     tenChuongTrinh NVARCHAR(150),
-    loaiKhuyenMai VARCHAR(20),
-    loaiGiam VARCHAR(20),
+    loaiKhuyenMai VARCHAR(20) CONSTRAINT CK_CHUONG_TRINH_KHUYEN_MAI_loaiKhuyenMai CHECK (loaiKhuyenMai IN ('VOUCHER', 'MON')),
+    loaiGiam VARCHAR(20) CONSTRAINT CK_CHUONG_TRINH_KHUYEN_MAI_loaiGiam CHECK (loaiGiam IN ('PHAN_TRAM', 'TIEN')),
     giaTriGiam FLOAT,
     giaTriDonToiThieu FLOAT,
     ngayBatDau DATE,
     ngayKetThuc DATE,
-    trangThai NVARCHAR(20)
+    trangThai NVARCHAR(20) CONSTRAINT CK_CHUONG_TRINH_KHUYEN_MAI_trangThai CHECK (trangThai IN ('Active', 'Inactive', 'Expired'))
 );
 
 CREATE TABLE CHI_TIET_KHUYEN_MAI_MON (
@@ -122,7 +122,7 @@ CREATE TABLE DON_HANG (
     maChuongTrinhVoucher VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
     diaChiGiao NVARCHAR(255),
     ngayDat DATETIME,
-    trangThai NVARCHAR(30),
+    trangThai NVARCHAR(30) CONSTRAINT CK_DON_HANG_trangThai CHECK (trangThai IN ('PendingConfirmation', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
     tongTienHang FLOAT,
     tienGiamVoucher FLOAT,
     tongThanhToan FLOAT
@@ -144,7 +144,7 @@ CREATE TABLE THANH_TOAN (
     maThanhToan VARCHAR(20) PRIMARY KEY,
     maDonHang VARCHAR(20) FOREIGN KEY REFERENCES DON_HANG(maDonHang),
     phuongThuc NVARCHAR(30),
-    trangThai NVARCHAR(20),
+    trangThai NVARCHAR(20) CONSTRAINT CK_THANH_TOAN_trangThai CHECK (trangThai IN ('Pending', 'Paid', 'Failed', 'Refunded')),
     ngayThanhToan DATETIME,
     soTien FLOAT
 );
@@ -162,7 +162,7 @@ CREATE TABLE DANH_GIA (
 CREATE TABLE LICH_SU_TRANG_THAI (
     maLichSu VARCHAR(20) PRIMARY KEY,
     maDonHang VARCHAR(20) FOREIGN KEY REFERENCES DON_HANG(maDonHang),
-    trangThai NVARCHAR(30),
+    trangThai NVARCHAR(30) CONSTRAINT CK_LICH_SU_TRANG_THAI_trangThai CHECK (trangThai IN ('PendingConfirmation', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
     thoiGian DATETIME,
     ghiChu NVARCHAR(255)
 );
@@ -175,14 +175,14 @@ CREATE TABLE PHAN_HOI (
     noiDung NVARCHAR(MAX),
     danhGia INT,
     ngayPhanHoi DATETIME,
-    trangThai NVARCHAR(20)
+    trangThai NVARCHAR(20) CONSTRAINT CK_PHAN_HOI_trangThai CHECK (trangThai IN ('Unresolved', 'Resolved'))
 );
 
 CREATE TABLE KHAO_SAT (
     maKhaoSat VARCHAR(20) PRIMARY KEY,
     maNhanVien VARCHAR(20) FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
     tieuDe NVARCHAR(200),
-    trangThai NVARCHAR(20),
+    trangThai NVARCHAR(20) CONSTRAINT CK_KHAO_SAT_trangThai CHECK (trangThai IN ('Draft', 'Open', 'Closed')),
     ngayTao DATETIME
 );
 
@@ -190,7 +190,7 @@ CREATE TABLE CAU_HOI_KHAO_SAT (
     maCauHoi VARCHAR(20) PRIMARY KEY,
     maKhaoSat VARCHAR(20) FOREIGN KEY REFERENCES KHAO_SAT(maKhaoSat),
     noiDungCauHoi NVARCHAR(500),
-    loaiCauHoi VARCHAR(20)
+    loaiCauHoi VARCHAR(20) CONSTRAINT CK_CAU_HOI_KHAO_SAT_loaiCauHoi CHECK (loaiCauHoi IN ('CHON_MOT', 'TU_DIEN'))
 );
 
 CREATE TABLE TUY_CHON_CAU_HOI (
