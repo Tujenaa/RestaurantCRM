@@ -3,25 +3,17 @@ using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
 
-public partial class PhanHoi
+public partial class TraLoiDanhGia
 {
-    public string MaPhanHoi { get; set; } = null!;
-
+    public string MaTraLoi { get; set; } = null!;
+    public string? MaDanhGia { get; set; }
+    public string? NguoiGui { get; set; }
     public string? MaKhachHang { get; set; }
-
     public string? MaNhanVien { get; set; }
-
     public string? NoiDung { get; set; }
+    public DateTime? NgayGui { get; set; }
 
-    public int? DanhGia { get; set; }
-
-    public DateTime? NgayPhanHoi { get; set; }
-
-    public string? TrangThai { get; set; }
-
+    public virtual DanhGia? MaDanhGiaNavigation { get; set; }
     public virtual KhachHang? MaKhachHangNavigation { get; set; }
-
     public virtual NhanVien? MaNhanVienNavigation { get; set; }
-
-    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHois { get; set; } = new List<TraLoiPhanHoi>();
 }

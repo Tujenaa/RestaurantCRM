@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.API.Models;
@@ -59,6 +59,10 @@ public partial class RestaurantCRMContext : DbContext
     public virtual DbSet<TuyChonCauHoi> TuyChonCauHois { get; set; }
 
     public virtual DbSet<VaiTro> VaiTros { get; set; }
+
+    public virtual DbSet<TraLoiDanhGia> TraLoiDanhGias { get; set; }
+
+    public virtual DbSet<TraLoiPhanHoi> TraLoiPhanHois { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -252,6 +256,7 @@ public partial class RestaurantCRMContext : DbContext
             entity.Property(e => e.TenChuongTrinh)
                 .HasMaxLength(150)
                 .HasColumnName("tenChuongTrinh");
+            entity.Property(e => e.SoLuong).HasColumnName("soLuong");
             entity.Property(e => e.TrangThai)
                 .HasMaxLength(20)
                 .HasColumnName("trangThai");
@@ -783,6 +788,94 @@ public partial class RestaurantCRMContext : DbContext
             entity.Property(e => e.TenVaiTro)
                 .HasMaxLength(100)
                 .HasColumnName("tenVaiTro");
+        });
+
+        modelBuilder.Entity<TraLoiDanhGia>(entity =>
+        {
+            entity.HasKey(e => e.MaTraLoi).HasName("PK__TRA_LOI_DANH_GIA");
+
+            entity.ToTable("TRA_LOI_DANH_GIA");
+
+            entity.Property(e => e.MaTraLoi)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maTraLoi");
+            entity.Property(e => e.MaDanhGia)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maDanhGia");
+            entity.Property(e => e.NguoiGui)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("nguoiGui");
+            entity.Property(e => e.MaKhachHang)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maKhachHang");
+            entity.Property(e => e.MaNhanVien)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maNhanVien");
+            entity.Property(e => e.NoiDung).HasColumnName("noiDung");
+            entity.Property(e => e.NgayGui)
+                .HasColumnType("datetime")
+                .HasColumnName("ngayGui");
+
+            entity.HasOne(d => d.MaDanhGiaNavigation).WithMany(p => p.TraLoiDanhGias)
+                .HasForeignKey(d => d.MaDanhGia)
+                .HasConstraintName("FK__TRA_LOI_DANH_GIA__maDanhGia");
+
+            entity.HasOne(d => d.MaKhachHangNavigation).WithMany(p => p.TraLoiDanhGias)
+                .HasForeignKey(d => d.MaKhachHang)
+                .HasConstraintName("FK__TRA_LOI_DANH_GIA__maKhachHang");
+
+            entity.HasOne(d => d.MaNhanVienNavigation).WithMany(p => p.TraLoiDanhGias)
+                .HasForeignKey(d => d.MaNhanVien)
+                .HasConstraintName("FK__TRA_LOI_DANH_GIA__maNhanVien");
+        });
+
+        modelBuilder.Entity<TraLoiPhanHoi>(entity =>
+        {
+            entity.HasKey(e => e.MaTraLoi).HasName("PK__TRA_LOI_PHAN_HOI");
+
+            entity.ToTable("TRA_LOI_PHAN_HOI");
+
+            entity.Property(e => e.MaTraLoi)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maTraLoi");
+            entity.Property(e => e.MaPhanHoi)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maPhanHoi");
+            entity.Property(e => e.NguoiGui)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("nguoiGui");
+            entity.Property(e => e.MaKhachHang)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maKhachHang");
+            entity.Property(e => e.MaNhanVien)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maNhanVien");
+            entity.Property(e => e.NoiDung).HasColumnName("noiDung");
+            entity.Property(e => e.NgayGui)
+                .HasColumnType("datetime")
+                .HasColumnName("ngayGui");
+
+            entity.HasOne(d => d.MaPhanHoiNavigation).WithMany(p => p.TraLoiPhanHois)
+                .HasForeignKey(d => d.MaPhanHoi)
+                .HasConstraintName("FK__TRA_LOI_PHAN_HOI__maPhanHoi");
+
+            entity.HasOne(d => d.MaKhachHangNavigation).WithMany(p => p.TraLoiPhanHois)
+                .HasForeignKey(d => d.MaKhachHang)
+                .HasConstraintName("FK__TRA_LOI_PHAN_HOI__maKhachHang");
+
+            entity.HasOne(d => d.MaNhanVienNavigation).WithMany(p => p.TraLoiPhanHois)
+                .HasForeignKey(d => d.MaNhanVien)
+                .HasConstraintName("FK__TRA_LOI_PHAN_HOI__maNhanVien");
         });
 
         OnModelCreatingPartial(modelBuilder);

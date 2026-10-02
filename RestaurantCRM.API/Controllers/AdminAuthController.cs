@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.API.Data;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Helpers;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -22,9 +23,9 @@ namespace RestaurantCRM.API.Controllers
         {
             // 1. Kiểm tra trong bảng TaiKhoanAdmin trước (Quyền cao nhất)
             var admin = await _context.TaiKhoanAdmins
-                .FirstOrDefaultAsync(a => a.TenDangNhap == request.TenDangNhap && a.MatKhau == request.MatKhau);
+                .FirstOrDefaultAsync(a => a.TenDangNhap == request.TenDangNhap);
 
-            if (admin != null)
+            if (admin != null && PasswordVerifier.Verify(request.MatKhau, admin.MatKhau))
             {
                 // TODO: Thay thế bằng JWT thật
                 return Ok(new
@@ -44,9 +45,9 @@ namespace RestaurantCRM.API.Controllers
             // 2. Nếu không phải Admin, kiểm tra trong bảng NhanVien
             var nhanVien = await _context.NhanViens
                 .Include(n => n.MaVaiTroNavigation)
-                .FirstOrDefaultAsync(n => n.TenDangNhap == request.TenDangNhap && n.MatKhau == request.MatKhau);
+                .FirstOrDefaultAsync(n => n.TenDangNhap == request.TenDangNhap);
 
-            if (nhanVien != null)
+            if (nhanVien != null && PasswordVerifier.Verify(request.MatKhau, nhanVien.MatKhau))
             {
                 if (nhanVien.TrangThai != "Active")
                 {
