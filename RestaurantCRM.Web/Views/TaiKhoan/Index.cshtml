@@ -5,6 +5,7 @@
     var activeTab = (ViewBag.Tab as string) ?? "profile";
 }
 <div class="page-intro"><h1 class="page-title">Tài khoản của bạn</h1><p>Quản lý thông tin và trải nghiệm tại Lẩu Phố.</p></div>
+@if (TempData["ThongBao"] is string message) { <p class="notice" role="alert">@message</p> }
 <div class="account-layout" data-account-root data-current-tab="@activeTab">
     <aside class="side-menu">
         <div class="user-mini"><div class="avatar">NA</div><div><strong>Nguyễn An</strong><div class="muted" class="muted account-caption">Thành viên Lẩu Phố</div></div></div>
@@ -31,7 +32,7 @@
                 <div class="field"><label for="regName">Họ và tên *</label><input id="regName" name="hoTen" required maxlength="100" placeholder="Nguyễn Văn A" /></div>
                 <div class="two"><div class="field"><label for="regPhone">Số điện thoại *</label><input id="regPhone" name="soDienThoai" required type="tel" placeholder="0901 234 567" /></div><div class="field"><label for="regEmail">Email</label><input id="regEmail" name="email" type="email" placeholder="ban@email.com" /></div></div>
                 <div class="field"><label for="regPassword">Mật khẩu *</label><input id="regPassword" name="matKhau" type="password" required minlength="8" placeholder="Ít nhất 8 ký tự" /></div><button class="btn" type="submit">Tạo tài khoản</button>
-            </form><p class="muted" class="muted account-caption">Form demo, chưa tạo tài khoản trên máy chủ.</p>
+            </form><p class="muted account-caption">Tài khoản mới sẽ được tạo trên hệ thống.</p>
         </div>
         <div data-account-panel="addresses" hidden="@(activeTab != "addresses")"><h3>Địa chỉ giao hàng</h3><div class="notice">📍 Nhà riêng · 12 Lê Lợi, Quận 1, TP. Hồ Chí Minh<br /><small>Người nhận: Nguyễn An · 0901 234 567</small></div><button class="btn" type="button" data-toast="Biểu mẫu thêm địa chỉ mới đang ở chế độ demo">＋ Thêm địa chỉ mới</button></div>
     </section>

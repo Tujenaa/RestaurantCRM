@@ -24,6 +24,7 @@ namespace RestaurantCRM.API.Controllers
             var danhGias = await _context.DanhGias
                 .Where(d => d.MaMon == maMon)
                 .Include(d => d.MaKhachHangNavigation)
+                .Include(d => d.TraLoiDanhGias)
                 .OrderByDescending(d => d.NgayDanhGia)
                 .Select(d => new
                 {
@@ -31,7 +32,16 @@ namespace RestaurantCRM.API.Controllers
                     d.SoSao,
                     d.NoiDung,
                     d.NgayDanhGia,
-                    TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách ẩn danh"
+                    TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
+                    HoiThoai = d.TraLoiDanhGias.OrderBy(t => t.NgayGui).Select(t => new
+                    {
+                        t.MaTraLoi,
+                        t.NguoiGui,
+                        t.NoiDung,
+                        t.NgayGui,
+                        NguoiTraLoi = t.NguoiGui == "KhachHang" && t.MaKhachHangNavigation != null ? t.MaKhachHangNavigation.HoTen : 
+                                      (t.NguoiGui == "NhanVien" && t.MaNhanVienNavigation != null ? t.MaNhanVienNavigation.HoTen : "Ẩn danh")
+                    })
                 })
                 .ToListAsync();
 
@@ -62,6 +72,33 @@ namespace RestaurantCRM.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đánh giá thành công", maDanhGia = danhGia.MaDanhGia });
+        }
+
+        // POST: api/DanhGia/{id}/Reply - Khách hàng phản hồi lại một đánh giá
+        [HttpPost("{id}/Reply")]
+        public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
+        {
+            var danhGia = await _context.DanhGias.FindAsync(id);
+            if (danhGia == null)
+            {
+                return NotFound("Không tìm thấy đánh giá.");
+            }
+
+            var traLoi = new TraLoiDanhGia
+            {
+                MaTraLoi = "TL" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
+                MaDanhGia = id,
+                NguoiGui = "KhachHang",
+                MaKhachHang = request.NguoiGuiId,
+                MaNhanVien = null,
+                NoiDung = request.NoiDung,
+                NgayGui = DateTime.Now
+            };
+
+            _context.TraLoiDanhGias.Add(traLoi);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Gửi phản hồi thành công", maTraLoi = traLoi.MaTraLoi });
         }
     }
 }

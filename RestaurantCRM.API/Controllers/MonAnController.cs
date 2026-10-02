@@ -50,75 +50,7 @@ namespace RestaurantCRM.API.Controllers
             return monAn;
         }
 
-        // POST: api/MonAn - Thêm một món ăn mới.
-        [HttpPost]
-        public async Task<ActionResult<MonAn>> PostMonAn(MonAn monAn)
-        {
-            _context.MonAns.Add(monAn);
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                if (MonAnExists(monAn.MaMon))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
-            }
 
-            return CreatedAtAction(nameof(GetMonAn), new { id = monAn.MaMon }, monAn);
-        }
-
-        // PUT: api/MonAn/{id} - Cập nhật thông tin món ăn.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutMonAn(string id, MonAn monAn)
-        {
-            if (id != monAn.MaMon)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(monAn).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!MonAnExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // DELETE: api/MonAn/{id} - Xóa một món ăn.
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMonAn(string id)
-        {
-            var monAn = await _context.MonAns.FindAsync(id);
-            if (monAn == null)
-            {
-                return NotFound();
-            }
-
-            _context.MonAns.Remove(monAn);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
 
         private bool MonAnExists(string id)
         {

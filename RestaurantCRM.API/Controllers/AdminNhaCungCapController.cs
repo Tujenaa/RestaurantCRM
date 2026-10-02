@@ -1,0 +1,107 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RestaurantCRM.API.Data;
+using RestaurantCRM.API.Models;
+
+namespace RestaurantCRM.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AdminNhaCungCapController : ControllerBase
+    {
+        private readonly RestaurantCRMContext _context;
+
+        public AdminNhaCungCapController(RestaurantCRMContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/AdminNhaCungCap - Lấy danh sách nhà cung cấp
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var nhaCungCaps = await _context.NhaCungCaps.ToListAsync();
+            return Ok(nhaCungCaps);
+        }
+
+        // GET: api/AdminNhaCungCap/{id} - Lấy chi tiết nhà cung cấp
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var nhaCungCap = await _context.NhaCungCaps.FindAsync(id);
+            if (nhaCungCap == null)
+            {
+                return NotFound("Không tìm thấy nhà cung cấp.");
+            }
+            return Ok(nhaCungCap);
+        }
+
+        // POST: api/AdminNhaCungCap - Thêm nhà cung cấp mới
+        [HttpPost]
+        public async Task<IActionResult> Create(NhaCungCap nhaCungCap)
+        {
+            nhaCungCap.MaNhaCungCap = "NCC" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper();
+            _context.NhaCungCaps.Add(nhaCungCap);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetById), new { id = nhaCungCap.MaNhaCungCap }, nhaCungCap);
+        }
+
+        // PUT: api/AdminNhaCungCap/{id} - Cập nhật nhà cung cấp
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(string id, NhaCungCap nhaCungCap)
+        {
+            if (id != nhaCungCap.MaNhaCungCap)
+            {
+                return BadRequest("ID không khớp.");
+            }
+
+            _context.Entry(nhaCungCap).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!NhaCungCapExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/AdminNhaCungCap/{id} - Xóa nhà cung cấp
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var nhaCungCap = await _context.NhaCungCaps.FindAsync(id);
+            if (nhaCungCap == null)
+            {
+                return NotFound();
+            }
+
+            var hasPhieuNhap = await _context.PhieuNhapHangs.AnyAsync(p => p.MaNhaCungCap == id);
+            if (hasPhieuNhap)
+            {
+                return BadRequest("Không thể xóa nhà cung cấp này vì đã có lịch sử nhập hàng.");
+            }
+
+            _context.NhaCungCaps.Remove(nhaCungCap);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Xóa thành công" });
+        }
+
+        private bool NhaCungCapExists(string id)
+        {
+            return _context.NhaCungCaps.Any(e => e.MaNhaCungCap == id);
+        }
+    }
+}

@@ -3,6 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.API.Data;
 using RestaurantCRM.API.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Helpers;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -38,7 +43,7 @@ namespace RestaurantCRM.API.Controllers
                 HoTen = request.HoTen,
                 SoDienThoai = request.SoDienThoai,
                 Email = request.Email,
-                MatKhau = request.MatKhau, // TODO: Cần Hash password khi đưa vào thực tế
+                MatKhau = BCrypt.Net.BCrypt.HashPassword(request.MatKhau),
                 TrangThai = "Active"
             };
 
@@ -53,10 +58,9 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> DangNhap(LoginRequest request)
         {
             var khachHang = await _context.KhachHangs.FirstOrDefaultAsync(k =>
-                (k.Email == request.EmailOrPhone || k.SoDienThoai == request.EmailOrPhone) &&
-                k.MatKhau == request.MatKhau);
+                (k.Email == request.EmailOrPhone || k.SoDienThoai == request.EmailOrPhone));
 
-            if (khachHang == null)
+            if (khachHang == null || !PasswordVerifier.Verify(request.MatKhau, khachHang.MatKhau))
             {
                 return Unauthorized("Email/Số điện thoại hoặc mật khẩu không đúng.");
             }
@@ -66,13 +70,26 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Tài khoản đã bị khóa.");
             }
 
-            // TODO: Tạo JWT Token thật khi cài đặt JWT Auth
-            var fakeToken = "jwt_token_placeholder_for_" + khachHang.MaKhachHang;
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes("Chuoi_Bao_Mat_Bi_Mat_Cua_Nha_Hang_CRM_123456");
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, khachHang.MaKhachHang),
+                    new Claim(ClaimTypes.Name, khachHang.HoTen ?? ""),
+                    new Claim(ClaimTypes.Role, "KhachHang")
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var jwtToken = tokenHandler.WriteToken(token);
 
             return Ok(new
             {
                 message = "Đăng nhập thành công",
-                token = fakeToken,
+                token = jwtToken,
                 khachHang = new
                 {
                     khachHang.MaKhachHang,
@@ -111,7 +128,38 @@ namespace RestaurantCRM.API.Controllers
 
         // PUT: api/KhachHang/ThongTin/{id} - Cập nhật thông tin cá nhân khách hàng
         [HttpPut("ThongTin/{id}")]
-        public async Task<IActionResult> CapNhatThongTin(string id, KhachHang updatedKhachHang)
+        public async Task<IActionResult> CapNhatThongTin(string id, UpdateProfileRequest request)
+        {
+            if (!string.IsNullOrEmpty(request.Email) && await _context.KhachHangs.AnyAsync(k => k.Email == request.Email && k.MaKhachHang != id))
+            {
+                return BadRequest("Email đã được sử dụng bởi người khác.");
+            }
+            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _context.KhachHangs.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && k.MaKhachHang != id))
+            {
+                return BadRequest("Số điện thoại đã được sử dụng bởi người khác.");
+            }
+
+            var khachHang = await _context.KhachHangs.FindAsync(id);
+            if (khachHang == null)
+            {
+                return NotFound("Không tìm thấy thông tin khách hàng.");
+            }
+
+            khachHang.HoTen = request.HoTen;
+            khachHang.Email = request.Email;
+            khachHang.SoDienThoai = request.SoDienThoai;
+            khachHang.NgaySinh = request.NgaySinh;
+            khachHang.GioiTinh = request.GioiTinh;
+            khachHang.SoThich = request.SoThich;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Cập nhật thông tin thành công.");
+        }
+
+        // PUT: api/KhachHang/DoiMatKhau/{id} - Đổi mật khẩu
+        [HttpPut("DoiMatKhau/{id}")]
+        public async Task<IActionResult> DoiMatKhau(string id, ChangePasswordRequest request)
         {
             var khachHang = await _context.KhachHangs.FindAsync(id);
             if (khachHang == null)
@@ -119,16 +167,15 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy thông tin khách hàng.");
             }
 
-            khachHang.HoTen = updatedKhachHang.HoTen;
-            khachHang.Email = updatedKhachHang.Email;
-            khachHang.SoDienThoai = updatedKhachHang.SoDienThoai;
-            khachHang.NgaySinh = updatedKhachHang.NgaySinh;
-            khachHang.GioiTinh = updatedKhachHang.GioiTinh;
-            khachHang.SoThich = updatedKhachHang.SoThich;
+            if (!BCrypt.Net.BCrypt.Verify(request.MatKhauCu, khachHang.MatKhau))
+            {
+                return BadRequest("Mật khẩu cũ không chính xác.");
+            }
 
+            khachHang.MatKhau = BCrypt.Net.BCrypt.HashPassword(request.MatKhauMoi);
             await _context.SaveChangesAsync();
 
-            return Ok("Cập nhật thông tin thành công.");
+            return Ok("Đổi mật khẩu thành công.");
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
@@ -20,6 +20,8 @@ public partial class ChuongTrinhKhuyenMai
     public DateOnly? NgayBatDau { get; set; }
 
     public DateOnly? NgayKetThuc { get; set; }
+
+    public int? SoLuong { get; set; }
 
     public string? TrangThai { get; set; }
 

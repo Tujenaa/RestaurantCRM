@@ -4,6 +4,7 @@ namespace RestaurantCRM.API.DTOs
     {
         public string MaKhachHang { get; set; } = null!;
         public string? DiaChiGiao { get; set; }
+        public string? MaChuongTrinhVoucher { get; set; }
         public List<OrderItemRequest> Items { get; set; } = new List<OrderItemRequest>();
     }
 

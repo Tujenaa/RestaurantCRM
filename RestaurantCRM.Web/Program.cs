@@ -14,6 +14,9 @@ builder.Services.AddSingleton<RestaurantCRM.Web.Services.MonAnService>();
 builder.Services.AddScoped<RestaurantCRM.Web.Services.GioHangService>();
 builder.Services.AddSingleton<RestaurantCRM.Web.Services.DonHangService>();
 builder.Services.AddSingleton<RestaurantCRM.Web.Services.PhanHoiService>();
+builder.Services.AddHttpClient("ApiClient", c => {
+    c.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5275");
+});
 
 var app = builder.Build();
 
