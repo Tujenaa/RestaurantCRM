@@ -125,12 +125,12 @@ INSERT INTO CHI_TIET_PHIEU_NHAP (maChiTiet, maPhieuNhap, maMon, soLuong, donGiaN
 -- loaiKhuyenMai: VOUCHER (giảm trên đơn) | MON (giảm trên món)
 -- loaiGiam: PHAN_TRAM | TIEN
 INSERT INTO CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, loaiKhuyenMai, loaiGiam, giaTriGiam, giaTriDonToiThieu, ngayBatDau, ngayKetThuc, soLuong, trangThai) VALUES
-('KM01', N'Giảm 10% cho đơn từ 300.000đ', 'VOUCHER', 'PHAN_TRAM', 10, 300000, '2026-08-01', '2026-12-31',2, 'Active'),
-('KM02', N'Giảm 40.000đ cho đơn từ 250.000đ', 'VOUCHER', 'TIEN', 40000, 250000, '2026-08-01', '2026-12-31',1, 'Active'),
-('KM03', N'Trà & nước ép giảm 20%', 'MON', 'PHAN_TRAM', 20, 0, '2026-08-01', '2026-10-31',0, 'Active'),
-('KM04', N'Tráng miệng giảm 15%', 'MON', 'PHAN_TRAM', 15, 0, '2026-08-01', '2026-12-31',19, 'Active'),
-('KM05', N'Ưu đãi nhóm đông giảm 15% đơn từ 700.000đ', 'VOUCHER', 'PHAN_TRAM', 15, 700000, '2026-08-01', '2026-12-31', 22,'Active'),
-('KM06', N'Bò Mỹ thái lát giảm 20.000đ', 'MON', 'TIEN', 20000, 0, '2026-08-01', '2026-11-30',10, 'Active');
+('KM01', N'Giảm 10% cho đơn từ 300.000đ', 'VOUCHER', 'PHAN_TRAM', 10, 300000, '2026-08-01', '2026-12-31', 200, 'Active'),
+('KM02', N'Giảm 40.000đ cho đơn từ 250.000đ', 'VOUCHER', 'TIEN', 40000, 250000, '2026-08-01', '2026-12-31', 150, 'Active'),
+('KM03', N'Trà & nước ép giảm 20%', 'MON', 'PHAN_TRAM', 20, 0, '2026-08-01', '2026-10-31', 100, 'Active'),
+('KM04', N'Tráng miệng giảm 15%', 'MON', 'PHAN_TRAM', 15, 0, '2026-08-01', '2026-12-31', 100, 'Active'),
+('KM05', N'Ưu đãi nhóm đông giảm 15% đơn từ 700.000đ', 'VOUCHER', 'PHAN_TRAM', 15, 700000, '2026-08-01', '2026-12-31', 50, 'Active'),
+('KM06', N'Bò Mỹ thái lát giảm 20.000đ', 'MON', 'TIEN', 20000, 0, '2026-08-01', '2026-11-30', 100, 'Active');
 
 INSERT INTO CHI_TIET_KHUYEN_MAI_MON (maChiTietKM, maChuongTrinh, maMon, soLuongApDung) VALUES
 ('CTKM01', 'KM03', 'M13', 5),
@@ -139,20 +139,19 @@ INSERT INTO CHI_TIET_KHUYEN_MAI_MON (maChiTietKM, maChuongTrinh, maMon, soLuongA
 ('CTKM04', 'KM06', 'M05', 5);
 
 -- 5. Đơn hàng
--- maNhanVien = NULL: khách tự đặt online, chưa có nhân viên tiếp nhận
 INSERT INTO DON_HANG (maDonHang, maKhachHang, maNhanVien, maChuongTrinhVoucher, diaChiGiao, ngayDat, trangThai, tongTienHang, tienGiamVoucher, tongThanhToan) VALUES
 ('DH01', 'KH01', 'NV02', 'KM01', N'25 Lê Lợi, Quận 1, TP.HCM', '2026-09-01T11:30:00', 'Completed', 344000, 34400, 309600),
 ('DH02', 'KH02', 'NV02', 'KM02', N'102 Cách Mạng Tháng 8, Quận 3, TP.HCM', '2026-09-03T18:45:00', 'Completed', 320000, 40000, 280000),
 ('DH03', 'KH03', 'NV03', 'KM01', N'45 Nguyễn Trãi, Quận 5, TP.HCM', '2026-09-05T19:10:00', 'Completed', 569500, 56950, 512550),
 ('DH04', 'KH04', 'NV02', 'KM05', N'88 Phan Xích Long, Quận Phú Nhuận, TP.HCM', '2026-09-08T12:00:00', 'Completed', 894000, 134100, 759900),
 ('DH05', 'KH05', 'NV03', NULL, N'17 Lý Thường Kiệt, Quận 10, TP.HCM', '2026-09-10T18:20:00', 'Completed', 245000, 0, 245000),
-('DH06', 'KH06', NULL, 'KM02', N'9 Nguyễn Thị Minh Khai, Quận 3, TP.HCM', '2026-09-29T19:00:00', 'Delivering', 361500, 40000, 321500),
+('DH06', 'KH06', 'NV06', 'KM02', N'9 Nguyễn Thị Minh Khai, Quận 3, TP.HCM', '2026-09-29T19:00:00', 'Delivering', 361500, 40000, 321500),
 ('DH07', 'KH07', 'NV03', 'KM01', N'63 Võ Văn Tần, Quận 3, TP.HCM', '2026-09-15T20:00:00', 'Completed', 580000, 58000, 522000),
-('DH08', 'KH08', NULL, NULL, N'31 Trần Hưng Đạo, Quận 1, TP.HCM', '2026-09-18T10:15:00', 'Cancelled', 202000, 0, 202000),
+('DH08', 'KH08', 'NV01', NULL, N'31 Trần Hưng Đạo, Quận 1, TP.HCM', '2026-09-18T10:15:00', 'Cancelled', 202000, 0, 202000),
 ('DH09', 'KH09', 'NV02', 'KM05', N'120 Hoàng Văn Thụ, Quận Tân Bình, TP.HCM', '2026-09-20T19:30:00', 'Completed', 984000, 147600, 836400),
 ('DH10', 'KH10', 'NV02', 'KM02', N'54 Điện Biên Phủ, Quận Bình Thạnh, TP.HCM', '2026-09-22T12:40:00', 'Completed', 290000, 40000, 250000),
 ('DH11', 'KH01', 'NV03', NULL, N'25 Lê Lợi, Quận 1, TP.HCM', '2026-09-30T11:00:00', 'Preparing', 249750, 0, 249750),
-('DH12', 'KH11', NULL, 'KM01', N'14 Nguyễn Đình Chiểu, Quận 3, TP.HCM', '2026-09-30T11:20:00', 'PendingConfirmation', 460000, 46000, 414000);
+('DH12', 'KH11', 'NV01', 'KM01', N'14 Nguyễn Đình Chiểu, Quận 3, TP.HCM', '2026-09-30T11:20:00', 'Pending', 460000, 46000, 414000);
 
 INSERT INTO CHI_TIET_DON_HANG (maChiTiet, maDonHang, maMon, maChuongTrinhKM, soLuong, donGiaGoc, tienGiamMon, donGiaSauGiam, thanhTien) VALUES
 -- DH01
@@ -240,37 +239,47 @@ INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maDonHang, maMon, soSao, noiDung, 
 
 INSERT INTO LICH_SU_TRANG_THAI (maLichSu, maDonHang, trangThai, thoiGian, ghiChu) VALUES
 ('LS01', 'DH01', 'Pending', '2026-09-01T11:30:00', N'Khách đặt món online'),
-('LS02', 'DH01', 'Preparing', '2026-09-01T11:35:00', N'Bếp đã nhận đơn'),
-('LS03', 'DH01', 'Completed', '2026-09-01T12:15:00', N'Giao hàng thành công'),
-('LS04', 'DH02', 'Pending', '2026-09-03T18:45:00', N'Khách đặt món tại quầy'),
-('LS05', 'DH02', 'Preparing', '2026-09-03T18:50:00', N'Bếp đã nhận đơn'),
-('LS06', 'DH02', 'Completed', '2026-09-03T19:30:00', N'Khách đã dùng bữa và thanh toán'),
-('LS07', 'DH03', 'Pending', '2026-09-05T19:10:00', N'Khách đặt món online'),
-('LS08', 'DH03', 'Preparing', '2026-09-05T19:15:00', N'Bếp đã nhận đơn'),
-('LS09', 'DH03', 'Completed', '2026-09-05T20:05:00', N'Giao hàng thành công'),
-('LS10', 'DH04', 'Pending', '2026-09-08T12:00:00', N'Khách đặt món online'),
-('LS11', 'DH04', 'Preparing', '2026-09-08T12:10:00', N'Bếp đã nhận đơn'),
-('LS12', 'DH04', 'Completed', '2026-09-08T13:00:00', N'Giao hàng thành công'),
-('LS13', 'DH05', 'Pending', '2026-09-10T18:20:00', N'Khách đặt món tại quầy'),
-('LS14', 'DH05', 'Preparing', '2026-09-10T18:25:00', N'Bếp đã nhận đơn'),
-('LS15', 'DH05', 'Completed', '2026-09-10T19:00:00', N'Khách đã dùng bữa và thanh toán'),
-('LS16', 'DH06', 'Pending', '2026-09-29T19:00:00', N'Khách đặt món online'),
-('LS17', 'DH06', 'Preparing', '2026-09-29T19:10:00', N'Bếp đã nhận đơn'),
-('LS18', 'DH06', 'Delivering', '2026-09-29T19:40:00', N'Shipper đang giao đến khách'),
-('LS19', 'DH07', 'Pending', '2026-09-15T20:00:00', N'Khách đặt món online'),
-('LS20', 'DH07', 'Preparing', '2026-09-15T20:10:00', N'Bếp đã nhận đơn'),
-('LS21', 'DH07', 'Completed', '2026-09-15T21:00:00', N'Giao hàng thành công'),
-('LS22', 'DH08', 'Pending', '2026-09-18T10:15:00', N'Khách đặt món online'),
-('LS23', 'DH08', 'Cancelled', '2026-09-18T10:20:00', N'Khách yêu cầu hủy, đã hoàn tiền'),
-('LS24', 'DH09', 'Pending', '2026-09-20T19:30:00', N'Khách đặt món tại bàn'),
-('LS25', 'DH09', 'Preparing', '2026-09-20T19:35:00', N'Bếp đã nhận đơn'),
-('LS26', 'DH09', 'Completed', '2026-09-20T20:30:00', N'Khách đã dùng bữa và thanh toán'),
-('LS27', 'DH10', 'Pending', '2026-09-22T12:40:00', N'Khách đặt món online'),
-('LS28', 'DH10', 'Preparing', '2026-09-22T12:45:00', N'Bếp đã nhận đơn'),
-('LS29', 'DH10', 'Completed', '2026-09-22T13:20:00', N'Giao hàng thành công'),
-('LS30', 'DH11', 'Pending', '2026-09-30T11:00:00', N'Khách đặt món online'),
-('LS31', 'DH11', 'Preparing', '2026-09-30T11:10:00', N'Bếp đã nhận đơn'),
-('LS32', 'DH12', 'Pending', '2026-09-30T11:20:00', N'Đơn mới, chờ nhân viên xác nhận');
+('LS02', 'DH01', 'Confirmed', '2026-09-01T11:33:00', N'Nhân viên đã xác nhận đơn'),
+('LS03', 'DH01', 'Preparing', '2026-09-01T11:35:00', N'Bếp đã nhận đơn'),
+('LS04', 'DH01', 'Completed', '2026-09-01T12:15:00', N'Giao hàng thành công'),
+('LS05', 'DH02', 'Pending', '2026-09-03T18:45:00', N'Khách đặt món tại quầy'),
+('LS06', 'DH02', 'Confirmed', '2026-09-03T18:48:00', N'Nhân viên đã xác nhận đơn'),
+('LS07', 'DH02', 'Preparing', '2026-09-03T18:50:00', N'Bếp đã nhận đơn'),
+('LS08', 'DH02', 'Completed', '2026-09-03T19:30:00', N'Khách đã dùng bữa và thanh toán'),
+('LS09', 'DH03', 'Pending', '2026-09-05T19:10:00', N'Khách đặt món online'),
+('LS10', 'DH03', 'Confirmed', '2026-09-05T19:13:00', N'Nhân viên đã xác nhận đơn'),
+('LS11', 'DH03', 'Preparing', '2026-09-05T19:15:00', N'Bếp đã nhận đơn'),
+('LS12', 'DH03', 'Completed', '2026-09-05T20:05:00', N'Giao hàng thành công'),
+('LS13', 'DH04', 'Pending', '2026-09-08T12:00:00', N'Khách đặt món online'),
+('LS14', 'DH04', 'Confirmed', '2026-09-08T12:08:00', N'Nhân viên đã xác nhận đơn'),
+('LS15', 'DH04', 'Preparing', '2026-09-08T12:10:00', N'Bếp đã nhận đơn'),
+('LS16', 'DH04', 'Completed', '2026-09-08T13:00:00', N'Giao hàng thành công'),
+('LS17', 'DH05', 'Pending', '2026-09-10T18:20:00', N'Khách đặt món tại quầy'),
+('LS18', 'DH05', 'Confirmed', '2026-09-10T18:23:00', N'Nhân viên đã xác nhận đơn'),
+('LS19', 'DH05', 'Preparing', '2026-09-10T18:25:00', N'Bếp đã nhận đơn'),
+('LS20', 'DH05', 'Completed', '2026-09-10T19:00:00', N'Khách đã dùng bữa và thanh toán'),
+('LS21', 'DH06', 'Pending', '2026-09-29T19:00:00', N'Khách đặt món online'),
+('LS22', 'DH06', 'Confirmed', '2026-09-29T19:08:00', N'Nhân viên đã xác nhận đơn'),
+('LS23', 'DH06', 'Preparing', '2026-09-29T19:10:00', N'Bếp đã nhận đơn'),
+('LS24', 'DH06', 'Delivering', '2026-09-29T19:40:00', N'Shipper đang giao đến khách'),
+('LS25', 'DH07', 'Pending', '2026-09-15T20:00:00', N'Khách đặt món online'),
+('LS26', 'DH07', 'Confirmed', '2026-09-15T20:08:00', N'Nhân viên đã xác nhận đơn'),
+('LS27', 'DH07', 'Preparing', '2026-09-15T20:10:00', N'Bếp đã nhận đơn'),
+('LS28', 'DH07', 'Completed', '2026-09-15T21:00:00', N'Giao hàng thành công'),
+('LS29', 'DH08', 'Pending', '2026-09-18T10:15:00', N'Khách đặt món online'),
+('LS30', 'DH08', 'Cancelled', '2026-09-18T10:20:00', N'Khách yêu cầu hủy, đã hoàn tiền'),
+('LS31', 'DH09', 'Pending', '2026-09-20T19:30:00', N'Khách đặt món tại bàn'),
+('LS32', 'DH09', 'Confirmed', '2026-09-20T19:33:00', N'Nhân viên đã xác nhận đơn'),
+('LS33', 'DH09', 'Preparing', '2026-09-20T19:35:00', N'Bếp đã nhận đơn'),
+('LS34', 'DH09', 'Completed', '2026-09-20T20:30:00', N'Khách đã dùng bữa và thanh toán'),
+('LS35', 'DH10', 'Pending', '2026-09-22T12:40:00', N'Khách đặt món online'),
+('LS36', 'DH10', 'Confirmed', '2026-09-22T12:43:00', N'Nhân viên đã xác nhận đơn'),
+('LS37', 'DH10', 'Preparing', '2026-09-22T12:45:00', N'Bếp đã nhận đơn'),
+('LS38', 'DH10', 'Completed', '2026-09-22T13:20:00', N'Giao hàng thành công'),
+('LS39', 'DH11', 'Pending', '2026-09-30T11:00:00', N'Khách đặt món online'),
+('LS40', 'DH11', 'Confirmed', '2026-09-30T11:08:00', N'Nhân viên đã xác nhận đơn'),
+('LS41', 'DH11', 'Preparing', '2026-09-30T11:10:00', N'Bếp đã nhận đơn'),
+('LS42', 'DH12', 'Pending', '2026-09-30T11:20:00', N'Đơn mới, chờ nhân viên xác nhận');
 
 -- 6. Tương tác & khảo sát (CRM)
 INSERT INTO PHAN_HOI (maPhanHoi, maKhachHang, maNhanVien, noiDung, danhGia, ngayPhanHoi, trangThai) VALUES
@@ -307,7 +316,7 @@ INSERT INTO KHAO_SAT (maKhaoSat, maNhanVien, tieuDe, trangThai, ngayTao) VALUES
 ('KS01', 'NV01', N'Khảo sát mức độ hài lòng về dịch vụ', 'Open', '2026-09-01T09:00:00'),
 ('KS02', 'NV01', N'Khảo sát sở thích nước lẩu & món nhúng mới', 'Open', '2026-09-10T09:00:00');
 
--- loaiCauHoi: CHON_MOT | TU_DIEN
+-- loaiCauHoi: Option | Text
 INSERT INTO CAU_HOI_KHAO_SAT (maCauHoi, maKhaoSat, noiDungCauHoi, loaiCauHoi) VALUES
 ('CH01', 'KS01', N'Bạn đánh giá thế nào về trải nghiệm tổng thể tại quán?', 'Option'),
 ('CH02', 'KS01', N'Bạn hài lòng nhất về điều gì?', 'Option'),

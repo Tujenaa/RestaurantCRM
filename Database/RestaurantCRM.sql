@@ -3,6 +3,17 @@
 -- SQL Server | Các cột trạng thái/loại đã được cố định bằng CHECK constraint
 -- ============================================
 
+USE master;
+GO
+
+-- Xóa CSDL cũ (nếu có) để tạo lại từ đầu. CẢNH BÁO: mất toàn bộ dữ liệu hiện có.
+IF DB_ID('RestaurantCRM') IS NOT NULL
+BEGIN
+    ALTER DATABASE RestaurantCRM SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE RestaurantCRM;
+END
+GO
+
 CREATE DATABASE RestaurantCRM;
 GO
 
@@ -104,7 +115,7 @@ CREATE TABLE CHUONG_TRINH_KHUYEN_MAI (
     giaTriDonToiThieu FLOAT,
     ngayBatDau DATE,
     ngayKetThuc DATE,
-	soLuong INT,
+    soLuong INT,
     trangThai NVARCHAR(20) CONSTRAINT CK_CHUONG_TRINH_KHUYEN_MAI_trangThai CHECK (trangThai IN ('Active', 'Inactive', 'Expired'))
 );
 
@@ -123,7 +134,7 @@ CREATE TABLE DON_HANG (
     maChuongTrinhVoucher VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
     diaChiGiao NVARCHAR(255),
     ngayDat DATETIME,
-    trangThai NVARCHAR(30) CONSTRAINT CK_DON_HANG_trangThai CHECK (trangThai IN ('PendingConfirmation', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
+    trangThai NVARCHAR(30) CONSTRAINT CK_DON_HANG_trangThai CHECK (trangThai IN ('Pending', 'Confirmed', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
     tongTienHang FLOAT,
     tienGiamVoucher FLOAT,
     tongThanhToan FLOAT
@@ -163,7 +174,7 @@ CREATE TABLE DANH_GIA (
 CREATE TABLE LICH_SU_TRANG_THAI (
     maLichSu VARCHAR(20) PRIMARY KEY,
     maDonHang VARCHAR(20) FOREIGN KEY REFERENCES DON_HANG(maDonHang),
-    trangThai NVARCHAR(30) CONSTRAINT CK_LICH_SU_TRANG_THAI_trangThai CHECK (trangThai IN ('Pending', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
+    trangThai NVARCHAR(30) CONSTRAINT CK_LICH_SU_TRANG_THAI_trangThai CHECK (trangThai IN ('Pending', 'Confirmed', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
     thoiGian DATETIME,
     ghiChu NVARCHAR(255)
 );
