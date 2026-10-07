@@ -11,9 +11,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class ThongKeController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public ThongKeController(RestaurantCRMContext context)
+        public ThongKeController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -25,17 +25,17 @@ namespace RestaurantCRM.API.Controllers
             var startOfDay = DateTime.Today;
             var endOfDay = startOfDay.AddDays(1);
 
-            var donHangsHomNay = await _context.DonHangs
+            var hoaDonsHomNay = await _context.HoaDon
                 .Where(d => d.NgayDat >= startOfDay && d.NgayDat < endOfDay)
                 .ToListAsync();
 
-            var tongDon = donHangsHomNay.Count;
+            var tongDon = hoaDonsHomNay.Count;
             
-            var doanhThuHomNay = donHangsHomNay
+            var doanhThuHomNay = hoaDonsHomNay
                 .Where(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành")
                 .Sum(d => d.TongThanhToan ?? 0);
 
-            var tongKhachHang = await _context.KhachHangs.CountAsync();
+            var tongKhachHang = await _context.KhachHang.CountAsync();
 
             return Ok(new
             {
@@ -54,7 +54,7 @@ namespace RestaurantCRM.API.Controllers
             var startDate = new DateTime(nam, 1, 1);
             var endDate = new DateTime(nam + 1, 1, 1);
 
-            var donHangsTrongNam = await _context.DonHangs
+            var hoaDonsTrongNam = await _context.HoaDon
                 .Where(d => d.NgayDat >= startDate && d.NgayDat < endDate 
                             && (d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành"))
                 .Select(d => new { d.NgayDat, d.TongThanhToan })
@@ -63,7 +63,7 @@ namespace RestaurantCRM.API.Controllers
             var doanhThuTheoThang = Enumerable.Range(1, 12).Select(thang => new
             {
                 Thang = thang,
-                DoanhThu = donHangsTrongNam
+                DoanhThu = hoaDonsTrongNam
                     .Where(d => d.NgayDat.HasValue && d.NgayDat.Value.Month == thang)
                     .Sum(d => d.TongThanhToan ?? 0)
             }).ToList();
@@ -75,9 +75,9 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("MonBanChay")]
         public async Task<IActionResult> GetMonBanChay([FromQuery] int top = 5)
         {
-            var query = await _context.ChiTietDonHangs
-                .Where(c => c.MaDonHangNavigation != null 
-                            && (c.MaDonHangNavigation.TrangThai == "Completed" || c.MaDonHangNavigation.TrangThai == "Hoàn thành"))
+            var query = await _context.ChiTietHoaDon
+                .Where(c => c.MaHoaDonNavigation != null 
+                            && (c.MaHoaDonNavigation.TrangThai == "Completed" || c.MaHoaDonNavigation.TrangThai == "Hoàn thành"))
                 .Select(c => new { c.MaMon, TenMon = c.MaMonNavigation != null ? c.MaMonNavigation.TenMon : "Không xác định", c.SoLuong })
                 .ToListAsync();
 

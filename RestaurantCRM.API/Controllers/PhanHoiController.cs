@@ -10,9 +10,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class PhanHoiController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public PhanHoiController(RestaurantCRMContext context)
+        public PhanHoiController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -31,7 +31,7 @@ namespace RestaurantCRM.API.Controllers
                 TrangThai = "Pending"
             };
 
-            _context.PhanHois.Add(phanHoi);
+            _context.PhanHoi.Add(phanHoi);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công", maPhanHoi = phanHoi.MaPhanHoi });
@@ -41,7 +41,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("KhachHang/{maKhachHang}")]
         public async Task<IActionResult> GetPhanHoiByKhachHang(string maKhachHang)
         {
-            var phanHois = await _context.PhanHois
+            var phanHois = await _context.PhanHoi
                 .Where(p => p.MaKhachHang == maKhachHang)
                 .OrderByDescending(p => p.NgayPhanHoi)
                 .Select(p => new
@@ -61,9 +61,9 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetChiTietPhanHoi(string id)
         {
-            var phanHoi = await _context.PhanHois
+            var phanHoi = await _context.PhanHoi
                 .Include(p => p.MaNhanVienNavigation)
-                .Include(p => p.TraLoiPhanHois)
+                .Include(p => p.TraLoiPhanHoi)
                 .FirstOrDefaultAsync(p => p.MaPhanHoi == id);
 
             if (phanHoi == null)
@@ -79,7 +79,7 @@ namespace RestaurantCRM.API.Controllers
                 phanHoi.NgayPhanHoi,
                 phanHoi.TrangThai,
                 NhanVienPhuTrach = phanHoi.MaNhanVienNavigation != null ? phanHoi.MaNhanVienNavigation.HoTen : "Chưa phân công",
-                HoiThoai = phanHoi.TraLoiPhanHois.OrderBy(t => t.NgayGui).Select(t => new
+                HoiThoai = phanHoi.TraLoiPhanHoi.OrderBy(t => t.NgayGui).Select(t => new
                 {
                     t.MaTraLoi,
                     t.NguoiGui,
@@ -95,7 +95,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/Reply")]
         public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
         {
-            var phanHoi = await _context.PhanHois.FindAsync(id);
+            var phanHoi = await _context.PhanHoi.FindAsync(id);
             if (phanHoi == null)
             {
                 return NotFound("Không tìm thấy phản hồi.");
@@ -112,7 +112,7 @@ namespace RestaurantCRM.API.Controllers
                 NgayGui = DateTime.Now
             };
 
-            _context.TraLoiPhanHois.Add(traLoi);
+            _context.TraLoiPhanHoi.Add(traLoi);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Gửi trả lời thành công", maTraLoi = traLoi.MaTraLoi });

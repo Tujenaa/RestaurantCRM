@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
@@ -23,5 +23,5 @@ public partial class PhanHoi
 
     public virtual NhanVien? MaNhanVienNavigation { get; set; }
 
-    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHois { get; set; } = new List<TraLoiPhanHoi>();
+    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHoi { get; set; } = new List<TraLoiPhanHoi>();
 }

@@ -10,9 +10,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminDanhGiaController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminDanhGiaController(RestaurantCRMContext context)
+        public AdminDanhGiaController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -21,10 +21,10 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllDanhGia()
         {
-            var danhGias = await _context.DanhGias
+            var danhGias = await _context.DanhGia
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaMonNavigation)
-                .Include(d => d.TraLoiDanhGias)
+                .Include(d => d.TraLoiDanhGia)
                 .OrderByDescending(d => d.NgayDanhGia)
                 .Select(d => new
                 {
@@ -35,8 +35,8 @@ namespace RestaurantCRM.API.Controllers
                     d.NoiDung,
                     d.NgayDanhGia,
                     TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
-                    TongSoTraLoi = d.TraLoiDanhGias.Count,
-                    HoiThoai = d.TraLoiDanhGias.OrderBy(t => t.NgayGui).Select(t => new
+                    TongSoTraLoi = d.TraLoiDanhGia.Count,
+                    HoiThoai = d.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
                         t.MaTraLoi,
                         t.NguoiGui,
@@ -55,7 +55,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/Reply")]
         public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
         {
-            var danhGia = await _context.DanhGias.FindAsync(id);
+            var danhGia = await _context.DanhGia.FindAsync(id);
             if (danhGia == null)
             {
                 return NotFound("Không tìm thấy đánh giá.");
@@ -72,7 +72,7 @@ namespace RestaurantCRM.API.Controllers
                 NgayGui = DateTime.Now
             };
 
-            _context.TraLoiDanhGias.Add(traLoi);
+            _context.TraLoiDanhGia.Add(traLoi);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công", maTraLoi = traLoi.MaTraLoi });
@@ -82,8 +82,8 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDanhGia(string id)
         {
-            var danhGia = await _context.DanhGias
-                .Include(d => d.TraLoiDanhGias)
+            var danhGia = await _context.DanhGia
+                .Include(d => d.TraLoiDanhGia)
                 .FirstOrDefaultAsync(d => d.MaDanhGia == id);
 
             if (danhGia == null)
@@ -91,12 +91,12 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy đánh giá.");
             }
 
-            if (danhGia.TraLoiDanhGias.Any())
+            if (danhGia.TraLoiDanhGia.Any())
             {
-                _context.TraLoiDanhGias.RemoveRange(danhGia.TraLoiDanhGias);
+                _context.TraLoiDanhGia.RemoveRange(danhGia.TraLoiDanhGia);
             }
 
-            _context.DanhGias.Remove(danhGia);
+            _context.DanhGia.Remove(danhGia);
             await _context.SaveChangesAsync();
 
             return NoContent();

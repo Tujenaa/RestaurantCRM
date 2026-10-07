@@ -9,9 +9,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminMonAnController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminMonAnController(RestaurantCRMContext context)
+        public AdminMonAnController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -21,7 +21,7 @@ namespace RestaurantCRM.API.Controllers
         public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAns()
         {
             // Admin cần xem toàn bộ các món (kể cả ngừng kinh doanh)
-            return await _context.MonAns
+            return await _context.MonAn
                 .AsNoTracking()
                 .ToListAsync();
         }
@@ -30,7 +30,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<MonAn>> GetMonAn(string id)
         {
-            var monAn = await _context.MonAns.FindAsync(id);
+            var monAn = await _context.MonAn.FindAsync(id);
 
             if (monAn == null)
             {
@@ -57,7 +57,7 @@ namespace RestaurantCRM.API.Controllers
                 }
             }
 
-            _context.MonAns.Add(monAn);
+            _context.MonAn.Add(monAn);
             try
             {
                 await _context.SaveChangesAsync();
@@ -124,9 +124,9 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMonAn(string id)
         {
-            var monAn = await _context.MonAns
-                .Include(m => m.ChiTietDonHangs)
-                .Include(m => m.ChiTietPhieuNhaps)
+            var monAn = await _context.MonAn
+                .Include(m => m.ChiTietHoaDon)
+                .Include(m => m.ChiTietPhieuNhap)
                 .Include(m => m.DanhGia) // Đã sửa DanhGias thành DanhGia theo đúng Model
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
@@ -136,12 +136,12 @@ namespace RestaurantCRM.API.Controllers
             }
 
             // Kiểm tra ràng buộc trước khi xóa cứng
-            if (monAn.ChiTietDonHangs.Any() || monAn.ChiTietPhieuNhaps.Any())
+            if (monAn.ChiTietHoaDon.Any() || monAn.ChiTietPhieuNhap.Any())
             {
                 return BadRequest("Không thể xóa món ăn này vì đã có dữ liệu liên quan trong Đơn hàng hoặc Phiếu nhập. Vui lòng chuyển trạng thái thành 'Ngừng kinh doanh' (Inactive) thay vì xóa.");
             }
 
-            _context.MonAns.Remove(monAn);
+            _context.MonAn.Remove(monAn);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -149,7 +149,7 @@ namespace RestaurantCRM.API.Controllers
 
         private bool MonAnExists(string id)
         {
-            return _context.MonAns.Any(e => e.MaMon == id);
+            return _context.MonAn.Any(e => e.MaMon == id);
         }
     }
 }

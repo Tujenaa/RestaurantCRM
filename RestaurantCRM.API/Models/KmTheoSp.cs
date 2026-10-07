@@ -1,17 +1,21 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
 
-public partial class ChiTietKhuyenMaiMon
+public partial class KmTheoSp
 {
-    public string MaChiTietKm { get; set; } = null!;
+    public string MaKmsp { get; set; } = null!;
 
     public string? MaChuongTrinh { get; set; }
 
     public string? MaMon { get; set; }
 
-    public int? SoLuongApDung { get; set; }
+    public double? PhanTramGiam { get; set; }
+
+    public double? TienGiam { get; set; }
+
+    public virtual ICollection<ChiTietHoaDon> ChiTietHoaDon { get; set; } = new List<ChiTietHoaDon>();
 
     public virtual ChuongTrinhKhuyenMai? MaChuongTrinhNavigation { get; set; }
 

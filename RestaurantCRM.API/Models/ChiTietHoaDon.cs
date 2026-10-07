@@ -3,15 +3,17 @@ using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
 
-public partial class ChiTietDonHang
+public partial class ChiTietHoaDon
 {
     public string MaChiTiet { get; set; } = null!;
 
-    public string? MaDonHang { get; set; }
+    public string? MaHoaDon { get; set; }
 
     public string? MaMon { get; set; }
 
-    public string? MaChuongTrinhKm { get; set; }
+    public string? MaKmsp { get; set; }
+
+    public string? TenMon { get; set; }
 
     public int? SoLuong { get; set; }
 
@@ -23,9 +25,9 @@ public partial class ChiTietDonHang
 
     public double? ThanhTien { get; set; }
 
-    public virtual ChuongTrinhKhuyenMai? MaChuongTrinhKmNavigation { get; set; }
+    public virtual HoaDon? MaHoaDonNavigation { get; set; }
 
-    public virtual DonHang? MaDonHangNavigation { get; set; }
+    public virtual KmTheoSp? MaKmspNavigation { get; set; }
 
     public virtual MonAn? MaMonNavigation { get; set; }
 }

@@ -10,9 +10,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class KhaoSatController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public KhaoSatController(RestaurantCRMContext context)
+        public KhaoSatController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -21,9 +21,9 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("HienTai")]
         public async Task<IActionResult> GetKhaoSatHienTai()
         {
-            var khaoSat = await _context.KhaoSats
-                .Include(k => k.CauHoiKhaoSats)
-                    .ThenInclude(c => c.TuyChonCauHois)
+            var khaoSat = await _context.KhaoSat
+                .Include(k => k.CauHoiKhaoSat)
+                    .ThenInclude(c => c.TuyChonCauHoi)
                 .Where(k => k.TrangThai == "Active")
                 .OrderByDescending(k => k.NgayTao)
                 .FirstOrDefaultAsync();
@@ -37,12 +37,12 @@ namespace RestaurantCRM.API.Controllers
             {
                 khaoSat.MaKhaoSat,
                 khaoSat.TieuDe,
-                CauHoi = khaoSat.CauHoiKhaoSats.Select(c => new
+                CauHoi = khaoSat.CauHoiKhaoSat.Select(c => new
                 {
                     c.MaCauHoi,
                     c.NoiDungCauHoi,
                     c.LoaiCauHoi,
-                    TuyChon = c.TuyChonCauHois.Select(t => new
+                    TuyChon = c.TuyChonCauHoi.Select(t => new
                     {
                         t.MaTuyChon,
                         t.NoiDungTuyChon
@@ -65,7 +65,7 @@ namespace RestaurantCRM.API.Controllers
                 NgayTraLoi = DateTime.Now
             };
 
-            _context.PhieuTraLois.Add(phieuTraLoi);
+            _context.PhieuTraLoi.Add(phieuTraLoi);
 
             if (request.Answers != null && request.Answers.Any())
             {
@@ -79,7 +79,7 @@ namespace RestaurantCRM.API.Controllers
                         MaTuyChon = answer.MaTuyChon,
                         NoiDungTuDien = answer.NoiDungTuDien
                     };
-                    _context.CauTraLois.Add(cauTraLoi);
+                    _context.CauTraLoi.Add(cauTraLoi);
                 }
             }
 

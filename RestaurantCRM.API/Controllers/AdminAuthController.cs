@@ -10,40 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminAuthController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminAuthController(RestaurantCRMContext context)
+        public AdminAuthController(RestaurantCrmContext context)
         {
             _context = context;
         }
 
-        // POST: api/AdminAuth/Login - Đăng nhập đa bảng dành cho Admin và Nhân viên
+        // POST: api/AdminAuth/Login - Đăng nhập cho hệ thống (Admin & Nhân viên)
         [HttpPost("Login")]
         public async Task<IActionResult> Login(AdminLoginRequest request)
         {
-            // 1. Kiểm tra trong bảng TaiKhoanAdmin trước (Quyền cao nhất)
-            var admin = await _context.TaiKhoanAdmins
-                .FirstOrDefaultAsync(a => a.TenDangNhap == request.TenDangNhap);
-
-            if (admin != null && PasswordVerifier.Verify(request.MatKhau, admin.MatKhau))
-            {
-                // TODO: Thay thế bằng JWT thật
-                return Ok(new
-                {
-                    message = "Đăng nhập thành công với quyền Admin tối cao",
-                    token = "fake_jwt_token_for_" + admin.MaAdmin,
-                    role = "SuperAdmin",
-                    userInfo = new
-                    {
-                        Id = admin.MaAdmin,
-                        HoTen = admin.HoTen,
-                        Username = admin.TenDangNhap
-                    }
-                });
-            }
-
-            // 2. Nếu không phải Admin, kiểm tra trong bảng NhanVien
-            var nhanVien = await _context.NhanViens
+            var nhanVien = await _context.NhanVien
                 .Include(n => n.MaVaiTroNavigation)
                 .FirstOrDefaultAsync(n => n.TenDangNhap == request.TenDangNhap);
 
@@ -51,15 +29,14 @@ namespace RestaurantCRM.API.Controllers
             {
                 if (nhanVien.TrangThai != "Active")
                 {
-                    return BadRequest("Tài khoản nhân viên đã bị khóa hoặc ngừng hoạt động.");
+                    return BadRequest("Tài khoản đã bị khóa hoặc ngừng hoạt động.");
                 }
 
-                // TODO: Thay thế bằng JWT thật
                 return Ok(new
                 {
                     message = "Đăng nhập thành công",
                     token = "fake_jwt_token_for_" + nhanVien.MaNhanVien,
-                    role = nhanVien.MaVaiTroNavigation?.TenVaiTro ?? "UnknownRole", 
+                    role = nhanVien.MaVaiTroNavigation?.TenVaiTro ?? "UnknownRole",
                     roleId = nhanVien.MaVaiTro,
                     userInfo = new
                     {
@@ -70,7 +47,6 @@ namespace RestaurantCRM.API.Controllers
                 });
             }
 
-            // 3. Không tìm thấy ở cả 2 bảng
             return Unauthorized("Tên đăng nhập hoặc mật khẩu không đúng.");
         }
     }
