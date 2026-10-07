@@ -13,9 +13,9 @@ public partial class CauHoiKhaoSat
 
     public string? LoaiCauHoi { get; set; }
 
-    public virtual ICollection<CauTraLoi> CauTraLois { get; set; } = new List<CauTraLoi>();
+    public virtual ICollection<CauTraLoi> CauTraLoi { get; set; } = new List<CauTraLoi>();
 
     public virtual KhaoSat? MaKhaoSatNavigation { get; set; }
 
-    public virtual ICollection<TuyChonCauHoi> TuyChonCauHois { get; set; } = new List<TuyChonCauHoi>();
+    public virtual ICollection<TuyChonCauHoi> TuyChonCauHoi { get; set; } = new List<TuyChonCauHoi>();
 }

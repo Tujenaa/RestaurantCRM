@@ -15,9 +15,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class KhachHangController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public KhachHangController(RestaurantCRMContext context)
+        public KhachHangController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -26,11 +26,11 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("DangKy")]
         public async Task<IActionResult> DangKy(RegisterRequest request)
         {
-            if (await _context.KhachHangs.AnyAsync(k => k.Email == request.Email && !string.IsNullOrEmpty(request.Email)))
+            if (await _context.KhachHang.AnyAsync(k => k.Email == request.Email && !string.IsNullOrEmpty(request.Email)))
             {
                 return BadRequest("Email đã được sử dụng.");
             }
-            if (await _context.KhachHangs.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && !string.IsNullOrEmpty(request.SoDienThoai)))
+            if (await _context.KhachHang.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && !string.IsNullOrEmpty(request.SoDienThoai)))
             {
                 return BadRequest("Số điện thoại đã được sử dụng.");
             }
@@ -47,7 +47,7 @@ namespace RestaurantCRM.API.Controllers
                 TrangThai = "Active"
             };
 
-            _context.KhachHangs.Add(khachHang);
+            _context.KhachHang.Add(khachHang);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đăng ký thành công", maKhachHang = khachHang.MaKhachHang });
@@ -57,7 +57,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("DangNhap")]
         public async Task<IActionResult> DangNhap(LoginRequest request)
         {
-            var khachHang = await _context.KhachHangs.FirstOrDefaultAsync(k =>
+            var khachHang = await _context.KhachHang.FirstOrDefaultAsync(k =>
                 (k.Email == request.EmailOrPhone || k.SoDienThoai == request.EmailOrPhone));
 
             if (khachHang == null || !PasswordVerifier.Verify(request.MatKhau, khachHang.MatKhau))
@@ -105,7 +105,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("ThongTin/{id}")]
         public async Task<IActionResult> ThongTin(string id)
         {
-            var khachHang = await _context.KhachHangs
+            var khachHang = await _context.KhachHang
                 .AsNoTracking()
                 .FirstOrDefaultAsync(k => k.MaKhachHang == id);
 
@@ -130,16 +130,16 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("ThongTin/{id}")]
         public async Task<IActionResult> CapNhatThongTin(string id, UpdateProfileRequest request)
         {
-            if (!string.IsNullOrEmpty(request.Email) && await _context.KhachHangs.AnyAsync(k => k.Email == request.Email && k.MaKhachHang != id))
+            if (!string.IsNullOrEmpty(request.Email) && await _context.KhachHang.AnyAsync(k => k.Email == request.Email && k.MaKhachHang != id))
             {
                 return BadRequest("Email đã được sử dụng bởi người khác.");
             }
-            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _context.KhachHangs.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && k.MaKhachHang != id))
+            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _context.KhachHang.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && k.MaKhachHang != id))
             {
                 return BadRequest("Số điện thoại đã được sử dụng bởi người khác.");
             }
 
-            var khachHang = await _context.KhachHangs.FindAsync(id);
+            var khachHang = await _context.KhachHang.FindAsync(id);
             if (khachHang == null)
             {
                 return NotFound("Không tìm thấy thông tin khách hàng.");
@@ -161,7 +161,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("DoiMatKhau/{id}")]
         public async Task<IActionResult> DoiMatKhau(string id, ChangePasswordRequest request)
         {
-            var khachHang = await _context.KhachHangs.FindAsync(id);
+            var khachHang = await _context.KhachHang.FindAsync(id);
             if (khachHang == null)
             {
                 return NotFound("Không tìm thấy thông tin khách hàng.");

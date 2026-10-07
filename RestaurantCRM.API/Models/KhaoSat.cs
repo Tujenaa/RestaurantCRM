@@ -15,11 +15,11 @@ public partial class KhaoSat
 
     public DateTime? NgayTao { get; set; }
 
-    public virtual ICollection<CauHoiKhaoSat> CauHoiKhaoSats { get; set; } = new List<CauHoiKhaoSat>();
+    public virtual ICollection<CauHoiKhaoSat> CauHoiKhaoSat { get; set; } = new List<CauHoiKhaoSat>();
 
-    public virtual ICollection<DoiTuongKhaoSat> DoiTuongKhaoSats { get; set; } = new List<DoiTuongKhaoSat>();
+    public virtual ICollection<DoiTuongKhaoSat> DoiTuongKhaoSat { get; set; } = new List<DoiTuongKhaoSat>();
 
     public virtual NhanVien? MaNhanVienNavigation { get; set; }
 
-    public virtual ICollection<PhieuTraLoi> PhieuTraLois { get; set; } = new List<PhieuTraLoi>();
+    public virtual ICollection<PhieuTraLoi> PhieuTraLoi { get; set; } = new List<PhieuTraLoi>();
 }

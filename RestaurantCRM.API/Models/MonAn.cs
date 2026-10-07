@@ -13,21 +13,21 @@ public partial class MonAn
 
     public string? MoTa { get; set; }
 
+    public string? DuongDanAnh { get; set; }
+
     public double? DonGia { get; set; }
 
     public int? SoLuong { get; set; }
 
     public string? TrangThai { get; set; }
 
-    public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
+    public virtual ICollection<ChiTietHoaDon> ChiTietHoaDon { get; set; } = new List<ChiTietHoaDon>();
 
-    public virtual ICollection<ChiTietKhuyenMaiMon> ChiTietKhuyenMaiMons { get; set; } = new List<ChiTietKhuyenMaiMon>();
-
-    public virtual ICollection<ChiTietPhieuNhap> ChiTietPhieuNhaps { get; set; } = new List<ChiTietPhieuNhap>();
+    public virtual ICollection<ChiTietPhieuNhap> ChiTietPhieuNhap { get; set; } = new List<ChiTietPhieuNhap>();
 
     public virtual ICollection<DanhGia> DanhGia { get; set; } = new List<DanhGia>();
 
-    public virtual ICollection<HinhAnhMonAn> HinhAnhMonAns { get; set; } = new List<HinhAnhMonAn>();
+    public virtual ICollection<KmTheoSp> KmTheoSp { get; set; } = new List<KmTheoSp>();
 
     public virtual LoaiMon? MaLoaiMonNavigation { get; set; }
 }

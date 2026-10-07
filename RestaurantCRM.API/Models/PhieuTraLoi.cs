@@ -13,7 +13,7 @@ public partial class PhieuTraLoi
 
     public DateTime? NgayTraLoi { get; set; }
 
-    public virtual ICollection<CauTraLoi> CauTraLois { get; set; } = new List<CauTraLoi>();
+    public virtual ICollection<CauTraLoi> CauTraLoi { get; set; } = new List<CauTraLoi>();
 
     public virtual KhachHang? MaKhachHangNavigation { get; set; }
 

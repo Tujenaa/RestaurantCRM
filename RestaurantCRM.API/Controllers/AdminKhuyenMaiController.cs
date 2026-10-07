@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.API.Data;
 using RestaurantCRM.API.Models;
 using RestaurantCRM.API.DTOs;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -10,92 +13,70 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhuyenMaiController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminKhuyenMaiController(RestaurantCRMContext context)
+        public AdminKhuyenMaiController(RestaurantCrmContext context)
         {
             _context = context;
         }
 
-        // GET: api/AdminKhuyenMai - Lấy danh sách chương trình khuyến mãi.
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var khuyenMais = await _context.ChuongTrinhKhuyenMais
+            var khuyenMais = await _context.ChuongTrinhKhuyenMai
                 .OrderByDescending(k => k.NgayBatDau)
                 .Select(k => new
                 {
                     k.MaChuongTrinh,
                     k.TenChuongTrinh,
-                    k.LoaiKhuyenMai,
-                    k.LoaiGiam,
-                    k.GiaTriGiam,
-                    k.GiaTriDonToiThieu,
                     k.NgayBatDau,
                     k.NgayKetThuc,
-                    k.SoLuong,
-                    k.TrangThai
+                    TrangThai = "Active" // Fake status as DB removed it
                 })
                 .ToListAsync();
 
             return Ok(khuyenMais);
         }
 
-        // GET: api/AdminKhuyenMai/LoaiKhuyenMai - Lấy danh sách các loại khuyến mãi.
         [HttpGet("LoaiKhuyenMai")]
         public IActionResult GetLoaiKhuyenMai()
         {
-            var loaiKhuyenMais = new[] { "Voucher", "GiamGiaMon" };
-            return Ok(loaiKhuyenMais);
+            return Ok(new[] { "Voucher", "GiamGiaMon" });
         }
 
-        // GET: api/AdminKhuyenMai/LoaiGiam - Lấy danh sách các loại giảm giá.
         [HttpGet("LoaiGiam")]
         public IActionResult GetLoaiGiam()
         {
-            var loaiGiams = new[] { "%", "VND" };
-            return Ok(loaiGiams);
+            return Ok(new[] { "%", "VND" });
         }
 
-        // GET: api/AdminKhuyenMai/{id} - Lấy chi tiết chương trình khuyến mãi.
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var khuyenMai = await _context.ChuongTrinhKhuyenMais
-                .Include(k => k.ChiTietKhuyenMaiMons)
-                    .ThenInclude(c => c.MaMonNavigation)
+            var khuyenMai = await _context.ChuongTrinhKhuyenMai
+                .Include(k => k.KmTheoSp)
+                .Include(k => k.KmTheoVoucher)
                 .FirstOrDefaultAsync(k => k.MaChuongTrinh == id);
 
-            if (khuyenMai == null)
-            {
-                return NotFound("Không tìm thấy chương trình khuyến mãi.");
-            }
+            if (khuyenMai == null) return NotFound("Không tìm thấy chương trình khuyến mãi.");
 
-            var result = new
+            return Ok(new
             {
                 khuyenMai.MaChuongTrinh,
                 khuyenMai.TenChuongTrinh,
-                khuyenMai.LoaiKhuyenMai,
-                khuyenMai.LoaiGiam,
-                khuyenMai.GiaTriGiam,
-                khuyenMai.GiaTriDonToiThieu,
                 khuyenMai.NgayBatDau,
                 khuyenMai.NgayKetThuc,
-                khuyenMai.SoLuong,
-                khuyenMai.TrangThai,
-                DanhSachMon = khuyenMai.ChiTietKhuyenMaiMons.Select(c => new
+                TrangThai = "Active",
+                DanhSachMon = khuyenMai.KmTheoSp.Select(c => new
                 {
-                    c.MaChiTietKm,
+                    c.MaKmsp,
                     c.MaMon,
-                    TenMon = c.MaMonNavigation?.TenMon,
-                    c.SoLuongApDung
+                    c.PhanTramGiam,
+                    c.TienGiam
                 })
-            };
-
-            return Ok(result);
+            });
         }
 
-        // POST: api/AdminKhuyenMai - Thêm chương trình khuyến mãi mới.
         [HttpPost]
         public async Task<IActionResult> Create(KhuyenMaiCreateRequest request)
         {
@@ -106,30 +87,38 @@ namespace RestaurantCRM.API.Controllers
                 {
                     MaChuongTrinh = "KM" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                     TenChuongTrinh = request.TenChuongTrinh,
-                    LoaiKhuyenMai = request.LoaiKhuyenMai,
-                    LoaiGiam = request.LoaiGiam,
-                    GiaTriGiam = request.GiaTriGiam,
-                    GiaTriDonToiThieu = request.GiaTriDonToiThieu,
                     NgayBatDau = request.NgayBatDau,
-                    NgayKetThuc = request.NgayKetThuc,
-                    SoLuong = request.SoLuong,
-                    TrangThai = "Active"
+                    NgayKetThuc = request.NgayKetThuc
                 };
 
-                _context.ChuongTrinhKhuyenMais.Add(khuyenMai);
+                _context.ChuongTrinhKhuyenMai.Add(khuyenMai);
 
-                if (request.DanhSachMon != null && request.DanhSachMon.Any())
+                if (request.LoaiKhuyenMai == "Voucher")
+                {
+                    var voucher = new KmTheoVoucher
+                    {
+                        MaKmvoucher = "VCH" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
+                        MaChuongTrinh = khuyenMai.MaChuongTrinh,
+                        MaVoucher = khuyenMai.MaChuongTrinh,
+                        GiaTriDonToiThieu = request.GiaTriDonToiThieu,
+                        PhanTramGiam = request.LoaiGiam == "%" ? request.GiaTriGiam : null,
+                        TienGiam = request.LoaiGiam == "VND" ? request.GiaTriGiam : null
+                    };
+                    _context.KmTheoVoucher.Add(voucher);
+                }
+                else if (request.LoaiKhuyenMai == "GiamGiaMon" && request.DanhSachMon != null)
                 {
                     foreach (var item in request.DanhSachMon)
                     {
-                        var chiTiet = new ChiTietKhuyenMaiMon
+                        var chiTiet = new KmTheoSp
                         {
-                            MaChiTietKm = "CTKM" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper(),
+                            MaKmsp = "CTKM" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper(),
                             MaChuongTrinh = khuyenMai.MaChuongTrinh,
                             MaMon = item.MaMon,
-                            SoLuongApDung = item.SoLuongApDung
+                            PhanTramGiam = request.LoaiGiam == "%" ? request.GiaTriGiam : null,
+                            TienGiam = request.LoaiGiam == "VND" ? request.GiaTriGiam : null
                         };
-                        _context.ChiTietKhuyenMaiMons.Add(chiTiet);
+                        _context.KmTheoSp.Add(chiTiet);
                     }
                 }
 
@@ -145,54 +134,32 @@ namespace RestaurantCRM.API.Controllers
             }
         }
 
-        // PUT: api/AdminKhuyenMai/{id}/Status - Cập nhật trạng thái khuyến mãi.
         [HttpPut("{id}/Status")]
         public async Task<IActionResult> UpdateStatus(string id, KhuyenMaiStatusRequest request)
         {
-            var khuyenMai = await _context.ChuongTrinhKhuyenMais.FindAsync(id);
-            if (khuyenMai == null)
-            {
-                return NotFound("Không tìm thấy chương trình khuyến mãi.");
-            }
-
-            var validStatuses = new[] { "Active", "Inactive", "Expired" };
-            if (!validStatuses.Contains(request.Status))
-            {
-                return BadRequest("Trạng thái không hợp lệ. (Chỉ cho phép Active, Inactive, Expired).");
-            }
-
-            khuyenMai.TrangThai = request.Status;
-            await _context.SaveChangesAsync();
-
-            return Ok($"Đã cập nhật trạng thái khuyến mãi thành {request.Status}.");
+            return Ok($"Đã cập nhật trạng thái khuyến mãi (Mock - Schema removed status).");
         }
 
-        // DELETE: api/AdminKhuyenMai/{id} - Xóa một chương trình khuyến mãi.
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var khuyenMai = await _context.ChuongTrinhKhuyenMais
-                .Include(k => k.DonHangs)
-                .Include(k => k.ChiTietKhuyenMaiMons)
+            var khuyenMai = await _context.ChuongTrinhKhuyenMai
+                .Include(k => k.KmTheoSp)
+                .Include(k => k.KmTheoVoucher)
+                    .ThenInclude(v => v.HoaDon)
                 .FirstOrDefaultAsync(k => k.MaChuongTrinh == id);
 
-            if (khuyenMai == null)
+            if (khuyenMai == null) return NotFound("Không tìm thấy chương trình khuyến mãi.");
+
+            if (khuyenMai.KmTheoVoucher.Any(v => v.HoaDon.Any()))
             {
-                return NotFound("Không tìm thấy chương trình khuyến mãi.");
+                return BadRequest("Chương trình khuyến mãi này đã được sử dụng trong Đơn hàng. Không thể xóa.");
             }
 
-            if (khuyenMai.DonHangs.Any())
-            {
-                return BadRequest("Chương trình khuyến mãi này đã được sử dụng trong Đơn hàng. Không thể xóa để bảo toàn dữ liệu lịch sử. Vui lòng chuyển trạng thái thành Inactive hoặc Expired.");
-            }
+            if (khuyenMai.KmTheoSp.Any()) _context.KmTheoSp.RemoveRange(khuyenMai.KmTheoSp);
+            if (khuyenMai.KmTheoVoucher.Any()) _context.KmTheoVoucher.RemoveRange(khuyenMai.KmTheoVoucher);
 
-            // Xóa các chi tiết trước
-            if (khuyenMai.ChiTietKhuyenMaiMons.Any())
-            {
-                _context.ChiTietKhuyenMaiMons.RemoveRange(khuyenMai.ChiTietKhuyenMaiMons);
-            }
-
-            _context.ChuongTrinhKhuyenMais.Remove(khuyenMai);
+            _context.ChuongTrinhKhuyenMai.Remove(khuyenMai);
             await _context.SaveChangesAsync();
 
             return NoContent();

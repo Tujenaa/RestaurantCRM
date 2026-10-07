@@ -9,9 +9,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminNhaCungCapController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminNhaCungCapController(RestaurantCRMContext context)
+        public AdminNhaCungCapController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -20,7 +20,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var nhaCungCaps = await _context.NhaCungCaps.ToListAsync();
+            var nhaCungCaps = await _context.NhaCungCap.ToListAsync();
             return Ok(nhaCungCaps);
         }
 
@@ -28,7 +28,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var nhaCungCap = await _context.NhaCungCaps.FindAsync(id);
+            var nhaCungCap = await _context.NhaCungCap.FindAsync(id);
             if (nhaCungCap == null)
             {
                 return NotFound("Không tìm thấy nhà cung cấp.");
@@ -41,7 +41,7 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> Create(NhaCungCap nhaCungCap)
         {
             nhaCungCap.MaNhaCungCap = "NCC" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper();
-            _context.NhaCungCaps.Add(nhaCungCap);
+            _context.NhaCungCap.Add(nhaCungCap);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetById), new { id = nhaCungCap.MaNhaCungCap }, nhaCungCap);
@@ -81,19 +81,19 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var nhaCungCap = await _context.NhaCungCaps.FindAsync(id);
+            var nhaCungCap = await _context.NhaCungCap.FindAsync(id);
             if (nhaCungCap == null)
             {
                 return NotFound();
             }
 
-            var hasPhieuNhap = await _context.PhieuNhapHangs.AnyAsync(p => p.MaNhaCungCap == id);
+            var hasPhieuNhap = await _context.PhieuNhapHang.AnyAsync(p => p.MaNhaCungCap == id);
             if (hasPhieuNhap)
             {
                 return BadRequest("Không thể xóa nhà cung cấp này vì đã có lịch sử nhập hàng.");
             }
 
-            _context.NhaCungCaps.Remove(nhaCungCap);
+            _context.NhaCungCap.Remove(nhaCungCap);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Xóa thành công" });
@@ -101,7 +101,7 @@ namespace RestaurantCRM.API.Controllers
 
         private bool NhaCungCapExists(string id)
         {
-            return _context.NhaCungCaps.Any(e => e.MaNhaCungCap == id);
+            return _context.NhaCungCap.Any(e => e.MaNhaCungCap == id);
         }
     }
 }

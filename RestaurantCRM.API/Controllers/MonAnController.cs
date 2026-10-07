@@ -9,9 +9,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class MonAnController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public MonAnController(RestaurantCRMContext context)
+        public MonAnController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -20,7 +20,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAns()
         {
-            return await _context.MonAns
+            return await _context.MonAn
                 .Where(m => m.TrangThai == "Active")
                 .AsNoTracking()
                 .ToListAsync();
@@ -30,7 +30,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("TheoLoai/{maLoai}")]
         public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAnsByLoai(string maLoai)
         {
-            return await _context.MonAns
+            return await _context.MonAn
                 .Where(m => m.MaLoaiMon == maLoai && m.TrangThai == "Active")
                 .AsNoTracking()
                 .ToListAsync();
@@ -40,7 +40,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<MonAn>> GetMonAn(string id)
         {
-            var monAn = await _context.MonAns.FindAsync(id);
+            var monAn = await _context.MonAn.FindAsync(id);
 
             if (monAn == null)
             {
@@ -54,7 +54,7 @@ namespace RestaurantCRM.API.Controllers
 
         private bool MonAnExists(string id)
         {
-            return _context.MonAns.Any(e => e.MaMon == id);
+            return _context.MonAn.Any(e => e.MaMon == id);
         }
     }
 }

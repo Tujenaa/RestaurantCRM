@@ -9,9 +9,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class LoaiMonController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public LoaiMonController(RestaurantCRMContext context)
+        public LoaiMonController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -20,7 +20,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<LoaiMon>>> GetLoaiMons()
         {
-            return await _context.LoaiMons
+            return await _context.LoaiMon
                 .AsNoTracking()
                 .ToListAsync();
         }

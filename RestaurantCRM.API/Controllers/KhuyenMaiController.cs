@@ -9,9 +9,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class KhuyenMaiController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public KhuyenMaiController(RestaurantCRMContext context)
+        public KhuyenMaiController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -22,22 +22,21 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var vouchers = await _context.ChuongTrinhKhuyenMais
-                .Where(k => k.TrangThai == "Active" 
-                         && k.LoaiKhuyenMai == "Voucher"
-                         && (k.NgayBatDau == null || k.NgayBatDau <= today)
-                         && (k.NgayKetThuc == null || k.NgayKetThuc >= today)
-                         && (k.SoLuong == null || k.SoLuong > 0))
-                .Select(k => new
+            var vouchers = await _context.KmTheoVoucher
+                .Include(v => v.MaChuongTrinhNavigation)
+                .Where(v => v.MaChuongTrinhNavigation != null 
+                         && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
+                         && (v.MaChuongTrinhNavigation.NgayKetThuc == null || v.MaChuongTrinhNavigation.NgayKetThuc >= today))
+                .Select(v => new
                 {
-                    k.MaChuongTrinh,
-                    k.TenChuongTrinh,
-                    k.LoaiGiam,
-                    k.GiaTriGiam,
-                    k.GiaTriDonToiThieu,
-                    k.NgayBatDau,
-                    k.NgayKetThuc,
-                    k.SoLuong
+                    v.MaKmvoucher,
+                    v.MaVoucher,
+                    TenChuongTrinh = v.MaChuongTrinhNavigation.TenChuongTrinh,
+                    v.PhanTramGiam,
+                    v.TienGiam,
+                    v.GiaTriDonToiThieu,
+                    v.MaChuongTrinhNavigation.NgayBatDau,
+                    v.MaChuongTrinhNavigation.NgayKetThuc
                 })
                 .ToListAsync();
 
@@ -50,27 +49,20 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var giamGiaMons = await _context.ChuongTrinhKhuyenMais
-                .Include(k => k.ChiTietKhuyenMaiMons)
-                .Where(k => k.TrangThai == "Active" 
-                         && k.LoaiKhuyenMai == "GiamGiaMon"
-                         && (k.NgayBatDau == null || k.NgayBatDau <= today)
-                         && (k.NgayKetThuc == null || k.NgayKetThuc >= today)
-                         && (k.SoLuong == null || k.SoLuong > 0))
+            var giamGiaMons = await _context.KmTheoSp
+                .Include(k => k.MaChuongTrinhNavigation)
+                .Where(k => k.MaChuongTrinhNavigation != null 
+                         && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today)
+                         && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today))
                 .Select(k => new
                 {
-                    k.MaChuongTrinh,
-                    k.TenChuongTrinh,
-                    k.LoaiGiam,
-                    k.GiaTriGiam,
-                    k.NgayBatDau,
-                    k.NgayKetThuc,
-                    k.SoLuong,
-                    DanhSachMon = k.ChiTietKhuyenMaiMons.Select(c => new
-                    {
-                        c.MaMon,
-                        c.SoLuongApDung
-                    })
+                    k.MaKmsp,
+                    TenChuongTrinh = k.MaChuongTrinhNavigation.TenChuongTrinh,
+                    k.PhanTramGiam,
+                    k.TienGiam,
+                    k.MaChuongTrinhNavigation.NgayBatDau,
+                    k.MaChuongTrinhNavigation.NgayKetThuc,
+                    k.MaMon
                 })
                 .ToListAsync();
 

@@ -10,9 +10,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminPhieuNhapController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminPhieuNhapController(RestaurantCRMContext context)
+        public AdminPhieuNhapController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -21,7 +21,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var phieuNhaps = await _context.PhieuNhapHangs
+            var phieuNhaps = await _context.PhieuNhapHang
                 .Include(p => p.MaNhaCungCapNavigation)
                 .Include(p => p.MaNhanVienNavigation)
                 .OrderByDescending(p => p.NgayNhap)
@@ -45,10 +45,10 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var phieuNhap = await _context.PhieuNhapHangs
+            var phieuNhap = await _context.PhieuNhapHang
                 .Include(p => p.MaNhaCungCapNavigation)
                 .Include(p => p.MaNhanVienNavigation)
-                .Include(p => p.ChiTietPhieuNhaps)
+                .Include(p => p.ChiTietPhieuNhap)
                     .ThenInclude(c => c.MaMonNavigation)
                 .FirstOrDefaultAsync(p => p.MaPhieuNhap == id);
 
@@ -67,7 +67,7 @@ namespace RestaurantCRM.API.Controllers
                 phieuNhap.NgayNhap,
                 phieuNhap.TongTien,
                 phieuNhap.GhiChu,
-                ChiTiet = phieuNhap.ChiTietPhieuNhaps.Select(c => new
+                ChiTiet = phieuNhap.ChiTietPhieuNhap.Select(c => new
                 {
                     c.MaChiTiet,
                     c.MaMon,
@@ -98,7 +98,7 @@ namespace RestaurantCRM.API.Controllers
                     TongTien = 0
                 };
 
-                _context.PhieuNhapHangs.Add(phieuNhap);
+                _context.PhieuNhapHang.Add(phieuNhap);
 
                 double tongTien = 0;
 
@@ -116,14 +116,14 @@ namespace RestaurantCRM.API.Controllers
                         DonGiaNhap = item.DonGiaNhap,
                         ThanhTien = thanhTien
                     };
-                    _context.ChiTietPhieuNhaps.Add(chiTiet);
+                    _context.ChiTietPhieuNhap.Add(chiTiet);
 
                     // Cập nhật tồn kho trong bảng MonAn
-                    var monAn = await _context.MonAns.FindAsync(item.MaMon);
+                    var monAn = await _context.MonAn.FindAsync(item.MaMon);
                     if (monAn != null)
                     {
                         monAn.SoLuong = (monAn.SoLuong ?? 0) + item.SoLuong;
-                        _context.MonAns.Update(monAn);
+                        _context.MonAn.Update(monAn);
                     }
                 }
 

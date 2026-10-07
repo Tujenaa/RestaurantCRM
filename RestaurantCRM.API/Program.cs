@@ -13,7 +13,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         builder.Configuration.GetConnectionString(
             "DefaultConnection")));
 
-builder.Services.AddDbContext<RestaurantCRMContext>(options =>
+builder.Services.AddDbContext<RestaurantCrmContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 // Add services to the container.

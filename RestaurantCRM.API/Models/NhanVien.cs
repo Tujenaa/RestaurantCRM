@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
@@ -17,17 +17,17 @@ public partial class NhanVien
 
     public string? TrangThai { get; set; }
 
-    public virtual ICollection<DonHang> DonHangs { get; set; } = new List<DonHang>();
+    public virtual ICollection<HoaDon> HoaDon { get; set; } = new List<HoaDon>();
 
-    public virtual ICollection<KhaoSat> KhaoSats { get; set; } = new List<KhaoSat>();
+    public virtual ICollection<KhaoSat> KhaoSat { get; set; } = new List<KhaoSat>();
 
     public virtual VaiTro? MaVaiTroNavigation { get; set; }
 
-    public virtual ICollection<PhanHoi> PhanHois { get; set; } = new List<PhanHoi>();
+    public virtual ICollection<PhanHoi> PhanHoi { get; set; } = new List<PhanHoi>();
 
-    public virtual ICollection<PhieuNhapHang> PhieuNhapHangs { get; set; } = new List<PhieuNhapHang>();
+    public virtual ICollection<PhieuNhapHang> PhieuNhapHang { get; set; } = new List<PhieuNhapHang>();
 
-    public virtual ICollection<TraLoiDanhGia> TraLoiDanhGias { get; set; } = new List<TraLoiDanhGia>();
+    public virtual ICollection<TraLoiDanhGia> TraLoiDanhGia { get; set; } = new List<TraLoiDanhGia>();
 
-    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHois { get; set; } = new List<TraLoiPhanHoi>();
+    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHoi { get; set; } = new List<TraLoiPhanHoi>();
 }

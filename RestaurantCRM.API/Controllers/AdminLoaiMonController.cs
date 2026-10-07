@@ -9,9 +9,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminLoaiMonController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminLoaiMonController(RestaurantCRMContext context)
+        public AdminLoaiMonController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -20,14 +20,14 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<LoaiMon>>> GetLoaiMons()
         {
-            return await _context.LoaiMons.ToListAsync();
+            return await _context.LoaiMon.ToListAsync();
         }
 
         // GET: api/AdminLoaiMon/{id} - Lấy thông tin chi tiết một loại món.
         [HttpGet("{id}")]
         public async Task<ActionResult<LoaiMon>> GetLoaiMon(string id)
         {
-            var loaiMon = await _context.LoaiMons.FindAsync(id);
+            var loaiMon = await _context.LoaiMon.FindAsync(id);
 
             if (loaiMon == null)
             {
@@ -43,7 +43,7 @@ namespace RestaurantCRM.API.Controllers
         {
             loaiMon.MaLoaiMon = "LM" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
             
-            _context.LoaiMons.Add(loaiMon);
+            _context.LoaiMon.Add(loaiMon);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetLoaiMon), new { id = loaiMon.MaLoaiMon }, loaiMon);
@@ -83,8 +83,8 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteLoaiMon(string id)
         {
-            var loaiMon = await _context.LoaiMons
-                .Include(lm => lm.MonAns)
+            var loaiMon = await _context.LoaiMon
+                .Include(lm => lm.MonAn)
                 .FirstOrDefaultAsync(lm => lm.MaLoaiMon == id);
             
             if (loaiMon == null)
@@ -92,12 +92,12 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy loại món để xóa.");
             }
 
-            if (loaiMon.MonAns.Any())
+            if (loaiMon.MonAn.Any())
             {
                 return BadRequest("Không thể xóa loại món này vì vẫn còn các món ăn thuộc loại này. Vui lòng chuyển các món ăn sang loại khác trước khi xóa.");
             }
 
-            _context.LoaiMons.Remove(loaiMon);
+            _context.LoaiMon.Remove(loaiMon);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -105,7 +105,7 @@ namespace RestaurantCRM.API.Controllers
 
         private bool LoaiMonExists(string id)
         {
-            return _context.LoaiMons.Any(e => e.MaLoaiMon == id);
+            return _context.LoaiMon.Any(e => e.MaLoaiMon == id);
         }
     }
 }

@@ -10,9 +10,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhachHangController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public AdminKhachHangController(RestaurantCRMContext context)
+        public AdminKhachHangController(RestaurantCrmContext context)
         {
             _context = context;
         }
@@ -21,7 +21,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetKhachHangs()
         {
-            var khachHangs = await _context.KhachHangs
+            var khachHangs = await _context.KhachHang
                 .Select(k => new
                 {
                     k.MaKhachHang,
@@ -42,8 +42,8 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetKhachHang(string id)
         {
-            var khachHang = await _context.KhachHangs
-                .Include(k => k.DonHangs)
+            var khachHang = await _context.KhachHang
+                .Include(k => k.HoaDon)
                 .Where(k => k.MaKhachHang == id)
                 .Select(k => new
                 {
@@ -55,9 +55,9 @@ namespace RestaurantCRM.API.Controllers
                     k.GioiTinh,
                     k.SoThich,
                     k.TrangThai,
-                    LichSuDonHang = k.DonHangs.Select(d => new
+                    LichSuHoaDon = k.HoaDon.Select(d => new
                     {
-                        d.MaDonHang,
+                        d.MaHoaDon,
                         d.NgayDat,
                         TongTien = d.TongThanhToan,
                         d.TrangThai
@@ -77,11 +77,11 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateKhachHang(AdminCreateKhachHangRequest request)
         {
-            if (!string.IsNullOrEmpty(request.Email) && await _context.KhachHangs.AnyAsync(k => k.Email == request.Email))
+            if (!string.IsNullOrEmpty(request.Email) && await _context.KhachHang.AnyAsync(k => k.Email == request.Email))
             {
                 return BadRequest("Email đã được sử dụng.");
             }
-            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _context.KhachHangs.AnyAsync(k => k.SoDienThoai == request.SoDienThoai))
+            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _context.KhachHang.AnyAsync(k => k.SoDienThoai == request.SoDienThoai))
             {
                 return BadRequest("Số điện thoại đã được sử dụng.");
             }
@@ -100,7 +100,7 @@ namespace RestaurantCRM.API.Controllers
                 TrangThai = "Active"
             };
 
-            _context.KhachHangs.Add(khachHang);
+            _context.KhachHang.Add(khachHang);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Thêm khách hàng thành công.", maKhachHang = khachHang.MaKhachHang });
@@ -110,7 +110,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}/Status")]
         public async Task<IActionResult> UpdateStatus(string id, AdminLockKhachHangRequest request)
         {
-            var khachHang = await _context.KhachHangs.FindAsync(id);
+            var khachHang = await _context.KhachHang.FindAsync(id);
             if (khachHang == null)
             {
                 return NotFound("Không tìm thấy khách hàng.");
@@ -131,10 +131,10 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteKhachHang(string id)
         {
-            var khachHang = await _context.KhachHangs
-                .Include(k => k.DonHangs)
+            var khachHang = await _context.KhachHang
+                .Include(k => k.HoaDon)
                 .Include(k => k.DanhGia)
-                .Include(k => k.PhanHois)
+                .Include(k => k.PhanHoi)
                 .FirstOrDefaultAsync(k => k.MaKhachHang == id);
 
             if (khachHang == null)
@@ -142,12 +142,12 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khách hàng.");
             }
 
-            if (khachHang.DonHangs.Any() || khachHang.DanhGia.Any() || khachHang.PhanHois.Any())
+            if (khachHang.HoaDon.Any() || khachHang.DanhGia.Any() || khachHang.PhanHoi.Any())
             {
                 return BadRequest("Khách hàng này đã phát sinh giao dịch (Đơn hàng, Đánh giá hoặc Phản hồi). Không thể xóa dữ liệu để bảo toàn lịch sử hệ thống. Vui lòng sử dụng tính năng 'Khóa tài khoản' thay thế.");
             }
 
-            _context.KhachHangs.Remove(khachHang);
+            _context.KhachHang.Remove(khachHang);
             await _context.SaveChangesAsync();
 
             return NoContent();
