@@ -1,0 +1,55 @@
+@{
+    ViewData["Title"] = "Đăng ký thành viên — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+
+<div class="page-intro">
+    <h1 class="page-title">Tạo tài khoản mới</h1>
+    <p>Trở thành thành viên Lẩu Phố để nhận ưu đãi và theo dõi đơn hàng tiện lợi.</p>
+</div>
+
+<div class="login-wrap">
+    <div class="login-art">
+        <div class="login-bowl">✨</div>
+        <span class="eyebrow">LẨU PHỐ · THÀNH VIÊN MỚI</span>
+        <h2>Gia nhập đại gia đình Lẩu Phố</h2>
+        <p>Lưu địa chỉ nhận món, tích lũy điểm thưởng và nhận voucher giảm giá độc quyền cho thành viên.</p>
+    </div>
+
+    <form class="panel login-form" asp-action="DangKy" method="post">
+        @Html.AntiForgeryToken()
+        <h2>Đăng ký tài khoản</h2>
+        <p class="muted login-subtitle">Vui lòng điền các thông tin bên dưới để tạo tài khoản.</p>
+
+        @if (TempData["ThongBao"] is string message)
+        {
+            <p class="notice" role="alert">@message</p>
+        }
+
+        <div class="field">
+            <label for="regName">Họ và tên *</label>
+            <input id="regName" name="hoTen" required maxlength="100" placeholder="Ví dụ: Nguyễn Văn An" />
+        </div>
+
+        <div class="two">
+            <div class="field">
+                <label for="regPhone">Số điện thoại liên hệ *</label>
+                <input id="regPhone" name="soDienThoai" required type="tel" placeholder="0901 234 567" />
+            </div>
+            <div class="field">
+                <label for="regEmail">Địa chỉ Email (Tùy chọn)</label>
+                <input id="regEmail" name="email" type="email" placeholder="ban@email.com" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="regPassword">Mật khẩu đăng nhập *</label>
+            <input id="regPassword" name="matKhau" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự" />
+        </div>
+
+        <button class="btn" type="submit" style="width:100%; margin-top:10px;">Tạo tài khoản mới →</button>
+
+        <div class="login-sep"><span>Đã có tài khoản?</span></div>
+        <a class="btn secondary" asp-action="DangNhap" style="width:100%; text-align:center;">Đăng nhập ngay</a>
+    </form>
+</div>

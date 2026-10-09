@@ -4,14 +4,34 @@ using RestaurantCRM.Web.Services;
 
 namespace RestaurantCRM.Web.Controllers;
 
-public class TrangChuController(MonAnService monAnService) : Controller
+public class TrangChuController : Controller
 {
-    public IActionResult Index(string? loai, string? q, bool menu = false)
+    private readonly MonAnService _monAnService;
+
+    public TrangChuController(MonAnService monAnService)
     {
-        var all = monAnService.GetAll();
-        var selected = all.AsEnumerable();
-        if (!String.IsNullOrWhiteSpace(loai) && loai != "Tất cả") selected = selected.Where(x => x.LoaiMon == loai);
-        if (!String.IsNullOrWhiteSpace(q)) selected = selected.Where(x => x.TenMon.Contains(q, StringComparison.CurrentCultureIgnoreCase));
-        return View(new MonAnDanhSachViewModel { MonAns = selected.ToList(), MonNoiBat = all.Take(4).ToList(), LoaiMons = monAnService.GetCategories(), LoaiDangChon = loai, TuKhoa = q, MenuMode = menu });
+        _monAnService = monAnService;
+    }
+
+    public async Task<IActionResult> Index(string? loai, string? q, bool menu = false)
+    {
+        if (menu)
+        {
+            return RedirectToAction("Index", "Menu", new { loai, q });
+        }
+
+        var all = await _monAnService.GetAllAsync(loai, q);
+        var categories = await _monAnService.GetCategoriesAsync();
+
+        return View(new MonAnDanhSachViewModel
+        {
+            MonAns = all,
+            MonNoiBat = all.Where(d => d.ConHang).Take(6).ToList(),
+            DanhSachLoaiMon = categories,
+            LoaiMons = categories.Select(c => c.TenLoaiMon).ToList(),
+            LoaiDangChon = loai,
+            TuKhoa = q,
+            MenuMode = false
+        });
     }
 }

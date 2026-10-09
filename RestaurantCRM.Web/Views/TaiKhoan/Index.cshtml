@@ -8,18 +8,23 @@
 @if (TempData["ThongBao"] is string message) { <p class="notice" role="alert">@message</p> }
 <div class="account-layout" data-account-root data-current-tab="@activeTab">
     <aside class="side-menu">
-        <div class="user-mini"><div class="avatar">NA</div><div><strong>Nguyễn An</strong><div class="muted" class="muted account-caption">Thành viên Lẩu Phố</div></div></div>
+        <div class="user-mini">
+            <div class="avatar">@(string.IsNullOrEmpty(Model.HoTen) ? "KH" : (Model.HoTen.Length > 2 ? Model.HoTen.Substring(0, 2).ToUpper() : Model.HoTen.ToUpper()))</div>
+            <div>
+                <strong>@Model.HoTen</strong>
+                <div class="muted account-caption">Thành viên Lẩu Phố</div>
+            </div>
+        </div>
         <button class="@(activeTab == "profile" ? "active" : "")" type="button" data-account="profile">👤 Thông tin cá nhân</button>
-        <button class="@(activeTab == "login" ? "active" : "")" type="button" data-account="login">🔐 Đăng nhập</button>
-        <button class="@(activeTab == "register" ? "active" : "")" type="button" data-account="register">✨ Tạo tài khoản</button>
         <button class="@(activeTab == "addresses" ? "active" : "")" type="button" data-account="addresses">📍 Địa chỉ giao hàng</button>
+        <a class="btn secondary small" asp-action="DangXuat" style="margin-top:14px; width:100%; text-align:center; display:block;">🚪 Đăng xuất</a>
     </aside>
     <section class="panel" id="accountPanel">
         <div data-account-panel="profile" hidden="@(activeTab != "profile")">
             <h3>Thông tin cá nhân</h3>
             <form asp-action="CapNhat" method="post">
                 <div class="two"><div class="field"><label asp-for="HoTen">Họ và tên</label><input asp-for="HoTen" required /></div><div class="field"><label asp-for="SoDienThoai">Số điện thoại</label><input asp-for="SoDienThoai" required /></div></div>
-                <div class="two"><div class="field"><label asp-for="Email">Email</label><input asp-for="Email" type="email" /></div><div class="field"><label asp-for="NgaySinh">Ngày sinh</label><input asp-for="NgaySinh" type="date" value="2003-05-18" /></div></div>
+                <div class="two"><div class="field"><label asp-for="Email">Email</label><input asp-for="Email" type="email" /></div><div class="field"><label asp-for="NgaySinh">Ngày sinh</label><input asp-for="NgaySinh" type="date" /></div></div>
                 <div class="field"><label asp-for="GioiTinh">Giới tính</label><select asp-for="GioiTinh"><option>Không muốn tiết lộ</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
                 <button class="btn" type="submit">Lưu thay đổi</button>
             </form>

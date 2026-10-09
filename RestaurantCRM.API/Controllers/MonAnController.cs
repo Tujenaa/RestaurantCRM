@@ -16,22 +16,33 @@ namespace RestaurantCRM.API.Controllers
             _context = context;
         }
 
-        // GET: api/MonAn - Lấy danh sách tất cả món ăn (chỉ hiển thị trạng thái Active).
+        // GET: api/MonAn - Lấy danh sách món ăn (hỗ trợ tìm kiếm theo tên và lọc theo loại món)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAns()
+        public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAns([FromQuery] string? search = null, [FromQuery] string? maLoai = null)
         {
-            return await _context.MonAn
-                .Where(m => m.TrangThai == "Active")
-                .AsNoTracking()
-                .ToListAsync();
+            var query = _context.MonAn
+                .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive"))
+                .AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "Tất cả")
+            {
+                query = query.Where(m => m.MaLoaiMon == maLoai);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(m => m.TenMon != null && m.TenMon.Contains(search));
+            }
+
+            return await query.ToListAsync();
         }
 
-        // GET: api/MonAn/TheoLoai/{maLoai} - Lấy danh sách món ăn theo loại (chỉ hiển thị trạng thái Active).
+        // GET: api/MonAn/TheoLoai/{maLoai} - Lấy danh sách món ăn theo loại
         [HttpGet("TheoLoai/{maLoai}")]
         public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAnsByLoai(string maLoai)
         {
             return await _context.MonAn
-                .Where(m => m.MaLoaiMon == maLoai && m.TrangThai == "Active")
+                .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive")))
                 .AsNoTracking()
                 .ToListAsync();
         }

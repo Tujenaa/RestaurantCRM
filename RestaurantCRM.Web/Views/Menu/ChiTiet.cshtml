@@ -1,0 +1,261 @@
+@model MonAnChiTietViewModel
+@{
+    var dish = Model.MonAn;
+    ViewData["Title"] = $"{dish.TenMon} — Chi tiết món ăn Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+
+<div class="dish-detail-page">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb-nav" aria-label="Đường dẫn điều hướng">
+        <ol class="breadcrumb-list">
+            <li><a asp-controller="TrangChu" asp-action="Index">Trang chủ</a></li>
+            <li class="separator">/</li>
+            <li><a asp-controller="Menu" asp-action="Index">Thực đơn</a></li>
+            <li class="separator">/</li>
+            <li><a asp-controller="Menu" asp-action="Index" asp-route-loai="@dish.MaLoaiMon">@dish.LoaiMon</a></li>
+            <li class="separator">/</li>
+            <li class="current" aria-current="page">@dish.TenMon</li>
+        </ol>
+    </nav>
+
+    <!-- Main Dish Detail Showcase -->
+    <section class="dish-detail-showcase">
+        <div class="dish-detail-grid">
+            <!-- Left: Media Showcase -->
+            <div class="dish-detail-media">
+                <div class="media-frame">
+                    <div class="dish-art @dish.Tone" style="height: 100%; border-radius: 0; font-size: 130px; user-select: none;">
+                        <span>@dish.BieuTuong</span>
+                    </div>
+
+                    <!-- Floating Badges -->
+                    <div class="media-badges">
+                        @if (!string.IsNullOrWhiteSpace(dish.Tag))
+                        {
+                            <span class="badge badge-tag">@dish.Tag</span>
+                        }
+                        <span class="badge @dish.TrangThaiBadgeClass">
+                            <span class="badge-dot"></span>@dish.TrangThaiHienThi
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Feature highlights -->
+                <div class="dish-trust-badges">
+                    <div class="trust-item">
+                        <span class="trust-icon">🥬</span>
+                        <div>
+                            <strong>Tươi mới mỗi ngày</strong>
+                            <p>Nguyên liệu sạch, kiểm định an toàn</p>
+                        </div>
+                    </div>
+                    <div class="trust-item">
+                        <span class="trust-icon">⚡</span>
+                        <div>
+                            <strong>Giao nhanh nóng hổi</strong>
+                            <p>Đóng gói giữ nhiệt giao 30-45 phút</p>
+                        </div>
+                    </div>
+                    <div class="trust-item">
+                        <span class="trust-icon">🍲</span>
+                        <div>
+                            <strong>Nồi lẩu gia truyền</strong>
+                            <p>Vị đậm đà khó quên</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Product Info & Order Action -->
+            <div class="dish-detail-info">
+                <div class="dish-meta-header">
+                    <span class="category-badge">@dish.LoaiMon</span>
+                    <span class="sku-badge">Mã món: <strong>@dish.MaMon</strong></span>
+                    <span class="rating-badge">⭐ 4.9 (48 đánh giá)</span>
+                </div>
+
+                <h1 class="dish-title">@dish.TenMon</h1>
+
+                <!-- Price Box -->
+                <div class="dish-price-box">
+                    <div class="price-main">
+                        <span class="price-number">@dish.DonGia.ToString("N0")</span>
+                        <span class="price-currency">đ</span>
+                    </div>
+                    <span class="price-vat">/ phần (Đã bao gồm VAT)</span>
+                </div>
+
+                <!-- Stock & Availability Info -->
+                <div class="dish-availability-card">
+                    <div class="availability-row">
+                        <span class="avail-label">Trạng thái kinh doanh:</span>
+                        <span class="badge @dish.TrangThaiBadgeClass">
+                            <span class="badge-dot"></span>@dish.TrangThaiHienThi
+                        </span>
+                    </div>
+
+                    <div class="availability-row">
+                        <span class="avail-label">Số lượng có thể đặt:</span>
+                        @if (dish.ConHang)
+                        {
+                            <div class="stock-counter-wrap">
+                                <span class="stock-number text-success">@dish.SoLuong suất có sẵn</span>
+                                <div class="stock-progress-bar">
+                                    <div class="stock-progress-fill" style="width: @Math.Min(100, Math.Max(15, dish.SoLuong * 2))%;"></div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="stock-number text-danger">Hiện tại đã hết hàng</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Order Action Form -->
+                @if (dish.ConHang)
+                {
+                    <form asp-controller="GioHang" asp-action="Them" method="post" class="dish-order-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="MaMon" value="@dish.MaMon" />
+
+                        <div class="form-row-quantity">
+                            <label for="detailQuantityInput" class="qty-control-label">Chọn số lượng:</label>
+                            <div class="quantity-picker">
+                                <button type="button" class="btn-qty" id="detailMinusBtn" aria-label="Giảm số lượng">−</button>
+                                <input type="number"
+                                       name="SoLuong"
+                                       id="detailQuantityInput"
+                                       value="1"
+                                       min="1"
+                                       max="@dish.SoLuong"
+                                       class="input-qty"
+                                       aria-label="Số lượng đặt" />
+                                <button type="button" class="btn-qty" id="detailPlusBtn" aria-label="Tăng số lượng">+</button>
+                            </div>
+                            <span class="qty-limit-note">(Tối đa: @dish.SoLuong suất)</span>
+                        </div>
+
+                        <!-- Live Total Preview -->
+                        <div class="order-subtotal-preview">
+                            <span>Tạm tính:</span>
+                            <strong id="liveSubtotalText">@dish.DonGia.ToString("N0") đ</strong>
+                        </div>
+
+                        <div class="order-action-buttons">
+                            <button type="submit" class="btn btn-primary btn-submit-cart">
+                                🛒 Thêm vào giỏ hàng
+                            </button>
+                            <a asp-controller="GioHang" asp-action="Index" class="btn btn-outline-cart">
+                                Xem giỏ hàng
+                            </a>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="dish-out-of-stock-card">
+                        <div class="alert-icon">⚠️</div>
+                        <div>
+                            <h4>Món ăn hiện tạm hết hàng</h4>
+                            <p>Bếp đang chuẩn bị bổ sung nguyên liệu tươi mới. Quý khách vui lòng chọn món ăn khác hoặc quay lại sau ít phút.</p>
+                            <a asp-controller="Menu" asp-action="Index" class="btn btn-secondary">Xem các món khác trong thực đơn</a>
+                        </div>
+                    </div>
+                }
+
+                <!-- Description & Details -->
+                <div class="dish-description-block">
+                    <h3 class="block-title">Mô tả món ăn</h3>
+                    <p class="description-text">@dish.MoTa</p>
+
+                    <div class="dish-specs">
+                        <div class="spec-row">
+                            <span class="spec-label">Phù hợp:</span>
+                            <span class="spec-value">Thưởng thức tại gia, liên hoan gia đình, bạn bè (1 - 4 người)</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-label">Quy cách:</span>
+                            <span class="spec-value">Đóng gói hộp chuyên dụng thực phẩm sạch kèm túi giữ nhiệt</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-label">Hướng dẫn:</span>
+                            <span class="spec-value">Nấu sôi lại nước lẩu hoặc nhúng ăn kèm ngay khi vừa nhận</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Related Dishes Section -->
+    @if (Model.MonLienQuan.Count > 0)
+    {
+        <section class="related-dishes-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Món ngon cùng danh mục</h2>
+                    <p>Khám phá thêm các lựa chọn hấp dẫn trong nhóm @dish.LoaiMon</p>
+                </div>
+                <a asp-controller="Menu" asp-action="Index" asp-route-loai="@dish.MaLoaiMon" class="text-btn">
+                    Xem tất cả @dish.LoaiMon →
+                </a>
+            </div>
+
+            <div class="dish-grid">
+                @foreach (var relatedDish in Model.MonLienQuan)
+                {
+                    <partial name="_DishCard" model="@relatedDish" />
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        (function() {
+            const unitPrice = @dish.DonGia;
+            const maxQuantity = @dish.SoLuong;
+            const minusBtn = document.getElementById('detailMinusBtn');
+            const plusBtn = document.getElementById('detailPlusBtn');
+            const qtyInput = document.getElementById('detailQuantityInput');
+            const liveSubtotal = document.getElementById('liveSubtotalText');
+
+            function updateSubtotal() {
+                if (!qtyInput) return;
+                let qty = parseInt(qtyInput.value || '1', 10);
+                if (isNaN(qty) || qty < 1) qty = 1;
+                if (maxQuantity > 0 && qty > maxQuantity) qty = maxQuantity;
+                qtyInput.value = qty;
+
+                if (liveSubtotal) {
+                    const total = qty * unitPrice;
+                    liveSubtotal.textContent = total.toLocaleString('vi-VN') + ' đ';
+                }
+            }
+
+            if (minusBtn && plusBtn && qtyInput) {
+                minusBtn.addEventListener('click', function() {
+                    let qty = parseInt(qtyInput.value || '1', 10);
+                    if (qty > 1) {
+                        qtyInput.value = qty - 1;
+                        updateSubtotal();
+                    }
+                });
+
+                plusBtn.addEventListener('click', function() {
+                    let qty = parseInt(qtyInput.value || '1', 10);
+                    if (qty < maxQuantity) {
+                        qtyInput.value = qty + 1;
+                        updateSubtotal();
+                    }
+                });
+
+                qtyInput.addEventListener('input', updateSubtotal);
+                qtyInput.addEventListener('change', updateSubtotal);
+            }
+        })();
+    </script>
+}

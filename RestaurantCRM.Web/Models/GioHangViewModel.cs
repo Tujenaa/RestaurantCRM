@@ -45,5 +45,6 @@ public class CapNhatSoLuongViewModel
 public class ApDungVoucherViewModel
 {
     [StringLength(30)]
-    public string MaVoucher { get; set; } = "";
+    public string? MaVoucher { get; set; }
+    public string? ReturnUrl { get; set; }
 }

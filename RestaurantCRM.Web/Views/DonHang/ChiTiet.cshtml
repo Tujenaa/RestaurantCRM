@@ -1,0 +1,131 @@
+@model DonHangViewModel
+@{
+    ViewData["Title"] = $"Chi tiết đơn hàng #{Model.MaDonHang} — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+    var steps = new[] { "Đã đặt", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Hoàn tất" };
+    var progress = Math.Clamp((Model.BuocHienTai - 1) * 20, 0, 80);
+}
+
+<div class="page-intro">
+    <a asp-action="Index" class="text-btn" style="margin-bottom: 8px; display: inline-block;">← Quay lại danh sách đơn hàng</a>
+    <h1 class="page-title">Chi tiết đơn hàng #@Model.MaDonHang</h1>
+    <p>Đặt lúc @Model.NgayDat.ToString("dd/MM/yyyy · HH:mm:ss")</p>
+</div>
+
+<div class="layout">
+    <section class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line);">
+            <div>
+                <h3 style="margin:0;">Danh sách món ăn</h3>
+                <small class="muted">@Model.ChiTiet.Count món trong đơn</small>
+            </div>
+            <span class="status @(Model.TrangThaiLoc == "done" ? "done" : (Model.TrangThaiLoc == "cancel" ? "badge-discontinued" : ""))">
+                @Model.TrangThai
+            </span>
+        </div>
+
+        <div class="order-items-detail-table">
+            @foreach (var item in Model.ChiTiet)
+            {
+                <div class="cart-item" style="grid-template-columns: auto 1fr auto; gap: 16px;">
+                    <div class="mini-art">🍲</div>
+                    <div>
+                        <h4 style="margin: 0 0 4px; font-size: 15px;">@item.TenMon</h4>
+                        <small class="muted">Mã: @item.MaMon · Số lượng: <strong>@item.SoLuong</strong></small>
+                        <div style="font-size: 13px; color: var(--muted); margin-top: 2px;">
+                            Đơn giá: @((item.DonGiaSauGiam > 0 ? item.DonGiaSauGiam : item.DonGiaGoc).ToString("N0"))đ
+                            @if (item.DonGiaSauGiam > 0 && item.DonGiaSauGiam < item.DonGiaGoc)
+                            {
+                                <span style="text-decoration: line-through; font-size: 11px; margin-left: 4px;">@item.DonGiaGoc.ToString("N0")đ</span>
+                            }
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="price" style="font-size: 16px;">@((item.DonGiaSauGiam > 0 ? item.DonGiaSauGiam * item.SoLuong : item.DonGiaGoc * item.SoLuong).ToString("N0"))đ</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Progress Tracker -->
+        @if (Model.TrangThaiLoc != "cancel")
+        {
+            <div class="order-progress" style="margin-top: 24px;">
+                <div class="progress-heading">
+                    <strong>📦 Trạng thái xử lý đơn hàng</strong>
+                    <small>@Model.TrangThai</small>
+                </div>
+                <div class="track-steps" style="--progress:@(progress)%">
+                    @for (var i = 0; i < steps.Length; i++)
+                    {
+                        var isComplete = i < Model.BuocHienTai;
+                        var isCurrent = i == (Model.BuocHienTai - 1);
+                        <div class="track-step @(isComplete ? "complete" : "") @(isCurrent ? "current" : "")">
+                            <div class="track-dot">@(isComplete ? "✓" : (i + 1).ToString())</div>
+                            <span>@steps[i]</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info" style="margin-top: 20px; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; padding: 14px; border-radius: 12px;">
+                ✕ Đơn hàng này đã được hủy. Món ăn đã được hoàn trả lại kho phục vụ.
+            </div>
+        }
+
+        <div style="margin-top: 24px; display:flex; gap:12px;">
+            @if (Model.CanCancel)
+            {
+                <form asp-action="HuyDon" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.MaDonHang" />
+                    <button class="btn secondary" type="submit" style="color: #c62828; border-color: #ef9a9a;">
+                        ✕ Hủy đơn hàng này
+                    </button>
+                </form>
+            }
+
+            <form asp-action="MuaLai" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.MaDonHang" />
+                <button class="btn" type="submit">
+                    🔄 Đặt lại các món này
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Side Summary -->
+    <aside class="panel summary">
+        <h3>Thông tin giao nhận</h3>
+        <div style="font-size: 13.5px; line-height: 1.6; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line);">
+            <div style="margin-bottom: 8px;">
+                <span class="muted">Địa chỉ nhận hàng:</span><br />
+                <strong>@(string.IsNullOrEmpty(Model.DiaChiGiao) ? "Chưa cập nhật địa chỉ" : Model.DiaChiGiao)</strong>
+            </div>
+            <div>
+                <span class="muted">Hình thức nhận:</span><br />
+                <strong>@Model.HinhThucNhan</strong>
+            </div>
+        </div>
+
+        <h3>Chi phí thanh toán</h3>
+        <div class="summary-line">
+            <span>Tiền hàng</span>
+            <strong>@(Model.TongTienHang > 0 ? Model.TongTienHang.ToString("N0") : Model.TongThanhToan.ToString("N0"))đ</strong>
+        </div>
+        @if (Model.TienGiamVoucher > 0)
+        {
+            <div class="summary-line">
+                <span>Voucher giảm giá</span>
+                <strong style="color: var(--green);">−@Model.TienGiamVoucher.ToString("N0")đ</strong>
+            </div>
+        }
+        <div class="summary-line total">
+            <span>Tổng thanh toán</span>
+            <span style="color: var(--red); font-size: 20px;">@Model.TongThanhToan.ToString("N0")đ</span>
+        </div>
+    </aside>
+</div>

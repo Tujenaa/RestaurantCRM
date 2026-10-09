@@ -11,7 +11,11 @@
     <main>
         @if (TempData["ThongBao"] is string message)
         {
-            <div class="notice" role="status">@message</div>
+            var isError = TempData["IsError"] as bool? == true;
+            <div class="notice @(isError ? "notice-error" : "")" role="status">
+                @if(isError) { <strong>⚠️ Lỗi ưu đãi:</strong> }
+                @message
+            </div>
         }
         @RenderBody()
     </main>

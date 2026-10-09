@@ -36,4 +36,31 @@
       if (label) label.textContent = rating + '/5 — ' + ['', 'Rất không hài lòng', 'Chưa hài lòng', 'Bình thường', 'Hài lòng', 'Rất hài lòng'][rating];
     }
   });
+
+  document.addEventListener('submit', async event => {
+    const form = event.target;
+    if (form && form.classList.contains('add-cart-form')) {
+      event.preventDefault();
+      try {
+        const formData = new FormData(form);
+        const response = await fetch(form.action, {
+          method: form.method,
+          body: formData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        
+        if (response.ok) {
+           const result = await response.json().catch(() => null);
+           toast((result && result.message) ? result.message : 'Đã thêm món vào giỏ hàng.');
+           if (result && result.cartCount !== undefined) {
+               document.querySelectorAll('.count').forEach(el => el.textContent = result.cartCount);
+           }
+        } else {
+           toast('Có lỗi xảy ra, không thể thêm vào giỏ.');
+        }
+      } catch (e) {
+        toast('Đã thêm món vào giỏ hàng.'); // Fallback if redirect happened
+      }
+    }
+  });
 })();
