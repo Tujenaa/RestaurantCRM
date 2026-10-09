@@ -176,7 +176,7 @@ namespace RestaurantCRM.API.Controllers
                         MaThanhToan = "TT" + DateTime.Now.Ticks.ToString().Substring(8, 6),
                         MaHoaDon = maHoaDon,
                         PhuongThuc = "Online",
-                        TrangThai = "Success",
+                        TrangThai = "Paid",
                         NgayThanhToan = DateTime.Now,
                         SoTien = hoaDon.TongThanhToan
                     };
@@ -204,7 +204,7 @@ namespace RestaurantCRM.API.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, "Lỗi hệ thống: " + ex.Message);
+                return StatusCode(500, "Lỗi hệ thống: " + ex.Message + " | Inner: " + ex.InnerException?.Message);
             }
         }
 
@@ -288,6 +288,7 @@ namespace RestaurantCRM.API.Controllers
             var hoaDon = await _context.HoaDon
                 .Include(d => d.ChiTietHoaDon)
                     .ThenInclude(c => c.MaMonNavigation)
+                .Include(d => d.ThanhToan)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.MaHoaDon == id);
 
@@ -305,6 +306,7 @@ namespace RestaurantCRM.API.Controllers
                 hoaDon.TongTienHang,
                 hoaDon.TienGiamVoucher,
                 hoaDon.TongThanhToan,
+                PhuongThucThanhToan = hoaDon.ThanhToan.FirstOrDefault()?.PhuongThuc ?? "COD",
                 ChiTiet = hoaDon.ChiTietHoaDon.Select(c => new
                 {
                     c.MaMon,

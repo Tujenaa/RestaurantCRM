@@ -79,10 +79,21 @@
 
                 <!-- Price Box -->
                 <div class="dish-price-box">
-                    <div class="price-main">
-                        <span class="price-number">@dish.DonGia.ToString("N0")</span>
-                        <span class="price-currency">đ</span>
-                    </div>
+                    @if (dish.DonGiaSauGiam < dish.DonGia && dish.DonGiaSauGiam > 0)
+                    {
+                        <div class="price-main">
+                            <span class="price-number">@dish.DonGiaSauGiam.ToString("N0")</span>
+                            <span class="price-currency">đ</span>
+                            <span style="text-decoration:line-through; font-size:16px; color:var(--muted); margin-left:12px; font-weight:normal;">@dish.DonGia.ToString("N0")đ</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="price-main">
+                            <span class="price-number">@dish.DonGia.ToString("N0")</span>
+                            <span class="price-currency">đ</span>
+                        </div>
+                    }
                     <span class="price-vat">/ phần (Đã bao gồm VAT)</span>
                 </div>
 
@@ -140,7 +151,7 @@
                         <!-- Live Total Preview -->
                         <div class="order-subtotal-preview">
                             <span>Tạm tính:</span>
-                            <strong id="liveSubtotalText">@dish.DonGia.ToString("N0") đ</strong>
+                            <strong id="liveSubtotalText">@((dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam.ToString("N0") : dish.DonGia.ToString("N0")) đ</strong>
                         </div>
 
                         <div class="order-action-buttons">
@@ -216,7 +227,7 @@
 @section Scripts {
     <script>
         (function() {
-            const unitPrice = @dish.DonGia;
+            const unitPrice = @((dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia);
             const maxQuantity = @dish.SoLuong;
             const minusBtn = document.getElementById('detailMinusBtn');
             const plusBtn = document.getElementById('detailPlusBtn');

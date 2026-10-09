@@ -13,6 +13,7 @@ public class DonHangViewModel
     public string TrangThai { get; set; } = "";
     public string DiaChiGiao { get; set; } = "";
     public string HinhThucNhan { get; set; } = "Giao hàng tận nơi";
+    public string PhuongThucThanhToan { get; set; } = "COD";
     public List<string> TienTrinh { get; set; } = new();
     public int BuocHienTai { get; set; }
     public string TrangThaiLoc { get; set; } = "active";

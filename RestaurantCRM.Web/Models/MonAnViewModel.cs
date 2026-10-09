@@ -11,6 +11,7 @@ public class MonAnViewModel
     public string MoTa { get; set; } = "";
     public string DuongDanAnh { get; set; } = "";
     public decimal DonGia { get; set; }
+    public decimal DonGiaSauGiam { get; set; }
     public int SoLuong { get; set; } = 0;
     public string TrangThai { get; set; } = "InStock"; // InStock, OutOfStock, Active, Discontinued
     public string BieuTuong { get; set; } = "🍲";

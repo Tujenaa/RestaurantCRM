@@ -46,7 +46,17 @@
         <div class="dish-card__footer">
             <div class="dish-card__price-wrap">
                 <span class="dish-card__price-label">Giá bán</span>
-                <span class="dish-card__price">@Model.DonGia.ToString("N0") <small>đ</small></span>
+                @if (Model.DonGiaSauGiam < Model.DonGia && Model.DonGiaSauGiam > 0)
+                {
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="dish-card__price">@Model.DonGiaSauGiam.ToString("N0") <small>đ</small></span>
+                        <span style="text-decoration:line-through; font-size:12px; color:var(--muted);">@Model.DonGia.ToString("N0") <small>đ</small></span>
+                    </div>
+                }
+                else
+                {
+                    <span class="dish-card__price">@Model.DonGia.ToString("N0") <small>đ</small></span>
+                }
             </div>
 
             <div class="dish-card__actions">

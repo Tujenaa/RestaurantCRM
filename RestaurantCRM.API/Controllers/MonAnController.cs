@@ -21,7 +21,9 @@ namespace RestaurantCRM.API.Controllers
         public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAns([FromQuery] string? search = null, [FromQuery] string? maLoai = null)
         {
             var query = _context.MonAn
-                .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive"))
+                .Include(m => m.KmTheoSp)
+                    .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock"))
                 .AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "Tất cả")
@@ -34,31 +36,77 @@ namespace RestaurantCRM.API.Controllers
                 query = query.Where(m => m.TenMon != null && m.TenMon.Contains(search));
             }
 
-            return await query.ToListAsync();
+            var now = DateTime.Now;
+            var today = DateOnly.FromDateTime(now);
+            var list = await query.ToListAsync();
+            return Ok(list.Select(m => {
+                var activeKm = m.KmTheoSp.FirstOrDefault(k => k.MaChuongTrinhNavigation != null && k.MaChuongTrinhNavigation.NgayBatDau <= today && k.MaChuongTrinhNavigation.NgayKetThuc >= today);
+                double donGia = m.DonGia ?? 0;
+                double giaSauGiam = donGia;
+                if (activeKm != null) {
+                    giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
+                }
+                return new {
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    DonGiaSauGiam = Math.Max(0, giaSauGiam)
+                };
+            }));
         }
 
         // GET: api/MonAn/TheoLoai/{maLoai} - Lấy danh sách món ăn theo loại
         [HttpGet("TheoLoai/{maLoai}")]
         public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAnsByLoai(string maLoai)
         {
-            return await _context.MonAn
-                .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive")))
+            var now = DateTime.Now;
+            var today = DateOnly.FromDateTime(now);
+            var list = await _context.MonAn
+                .Include(m => m.KmTheoSp)
+                    .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock")))
                 .AsNoTracking()
                 .ToListAsync();
+
+            return Ok(list.Select(m => {
+                var activeKm = m.KmTheoSp.FirstOrDefault(k => k.MaChuongTrinhNavigation != null && k.MaChuongTrinhNavigation.NgayBatDau <= today && k.MaChuongTrinhNavigation.NgayKetThuc >= today);
+                double donGia = m.DonGia ?? 0;
+                double giaSauGiam = donGia;
+                if (activeKm != null) {
+                    giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
+                }
+                return new {
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    DonGiaSauGiam = Math.Max(0, giaSauGiam)
+                };
+            }));
         }
 
         // GET: api/MonAn/{id} - Lấy thông tin chi tiết một món ăn.
         [HttpGet("{id}")]
         public async Task<ActionResult<MonAn>> GetMonAn(string id)
         {
-            var monAn = await _context.MonAn.FindAsync(id);
+            var now = DateTime.Now;
+            var today = DateOnly.FromDateTime(now);
+            var monAn = await _context.MonAn
+                .Include(m => m.KmTheoSp)
+                    .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)
             {
                 return NotFound();
             }
 
-            return monAn;
+            var activeKm = monAn.KmTheoSp.FirstOrDefault(k => k.MaChuongTrinhNavigation != null && k.MaChuongTrinhNavigation.NgayBatDau <= today && k.MaChuongTrinhNavigation.NgayKetThuc >= today);
+            double donGia = monAn.DonGia ?? 0;
+            double giaSauGiam = donGia;
+            if (activeKm != null) {
+                giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
+            }
+
+            return Ok(new {
+                monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia, monAn.SoLuong, monAn.TrangThai,
+                DonGiaSauGiam = Math.Max(0, giaSauGiam)
+            });
         }
 
 

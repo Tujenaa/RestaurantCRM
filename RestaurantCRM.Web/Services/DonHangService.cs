@@ -218,6 +218,7 @@ public class DonHangService
                         TongTienHang = (decimal)dto.TongTienHang,
                         TienGiamVoucher = (decimal)dto.TienGiamVoucher,
                         TongThanhToan = (decimal)dto.TongThanhToan,
+                        PhuongThucThanhToan = (dto.PhuongThucThanhToan == "Online" ? "Thanh toán Online (Đã thanh toán)" : "Thanh toán tiền mặt khi nhận hàng (COD)"),
                         BuocHienTai = MapStep(dto.TrangThai),
                         TienTrinh = Steps(),
                         ChiTiet = (dto.ChiTiet ?? new()).Select(c => new DonHangChiTietViewModel
@@ -378,6 +379,7 @@ internal class ApiOrderDetailDto
     public double TongTienHang { get; set; }
     public double TienGiamVoucher { get; set; }
     public double TongThanhToan { get; set; }
+    public string? PhuongThucThanhToan { get; set; }
     public List<ApiOrderDetailItemDto>? ChiTiet { get; set; }
 }
 

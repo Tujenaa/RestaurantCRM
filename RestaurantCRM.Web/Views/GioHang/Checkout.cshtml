@@ -214,13 +214,15 @@
             <form asp-action="Voucher" method="post" id="checkoutVoucherForm" style="margin-bottom: 8px;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="ReturnUrl" value="checkout" />
-                <div style="display: flex; gap: 6px;">
-                    <input id="checkoutVoucherInput" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã (VD: LAUPHO20)" style="flex:1;" />
-                    <button class="btn secondary small" type="submit" style="white-space:nowrap;">Áp dụng</button>
-                    @if (!string.IsNullOrWhiteSpace(Model.GioHang.MaVoucher))
-                    {
-                        <button class="btn secondary small" type="button" onclick="removeCheckoutVoucher()" title="Gỡ mã" style="color:var(--red); border-color:#ef9a9a;">✕ Gỡ</button>
-                    }
+                <div style="display: flex; flex-direction:column; gap: 8px;">
+                    <input id="checkoutVoucherInput" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã (VD: LAUPHO20)" style="width:100%;" />
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn secondary small" type="submit" style="flex:1; width:auto; margin-top:0;">Áp dụng ưu đãi</button>
+                        @if (!string.IsNullOrWhiteSpace(Model.GioHang.MaVoucher))
+                        {
+                            <button class="btn secondary small" type="button" onclick="removeCheckoutVoucher()" title="Gỡ mã" style="color:var(--red); border-color:#ef9a9a; flex:none; width:auto; margin-top:0; padding:0 16px;">✕ Gỡ</button>
+                        }
+                    </div>
                 </div>
             </form>
             <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Gợi ý mã giảm giá:</div>
@@ -232,14 +234,20 @@
             </div>
         </div>
 
-        <div class="summary-line total">
+        <div class="summary-line total" style="align-items:flex-end;">
             <span>Tổng thanh toán</span>
-            <span style="color: var(--red); font-size: 20px;">@Model.GioHang.TongThanhToan.ToString("N0")đ</span>
+            <div style="text-align: right;">
+                @if (Model.GioHang.GiamGia > 0)
+                {
+                    var originalTotal = Model.GioHang.TongThanhToan + Model.GioHang.GiamGia;
+                    <div style="text-decoration: line-through; color: var(--muted); font-size: 14px; margin-bottom: 2px;">
+                        @originalTotal.ToString("N0")đ
+                    </div>
+                }
+                <div style="color: var(--red); font-size: 20px;">@Model.GioHang.TongThanhToan.ToString("N0")đ</div>
+            </div>
         </div>
 
-        <div class="notice" style="margin-top: 16px; font-size: 12px; line-height: 1.5;">
-            🔒 Đơn hàng sẽ được gửi và lưu trực tiếp vào cơ sở dữ liệu hệ thống (Bảng <code>HOA_DON</code> & <code>CHI_TIET_HOA_DON</code>). Số lượng kho sẽ được trừ tự động.
-        </div>
     </aside>
 </div>
 
@@ -308,10 +316,9 @@
 
         function quickApplyCheckoutVoucher(code) {
             const input = document.getElementById('checkoutVoucherInput');
-            const form = document.getElementById('checkoutVoucherForm');
-            if (input && form) {
+            if (input) {
                 input.value = code;
-                form.submit();
+                input.focus({ preventScroll: true });
             }
         }
 

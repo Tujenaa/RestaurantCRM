@@ -133,7 +133,7 @@ public class MonAnService
                 d.MoTa.Contains(clean, StringComparison.OrdinalIgnoreCase));
         }
 
-        var result = filtered.ToList();
+        var result = filtered.Where(d => d.TrangThai != "OutOfStock").ToList();
         _cachedDishes = result;
         return result;
     }
@@ -224,6 +224,7 @@ public class MonAnService
             MoTa = dto.MoTa ?? "Món ăn thơm ngon, chuẩn bị nóng hổi mỗi ngày từ nhà hàng Lẩu Phố.",
             DuongDanAnh = img,
             DonGia = (decimal)(dto.DonGia ?? 0),
+            DonGiaSauGiam = (decimal)(dto.DonGiaSauGiam ?? dto.DonGia ?? 0),
             SoLuong = dto.SoLuong ?? 0,
             TrangThai = dto.TrangThai ?? "InStock",
             BieuTuong = icon,
@@ -276,6 +277,7 @@ internal class ApiMonAnDto
     public string? MoTa { get; set; }
     public string? DuongDanAnh { get; set; }
     public double? DonGia { get; set; }
+    public double? DonGiaSauGiam { get; set; }
     public int? SoLuong { get; set; }
     public string? TrangThai { get; set; }
 }

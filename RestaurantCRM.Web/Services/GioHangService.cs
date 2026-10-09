@@ -27,9 +27,10 @@ public class GioHangService
         if (dish is null) return;
         var cart = Get(session).Items;
         var item = cart.FirstOrDefault(x => x.MaMon == maMon);
-        if (item is null) cart.Add(new GioHangItemViewModel { MaMon = dish.MaMon, TenMon = dish.TenMon, BieuTuong = dish.BieuTuong, DonGia = dish.DonGia, SoLuong = Math.Clamp(quantity, 1, 99) });
+        if (item is null) cart.Add(new GioHangItemViewModel { MaMon = dish.MaMon, TenMon = dish.TenMon, BieuTuong = dish.BieuTuong, DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia, SoLuong = Math.Clamp(quantity, 1, 99) });
         else item.SoLuong = Math.Min(99, item.SoLuong + Math.Clamp(quantity, 1, 99));
         Save(session, cart);
+        AutoApplyBestVoucher(session, cart);
     }
 
     public void SetQuantity(ISession session, string maMon, int quantity)
@@ -42,6 +43,7 @@ public class GioHangService
             else item.SoLuong = Math.Min(quantity, 99);
         }
         Save(session, cart);
+        AutoApplyBestVoucher(session, cart);
     }
 
     public (bool Success, string Message, decimal Discount) ApplyVoucher(ISession session, string? code)
@@ -104,4 +106,32 @@ public class GioHangService
     }
 
     private static void Save(ISession session, List<GioHangItemViewModel> cart) => session.SetString(CartKey, JsonSerializer.Serialize(cart));
+
+    private void AutoApplyBestVoucher(ISession session, List<GioHangItemViewModel> cart)
+    {
+        var subtotal = cart.Sum(x => x.ThanhTien);
+        if (subtotal == 0) return;
+        
+        var currentVoucher = session.GetString(VoucherKey);
+        var currentDiscount = string.IsNullOrWhiteSpace(currentVoucher) ? 0m : CalculateDiscount(currentVoucher, subtotal);
+
+        var allVouchers = new[] { "LAUPHO20", "VOUCHER40K", "VOUCHER10", "NHOM15" };
+        var bestVoucher = currentVoucher;
+        var maxDiscount = currentDiscount;
+
+        foreach (var v in allVouchers)
+        {
+            var d = CalculateDiscount(v, subtotal);
+            if (d > maxDiscount)
+            {
+                maxDiscount = d;
+                bestVoucher = v;
+            }
+        }
+
+        if (bestVoucher != currentVoucher && maxDiscount > 0)
+        {
+            session.SetString(VoucherKey, bestVoucher);
+        }
+    }
 }
