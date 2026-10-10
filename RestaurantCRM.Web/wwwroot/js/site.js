@@ -39,7 +39,7 @@
 
   document.addEventListener('submit', async event => {
     const form = event.target;
-    if (form && form.classList.contains('add-cart-form')) {
+    if (form && (form.classList.contains('add-cart-form') || form.classList.contains('dish-order-form'))) {
       event.preventDefault();
       try {
         const formData = new FormData(form);
@@ -64,3 +64,70 @@
     }
   });
 })();
+
+// Global Quick View functions
+window.openQuickView = function(dishId) {
+    const modal = document.getElementById('quickViewModal');
+    const content = document.getElementById('quickViewContent');
+    if (!modal || !content) return;
+
+    modal.classList.add('quickview-modal--open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    content.innerHTML = `
+        <div class="quickview-loading">
+            <div class="spinner"></div>
+            <p>Đang tải thông tin món ăn...</p>
+        </div>
+    `;
+
+    fetch(`/Menu/QuickView/${encodeURIComponent(dishId)}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Không thể tải món ăn');
+            return res.text();
+        })
+        .then(html => {
+            content.innerHTML = html;
+            window.bindQuickViewActions();
+        })
+        .catch(err => {
+            content.innerHTML = `
+                <div class="quickview-error">
+                    <p>⚠️ Không thể tải thông tin món lúc này. Vui lòng mở xem chi tiết trực tiếp.</p>
+                    <a href="/Menu/ChiTiet/${encodeURIComponent(dishId)}" class="btn btn-primary">Xem trang chi tiết</a>
+                </div>
+            `;
+        });
+};
+
+window.closeQuickView = function() {
+    const modal = document.getElementById('quickViewModal');
+    if (modal) {
+        modal.classList.remove('quickview-modal--open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+};
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') window.closeQuickView();
+});
+
+window.bindQuickViewActions = function() {
+    const minusBtn = document.getElementById('qvMinusBtn');
+    const plusBtn = document.getElementById('qvPlusBtn');
+    const qtyInput = document.getElementById('qvQuantityInput');
+    const maxQty = parseInt(qtyInput?.getAttribute('max') || '99', 10);
+
+    if (minusBtn && plusBtn && qtyInput) {
+        minusBtn.addEventListener('click', () => {
+            let val = parseInt(qtyInput.value || '1', 10);
+            if (val > 1) qtyInput.value = val - 1;
+        });
+        plusBtn.addEventListener('click', () => {
+            let val = parseInt(qtyInput.value || '1', 10);
+            if (val < maxQty) qtyInput.value = val + 1;
+        });
+    }
+};

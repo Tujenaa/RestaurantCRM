@@ -146,6 +146,12 @@ public class GioHangController : Controller
         _gioHangService.Clear(HttpContext.Session);
         TempData["DonHangMoi"] = result.OrderId;
 
+        if (!string.IsNullOrWhiteSpace(voucherCode))
+        {
+            var used = HttpContext.Session.GetString("UsedVouchers");
+            HttpContext.Session.SetString("UsedVouchers", string.IsNullOrEmpty(used) ? voucherCode : used + "," + voucherCode);
+        }
+
         var isOnline = string.Equals(model.PhuongThucThanhToan, "transfer", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(model.PhuongThucThanhToan, "online", StringComparison.OrdinalIgnoreCase);
 

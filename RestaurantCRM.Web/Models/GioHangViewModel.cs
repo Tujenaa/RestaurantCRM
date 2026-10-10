@@ -17,7 +17,7 @@ public class GioHangViewModel
     public List<GioHangItemViewModel> Items { get; set; } = new();
     public string? MaVoucher { get; set; }
     public decimal GiamGia { get; set; }
-    public decimal PhiGiaoHang => Items.Count == 0 ? 0 : 15000;
+    public decimal PhiGiaoHang => 0; // Đã bỏ phí giao hàng
     public decimal TamTinh => Items.Sum(x => x.ThanhTien);
     public decimal TongThanhToan => Math.Max(0, TamTinh - GiamGia + PhiGiaoHang);
 }

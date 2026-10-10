@@ -57,6 +57,7 @@ public class MonAnDanhSachViewModel
     public IReadOnlyList<string> LoaiMons { get; set; } = Array.Empty<string>();
     public string? LoaiDangChon { get; set; }
     public string? TuKhoa { get; set; }
+    public string? SortDangChon { get; set; }
     public bool MenuMode { get; set; }
     public int TongSoMon => MonAns.Count;
 }

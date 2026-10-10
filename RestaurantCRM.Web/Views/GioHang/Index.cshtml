@@ -66,10 +66,7 @@ else
                 <span>Tạm tính tiền món</span>
                 <strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong>
             </div>
-            <div class="summary-line">
-                <span>Phí vận chuyển</span>
-                <strong>@Model.GioHang.PhiGiaoHang.ToString("N0")đ</strong>
-            </div>
+
 
             @if (Model.GioHang.GiamGia > 0)
             {
@@ -120,8 +117,10 @@ else
                             new { Code = "VOUCHER10", Label = "-10%" },
                             new { Code = "NHOM15", Label = "-15%" }
                         };
-                        var validVouchers = allVouchers.Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) > 0).ToList();
-                        var invalidVouchers = allVouchers.Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) == 0).ToList();
+                        var usedStr = Context.Session.GetString("UsedVouchers") ?? "";
+                        var available = allVouchers.Where(v => !usedStr.Contains(v.Code)).ToList();
+                        var validVouchers = available.Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) > 0).ToList();
+                        var invalidVouchers = available.Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) == 0).ToList();
                     }
                     @foreach (var v in validVouchers)
                     {

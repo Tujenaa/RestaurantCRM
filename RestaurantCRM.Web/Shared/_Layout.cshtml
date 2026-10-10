@@ -21,6 +21,19 @@
     </main>
     <partial name="/Shared/_Footer.cshtml" />
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <!-- Quick View Modal Container -->
+    <div class="quickview-modal" id="quickViewModal" aria-hidden="true" role="dialog">
+        <div class="quickview-modal__backdrop" onclick="closeQuickView()"></div>
+        <div class="quickview-modal__dialog">
+            <button class="quickview-modal__close" onclick="closeQuickView()" aria-label="Đóng">✕</button>
+            <div class="quickview-modal__content" id="quickViewContent">
+                <div class="quickview-loading">
+                    <div class="spinner"></div>
+                    <p>Đang tải thông tin món ăn...</p>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -25,9 +25,16 @@
             <!-- Left: Media Showcase -->
             <div class="dish-detail-media">
                 <div class="media-frame">
-                    <div class="dish-art @dish.Tone" style="height: 100%; border-radius: 0; font-size: 130px; user-select: none;">
-                        <span>@dish.BieuTuong</span>
-                    </div>
+                    @if (!string.IsNullOrWhiteSpace(dish.DuongDanAnh))
+                    {
+                        <img src="@dish.DuongDanAnh" alt="@dish.TenMon" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px;" />
+                    }
+                    else
+                    {
+                        <div class="dish-art @dish.Tone" style="height: 100%; border-radius: 0; font-size: 130px; user-select: none;">
+                            <span>@dish.BieuTuong</span>
+                        </div>
+                    }
 
                     <!-- Floating Badges -->
                     <div class="media-badges">

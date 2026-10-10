@@ -16,10 +16,10 @@ public class MenuController : Controller
 
     [HttpGet("")]
     [HttpGet("Index")]
-    public async Task<IActionResult> Index([FromQuery] string? loai = null, [FromQuery] string? q = null)
+    public async Task<IActionResult> Index([FromQuery] string? loai = null, [FromQuery] string? q = null, [FromQuery] string? sort = null)
     {
         var categories = await _monAnService.GetCategoriesAsync();
-        var dishes = await _monAnService.GetAllAsync(loai, q);
+        var dishes = await _monAnService.GetAllAsync(loai, q, sort);
 
         var viewModel = new MonAnDanhSachViewModel
         {
@@ -29,6 +29,7 @@ public class MenuController : Controller
             LoaiMons = categories.Select(c => c.TenLoaiMon).ToList(),
             LoaiDangChon = loai,
             TuKhoa = q,
+            SortDangChon = sort,
             MenuMode = true
         };
 

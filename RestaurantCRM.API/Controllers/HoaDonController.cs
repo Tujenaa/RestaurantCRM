@@ -42,7 +42,7 @@ namespace RestaurantCRM.API.Controllers
                     SoDienThoai = request.SoDienThoai,
                     DiaChiGiao = request.DiaChiGiao,
                     NgayDat = DateTime.Now,
-                    TrangThai = isOnline ? "Delivering" : "Pending", // Đã thanh toán online thì đơn chuyển sang đang giao
+                    TrangThai = isOnline ? "Confirmed" : "Pending", // Đã thanh toán online thì đơn chuyển sang đã xác nhận
                     TongTienHang = 0,
                     TongThanhToan = 0,
                     TienGiamVoucher = 0
@@ -188,10 +188,10 @@ namespace RestaurantCRM.API.Controllers
                 {
                     MaLichSu = "LS" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                     MaHoaDon = maHoaDon,
-                    TrangThai = isOnline ? "Delivering" : "Pending",
+                    TrangThai = isOnline ? "Confirmed" : "Pending",
                     ThoiGian = DateTime.Now,
                     GhiChu = isOnline 
-                        ? "Đã thanh toán online thành công qua ngân hàng. Đơn hàng đang trên đường giao." 
+                        ? "Đã thanh toán online thành công qua ngân hàng. Đơn hàng đã được xác nhận." 
                         : "Đơn hàng mới được tạo (Thanh toán COD khi nhận món)"
                 };
                 _context.LichSuTrangThai.Add(lichSu);

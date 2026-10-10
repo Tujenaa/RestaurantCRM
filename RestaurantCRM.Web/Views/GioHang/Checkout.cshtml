@@ -102,14 +102,13 @@
         </label>
         <label class="choice" style="margin-bottom:16px;">
             <input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="transfer" id="payOnline" />
-            <span>💳 <strong>Thanh toán Online / Chuyển khoản / Thẻ ngân hàng (Demo)</strong></span>
+            <span>💳 <strong>Thanh toán Online / Chuyển khoản / Thẻ ngân hàng</strong></span>
         </label>
 
         <!-- Online Payment Container -->
         <div id="onlinePaymentPanel" style="display:none; background:#fbf7ef; border:1.5px solid #d4c3b3; border-radius:16px; padding:20px; margin-bottom:20px; animation:fadeIn .2s;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px dashed #d4c3b3; padding-bottom:10px;">
-                <strong style="color:var(--dark); font-size:15px;">🏦 Cổng thanh toán trực tuyến Lẩu Phố (Demo)</strong>
-                <span style="font-size:12px; background:#e8f5e9; color:#2e7d32; font-weight:700; padding:3px 10px; border-radius:999px;">✓ Sandbox Test Mode</span>
+                <strong style="color:var(--dark); font-size:15px;">🏦 Cổng thanh toán trực tuyến Lẩu Phố</strong>
             </div>
 
             <!-- Tab Selection -->
@@ -133,7 +132,7 @@
                     </select>
                 </div>
                 <div class="field" style="margin-bottom:12px;">
-                    <label style="font-size:12px; font-weight:700;">Số thẻ thanh toán (Gợi ý sẵn số test)</label>
+                    <label style="font-size:12px; font-weight:700;">Số thẻ thanh toán</label>
                     <input type="text" id="demoCardNumber" value="9704 2200 8899 3366" placeholder="9704 xxxx xxxx xxxx" maxlength="19" style="background:white; font-family:monospace; font-size:14px; font-weight:700;" />
                 </div>
                 <div class="two" style="gap:12px; margin-bottom:12px;">
@@ -153,7 +152,7 @@
                     </div>
                 </div>
                 <p style="margin:0; font-size:12px; color:#5c6f84; background:#e8f0fe; padding:8px 12px; border-radius:8px;">
-                    🔒 Thẻ hợp lệ demo: Nhấn <b>"Thanh toán ngay"</b> bên dưới, hệ thống sẽ tự động xác thực và kích hoạt đơn hàng sang trạng thái <b>Đang giao hàng</b>.
+                    🔒 Nhấn <b>"Thanh toán ngay"</b> bên dưới, hệ thống sẽ tự động xác thực và kích hoạt đơn hàng.
                 </p>
             </div>
 
@@ -162,7 +161,7 @@
                 <div style="background:white; border:1px solid #d4c3b3; border-radius:12px; padding:16px; display:inline-block; max-width:280px; margin-bottom:10px;">
                     <div style="font-weight:800; font-size:14px; color:#c6402b; margin-bottom:6px;">NHÀ HÀNG LẨU PHỐ</div>
                     <div style="width:180px; height:180px; margin:0 auto; background:#fff; display:grid; place-items:center; border:2px dashed #c6402b; border-radius:8px; font-size:13px; font-weight:700;">
-                        📲 VIETQR DEMO<br/><small style="color:var(--muted);">Mã thanh toán tự động</small>
+                        📲 VIETQR<br/><small style="color:var(--muted);">Mã thanh toán tự động</small>
                     </div>
                     <div style="font-size:13px; font-weight:700; margin-top:8px;">STK: 9999 8888 6688 · MB Bank</div>
                     <div style="font-size:12px; color:var(--muted);">Số tiền: <b style="color:var(--red);">@Model.GioHang.TongThanhToan.ToString("N0")đ</b></div>
@@ -196,10 +195,6 @@
             <span>Tạm tính tiền hàng</span>
             <strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong>
         </div>
-        <div class="summary-line">
-            <span>Phí vận chuyển</span>
-            <strong>@Model.GioHang.PhiGiaoHang.ToString("N0")đ</strong>
-        </div>
         @if (Model.GioHang.GiamGia > 0)
         {
             <div class="summary-line">
@@ -227,10 +222,20 @@
             </form>
             <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Gợi ý mã giảm giá:</div>
             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                <button type="button" class="chip-voucher" onclick="quickApplyCheckoutVoucher('LAUPHO20')" style="background:#fcf2eb; border:1px solid #f1c5b4; color:#a34820; font-size:11px; padding:3px 8px; border-radius:999px; cursor:pointer;">🎟️ LAUPHO20 (-20k)</button>
-                <button type="button" class="chip-voucher" onclick="quickApplyCheckoutVoucher('VOUCHER40K')" style="background:#fcf2eb; border:1px solid #f1c5b4; color:#a34820; font-size:11px; padding:3px 8px; border-radius:999px; cursor:pointer;">🎟️ VOUCHER40K (-40k)</button>
-                <button type="button" class="chip-voucher" onclick="quickApplyCheckoutVoucher('VOUCHER10')" style="background:#fcf2eb; border:1px solid #f1c5b4; color:#a34820; font-size:11px; padding:3px 8px; border-radius:999px; cursor:pointer;">🎟️ VOUCHER10 (-10%)</button>
-                <button type="button" class="chip-voucher" onclick="quickApplyCheckoutVoucher('NHOM15')" style="background:#fcf2eb; border:1px solid #f1c5b4; color:#a34820; font-size:11px; padding:3px 8px; border-radius:999px; cursor:pointer;">🎟️ NHOM15 (-15%)</button>
+                @{
+                    var allVouchers = new[] {
+                        new { Code = "LAUPHO20", Label = "-20k" },
+                        new { Code = "VOUCHER40K", Label = "-40k" },
+                        new { Code = "VOUCHER10", Label = "-10%" },
+                        new { Code = "NHOM15", Label = "-15%" }
+                    };
+                    var usedStr = Context.Session.GetString("UsedVouchers") ?? "";
+                    var available = allVouchers.Where(v => !usedStr.Contains(v.Code));
+                }
+                @foreach (var v in available)
+                {
+                    <button type="button" class="chip-voucher" onclick="quickApplyCheckoutVoucher('@v.Code')" style="background:#fcf2eb; border:1px solid #f1c5b4; color:#a34820; font-size:11px; padding:3px 8px; border-radius:999px; cursor:pointer;">🎟️ @v.Code (@v.Label)</button>
+                }
             </div>
         </div>
 
@@ -290,7 +295,7 @@
             if (payOnline && payOnline.checked) {
                 if (onlinePanel) onlinePanel.style.display = 'block';
                 if (btnSubmitOrder) {
-                    btnSubmitOrder.innerHTML = '💳 Thanh toán ngay @Model.GioHang.TongThanhToan.ToString("N0")đ (Demo) →';
+                    btnSubmitOrder.innerHTML = '💳 Thanh toán ngay @Model.GioHang.TongThanhToan.ToString("N0")đ →';
                 }
             } else {
                 if (onlinePanel) onlinePanel.style.display = 'none';
