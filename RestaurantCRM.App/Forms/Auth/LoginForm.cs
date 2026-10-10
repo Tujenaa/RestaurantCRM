@@ -80,3 +80,4 @@ namespace RestaurantCRM.AdminApp.Forms.Auth {
         private void ShowError(string message) { _error.Text = message; _error.Visible = true; }
     }
 }
+

@@ -44,14 +44,24 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost]
         public async Task<ActionResult<MonAn>> PostMonAn(MonAn monAn)
         {
+            if (string.IsNullOrWhiteSpace(monAn.MaMon))
+            {
+                monAn.MaMon = await Helpers.CodeGenerator.GenerateMaMonAnAsync(_context);
+            }
+
+            if (string.IsNullOrEmpty(monAn.TrangThai) || monAn.TrangThai == "Active")
+            {
+                monAn.TrangThai = "InStock";
+            }
+
             // Tự động điều chỉnh trạng thái dựa trên số lượng (nếu không phải là hàng đã ngừng kinh doanh)
             if (monAn.TrangThai != "Discontinued")
             {
-                if (monAn.SoLuong <= 0)
+                if ((monAn.SoLuong ?? 0) <= 0 && monAn.TrangThai != "InStock")
                 {
                     monAn.TrangThai = "OutOfStock";
                 }
-                else if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
+                else if ((monAn.SoLuong ?? 0) > 0 && monAn.TrangThai == "OutOfStock")
                 {
                     monAn.TrangThai = "InStock";
                 }

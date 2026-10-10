@@ -28,12 +28,12 @@ namespace RestaurantCRM.AdminApp.Controls {
 
             AddSection("TỔNG QUAN", new[] { "Dashboard" }, top); top += 61;
             if (role == "Admin") {
-                AddSection("BÁN HÀNG & KHO", new[] { "Món ăn", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi" }, top); top += 165;
+                AddSection("BÁN HÀNG & KHO", new[] { "Đơn hàng", "Món ăn", "Loại món", "Kho hàng", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi" }, top); top += 270;
                 AddSection("HỆ THỐNG", new[] { "Tài khoản", "Vai trò & phân quyền" }, top);
             } else if (role == "Bán hàng") {
-                AddSection("BÁN HÀNG & KHO", new[] { "Tạo đơn hàng", "Đơn hàng", "Thực đơn", "Món ăn", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi", "Báo cáo bán hàng" }, top);
+                AddSection("BÁN HÀNG & KHO", new[] { "Tạo đơn hàng", "Đơn hàng", "Thực đơn", "Món ăn", "Loại món", "Kho hàng", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi", "Báo cáo bán hàng" }, top);
             } else {
-                AddSection("KHÁCH HÀNG", new[] { "Khách hàng", "Đánh giá", "Phản hồi" }, top); top += 127;
+                AddSection("Khách hàng", new[] { "Khách hàng", "Đánh giá", "Phản hồi" }, top); top += 127;
                 AddSection("KHẢO SÁT & BÁO CÁO", new[] { "Khảo sát", "Phân tích khách hàng" }, top);
             }
 

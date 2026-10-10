@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
 
 public partial class MonAn
 {
-    public string MaMon { get; set; } = null!;
+    public string? MaMon { get; set; }
 
     public string? MaLoaiMon { get; set; }
 

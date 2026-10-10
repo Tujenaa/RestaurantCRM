@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Helpers;
@@ -33,3 +33,4 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich {
         }
     }
 }
+

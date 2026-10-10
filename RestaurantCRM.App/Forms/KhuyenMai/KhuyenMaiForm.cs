@@ -9,3 +9,4 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             new[] { new[] { "KM001", "Ưu đãi khai trương", "Phần trăm", "10%", "01/09/2026", "30/09/2026", "Đang áp dụng" }, new[] { "KM002", "Combo gia đình", "Giảm tiền", "50000", "15/09/2026", "15/10/2026", "Đang áp dụng" } }, ThemeManager.Blue) { }
     }
 }
+
