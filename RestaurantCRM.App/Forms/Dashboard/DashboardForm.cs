@@ -6,15 +6,15 @@ using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Forms.BanHang;
 using RestaurantCRM.AdminApp.Forms.BaoCao;
 using RestaurantCRM.AdminApp.Forms.DanhGia;
-using RestaurantCRM.AdminApp.Forms.DonHang;
+using RestaurantCRM.AdminApp.Forms.HoaDon;
 using RestaurantCRM.AdminApp.Forms.KhachHang;
+using RestaurantCRM.AdminApp.Forms.Kho;
 using RestaurantCRM.AdminApp.Forms.KhuyenMai;
 using RestaurantCRM.AdminApp.Forms.KhaoSat;
 using RestaurantCRM.AdminApp.Forms.MonAn;
 using RestaurantCRM.AdminApp.Forms.NhaCungCap;
 using RestaurantCRM.AdminApp.Forms.PhanHoi;
 using RestaurantCRM.AdminApp.Forms.PhanTich;
-using RestaurantCRM.AdminApp.Forms.PhieuNhap;
 using RestaurantCRM.AdminApp.Forms.TaiKhoan;
 using RestaurantCRM.AdminApp.Forms.VaiTro;
 using RestaurantCRM.AdminApp.Helpers;
@@ -83,13 +83,15 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
         private Form CreateModule(string item) {
             switch (item) {
                 case "Món ăn": case "Thực đơn": return new MonAnForm();
+                case "Loại món": return new LoaiMonForm();
+                case "Kho hàng": case "Tồn kho": return new KhoForm();
                 case "Nhà cung cấp": return new NhaCungCapForm();
-                case "Phiếu nhập hàng": return new PhieuNhapForm();
+                case "Phiếu nhập hàng": case "Phiếu nhập": return new PhieuNhapForm();
                 case "Khuyến mãi": return new KhuyenMaiForm();
                 case "Tài khoản": return new TaiKhoanForm();
                 case "Vai trò & phân quyền": return new VaiTroForm();
                 case "Tạo đơn hàng": return new TaoDonHangForm();
-                case "Đơn hàng": return new DonHangForm();
+                case "Đơn hàng": case "Hóa đơn": return new HoaDonForm();
                 case "Khách hàng": return new KhachHangForm();
                 case "Đánh giá": return new DanhGiaForm();
                 case "Phản hồi": return new PhanHoiForm();
@@ -136,3 +138,4 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
         }
     }
 }
+

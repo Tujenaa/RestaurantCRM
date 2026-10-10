@@ -97,3 +97,4 @@ namespace RestaurantCRM.AdminApp.Services {
         public string Username { get; set; }
     }
 }
+

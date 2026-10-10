@@ -1,4 +1,4 @@
-using RestaurantCRM.AdminApp.Forms;
+﻿using RestaurantCRM.AdminApp.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Forms.VaiTro {
@@ -9,3 +9,4 @@ namespace RestaurantCRM.AdminApp.Forms.VaiTro {
             new[] { new[] { "VT001", "Quản trị viên", "Quản trị toàn hệ thống", "Tất cả quyền" }, new[] { "VT002", "CSKH", "Khách hàng, phản hồi, khảo sát", "Đọc/ghi CRM" }, new[] { "VT003", "Thu ngân", "Đơn hàng và thanh toán", "Bán hàng" } }, ThemeManager.Blue) { }
     }
 }
+

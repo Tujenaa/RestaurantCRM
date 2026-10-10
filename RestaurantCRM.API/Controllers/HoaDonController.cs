@@ -29,7 +29,7 @@ namespace RestaurantCRM.API.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var maHoaDon = "DH" + DateTime.Now.Ticks.ToString().Substring(8, 6);
+                var maHoaDon = await Helpers.CodeGenerator.GenerateMaHoaDonAsync(_context);
 
                 var hoaDon = new HoaDon
                 {

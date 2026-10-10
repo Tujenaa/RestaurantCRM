@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
 
 public partial class LoaiMon
 {
-    public string MaLoaiMon { get; set; } = null!;
+    public string? MaLoaiMon { get; set; }
 
     public string? TenLoaiMon { get; set; }
 

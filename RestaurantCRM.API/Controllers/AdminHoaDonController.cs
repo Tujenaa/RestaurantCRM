@@ -30,7 +30,7 @@ namespace RestaurantCRM.API.Controllers
                 {
                     d.MaHoaDon,
                     d.NgayDat,
-                    TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách vãng lai",
+                    TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : (!string.IsNullOrEmpty(d.TenKhachHang) ? d.TenKhachHang : "Khách vãng lai"),
                     d.TrangThai,
                     d.TongTienHang,
                     d.TongThanhToan,
@@ -71,7 +71,9 @@ namespace RestaurantCRM.API.Controllers
                 hoaDon.TongTienHang,
                 hoaDon.TienGiamVoucher,
                 hoaDon.TongThanhToan,
-                KhachHang = hoaDon.MaKhachHangNavigation != null ? new { hoaDon.MaKhachHangNavigation.HoTen, hoaDon.MaKhachHangNavigation.SoDienThoai } : null,
+                KhachHang = hoaDon.MaKhachHangNavigation != null 
+                    ? new { HoTen = hoaDon.MaKhachHangNavigation.HoTen, SoDienThoai = hoaDon.MaKhachHangNavigation.SoDienThoai } 
+                    : new { HoTen = !string.IsNullOrEmpty(hoaDon.TenKhachHang) ? hoaDon.TenKhachHang : "Khách vãng lai", SoDienThoai = hoaDon.SoDienThoai ?? "" },
                 NhanVienPhuTrach = hoaDon.MaNhanVienNavigation != null ? hoaDon.MaNhanVienNavigation.HoTen : null,
                 KhuyenMai = hoaDon.MaKmvoucherNavigation?.MaChuongTrinhNavigation?.TenChuongTrinh,
                 ThanhToan = hoaDon.ThanhToan.Select(t => new { t.PhuongThuc, t.NgayThanhToan, t.SoTien, t.TrangThai }),
@@ -144,22 +146,32 @@ namespace RestaurantCRM.API.Controllers
             }
 
             // Gán nhân viên tiếp nhận đơn (nếu có MaNhanVien gửi lên và đơn chưa có người nhận)
-            if (!string.IsNullOrEmpty(request.MaNhanVien) && hoaDon.MaNhanVien == null && request.TrangThaiMoi == "Preparing")
+            if (!string.IsNullOrEmpty(request.MaNhanVien) && hoaDon.MaNhanVien == null && (request.TrangThaiMoi == "Preparing" || request.TrangThaiMoi == "Đang chuẩn bị"))
             {
                 hoaDon.MaNhanVien = request.MaNhanVien;
+            }
+
+            // Nếu hoàn tất đơn hàng và chưa có ngày hoàn tất, lưu thời gian hiện tại
+            if ((request.TrangThaiMoi == "Completed" || request.TrangThaiMoi == "Hoàn thành") && hoaDon.NgayHoanTat == null)
+            {
+                hoaDon.NgayHoanTat = DateTime.Now;
             }
 
             // Cập nhật trạng thái mới
             hoaDon.TrangThai = request.TrangThaiMoi;
 
             // Ghi log vào bảng LichSuTrangThai
+            var note = !string.IsNullOrWhiteSpace(request.GhiChu) 
+                ? request.GhiChu 
+                : $"Chuyển trạng thái: {trangThaiCu} -> {request.TrangThaiMoi}";
+
             var lichSu = new LichSuTrangThai
             {
                 MaLichSu = "LS" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                 MaHoaDon = id,
                 TrangThai = request.TrangThaiMoi,
                 ThoiGian = DateTime.Now,
-                GhiChu = request.GhiChu
+                GhiChu = note
             };
             
             _context.LichSuTrangThai.Add(lichSu);
