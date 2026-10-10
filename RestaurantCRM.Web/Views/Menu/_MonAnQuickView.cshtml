@@ -1,0 +1,97 @@
+@model MonAnViewModel
+
+<div class="quickview-body">
+    <div class="quickview-media">
+        @if (!string.IsNullOrWhiteSpace(Model.DuongDanAnh))
+        {
+            <img src="@Model.DuongDanAnh" alt="@Model.TenMon" style="width: 100%; height: 100%; min-height: 320px; object-fit: cover;" />
+        }
+        else
+        {
+            <div class="dish-art @Model.Tone" style="height: 100%; min-height: 320px; border-radius: 0; font-size: 100px; user-select: none;">
+                <span>@Model.BieuTuong</span>
+            </div>
+        }
+        <div class="quickview-badge-wrap">
+            <span class="badge @Model.TrangThaiBadgeClass">
+                <span class="badge-dot"></span>@Model.TrangThaiHienThi
+            </span>
+        </div>
+    </div>
+
+    <div class="quickview-info">
+        <div class="quickview-header">
+            <span class="quickview-category">@Model.LoaiMon</span>
+            <span class="quickview-sku">Mã: @Model.MaMon</span>
+        </div>
+
+        <h2 class="quickview-title">@Model.TenMon</h2>
+
+        <div class="quickview-price-stock">
+            <div class="quickview-price">
+                @Model.DonGia.ToString("N0") <span class="currency">đ</span>
+            </div>
+            <div class="quickview-stock-info">
+                @if (Model.ConHang)
+                {
+                    <span class="stock-badge in-stock">
+                        ✓ Còn <strong>@Model.SoLuong</strong> suất có thể đặt
+                    </span>
+                }
+                else
+                {
+                    <span class="stock-badge out-stock">
+                        ✕ Tạm hết hàng tại cửa hàng
+                    </span>
+                }
+            </div>
+        </div>
+
+        <p class="quickview-desc">
+            @Model.MoTa
+        </p>
+
+        @if (Model.ConHang)
+        {
+            <form asp-controller="GioHang" asp-action="Them" method="post" class="quickview-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="MaMon" value="@Model.MaMon" />
+
+                <div class="quickview-quantity-row">
+                    <label class="qty-label">Số lượng đặt:</label>
+                    <div class="quantity-controller">
+                        <button type="button" class="qty-btn" id="qvMinusBtn" aria-label="Giảm số lượng">−</button>
+                        <input type="number"
+                               name="SoLuong"
+                               id="qvQuantityInput"
+                               value="1"
+                               min="1"
+                               max="@Model.SoLuong"
+                               class="qty-input"
+                               aria-label="Số lượng" />
+                        <button type="button" class="qty-btn" id="qvPlusBtn" aria-label="Tăng số lượng">+</button>
+                    </div>
+                    <span class="qty-max-hint">(Tối đa @Model.SoLuong)</span>
+                </div>
+
+                <div class="quickview-actions">
+                    <button type="submit" class="btn btn-add-cart-lg">
+                        🛒 Thêm vào giỏ hàng
+                    </button>
+                    <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="btn btn-view-full">
+                        Xem trang chi tiết →
+                    </a>
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="quickview-unavailable-alert">
+                <p>⚠️ Món ăn này hiện đang tạm hết nguyên liệu phục vụ. Quý khách vui lòng chọn món ăn khác trong thực đơn.</p>
+                <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="btn btn-view-full">
+                    Xem thông tin chi tiết món →
+                </a>
+            </div>
+        }
+    </div>
+</div>

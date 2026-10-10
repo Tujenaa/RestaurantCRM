@@ -31,13 +31,18 @@ namespace RestaurantCRM.API.Controllers
             {
                 var maHoaDon = "DH" + DateTime.Now.Ticks.ToString().Substring(8, 6);
 
+                var isOnline = string.Equals(request.PhuongThucThanhToan, "online", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(request.PhuongThucThanhToan, "transfer", StringComparison.OrdinalIgnoreCase);
+
                 var hoaDon = new HoaDon
                 {
                     MaHoaDon = maHoaDon,
                     MaKhachHang = request.MaKhachHang,
+                    TenKhachHang = request.TenKhachHang,
+                    SoDienThoai = request.SoDienThoai,
                     DiaChiGiao = request.DiaChiGiao,
                     NgayDat = DateTime.Now,
-                    TrangThai = "Pending", // Đang chờ xác nhận
+                    TrangThai = isOnline ? "Confirmed" : "Pending", // Đã thanh toán online thì đơn chuyển sang đã xác nhận
                     TongTienHang = 0,
                     TongThanhToan = 0,
                     TienGiamVoucher = 0
@@ -135,7 +140,7 @@ namespace RestaurantCRM.API.Controllers
                 {
                     var voucher = await _context.KmTheoVoucher
                         .Include(v => v.MaChuongTrinhNavigation)
-                        .FirstOrDefaultAsync(v => v.MaKmvoucher == request.MaKmvoucher);
+                        .FirstOrDefaultAsync(v => v.MaKmvoucher == request.MaKmvoucher || v.MaVoucher == request.MaKmvoucher);
 
                     if (voucher != null && voucher.MaChuongTrinhNavigation != null)
                     {
@@ -163,14 +168,31 @@ namespace RestaurantCRM.API.Controllers
                     }
                 }
 
-                // Lưu lại lịch sử
+                // Lưu lại thanh toán nếu online
+                if (isOnline)
+                {
+                    var thanhToan = new ThanhToan
+                    {
+                        MaThanhToan = "TT" + DateTime.Now.Ticks.ToString().Substring(8, 6),
+                        MaHoaDon = maHoaDon,
+                        PhuongThuc = "Online",
+                        TrangThai = "Paid",
+                        NgayThanhToan = DateTime.Now,
+                        SoTien = hoaDon.TongThanhToan
+                    };
+                    _context.ThanhToan.Add(thanhToan);
+                }
+
+                // Lưu lại lịch sử trạng thái
                 var lichSu = new LichSuTrangThai
                 {
                     MaLichSu = "LS" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                     MaHoaDon = maHoaDon,
-                    TrangThai = "Pending",
+                    TrangThai = isOnline ? "Confirmed" : "Pending",
                     ThoiGian = DateTime.Now,
-                    GhiChu = "Đơn hàng mới được tạo"
+                    GhiChu = isOnline 
+                        ? "Đã thanh toán online thành công qua ngân hàng. Đơn hàng đã được xác nhận." 
+                        : "Đơn hàng mới được tạo (Thanh toán COD khi nhận món)"
                 };
                 _context.LichSuTrangThai.Add(lichSu);
 
@@ -182,7 +204,7 @@ namespace RestaurantCRM.API.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, "Lỗi hệ thống: " + ex.Message);
+                return StatusCode(500, "Lỗi hệ thống: " + ex.Message + " | Inner: " + ex.InnerException?.Message);
             }
         }
 
@@ -266,6 +288,7 @@ namespace RestaurantCRM.API.Controllers
             var hoaDon = await _context.HoaDon
                 .Include(d => d.ChiTietHoaDon)
                     .ThenInclude(c => c.MaMonNavigation)
+                .Include(d => d.ThanhToan)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.MaHoaDon == id);
 
@@ -283,6 +306,7 @@ namespace RestaurantCRM.API.Controllers
                 hoaDon.TongTienHang,
                 hoaDon.TienGiamVoucher,
                 hoaDon.TongThanhToan,
+                PhuongThucThanhToan = hoaDon.ThanhToan.FirstOrDefault()?.PhuongThuc ?? "COD",
                 ChiTiet = hoaDon.ChiTietHoaDon.Select(c => new
                 {
                     c.MaMon,
