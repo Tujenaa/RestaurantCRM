@@ -48,20 +48,20 @@ GO
 
 -- 5. MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, soLuong, trangThai)
 INSERT INTO MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, soLuong, trangThai) VALUES
-('M01', 'LM01', N'Lẩu Thái chua cay', N'Nước lẩu Thái chua cay, thơm sả và lá chanh.', '/images/Lau_thai.jpg', 180000, 37, 'InStock'),
+('M01', 'LM03', N'Lẩu Thái chua cay', NULL, '/images/Lau_thai.jpg', 180000, 1, 'InStock'),
 ('M02', 'LM01', N'Lẩu bò nhúng dấm', N'Nước lẩu bò nhúng dấm chua dịu, thơm tỏi.', '/images/Lau_bo_nhung_giam.png', 220000, 31, 'InStock'),
-('M03', 'LM01', N'Lẩu nấm thanh đạm', N'Nước lẩu nấm vị thanh nhẹ, phù hợp ăn thanh đạm.', '/images/Lau_nam.jpg', 170000, 28, 'InStock'),
-('M04', 'LM01', N'Lẩu gà lá é', N'Lẩu gà với lá é thơm đặc trưng.', '/images/Lau_ga_la_e.jpg', 200000, 27, 'InStock'),
+('M03', 'LM03', N'Lẩu nấm thanh đạm nè', NULL, '/images/Lau_nam.jpg', 170000, 0, 'OutOfStock'),
+('M04', 'LM01', N'Lẩu gà lá é', NULL, '/images/Lau_ga_la_e.jpg', 200000, 0, 'OutOfStock'),
 ('M05', 'LM02', N'Bò Mỹ thái lát', N'Thịt bò Mỹ thái lát mỏng dùng để nhúng lẩu.', '/images/Bo_my_thai_lat.jpg', 120000, 52, 'InStock'),
 ('M06', 'LM02', N'Tôm sú tươi', N'Tôm sú tươi, thịt chắc và ngọt.', '/images/Tom_su_tuoi.jpg', 140000, 46, 'InStock'),
-('M07', 'LM02', N'Viên thả lẩu thập cẩm', N'Các loại viên thả lẩu tổng hợp.', '/images/Vien_tha_lau_thap_cam.jpg', 70000, 76, 'InStock'),
-('M08', 'LM02', N'Ba chỉ heo thái mỏng', N'Ba chỉ heo thái mỏng dùng để nhúng lẩu.', '/images/Ba_chi_thai_mong.jpg', 90000, 56, 'InStock'),
+('M07', 'LM02', N'Viên thả lẩu thập cẩm', NULL, '/images/Vien_tha_lau_thap_cam.jpg', 69999, 0, 'OutOfStock'),
+('M08', 'LM02', N'Ba chỉ heo thái mỏng nè', NULL, '/images/Ba_chi_thai_mong.jpg', 90000, 0, 'Discontinued'),
 ('M09', 'LM03', N'Rau lẩu thập cẩm', N'Rau xanh tươi dùng kèm các món lẩu.', '/images/Rau.png', 50000, 95, 'InStock'),
 ('M10', 'LM03', N'Nấm thập cẩm', N'Nhiều loại nấm tươi dùng cho món lẩu.', '/images/Nam.jpg', 60000, 77, 'InStock'),
 ('M11', 'LM04', N'Mì Udon', N'Mì Udon ăn kèm lẩu.', '/images/Mi_udon.jpg', 25000, 117, 'InStock'),
-('M12', 'LM04', N'Bún tươi', N'Bún tươi dùng ăn kèm lẩu.', '/images/bun_tuoi.jpg', 15000, 146, 'InStock'),
-('M13', 'LM05', N'Trà đào cam sả', N'Trà đào kết hợp cam và sả.', '/images/Tra_dao_cam_sa.jpg', 40000, 93, 'InStock'),
-('M14', 'LM05', N'Chè khúc bạch', N'Món tráng miệng mát lạnh.', '/images/Che_khuc_bach.jpg', 35000, 55, 'InStock'),
+('M12', 'LM04', N'Bún tươi', N'Bún tươi dùng ăn kèm lẩu.', '/images/bun_tuoi.jpg', 14999, 146, 'InStock'),
+('M13', 'LM05', N'Trà đào cam sả', N'Trà đào kết hợp cam và sả.', '/images/Tra_dao_cam_sa.jpg', 40001, 93, 'Discontinued'),
+('M14', 'LM05', N'Chè khúc bạch', N'Món tráng miệng mát lạnh.', '/images/Che_khuc_bach.jpg', 35000, 54, 'InStock'),
 ('M15', 'LM05', N'Nước ép cam', N'Nước ép cam tươi.', '/images/Nuoc_ep_cam.jpg', 40000, 0, 'OutOfStock');
 GO
 
@@ -121,9 +121,9 @@ GO
 
 -- 11. KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa)
 INSERT INTO KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa) VALUES
-('KMV01', 'KM01', 'VOUCHER10', 300000, 10, NULL, 50000),
+('KMV01', 'KM01', 'VOUCHER10', 300000, 10, NULL, NULL),
 ('KMV02', 'KM02', 'VOUCHER40K', 250000, NULL, 40000, NULL),
-('KMV03', 'KM05', 'NHOM15', 700000, 15, NULL, 150000);
+('KMV03', 'KM05', 'NHOM15', 700000, 15, NULL, NULL);
 GO
 
 -- 12. HOA_DON (maHoaDon, maKhachHang, maNhanVien, maKMVoucher, tenKhachHang, soDienThoai, diaChiGiao, ngayDat, ngayHoanTat, trangThai, tongTienHang, tienGiamVoucher, tongThanhToan)
