@@ -14,6 +14,8 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
     public partial class KhoForm : Form {
         private readonly KhoService _khoService;
         private List<TonKhoDto> _allTonKho = new List<TonKhoDto>();
+        private readonly Timer _refreshTimer;
+        private bool _isRefreshing = false;
 
         public KhoForm() {
             InitializeComponent();
@@ -21,10 +23,19 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _khoService = new KhoService(httpClient);
             cboBoLoc.SelectedIndex = 0;
+
+            _refreshTimer = new Timer { Interval = 6000 };
+            _refreshTimer.Tick += async (s, e) => await LoadKhoSilently();
+            this.Activated += async (s, e) => await LoadKhoSilently();
+            this.FormClosing += (s, e) => {
+                _refreshTimer.Stop();
+                _refreshTimer.Dispose();
+            };
         }
 
         private async void KhoForm_Load(object sender, EventArgs e) {
             await LoadKho();
+            _refreshTimer.Start();
         }
 
         private async Task LoadKho() {
@@ -35,6 +46,34 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             }
             catch (Exception ex) {
                 MessageBox.Show("Lỗi khi tải dữ liệu tồn kho từ API: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task LoadKhoSilently() {
+            if (_isRefreshing || IsDisposed) return;
+            _isRefreshing = true;
+            try {
+                string selectedMaMon = GetSelected()?.MaMon;
+                var fresh = await _khoService.GetTonKhoAsync();
+                if (fresh != null && !IsDisposed) {
+                    _allTonKho = fresh;
+                    UpdateThongKe();
+                    FilterData();
+
+                    if (!string.IsNullOrEmpty(selectedMaMon)) {
+                        for (int i = 0; i < dgvKho.Rows.Count; i++) {
+                            if (dgvKho.Rows[i].DataBoundItem is TonKhoDto item && item.MaMon == selectedMaMon) {
+                                dgvKho.Rows[i].Selected = true;
+                                try { dgvKho.CurrentCell = dgvKho.Rows[i].Cells[0]; } catch { }
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch {
+                // Bỏ qua lỗi ngầm
+            } finally {
+                _isRefreshing = false;
             }
         }
 

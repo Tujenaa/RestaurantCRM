@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Config;
+using RestaurantCRM.AdminApp.Controls;
+using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
@@ -12,12 +16,137 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         private readonly MonAnService _monAnService;
         private readonly LoaiMonService _loaiMonService;
         private List<MonAnDto> _allMonAn = new List<MonAnDto>();
+        private List<LoaiMonDto> _allLoaiMon = new List<LoaiMonDto>();
+        private readonly Timer _refreshTimer;
+        private bool _isRefreshing = false;
 
         public MonAnForm() {
             InitializeComponent();
-            var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5275/") }; // TBD: Use ApiClient or correct config
+            var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
+            var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _monAnService = new MonAnService(httpClient);
             _loaiMonService = new LoaiMonService(httpClient);
+
+            SetupKpiCards();
+            SetupSearchAndFilter();
+            SetupGridDesign();
+
+            _refreshTimer = new Timer { Interval = 6000 };
+            _refreshTimer.Tick += async (s, e) => await LoadMonAnSilently();
+            this.Activated += async (s, e) => await LoadMonAnSilently();
+            this.FormClosing += (s, e) => {
+                _refreshTimer.Stop();
+                _refreshTimer.Dispose();
+            };
+        }
+
+        private void SetupKpiCards() {
+            pnlKpis.Controls.Clear();
+
+            // Card 1: Tổng thực đơn
+            var card1 = CreateKpiCard("🍽️", "TỔNG THỰC ĐƠN", "0 món", "Món ăn trong hệ thống", ThemeManager.Ink, out lblKpiTongMon);
+            pnlKpis.Controls.Add(card1, 0, 0);
+
+            // Card 2: Đang kinh doanh
+            var card2 = CreateKpiCard("🟢", "ĐANG KINH DOANH", "0 món", "Sẵn sàng phục vụ khách", Color.FromArgb(5, 150, 105), out lblKpiKinhDoanh);
+            pnlKpis.Controls.Add(card2, 1, 0);
+
+            // Card 3: Hết hàng
+            var card3 = CreateKpiCard("⚠️", "HẾT HÀNG TẠM THỜI", "0 món", "Số lượng tồn kho = 0", Color.FromArgb(217, 119, 6), out lblKpiHetHang);
+            pnlKpis.Controls.Add(card3, 2, 0);
+
+            // Card 4: Ngừng kinh doanh
+            var card4 = CreateKpiCard("🛑", "NGỪNG KINH DOANH", "0 món", "Đã tạm dừng trên menu", Color.FromArgb(220, 38, 38), out lblKpiNgungKD);
+            pnlKpis.Controls.Add(card4, 3, 0);
+        }
+
+        private Panel CreateKpiCard(string icon, string title, string initialValue, string sub, Color valueColor, out Label lblValueRef) {
+            var card = new RoundedPanel {
+                Dock = DockStyle.Fill,
+                Radius = 12,
+                FillColor = Color.White,
+                BorderColor = Color.FromArgb(226, 232, 240),
+                BorderWidth = 1,
+                Margin = new Padding(4, 0, 4, 0)
+            };
+
+            var lblIcon = new Label {
+                Text = icon,
+                Font = new Font("Segoe UI", 15F),
+                Location = new Point(14, 12),
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+            card.Controls.Add(lblIcon);
+
+            var lblTitle = new Label {
+                Text = title,
+                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(50, 12),
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+            card.Controls.Add(lblTitle);
+
+            var lblValue = new Label {
+                Text = initialValue,
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = valueColor,
+                Location = new Point(48, 28),
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+            card.Controls.Add(lblValue);
+            lblValueRef = lblValue;
+
+            var lblSub = new Label {
+                Text = sub,
+                Font = new Font("Segoe UI", 7.5F),
+                ForeColor = Color.FromArgb(148, 163, 184),
+                Location = new Point(50, 52),
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+            card.Controls.Add(lblSub);
+
+            return card;
+        }
+
+        private void SetupSearchAndFilter() {
+            cboTrangThai.Items.Clear();
+            cboTrangThai.Items.AddRange(new object[] {
+                "Tất cả trạng thái",
+                "Đang kinh doanh",
+                "Hết hàng",
+                "Ngừng kinh doanh"
+            });
+            cboTrangThai.SelectedIndex = 0;
+
+            pnlFilter.Paint += (s, e) => {
+                using (var pen = new Pen(Color.FromArgb(226, 232, 240), 1)) {
+                    e.Graphics.DrawRectangle(pen, 0, 0, pnlFilter.Width - 1, pnlFilter.Height - 1);
+                }
+            };
+
+            pnlGridCard.Paint += (s, e) => {
+                using (var pen = new Pen(Color.FromArgb(226, 232, 240), 1)) {
+                    e.Graphics.DrawRectangle(pen, 0, 0, pnlGridCard.Width - 1, pnlGridCard.Height - 1);
+                }
+            };
+        }
+
+        private void SetupGridDesign() {
+            dgvMonAn.ReadOnly = true;
+            dgvMonAn.AllowUserToAddRows = false;
+            dgvMonAn.AllowUserToDeleteRows = false;
+            dgvMonAn.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvMonAn.MultiSelect = false;
+            dgvMonAn.DoubleClick += (s, e) => {
+                if (dgvMonAn.SelectedRows.Count > 0) {
+                    btnSua_Click(s, e);
+                }
+            };
         }
 
         private async void MonAnForm_Load(object sender, EventArgs e) {
@@ -26,6 +155,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 dgvMonAn.CellFormatting += dgvMonAn_CellFormatting;
                 await LoadLoaiMon();
                 await LoadMonAn();
+                _refreshTimer.Start();
             }
             catch (Exception ex) {
                 MessageBox.Show("Lỗi khi tải dữ liệu. Vui lòng kiểm tra API Server.\nChi tiết: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -33,38 +163,109 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         }
 
         private async Task LoadLoaiMon() {
-            var loaiMonList = await _loaiMonService.GetAllAsync();
-            loaiMonList.Insert(0, new LoaiMonDto { MaLoaiMon = "", TenLoaiMon = "Tất cả" });
-            cboLoaiMon.DataSource = loaiMonList;
-            cboLoaiMon.DisplayMember = "TenLoaiMon";
-            cboLoaiMon.ValueMember = "MaLoaiMon";
+            try {
+                _allLoaiMon = await _loaiMonService.GetAllAsync() ?? new List<LoaiMonDto>();
+                var loaiMonList = new List<LoaiMonDto>(_allLoaiMon);
+                loaiMonList.Insert(0, new LoaiMonDto { MaLoaiMon = "", TenLoaiMon = "Tất cả loại món" });
+
+                cboLoaiMon.DataSource = loaiMonList;
+                cboLoaiMon.DisplayMember = "TenLoaiMon";
+                cboLoaiMon.ValueMember = "MaLoaiMon";
+            } catch { }
         }
 
         private async Task LoadMonAn(string selectId = null) {
-            _allMonAn = await _monAnService.GetAllAsync();
+            _allMonAn = await _monAnService.GetAllAsync() ?? new List<MonAnDto>();
+            UpdateKpis();
             FilterData(selectId);
         }
 
-        private void FilterData(string selectId = null) {
-            var keyword = txtTimKiem.Text.ToLower();
-            var maLoaiMon = cboLoaiMon.SelectedValue?.ToString() ?? "";
+        private async Task LoadMonAnSilently() {
+            if (_isRefreshing || IsDisposed) return;
+            _isRefreshing = true;
+            try {
+                string currentSelectedId = null;
+                if (dgvMonAn.CurrentRow?.DataBoundItem is MonAnDto current) {
+                    currentSelectedId = current.MaMonAn;
+                }
+                var fresh = await _monAnService.GetAllAsync();
+                if (fresh != null && !IsDisposed) {
+                    _allMonAn = fresh;
+                    UpdateKpis();
+                    FilterData(currentSelectedId);
+                }
+            } catch {
+                // Bỏ qua lỗi ngầm khi polling
+            } finally {
+                _isRefreshing = false;
+            }
+        }
 
-            var filtered = _allMonAn.Where(m => 
-                (string.IsNullOrEmpty(keyword) || m.TenMonAn.ToLower().Contains(keyword)) &&
-                (string.IsNullOrEmpty(maLoaiMon) || m.MaLoaiMon == maLoaiMon)
-            ).ToList();
+        private void UpdateKpis() {
+            int tong = _allMonAn.Count;
+            int ngungKd = _allMonAn.Count(m => m.TrangThaiRaw == "Discontinued" || m.TrangThaiRaw == "Inactive");
+            int hetHang = _allMonAn.Count(m => (m.TrangThaiRaw != "Discontinued" && m.TrangThaiRaw != "Inactive") && (m.SoLuongTon <= 0 || m.TrangThaiRaw == "OutOfStock"));
+            int dangKd = _allMonAn.Count(m => (m.TrangThaiRaw != "Discontinued" && m.TrangThaiRaw != "Inactive") && m.SoLuongTon > 0 && m.TrangThaiRaw != "OutOfStock");
+
+            lblKpiTongMon.Text = $"{tong} món";
+            lblKpiKinhDoanh.Text = $"{dangKd} món";
+            lblKpiHetHang.Text = $"{hetHang} món";
+            lblKpiNgungKD.Text = $"{ngungKd} món";
+        }
+
+        private void FilterData(string selectId = null) {
+            var keyword = (txtTimKiem.Text ?? "").Trim().ToLowerInvariant();
+            var maLoaiMon = cboLoaiMon.SelectedValue?.ToString() ?? "";
+            var selectedTrangThai = cboTrangThai.SelectedItem?.ToString() ?? "Tất cả trạng thái";
+
+            var filtered = _allMonAn.Where(m => {
+                bool matchKeyword = string.IsNullOrEmpty(keyword)
+                    || (m.TenMonAn != null && m.TenMonAn.ToLowerInvariant().Contains(keyword))
+                    || (m.MaMonAn != null && m.MaMonAn.ToLowerInvariant().Contains(keyword));
+
+                bool matchLoai = string.IsNullOrEmpty(maLoaiMon) || m.MaLoaiMon == maLoaiMon;
+
+                bool isNgungKd = m.TrangThaiRaw == "Discontinued" || m.TrangThaiRaw == "Inactive";
+                bool isHetHang = !isNgungKd && (m.SoLuongTon <= 0 || m.TrangThaiRaw == "OutOfStock");
+                bool isDangKd = !isNgungKd && !isHetHang;
+
+                bool matchStatus = true;
+                if (selectedTrangThai == "Đang kinh doanh") matchStatus = isDangKd;
+                else if (selectedTrangThai == "Hết hàng") matchStatus = isHetHang;
+                else if (selectedTrangThai == "Ngừng kinh doanh") matchStatus = isNgungKd;
+
+                return matchKeyword && matchLoai && matchStatus;
+            }).ToList();
 
             dgvMonAn.DataSource = null;
             dgvMonAn.DataSource = filtered;
-            
+            dgvMonAn.ReadOnly = true;
+
+            lblDemSoLuong.Text = $"Hiển thị: {filtered.Count}/{_allMonAn.Count} món";
+
             if (dgvMonAn.Columns["MaMonAn"] != null) {
                 dgvMonAn.Columns["MaMonAn"].HeaderText = "Mã Món";
+                dgvMonAn.Columns["MaMonAn"].FillWeight = 55;
+                dgvMonAn.Columns["MaMonAn"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
                 dgvMonAn.Columns["TenMonAn"].HeaderText = "Tên Món Ăn";
+                dgvMonAn.Columns["TenMonAn"].FillWeight = 160;
+
+                dgvMonAn.Columns["MaLoaiMon"].HeaderText = "Loại Món";
+                dgvMonAn.Columns["MaLoaiMon"].FillWeight = 90;
+
                 dgvMonAn.Columns["Gia"].HeaderText = "Đơn Giá";
-                dgvMonAn.Columns["Gia"].DefaultCellStyle.Format = "N0";
-                dgvMonAn.Columns["MaLoaiMon"].HeaderText = "Mã Loại Món";
+                dgvMonAn.Columns["Gia"].FillWeight = 75;
+                dgvMonAn.Columns["Gia"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+
                 dgvMonAn.Columns["SoLuongTon"].HeaderText = "Số Lượng Tồn";
+                dgvMonAn.Columns["SoLuongTon"].FillWeight = 70;
+                dgvMonAn.Columns["SoLuongTon"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
                 dgvMonAn.Columns["TrangThaiRaw"].HeaderText = "Trạng Thái";
+                dgvMonAn.Columns["TrangThaiRaw"].FillWeight = 95;
+                dgvMonAn.Columns["TrangThaiRaw"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+
                 if (dgvMonAn.Columns["TrangThai"] != null) dgvMonAn.Columns["TrangThai"].Visible = false;
                 if (dgvMonAn.Columns["HinhAnhUrl"] != null) dgvMonAn.Columns["HinhAnhUrl"].Visible = false;
             }
@@ -84,19 +285,74 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         }
 
         private void dgvMonAn_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e) {
-            if (e.RowIndex >= 0 && dgvMonAn.Columns[e.ColumnIndex].Name == "TrangThaiRaw" && e.Value != null) {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+            string colName = dgvMonAn.Columns[e.ColumnIndex].Name;
+
+            // Mã món
+            if (colName == "MaMonAn" && e.Value != null) {
+                e.CellStyle.ForeColor = Color.FromArgb(79, 70, 229);
+                e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            }
+            // Tên món
+            else if (colName == "TenMonAn" && e.Value != null) {
+                e.CellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+                e.CellStyle.ForeColor = Color.FromArgb(17, 24, 39);
+            }
+            // Loại món (hiển thị tên loại thay vì mã)
+            else if (colName == "MaLoaiMon" && e.Value != null) {
+                string maLoai = e.Value.ToString();
+                var found = _allLoaiMon.FirstOrDefault(x => x.MaLoaiMon == maLoai);
+                if (found != null && !string.IsNullOrEmpty(found.TenLoaiMon)) {
+                    e.Value = found.TenLoaiMon;
+                    e.FormattingApplied = true;
+                }
+                e.CellStyle.ForeColor = Color.FromArgb(71, 85, 105);
+            }
+            // Đơn giá
+            else if (colName == "Gia" && e.Value != null) {
+                if (decimal.TryParse(e.Value.ToString(), out decimal gia)) {
+                    e.Value = $"{gia:N0} đ";
+                    e.FormattingApplied = true;
+                }
+                e.CellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+                e.CellStyle.ForeColor = Color.FromArgb(15, 23, 42);
+            }
+            // Số lượng tồn
+            else if (colName == "SoLuongTon" && e.Value != null) {
+                if (int.TryParse(e.Value.ToString(), out int sl)) {
+                    if (sl <= 0) {
+                        e.Value = "0 (Hết)";
+                        e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
+                        e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    } else if (sl <= 5) {
+                        e.Value = $"{sl} (Sắp hết)";
+                        e.CellStyle.ForeColor = Color.FromArgb(217, 119, 6);
+                        e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    } else {
+                        e.Value = $"{sl}";
+                        e.CellStyle.ForeColor = Color.FromArgb(5, 150, 105);
+                        e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    }
+                    e.FormattingApplied = true;
+                }
+            }
+            // Trạng thái
+            else if (colName == "TrangThaiRaw" && e.Value != null) {
                 string val = e.Value.ToString();
                 if (val == "Discontinued" || val == "Inactive") {
-                    e.Value = "Ngừng kinh doanh";
-                    e.CellStyle.ForeColor = System.Drawing.Color.FromArgb(220, 38, 38);
+                    e.Value = "● Ngừng kinh doanh";
+                    e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
+                    e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                     e.FormattingApplied = true;
                 } else if (val == "OutOfStock") {
-                    e.Value = "Hết hàng";
-                    e.CellStyle.ForeColor = System.Drawing.Color.FromArgb(217, 119, 6);
+                    e.Value = "● Hết hàng";
+                    e.CellStyle.ForeColor = Color.FromArgb(217, 119, 6);
+                    e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                     e.FormattingApplied = true;
-                } else if (val == "InStock" || val == "Active") {
-                    e.Value = "Đang kinh doanh";
-                    e.CellStyle.ForeColor = System.Drawing.Color.FromArgb(22, 163, 74);
+                } else {
+                    e.Value = "● Đang kinh doanh";
+                    e.CellStyle.ForeColor = Color.FromArgb(5, 150, 105);
+                    e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                     e.FormattingApplied = true;
                 }
             }
@@ -106,24 +362,35 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             if (dgvMonAn.SelectedRows.Count > 0) {
                 var monAn = dgvMonAn.SelectedRows[0].DataBoundItem as MonAnDto;
                 if (monAn != null) {
+                    btnSua.Enabled = true;
+                    btnNgungKinhDoanh.Enabled = true;
+
                     bool isNgungKinhDoanh = monAn.TrangThaiRaw == "Discontinued" || monAn.TrangThaiRaw == "Inactive";
                     if (isNgungKinhDoanh) {
-                        btnNgungKinhDoanh.Text = "Kinh Doanh Lại";
-                        btnNgungKinhDoanh.BackColor = System.Drawing.Color.FromArgb(220, 252, 231);
-                        btnNgungKinhDoanh.ForeColor = System.Drawing.Color.FromArgb(22, 163, 74);
+                        btnNgungKinhDoanh.Text = "♻ Kinh Doanh Lại";
+                        btnNgungKinhDoanh.BackColor = Color.FromArgb(240, 253, 244);
+                        btnNgungKinhDoanh.FlatAppearance.BorderColor = Color.FromArgb(187, 247, 208);
+                        btnNgungKinhDoanh.ForeColor = Color.FromArgb(22, 163, 74);
                     } else {
-                        btnNgungKinhDoanh.Text = "Ngừng Kinh Doanh";
-                        btnNgungKinhDoanh.BackColor = System.Drawing.Color.FromArgb(254, 226, 226);
-                        btnNgungKinhDoanh.ForeColor = System.Drawing.Color.FromArgb(220, 38, 38);
+                        btnNgungKinhDoanh.Text = "🛑 Ngừng Kinh Doanh";
+                        btnNgungKinhDoanh.BackColor = Color.FromArgb(254, 242, 242);
+                        btnNgungKinhDoanh.FlatAppearance.BorderColor = Color.FromArgb(254, 202, 202);
+                        btnNgungKinhDoanh.ForeColor = Color.FromArgb(220, 38, 38);
                     }
-                    btnNgungKinhDoanh.Enabled = true;
+
+                    string catName = _allLoaiMon.FirstOrDefault(x => x.MaLoaiMon == monAn.MaLoaiMon)?.TenLoaiMon ?? monAn.MaLoaiMon;
+                    lblSelectionInfo.Text = $"Đang chọn: {monAn.TenMonAn} ({monAn.MaMonAn})  ·  Loại: {catName}  ·  Đơn giá: {monAn.Gia:N0} đ  ·  Kho: {monAn.SoLuongTon}";
                     return;
                 }
             }
-            btnNgungKinhDoanh.Text = "Ngừng Kinh Doanh";
-            btnNgungKinhDoanh.UseVisualStyleBackColor = true;
-            btnNgungKinhDoanh.ForeColor = System.Drawing.SystemColors.ControlText;
+
+            btnSua.Enabled = false;
             btnNgungKinhDoanh.Enabled = false;
+            btnNgungKinhDoanh.Text = "🛑 Ngừng Kinh Doanh";
+            btnNgungKinhDoanh.BackColor = Color.FromArgb(241, 245, 249);
+            btnNgungKinhDoanh.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
+            btnNgungKinhDoanh.ForeColor = Color.FromArgb(148, 163, 184);
+            lblSelectionInfo.Text = "Chưa chọn món ăn nào trên bảng";
         }
 
         private void txtTimKiem_TextChanged(object sender, EventArgs e) {
@@ -134,9 +401,23 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             FilterData();
         }
 
+        private void cboTrangThai_SelectedIndexChanged(object sender, EventArgs e) {
+            FilterData();
+        }
+
+        private async void btnLamMoi_Click(object sender, EventArgs e) {
+            btnLamMoi.Enabled = false;
+            try {
+                await LoadLoaiMon();
+                await LoadMonAn();
+            } finally {
+                btnLamMoi.Enabled = true;
+            }
+        }
+
         private async void btnThem_Click(object sender, EventArgs e) {
             var dialog = new MonAnDialog();
-            if (dialog.ShowDialog() == DialogResult.OK) {
+            if (dialog.ShowDialog(this) == DialogResult.OK) {
                 await LoadMonAn();
             }
         }
@@ -145,8 +426,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             if (dgvMonAn.SelectedRows.Count > 0) {
                 var monAn = (MonAnDto)dgvMonAn.SelectedRows[0].DataBoundItem;
                 var dialog = new MonAnDialog(monAn);
-                if (dialog.ShowDialog() == DialogResult.OK) {
-                    await LoadMonAn();
+                if (dialog.ShowDialog(this) == DialogResult.OK) {
+                    await LoadMonAn(monAn.MaMonAn);
                 }
             } else {
                 MessageBox.Show("Vui lòng chọn món ăn để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -188,5 +469,3 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         }
     }
 }
-
-
