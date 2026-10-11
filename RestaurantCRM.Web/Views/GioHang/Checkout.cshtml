@@ -3,37 +3,342 @@
     ViewData["Title"] = "Xác nhận đặt hàng — Lẩu Phố";
     Layout = "/Shared/_Layout.cshtml";
 }
-<div class="page-intro"><h1 class="page-title">Xác nhận đặt hàng</h1><p>Thông tin giao hàng và phương thức thanh toán.</p></div>
-<div class="steps"><span class="step done">1. Giỏ hàng</span><span class="step current">2. Giao hàng</span><span class="step">3. Hoàn tất</span></div>
+
+<div class="page-intro">
+    <h1 class="page-title">Xác nhận đặt hàng</h1>
+    <p>Kiểm tra giỏ hàng, thông tin giao nhận và phương thức thanh toán trước khi gửi tạo đơn.</p>
+</div>
+
+<div class="steps">
+    <span class="step done">1. Giỏ hàng</span>
+    <span class="step current">2. Thông tin & Xác nhận</span>
+    <span class="step">3. Hoàn tất</span>
+</div>
+
+@if (!ViewData.ModelState.IsValid || ViewBag.ErrorMessage != null)
+{
+    <div class="alert alert-danger" style="background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:16px 20px; border-radius:14px; margin-bottom:24px;">
+        <h4 style="margin:0 0 6px; font-size:15px; font-weight:800;">⚠️ Đặt hàng không thành công</h4>
+        @if (ViewBag.ErrorMessage != null)
+        {
+            <p style="margin:0; font-size:13.5px;">@ViewBag.ErrorMessage</p>
+        }
+        else
+        {
+            <div asp-validation-summary="All" style="margin:0; font-size:13.5px;"></div>
+        }
+    </div>
+}
+
 <div class="layout">
-    <form class="panel" asp-action="DatHang" method="post">
-        <div asp-validation-summary="All" class="validation"></div>
+    <form class="panel" asp-action="DatHang" method="post" id="checkoutForm">
+        @Html.AntiForgeryToken()
+        
+        <h3>Hình thức nhận món</h3>
+        <div style="display:flex; gap:16px; margin-bottom: 20px;">
+            <label class="choice" style="cursor:pointer; background:var(--cream); padding:10px 16px; border-radius:12px; border:1px solid var(--line); flex:1;">
+                <input asp-for="DatHang.HinhThucNhan" type="radio" value="delivery" id="typeDelivery" checked />
+                <span>🛵 <strong>Giao hàng tận nơi</strong></span>
+            </label>
+            <label class="choice" style="cursor:pointer; background:var(--cream); padding:10px 16px; border-radius:12px; border:1px solid var(--line); flex:1;">
+                <input asp-for="DatHang.HinhThucNhan" type="radio" value="pickup" id="typePickup" />
+                <span>🏬 <strong>Đến lấy tại quán</strong></span>
+            </label>
+        </div>
+
         <h3>Thông tin người nhận</h3>
         <div class="two">
-            <div class="field"><label asp-for="DatHang.HoTen">Họ và tên *</label><input asp-for="DatHang.HoTen" placeholder="Nguyễn Văn A" /></div>
-            <div class="field"><label asp-for="DatHang.SoDienThoai">Số điện thoại *</label><input asp-for="DatHang.SoDienThoai" type="tel" pattern="[0-9 +().-]{9,15}" placeholder="0901 234 567" /></div>
+            <div class="field">
+                <label asp-for="DatHang.HoTen">Họ và tên người nhận *</label>
+                <input asp-for="DatHang.HoTen" placeholder="Ví dụ: Nguyễn Văn An" required />
+                <span asp-validation-for="DatHang.HoTen" class="text-danger" style="font-size:12px;"></span>
+            </div>
+            <div class="field">
+                <label asp-for="DatHang.SoDienThoai">Số điện thoại liên hệ *</label>
+                <input asp-for="DatHang.SoDienThoai" type="tel" placeholder="Ví dụ: 0901 234 567" required />
+                <span asp-validation-for="DatHang.SoDienThoai" class="text-danger" style="font-size:12px;"></span>
+            </div>
         </div>
-        <div class="field"><label asp-for="DatHang.DiaChiGiao">Địa chỉ giao hàng *</label><input asp-for="DatHang.DiaChiGiao" placeholder="Số nhà, đường, phường/xã..." /></div>
-        <div class="two">
-            <div class="field"><label asp-for="DatHang.TinhThanh">Tỉnh / Thành phố *</label><select asp-for="DatHang.TinhThanh"><option value="">Chọn tỉnh / thành</option><option>TP. Hồ Chí Minh</option><option>Vĩnh Long</option><option>Cần Thơ</option><option>Đồng Nai</option><option>Tỉnh khác</option></select></div>
-            <div class="field"><label asp-for="DatHang.ThoiGianNhan">Thời gian nhận</label><select asp-for="DatHang.ThoiGianNhan"><option>Giao sớm nhất có thể</option><option>Trong 1 giờ</option><option>Đặt lịch sau</option></select></div>
+
+        <div id="deliveryAddressGroup">
+            <div class="field">
+                <label asp-for="DatHang.DiaChiGiao">Địa chỉ giao hàng chi tiết *</label>
+                <input asp-for="DatHang.DiaChiGiao" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required />
+                <span asp-validation-for="DatHang.DiaChiGiao" class="text-danger" style="font-size:12px;"></span>
+            </div>
+            <div class="two">
+                <div class="field">
+                    <label asp-for="DatHang.TinhThanh">Tỉnh / Thành phố *</label>
+                    <select asp-for="DatHang.TinhThanh" required>
+                        <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                        <option value="Hà Nội">Hà Nội</option>
+                        <option value="Đà Nẵng">Đà Nẵng</option>
+                        <option value="Cần Thơ">Cần Thơ</option>
+                        <option value="Bình Dương">Bình Dương</option>
+                        <option value="Đồng Nai">Đồng Nai</option>
+                        <option value="Khác">Tỉnh thành khác</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label asp-for="DatHang.ThoiGianNhan">Thời gian giao món</label>
+                    <select asp-for="DatHang.ThoiGianNhan">
+                        <option>Giao sớm nhất có thể (30 - 45 phút)</option>
+                        <option>Giao trong vòng 1 - 2 giờ tới</option>
+                        <option>Hẹn giờ cụ thể (ghi chú thêm bên dưới)</option>
+                    </select>
+                </div>
+            </div>
         </div>
-        <div class="field"><label asp-for="DatHang.GhiChu">Ghi chú cho nhà hàng</label><textarea asp-for="DatHang.GhiChu" rows="3" placeholder="Ví dụ: ít cay, gọi trước khi giao..."></textarea></div>
-        <h3>Phương thức thanh toán</h3>
-        <label class="choice"><input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="cod" /> 💵 Thanh toán khi nhận hàng (COD)</label>
-        <label class="choice"><input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="transfer" /> 🏦 Chuyển khoản (demo)</label>
-        <button class="btn" type="submit">Xác nhận đặt hàng →</button>
+
+        <div class="field">
+            <label asp-for="DatHang.GhiChu">Ghi chú cho bếp & tài xế</label>
+            <textarea asp-for="DatHang.GhiChu" rows="2" placeholder="Ví dụ: Nước lẩu ít cay, gọi trước khi giao 5 phút, xin thêm sốt chấm..."></textarea>
+        </div>
+
+        <h3 style="margin-top:24px;">Phương thức thanh toán</h3>
+        <label class="choice" style="margin-bottom:10px;">
+            <input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="cod" id="payCod" checked />
+            <span>💵 <strong>Thanh toán tiền mặt khi nhận hàng (COD)</strong></span>
+        </label>
+        <label class="choice" style="margin-bottom:16px;">
+            <input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="transfer" id="payOnline" />
+            <span>💳 <strong>Thanh toán Online / Chuyển khoản / Thẻ ngân hàng</strong></span>
+        </label>
+
+        <!-- Online Payment Container -->
+        <div id="onlinePaymentPanel" style="display:none; background:#fbf7ef; border:1.5px solid #d4c3b3; border-radius:16px; padding:20px; margin-bottom:20px; animation:fadeIn .2s;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px dashed #d4c3b3; padding-bottom:10px;">
+                <strong style="color:var(--dark); font-size:15px;">🏦 Cổng thanh toán trực tuyến Lẩu Phố</strong>
+            </div>
+
+            <!-- Tab Selection -->
+            <div style="display:flex; gap:8px; margin-bottom:16px;">
+                <button type="button" class="btn small" id="btnTabCard" style="flex:1;" onclick="switchPayTab('card')">💳 Thẻ ngân hàng / ATM</button>
+                <button type="button" class="btn secondary small" id="btnTabQr" style="flex:1;" onclick="switchPayTab('qr')">📲 Quét mã VietQR</button>
+            </div>
+
+            <!-- Card Sub-panel -->
+            <div id="payCardSection">
+                <div class="field" style="margin-bottom:12px;">
+                    <label style="font-size:12px; font-weight:700;">Ngân hàng phát hành thẻ</label>
+                    <select id="cardBankSelect" style="width:100%; border-radius:10px; padding:8px 12px; background:white;">
+                        <option value="VCB">Vietcombank - Ngân hàng Ngoại thương</option>
+                        <option value="MB">MB Bank - Ngân hàng Quân Đội</option>
+                        <option value="TCB">Techcombank - Ngân hàng Kỹ Thương</option>
+                        <option value="VPB">VPBank - Ngân hàng Việt Nam Thịnh Vượng</option>
+                        <option value="ACB">ACB - Ngân hàng Á Châu</option>
+                        <option value="CTG">VietinBank - Ngân hàng Công Thương</option>
+                        <option value="VISA">Visa / Mastercard quốc tế</option>
+                    </select>
+                </div>
+                <div class="field" style="margin-bottom:12px;">
+                    <label style="font-size:12px; font-weight:700;">Số thẻ thanh toán</label>
+                    <input type="text" id="demoCardNumber" value="9704 2200 8899 3366" placeholder="9704 xxxx xxxx xxxx" maxlength="19" style="background:white; font-family:monospace; font-size:14px; font-weight:700;" />
+                </div>
+                <div class="two" style="gap:12px; margin-bottom:12px;">
+                    <div class="field">
+                        <label style="font-size:12px; font-weight:700;">Tên in trên thẻ</label>
+                        <input type="text" id="demoCardHolder" value="NGUYEN VAN AN" placeholder="NGUYEN VAN A" style="background:white; text-transform:uppercase; font-size:13px;" />
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <div class="field" style="flex:1;">
+                            <label style="font-size:12px; font-weight:700;">Hết hạn</label>
+                            <input type="text" value="08/29" placeholder="MM/YY" maxlength="5" style="background:white; text-align:center; font-size:13px;" />
+                        </div>
+                        <div class="field" style="flex:1;">
+                            <label style="font-size:12px; font-weight:700;">CVV</label>
+                            <input type="password" value="888" placeholder="•••" maxlength="3" style="background:white; text-align:center; font-size:13px;" />
+                        </div>
+                    </div>
+                </div>
+                <p style="margin:0; font-size:12px; color:#5c6f84; background:#e8f0fe; padding:8px 12px; border-radius:8px;">
+                    🔒 Nhấn <b>"Thanh toán ngay"</b> bên dưới, hệ thống sẽ tự động xác thực và kích hoạt đơn hàng.
+                </p>
+            </div>
+
+            <!-- QR Sub-panel -->
+            <div id="payQrSection" style="display:none; text-align:center; padding:10px 0;">
+                <div style="background:white; border:1px solid #d4c3b3; border-radius:12px; padding:16px; display:inline-block; max-width:280px; margin-bottom:10px;">
+                    <div style="font-weight:800; font-size:14px; color:#c6402b; margin-bottom:6px;">NHÀ HÀNG LẨU PHỐ</div>
+                    <div style="width:180px; height:180px; margin:0 auto; background:#fff; display:grid; place-items:center; border:2px dashed #c6402b; border-radius:8px; font-size:13px; font-weight:700;">
+                        📲 VIETQR<br/><small style="color:var(--muted);">Mã thanh toán tự động</small>
+                    </div>
+                    <div style="font-size:13px; font-weight:700; margin-top:8px;">STK: 9999 8888 6688 · MB Bank</div>
+                    <div style="font-size:12px; color:var(--muted);">Số tiền: <b style="color:var(--red);">@Model.GioHang.TongThanhToan.ToString("N0")đ</b></div>
+                </div>
+                <div style="font-size:12px; color:var(--muted);">Sau khi chuyển khoản, bấm nút <b>"Thanh toán ngay"</b> bên dưới để hoàn tất đơn hàng.</div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:24px;">
+            <a class="btn secondary" asp-action="Index">← Xem lại giỏ hàng</a>
+            <button class="btn" type="submit" id="btnSubmitOrder" style="flex:1;">
+                Xác nhận & Gửi đơn hàng →
+            </button>
+        </div>
     </form>
+
+    <!-- Side Order Summary -->
     <aside class="panel summary">
-        <h3>Đơn hàng của bạn</h3>
-        @foreach (var item in Model.GioHang.Items)
+        <h3>Kiểm tra đơn hàng (@Model.GioHang.Items.Count món)</h3>
+        <div style="max-height: 280px; overflow-y: auto; margin-bottom: 14px; padding-right: 4px;">
+            @foreach (var item in Model.GioHang.Items)
+            {
+                <div class="summary-line" style="margin: 8px 0;">
+                    <span>@item.TenMon × <strong>@item.SoLuong</strong></span>
+                    <strong>@item.ThanhTien.ToString("N0")đ</strong>
+                </div>
+            }
+        </div>
+
+        <div class="summary-line" style="border-top: 1px solid var(--line); padding-top: 12px;">
+            <span>Tạm tính tiền hàng</span>
+            <strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong>
+        </div>
+        @if (Model.GioHang.GiamGia > 0)
         {
-            <div class="summary-line"><span>@item.TenMon × @item.SoLuong</span><strong>@item.ThanhTien.ToString("N0")đ</strong></div>
+            <div class="summary-line">
+                <span>Ưu đãi voucher (@Model.GioHang.MaVoucher)</span>
+                <strong style="color: var(--green);">−@Model.GioHang.GiamGia.ToString("N0")đ</strong>
+            </div>
         }
-        <div class="summary-line"><span>Phí giao hàng</span><strong>@Model.GioHang.PhiGiaoHang.ToString("N0")đ</strong></div>
-        <div class="summary-line"><span>Ưu đãi demo</span><strong>−@Model.GioHang.GiamGia.ToString("N0")đ</strong></div>
-        <div class="summary-line total"><span>Tổng thanh toán</span><span>@Model.GioHang.TongThanhToan.ToString("N0")đ</span></div>
-        <div class="notice">Đơn hàng và thanh toán chỉ mô phỏng trên giao diện.</div>
+
+        <!-- Voucher section in checkout -->
+        <div class="checkout-voucher-section" style="margin: 16px 0; padding: 14px; background: #fffcf8; border: 1px dashed var(--line); border-radius: 14px;">
+            <label for="checkoutVoucherInput" style="font-size: 13px; font-weight: 750; margin-bottom: 6px;">Mã ưu đãi / Voucher</label>
+            <form asp-action="Voucher" method="post" id="checkoutVoucherForm" style="margin-bottom: 8px;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ReturnUrl" value="checkout" />
+                <div style="display: flex; flex-direction:column; gap: 8px;">
+                    <input id="checkoutVoucherInput" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã (VD: LAUPHO20)" style="width:100%;" />
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn secondary small" type="submit" style="flex:1; width:auto; margin-top:0;">Áp dụng ưu đãi</button>
+                        @if (!string.IsNullOrWhiteSpace(Model.GioHang.MaVoucher))
+                        {
+                            <button class="btn secondary small" type="button" onclick="removeCheckoutVoucher()" title="Gỡ mã" style="color:var(--red); border-color:#ef9a9a; flex:none; width:auto; margin-top:0; padding:0 16px;">✕ Gỡ</button>
+                        }
+                    </div>
+                </div>
+            </form>
+            <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Gợi ý mã giảm giá:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                @{
+                    var allVouchers = new[] {
+                        new { Code = "LAUPHO20", Label = "-20k" },
+                        new { Code = "VOUCHER40K", Label = "-40k" },
+                        new { Code = "VOUCHER10", Label = "-10%" },
+                        new { Code = "NHOM15", Label = "-15%" }
+                    };
+                    var usedStr = Context.Session.GetString("UsedVouchers") ?? "";
+                    var available = allVouchers.Where(v => !usedStr.Contains(v.Code));
+                }
+                @foreach (var v in available)
+                {
+                    <button type="button" class="chip-voucher" onclick="quickApplyCheckoutVoucher('@v.Code')" style="background:#fcf2eb; border:1px solid #f1c5b4; color:#a34820; font-size:11px; padding:3px 8px; border-radius:999px; cursor:pointer;">🎟️ @v.Code (@v.Label)</button>
+                }
+            </div>
+        </div>
+
+        <div class="summary-line total" style="align-items:flex-end;">
+            <span>Tổng thanh toán</span>
+            <div style="text-align: right;">
+                @if (Model.GioHang.GiamGia > 0)
+                {
+                    var originalTotal = Model.GioHang.TongThanhToan + Model.GioHang.GiamGia;
+                    <div style="text-decoration: line-through; color: var(--muted); font-size: 14px; margin-bottom: 2px;">
+                        @originalTotal.ToString("N0")đ
+                    </div>
+                }
+                <div style="color: var(--red); font-size: 20px;">@Model.GioHang.TongThanhToan.ToString("N0")đ</div>
+            </div>
+        </div>
+
     </aside>
 </div>
-@section Scripts { <partial name="/Shared/_ValidationScriptsPartial.cshtml" /> }
+
+@section Scripts {
+    <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
+    <script>
+        const typePickup = document.getElementById('typePickup');
+        const typeDelivery = document.getElementById('typeDelivery');
+        const addressGroup = document.getElementById('deliveryAddressGroup');
+        const addressInput = document.querySelector('input[name="DatHang.DiaChiGiao"]');
+
+        function toggleAddress() {
+            if (typePickup && typePickup.checked) {
+                if (addressGroup) addressGroup.style.display = 'none';
+                if (addressInput) addressInput.value = 'Nhận tại quán (12 Lê Lợi, Q.1)';
+            } else {
+                if (addressGroup) addressGroup.style.display = 'block';
+                if (addressInput && addressInput.value === 'Nhận tại quán (12 Lê Lợi, Q.1)') {
+                    addressInput.value = '';
+                }
+            }
+        }
+
+        if (typePickup && typeDelivery) {
+            typePickup.addEventListener('change', toggleAddress);
+            typeDelivery.addEventListener('change', toggleAddress);
+        }
+
+        // Online payment toggle & tabs
+        const payCod = document.getElementById('payCod');
+        const payOnline = document.getElementById('payOnline');
+        const onlinePanel = document.getElementById('onlinePaymentPanel');
+        const btnSubmitOrder = document.getElementById('btnSubmitOrder');
+        const payCardSection = document.getElementById('payCardSection');
+        const payQrSection = document.getElementById('payQrSection');
+        const btnTabCard = document.getElementById('btnTabCard');
+        const btnTabQr = document.getElementById('btnTabQr');
+
+        function togglePaymentMethod() {
+            if (payOnline && payOnline.checked) {
+                if (onlinePanel) onlinePanel.style.display = 'block';
+                if (btnSubmitOrder) {
+                    btnSubmitOrder.innerHTML = '💳 Thanh toán ngay @Model.GioHang.TongThanhToan.ToString("N0")đ →';
+                }
+            } else {
+                if (onlinePanel) onlinePanel.style.display = 'none';
+                if (btnSubmitOrder) {
+                    btnSubmitOrder.innerHTML = 'Xác nhận & Gửi đơn hàng (COD) →';
+                }
+            }
+        }
+
+        function switchPayTab(tab) {
+            if (tab === 'card') {
+                if (payCardSection) payCardSection.style.display = 'block';
+                if (payQrSection) payQrSection.style.display = 'none';
+                if (btnTabCard) { btnTabCard.className = 'btn small'; }
+                if (btnTabQr) { btnTabQr.className = 'btn secondary small'; }
+            } else {
+                if (payCardSection) payCardSection.style.display = 'none';
+                if (payQrSection) payQrSection.style.display = 'block';
+                if (btnTabCard) { btnTabCard.className = 'btn secondary small'; }
+                if (btnTabQr) { btnTabQr.className = 'btn small'; }
+            }
+        }
+
+        function quickApplyCheckoutVoucher(code) {
+            const input = document.getElementById('checkoutVoucherInput');
+            if (input) {
+                input.value = code;
+                input.focus({ preventScroll: true });
+            }
+        }
+
+        function removeCheckoutVoucher() {
+            const input = document.getElementById('checkoutVoucherInput');
+            const form = document.getElementById('checkoutVoucherForm');
+            if (input && form) {
+                input.value = '';
+                form.submit();
+            }
+        }
+
+        if (payCod && payOnline) {
+            payCod.addEventListener('change', togglePaymentMethod);
+            payOnline.addEventListener('change', togglePaymentMethod);
+        }
+    </script>
+}

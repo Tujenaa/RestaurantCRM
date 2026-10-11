@@ -1,0 +1,99 @@
+@model MonAnViewModel
+
+<article class="dish-card @(Model.ConHang ? "" : "dish-card--unavailable")" data-id="@Model.MaMon" data-name="@Model.TenMon" data-category="@Model.MaLoaiMon">
+    <div class="dish-card__media">
+        <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="dish-card__img-link" title="Xem chi tiết @Model.TenMon">
+            @if (!string.IsNullOrWhiteSpace(Model.DuongDanAnh))
+            {
+                <img src="@Model.DuongDanAnh" alt="@Model.TenMon" style="width:100%; height:100%; object-fit:cover; border-radius:16px 16px 0 0;" />
+            }
+            else
+            {
+                <div class="dish-art @Model.Tone" style="height: 100%; border-radius: 0; user-select: none;">
+                    <span>@Model.BieuTuong</span>
+                </div>
+            }
+        </a>
+
+        <!-- Top Badges -->
+        <div class="dish-card__badges">
+            @if (Model.DonGiaSauGiam < Model.DonGia && Model.DonGiaSauGiam > 0)
+            {
+                var pt = Math.Round((1 - (Model.DonGiaSauGiam / Model.DonGia)) * 100);
+                <span class="badge" style="background-color: var(--red); color: white;">Giảm @pt%</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Tag))
+            {
+                <span class="badge badge-tag">@Model.Tag</span>
+            }
+            <span class="badge @Model.TrangThaiBadgeClass">
+                <span class="badge-dot"></span>@Model.TrangThaiHienThi
+            </span>
+        </div>
+
+        <!-- Quick View Overlay Button -->
+        <button type="button" class="btn-quick-view" onclick="openQuickView('@Model.MaMon')" title="Xem nhanh món ăn">
+            <span>👁 Xem nhanh</span>
+        </button>
+    </div>
+
+    <div class="dish-card__body">
+        <div class="dish-card__meta">
+            <span class="dish-card__category">@Model.LoaiMon</span>
+            <span class="dish-card__stock @(Model.ConHang ? "text-success" : "text-muted")">
+                @(Model.ConHang ? $"Còn {Model.SoLuong} suất" : "Hết món")
+            </span>
+        </div>
+
+        <h3 class="dish-card__title">
+            <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" title="@Model.TenMon">
+                @Model.TenMon
+            </a>
+        </h3>
+
+        <p class="dish-card__desc" title="@Model.MoTa">
+            @Model.MoTa
+        </p>
+
+        <div class="dish-card__footer">
+            <div class="dish-card__price-wrap">
+                <span class="dish-card__price-label">Giá bán</span>
+                @if (Model.DonGiaSauGiam < Model.DonGia && Model.DonGiaSauGiam > 0)
+                {
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="dish-card__price">@Model.DonGiaSauGiam.ToString("N0") <small>đ</small></span>
+                        <span style="text-decoration:line-through; font-size:12px; color:var(--muted);">@Model.DonGia.ToString("N0") <small>đ</small></span>
+                    </div>
+                }
+                else
+                {
+                    <span class="dish-card__price">@Model.DonGia.ToString("N0") <small>đ</small></span>
+                }
+            </div>
+
+            <div class="dish-card__actions">
+                <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="btn-detail" title="Xem chi tiết món">
+                    Chi tiết
+                </a>
+
+                @if (Model.ConHang)
+                {
+                    <form asp-controller="GioHang" asp-action="Them" method="post" class="add-cart-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="MaMon" value="@Model.MaMon" />
+                        <input type="hidden" name="SoLuong" value="1" />
+                        <button class="btn-add-cart" type="submit" aria-label="Thêm @Model.TenMon vào giỏ" title="Thêm vào giỏ">
+                            <span class="plus-icon">+</span>
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <button class="btn-add-cart disabled" type="button" disabled title="Món ăn tạm hết hàng">
+                        <span>✕</span>
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</article>

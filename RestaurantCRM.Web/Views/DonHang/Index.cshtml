@@ -1,58 +1,148 @@
 @model DonHangDanhSachViewModel
 @{
-    ViewData["Title"] = "Đơn hàng — Lẩu Phố";
+    ViewData["Title"] = "Đơn hàng của tôi — Lẩu Phố";
     Layout = "/Shared/_Layout.cshtml";
     var filters = new[] { ("all", "Tất cả"), ("active", "Đang xử lý"), ("done", "Đã hoàn tất"), ("cancel", "Đã hủy") };
     var steps = new[] { "Đã đặt", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Hoàn tất" };
 }
-<div class="page-intro"><h1 class="page-title">Đơn hàng của tôi</h1><p>Theo dõi đơn đang giao và xem lại lịch sử mua hàng.</p></div>
+
+<div class="page-intro">
+    <h1 class="page-title">Đơn hàng của tôi</h1>
+    <p>Theo dõi tiến trình đơn hàng đang giao và xem lại lịch sử đặt món của bạn.</p>
+</div>
+
 <div class="tabs">
     @foreach (var filter in filters)
     {
-        <a class="@(Model.TrangThaiDangChon == filter.Item1 ? "active" : "")" asp-action="Index" asp-route-trangThai="@filter.Item1">@filter.Item2</a>
+        <a class="@(Model.TrangThaiDangChon == filter.Item1 ? "active" : "")"
+           asp-action="Index"
+           asp-route-trangThai="@filter.Item1">
+            @filter.Item2
+        </a>
     }
 </div>
+
 @if (Model.DonHangs.Count == 0)
 {
-    <div class="empty">Không có đơn hàng ở mục này.</div>
+    <div class="panel empty">
+        <div class="big">📦</div>
+        <h3>Không có đơn hàng nào ở mục này</h3>
+        <p>Khám phá thực đơn và chọn món ngon giao tận nơi ngay hôm nay.</p>
+        <a class="btn" asp-controller="Menu" asp-action="Index">Khám phá thực đơn →</a>
+    </div>
 }
+
 @foreach (var order in Model.DonHangs)
 {
-    <article class="order-card">
-        <div class="order-top"><div><h3>Đơn hàng #@order.MaDonHang</h3><p>Đặt lúc @order.NgayDat.ToString("dd/MM/yyyy · HH:mm")</p></div><span class="status @(order.TrangThaiLoc == "done" ? "done" : "")">@order.TrangThai</span></div>
-        @foreach (var item in order.ChiTiet)
+    <article class="order-card" id="order-@order.MaDonHang">
+        <div class="order-top">
+            <div>
+                <h3>Đơn hàng #@order.MaDonHang</h3>
+                <p>Đặt lúc @order.NgayDat.ToString("dd/MM/yyyy · HH:mm")</p>
+                @if (!string.IsNullOrWhiteSpace(order.DiaChiGiao))
+                {
+                    <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+                        📍 Giao đến: <strong>@order.DiaChiGiao</strong>
+                    </p>
+                }
+            </div>
+            <span class="status @(order.TrangThaiLoc == "done" ? "done" : (order.TrangThaiLoc == "cancel" ? "badge-discontinued" : ""))">
+                @order.TrangThai
+            </span>
+        </div>
+
+        @if (order.ChiTiet != null && order.ChiTiet.Count > 0)
         {
-            <div class="order-products"><span>@item.TenMon × @item.SoLuong</span><strong>@((item.DonGia * item.SoLuong).ToString("N0"))đ</strong></div>
+            <div class="order-items-list" style="margin: 12px 0;">
+                @foreach (var item in order.ChiTiet)
+                {
+                    <div class="order-products">
+                        <span><strong>@item.TenMon</strong> × @item.SoLuong</span>
+                        <strong>@((item.DonGiaSauGiam > 0 ? item.DonGiaSauGiam * item.SoLuong : item.DonGiaGoc * item.SoLuong).ToString("N0"))đ</strong>
+                    </div>
+                }
+            </div>
         }
-        <div class="summary-line total"><span>Tổng thanh toán</span><span>@order.TongThanhToan.ToString("N0")đ</span></div>
+
+        <div class="summary-line total">
+            <span>Tổng thanh toán</span>
+            <span style="color: var(--red); font-size: 18px; font-weight: 850;">@order.TongThanhToan.ToString("N0")đ</span>
+        </div>
+
         @if (order.TrangThaiLoc == "active")
         {
             var progress = Math.Clamp((order.BuocHienTai - 1) * 20, 0, 80);
-            var notes = new[] { "Đơn hàng đã được tiếp nhận", "Nhà hàng đang xử lý đơn hàng.", "Món ăn đang được chuẩn bị tại bếp.", "Vui lòng giữ điện thoại để tài xế liên hệ khi đến.", "Cảm ơn bạn đã đặt hàng tại Lẩu Phố." };
+            var notes = new[]
+            {
+                "Đơn hàng mới được tiếp nhận, đang chờ xác nhận từ nhà hàng.",
+                "Nhà hàng đã xác nhận đơn, chuẩn bị xuất nguyên liệu.",
+                "Đầu bếp đang chuẩn bị món ăn tươi ngon tại gian bếp.",
+                "Tài xế đang trên đường giao đơn nóng hổi đến bạn.",
+                "Đơn hàng đã được giao thành công. Chúc bạn ngon miệng!"
+            };
+            int noteIndex = Math.Clamp(order.BuocHienTai - 1, 0, notes.Length - 1);
+
             <div class="order-progress">
-                <div class="progress-heading"><strong>📦 Tiến trình đơn hàng</strong><small>Bước @(Math.Min(order.BuocHienTai + 1, 5))/5</small></div>
+                <div class="progress-heading">
+                    <strong>📦 Tiến trình đơn hàng</strong>
+                    <small>Bước @Math.Min(order.BuocHienTai, 5)/5 · @order.TrangThai</small>
+                </div>
                 <div class="track-steps" style="--progress:@(progress)%">
                     @for (var i = 0; i < steps.Length; i++)
                     {
-                        <div class="track-step @(i < order.BuocHienTai ? "complete" : "") @(i == order.BuocHienTai ? "current" : "")"><div class="track-dot">@(i < order.BuocHienTai ? "✓" : (i + 1).ToString())</div><span>@steps[i]</span></div>
+                        var isComplete = i < order.BuocHienTai;
+                        var isCurrent = i == (order.BuocHienTai - 1);
+                        <div class="track-step @(isComplete ? "complete" : "") @(isCurrent ? "current" : "")">
+                            <div class="track-dot">@(isComplete ? "✓" : (i + 1).ToString())</div>
+                            <span>@steps[i]</span>
+                        </div>
                     }
                 </div>
-                <div class="track-note"><span>ℹ️</span><div><b>@notes[Math.Clamp(order.BuocHienTai, 0, notes.Length - 1)]</b></div></div>
+                <div class="track-note">
+                    <span>ℹ️</span>
+                    <div><b>@notes[noteIndex]</b></div>
+                </div>
             </div>
         }
-        <div class="order-actions">
+
+        <div class="order-actions" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;">
+            @if (order.CanCancel)
+            {
+                <form asp-action="HuyDon" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Kho sẽ hoàn trả số lượng món.');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@order.MaDonHang" />
+                    <button class="btn secondary small" type="submit" style="color: #c62828; border-color: #ef9a9a;">
+                        ✕ Hủy đơn hàng
+                    </button>
+                </form>
+            }
+
+            <a class="btn secondary small" asp-action="ChiTiet" asp-route-id="@order.MaDonHang">
+                Xem chi tiết
+            </a>
+
             @if (order.TrangThaiLoc == "done")
             {
-                <form asp-action="MuaLai" method="post"><input type="hidden" name="id" value="@order.MaDonHang" /><button class="btn secondary small" type="submit">Mua lại</button></form>
-                <a class="btn small" asp-controller="PhanHoi" asp-action="Index">Đánh giá món</a>
+                <form asp-action="MuaLai" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@order.MaDonHang" />
+                    <button class="btn small" type="submit">
+                        🔄 Mua lại đơn này
+                    </button>
+                </form>
+                <a class="btn secondary small" asp-controller="PhanHoi" asp-action="Index">
+                    ⭐ Đánh giá món
+                </a>
             }
-            else if (order.TrangThaiLoc == "active")
+            else if (order.TrangThaiLoc == "cancel")
             {
-                <button class="btn secondary small" type="button" data-toast="Vui lòng liên hệ nhà hàng để hỗ trợ đơn hàng demo">Yêu cầu hỗ trợ</button>
-            }
-            else
-            {
-                <form asp-action="MuaLai" method="post"><input type="hidden" name="id" value="@order.MaDonHang" /><button class="btn secondary small" type="submit">Đặt lại đơn này</button></form>
+                <form asp-action="MuaLai" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@order.MaDonHang" />
+                    <button class="btn secondary small" type="submit">
+                        🔄 Đặt lại đơn này
+                    </button>
+                </form>
             }
         </div>
     </article>

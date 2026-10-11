@@ -1,0 +1,184 @@
+@model MonAnDanhSachViewModel
+@{
+    ViewData["Title"] = "Thực đơn món ngon — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+
+<div class="menu-page-container">
+    <!-- Hero Banner -->
+    <section class="menu-hero">
+        <div class="menu-hero__content">
+            <span class="menu-hero__eyebrow">✦ TINH HOA NỒI LẨU VIỆT</span>
+            <h1 class="menu-hero__title">Thực đơn Lẩu Phố</h1>
+            <p class="menu-hero__subtitle">
+                Hơn @Model.TongSoMon món lẩu và đồ nhúng tươi ngon thượng hạng. Đặt món giao tận nhà nóng hổi trong 30-45 phút!
+            </p>
+            <div class="menu-hero__badges">
+                <span class="hero-chip">🥬 Rau củ sạch trong ngày</span>
+                <span class="hero-chip">🥩 Thịt bò & hải sản tươi sống</span>
+                <span class="hero-chip">🥘 Nước lẩu gia truyền đậm vị</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Toolbar: Search & Category Filter -->
+    <section class="menu-toolbar" id="menu-toolbar">
+        <div class="menu-toolbar__top">
+            <!-- Search Form -->
+            <form class="menu-search-form" asp-controller="Menu" asp-action="Index" method="get" id="searchForm">
+                @if (!string.IsNullOrEmpty(Model.LoaiDangChon) && Model.LoaiDangChon != "all")
+                {
+                    <input type="hidden" name="loai" value="@Model.LoaiDangChon" />
+                }
+                <div class="search-input-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input type="text"
+                           id="dishSearchInput"
+                           name="q"
+                           value="@Model.TuKhoa"
+                           placeholder="Tìm theo tên món (VD: Lẩu Thái, Bò Mỹ, Tôm sú...)"
+                           autocomplete="off"
+                           aria-label="Tìm kiếm món ăn" />
+                    @if (!string.IsNullOrWhiteSpace(Model.TuKhoa))
+                    {
+                        <a href="@Url.Action("Index", "Menu", new { loai = Model.LoaiDangChon })" class="search-clear" title="Xóa tìm kiếm">✕</a>
+                    }
+                </div>
+                <button type="submit" class="btn btn-search">Tìm kiếm</button>
+            </form>
+
+            <!-- Search stats -->
+            <div class="menu-stats" style="display: flex; gap: 16px; align-items: center;">
+                <span id="dishCounterText">Hiển thị <strong>@Model.TongSoMon</strong> món ăn</span>
+                <select id="sortSelect" onchange="applySort(this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line);">
+                    @if(string.IsNullOrEmpty(Model.SortDangChon)) { <option value="" selected>Mặc định</option> } else { <option value="">Mặc định</option> }
+                    @if(Model.SortDangChon == "asc") { <option value="asc" selected>Giá: Thấp đến cao</option> } else { <option value="asc">Giá: Thấp đến cao</option> }
+                    @if(Model.SortDangChon == "desc") { <option value="desc" selected>Giá: Cao đến thấp</option> } else { <option value="desc">Giá: Cao đến thấp</option> }
+                </select>
+            </div>
+        </div>
+
+        <!-- Category Filter Tabs -->
+        <div class="menu-categories" role="tablist">
+            <div class="categories-scroll">
+                @foreach (var cat in Model.DanhSachLoaiMon)
+                {
+                    bool isSelected = (string.IsNullOrEmpty(Model.LoaiDangChon) || Model.LoaiDangChon == "all")
+                        ? (cat.MaLoaiMon == "all" || cat.TenLoaiMon == "Tất cả món")
+                        : (Model.LoaiDangChon == cat.MaLoaiMon || Model.LoaiDangChon == cat.TenLoaiMon);
+
+                    <a class="category-pill @(isSelected ? "category-pill--active" : "")"
+                       href="javascript:void(0)"
+                       onclick="filterCategory(this, '@(cat.MaLoaiMon == "all" ? "all" : cat.MaLoaiMon)')"
+                       data-cat-id="@cat.MaLoaiMon"
+                       title="Xem món loại: @cat.TenLoaiMon">
+                        <span class="pill-name">@cat.TenLoaiMon</span>
+                        @if (cat.SoLuongMon > 0)
+                        {
+                            <span class="pill-count">@cat.SoLuongMon</span>
+                        }
+                    </a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <!-- Dish Grid Section -->
+    <section class="menu-grid-section">
+        @if (TempData["ThongBao"] != null)
+        {
+            <div class="alert alert-info">
+                ℹ️ @TempData["ThongBao"]
+            </div>
+        }
+
+        <div class="dish-grid" id="dishGrid">
+            @if (Model.MonAns.Count == 0)
+            {
+                <div class="menu-empty-state">
+                    <div class="empty-icon">🍲</div>
+                    <h3>Không tìm thấy món ăn phù hợp</h3>
+                    <p>Rất tiếc, không có món nào khớp với tiêu chí tìm kiếm "@Model.TuKhoa".</p>
+                    <a asp-controller="Menu" asp-action="Index" class="btn btn-secondary">Xem lại toàn bộ thực đơn</a>
+                </div>
+            }
+            else
+            {
+                @foreach (var dish in Model.MonAns)
+                {
+                    <partial name="_DishCard" model="@dish" />
+                }
+            }
+        </div>
+    </section>
+</div>
+
+
+
+@section Scripts {
+    <script>
+        // Real-time client-side instant search filter
+        const searchInput = document.getElementById('dishSearchInput');
+        const dishCards = document.querySelectorAll('.dish-card');
+        const counterText = document.getElementById('dishCounterText');
+
+        function removeVietnameseTones(str) {
+            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a"); 
+            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e"); 
+            str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i"); 
+            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o"); 
+            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u"); 
+            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y"); 
+            str = str.replace(/đ/g,"d");
+            return str;
+        }
+        
+        function applySort(sortVal) {
+            const url = new URL(window.location.href);
+            if (sortVal) url.searchParams.set('sort', sortVal);
+            else url.searchParams.delete('sort');
+            window.location.href = url.toString();
+        }
+
+        window.currentCategory = '@(string.IsNullOrEmpty(Model.LoaiDangChon) ? "all" : Model.LoaiDangChon)';
+        
+        function filterCategory(btn, catId) {
+            window.currentCategory = catId;
+            document.querySelectorAll('.category-pill').forEach(el => el.classList.remove('category-pill--active'));
+            if (btn) btn.classList.add('category-pill--active');
+            
+            // Trigger search input event to re-evaluate the filter
+            if (searchInput) {
+                searchInput.dispatchEvent(new Event('input'));
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function (e) {
+                const query = removeVietnameseTones(e.target.value.trim().toLowerCase());
+                let visibleCount = 0;
+
+                dishCards.forEach(card => {
+                    const name = removeVietnameseTones((card.getAttribute('data-name') || '').toLowerCase());
+                    const catId = card.getAttribute('data-category') || '';
+
+                    // Check search query
+                    const matchesSearch = !query || name.includes(query);
+                    // Check category pill
+                    const matchesCategory = window.currentCategory === 'all' || catId === window.currentCategory;
+
+                    if (matchesSearch && matchesCategory) {
+                        card.style.display = '';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                if (counterText) {
+                    counterText.innerHTML = `Hiển thị <strong>${visibleCount}</strong> món ăn`;
+                }
+            });
+        }
+    </script>
+}

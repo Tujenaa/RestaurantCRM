@@ -20,27 +20,41 @@ public class TaiKhoanController : Controller
     public IActionResult DangNhap() => View("Login");
 
     [HttpGet]
-    public IActionResult Index(string tab = "login")
+    public IActionResult DangKy() => View("Register");
+
+    [HttpGet]
+    public IActionResult Index(string tab = "profile")
     {
-        ViewBag.Tab = tab;
         // Check if user is logged in
-        if (HttpContext.Session.GetString("Token") != null)
+        var token = HttpContext.Session.GetString("Token");
+        if (string.IsNullOrEmpty(token))
         {
-            var hoTen = HttpContext.Session.GetString("HoTen");
-            var email = HttpContext.Session.GetString("Email");
-            var soDienThoai = HttpContext.Session.GetString("SoDienThoai");
-            
-            return View(new KhachHangViewModel { 
-                HoTen = hoTen ?? String.Empty,
-                SoDienThoai = soDienThoai ?? String.Empty,
-                Email = email ?? String.Empty,
-                GioiTinh = "Nam", // Placeholder, you may fetch from API
-                DiaChi = "12 Lê Lợi, Quận 1, TP. Hồ Chí Minh", // Placeholder
-                SoDonHang = 12 
-            });
+            TempData["ThongBao"] = "Vui lòng đăng nhập để xem thông tin tài khoản.";
+            return RedirectToAction(nameof(DangNhap));
         }
 
-        return View(new KhachHangViewModel { HoTen = "Nguyễn Văn An", SoDienThoai = "0901234567", Email = "a.nguyen@email.com", GioiTinh = "Nam", DiaChi = "12 Lê Lợi, Quận 1, TP. Hồ Chí Minh", SoDonHang = 12 });
+        ViewBag.Tab = tab;
+        var hoTen = HttpContext.Session.GetString("HoTen") ?? "Khách hàng";
+        var email = HttpContext.Session.GetString("Email") ?? "";
+        var soDienThoai = HttpContext.Session.GetString("SoDienThoai") ?? "";
+
+        return View(new KhachHangViewModel
+        {
+            HoTen = hoTen,
+            SoDienThoai = soDienThoai,
+            Email = email,
+            GioiTinh = "Khác",
+            DiaChi = "Chưa cập nhật",
+            SoDonHang = 0
+        });
+    }
+
+    [HttpGet]
+    public IActionResult DangXuat()
+    {
+        HttpContext.Session.Clear();
+        TempData["ThongBao"] = "Đã đăng xuất tài khoản thành công.";
+        return RedirectToAction("Index", "TrangChu");
     }
 
     [HttpPost]
@@ -117,11 +131,11 @@ public class TaiKhoanController : Controller
         if (String.IsNullOrWhiteSpace(hoTen) || String.IsNullOrWhiteSpace(soDienThoai) || String.IsNullOrWhiteSpace(matKhau))
         {
             TempData["ThongBao"] = "Vui lòng nhập họ tên, số điện thoại và mật khẩu.";
-            return RedirectToAction(nameof(Index), new { tab = "register" });
+            return RedirectToAction(nameof(DangKy));
         }
 
         var client = _httpClientFactory.CreateClient("ApiClient");
-        var payload = new { HoTen = hoTen, SoDienThoai = soDienThoai, Email = email, MatKhau = matKhau };
+        var payload = new { HoTen = hoTen.Trim(), SoDienThoai = soDienThoai.Trim(), Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(), MatKhau = matKhau };
         var json = JsonSerializer.Serialize(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -132,20 +146,20 @@ public class TaiKhoanController : Controller
         }
         catch (HttpRequestException)
         {
-            TempData["ThongBao"] = "Không kết nối được API. Hãy chạy RestaurantCRM.API rồi thử lại.";
-            return RedirectToAction(nameof(Index), new { tab = "register" });
+            TempData["ThongBao"] = "Không kết nối được API. Hãy đảm bảo RestaurantCRM.API đang chạy rồi thử lại.";
+            return RedirectToAction(nameof(DangKy));
         }
 
         if (response.IsSuccessStatusCode)
         {
-            TempData["ThongBao"] = "Đăng ký thành công, vui lòng đăng nhập.";
-            return RedirectToAction(nameof(Index), new { tab = "login" });
+            TempData["ThongBao"] = "🎉 Tạo tài khoản thành công! Vui lòng đăng nhập bằng số điện thoại/email vừa đăng ký.";
+            return RedirectToAction(nameof(DangNhap));
         }
         else
         {
             var errorResponse = await response.Content.ReadAsStringAsync();
-            TempData["ThongBao"] = "Đăng ký thất bại: " + errorResponse;
-            return RedirectToAction(nameof(Index), new { tab = "register" });
+            TempData["ThongBao"] = "Đăng ký không thành công: " + (string.IsNullOrWhiteSpace(errorResponse) ? "Vui lòng kiểm tra lại thông tin." : errorResponse.Trim('"'));
+            return RedirectToAction(nameof(DangKy));
         }
     }
 
