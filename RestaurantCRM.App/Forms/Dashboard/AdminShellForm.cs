@@ -6,3 +6,4 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
             : base(username, displayName, roles) { }
     }
 }
+

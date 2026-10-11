@@ -119,11 +119,11 @@ INSERT INTO KM_THEO_SP (maKMSP, maChuongTrinh, maMon, phanTramGiam, tienGiam) VA
 ('KMSP04', 'KM06', 'M05', NULL, 20000);
 GO
 
--- 11. KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam)
-INSERT INTO KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam) VALUES
-('KMV01', 'KM01', 'VOUCHER10', 300000, 10, NULL),
-('KMV02', 'KM02', 'VOUCHER40K', 250000, NULL, 40000),
-('KMV03', 'KM05', 'NHOM15', 700000, 15, NULL);
+-- 11. KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa)
+INSERT INTO KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa) VALUES
+('KMV01', 'KM01', 'VOUCHER10', 300000, 10, NULL, 50000),
+('KMV02', 'KM02', 'VOUCHER40K', 250000, NULL, 40000, NULL),
+('KMV03', 'KM05', 'NHOM15', 700000, 15, NULL, 150000);
 GO
 
 -- 12. HOA_DON (maHoaDon, maKhachHang, maNhanVien, maKMVoucher, tenKhachHang, soDienThoai, diaChiGiao, ngayDat, ngayHoanTat, trangThai, tongTienHang, tienGiamVoucher, tongThanhToan)

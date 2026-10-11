@@ -40,7 +40,10 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(NhaCungCap nhaCungCap)
         {
-            nhaCungCap.MaNhaCungCap = "NCC" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper();
+            if (string.IsNullOrWhiteSpace(nhaCungCap.MaNhaCungCap))
+            {
+                nhaCungCap.MaNhaCungCap = await Helpers.CodeGenerator.GenerateMaNhaCungCapAsync(_context);
+            }
             _context.NhaCungCap.Add(nhaCungCap);
             await _context.SaveChangesAsync();
 

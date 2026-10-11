@@ -1,5 +1,6 @@
-﻿namespace RestaurantCRM.AdminApp.Services {
+namespace RestaurantCRM.AdminApp.Services {
     public class KhachHangService {
         
     }
 }
+

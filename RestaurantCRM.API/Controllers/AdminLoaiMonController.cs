@@ -41,7 +41,10 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost]
         public async Task<ActionResult<LoaiMon>> PostLoaiMon(LoaiMon loaiMon)
         {
-            loaiMon.MaLoaiMon = "LM" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
+            if (string.IsNullOrWhiteSpace(loaiMon.MaLoaiMon))
+            {
+                loaiMon.MaLoaiMon = await Helpers.CodeGenerator.GenerateMaLoaiMonAsync(_context);
+            }
             
             _context.LoaiMon.Add(loaiMon);
             await _context.SaveChangesAsync();

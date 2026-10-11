@@ -1,4 +1,4 @@
-﻿-- ============================================
+-- ============================================
 -- CSDL: Hệ thống quản lý đặt món & CRM khách hàng
 -- SQL Server | Các cột trạng thái/loại đã được cố định bằng CHECK constraint
 -- Phiên bản đã chỉnh: gộp admin vào nhân viên, khuyến mãi tách 2 loại (theo SP / voucher),
@@ -123,6 +123,7 @@ CREATE TABLE KM_THEO_VOUCHER (
     giaTriDonToiThieu FLOAT,
     phanTramGiam FLOAT NULL,
     tienGiam FLOAT NULL,
+    giamToiDa FLOAT NULL,
     CONSTRAINT CK_KM_THEO_VOUCHER_giamHopLe CHECK (
         (phanTramGiam IS NOT NULL AND tienGiam IS NULL AND phanTramGiam > 0 AND phanTramGiam <= 100) OR
         (tienGiam IS NOT NULL AND phanTramGiam IS NULL AND tienGiam > 0)
