@@ -95,5 +95,72 @@ namespace RestaurantCRM.API.Controllers
 
             return Ok(monBanChay);
         }
+
+        // GET: api/ThongKe/DashboardMetrics - Lấy tổng hợp số liệu theo thời gian thực cho Dashboard
+        [HttpGet("DashboardMetrics")]
+        public async Task<IActionResult> GetDashboardMetrics()
+        {
+            var now = DateTime.Now;
+            var startOfDay = DateTime.Today;
+            var endOfDay = startOfDay.AddDays(1);
+            var startOfMonth = new DateTime(now.Year, now.Month, 1);
+
+            // 1. Phân hệ Admin
+            var soMonAn = await _context.MonAn.CountAsync();
+            var soNhaCungCap = await _context.NhaCungCap.CountAsync();
+            var soPhieuNhapThangNay = await _context.PhieuNhapHang
+                .CountAsync(p => p.NgayNhap >= startOfMonth);
+            var soTaiKhoan = await _context.NhanVien.CountAsync();
+
+            // 2. Phân hệ Bán hàng
+            var hoaDonsHomNay = await _context.HoaDon
+                .Where(d => d.NgayDat >= startOfDay && d.NgayDat < endOfDay)
+                .ToListAsync();
+
+            var doanhThuHomNay = hoaDonsHomNay
+                .Where(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành")
+                .Sum(d => d.TongThanhToan ?? 0);
+
+            var donChoXuLy = await _context.HoaDon
+                .CountAsync(d => d.TrangThai == "Pending" || d.TrangThai == "Chờ xử lý");
+
+            var donDangGiao = await _context.HoaDon
+                .CountAsync(d => d.TrangThai == "Delivering" || d.TrangThai == "Đang giao" 
+                              || d.TrangThai == "Preparing" || d.TrangThai == "Đang chuẩn bị");
+
+            var donHoanThanhHomNay = hoaDonsHomNay
+                .Count(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành");
+
+            // 3. Phân hệ CRM
+            var tongKhachHang = await _context.KhachHang.CountAsync();
+            var diemDanhGiaTb = await _context.DanhGia.AnyAsync()
+                ? await _context.DanhGia.AverageAsync(d => (double?)d.SoSao) ?? 5.0
+                : 5.0;
+            var phanHoiChuaXuLy = await _context.PhanHoi
+                .CountAsync(p => p.TrangThai == "Chờ xử lý" || p.TrangThai == "Pending");
+            var khaoSatDangMo = await _context.KhaoSat
+                .CountAsync(k => k.TrangThai == "Đang diễn ra" || k.TrangThai == "Hoạt động" || k.TrangThai == "Active");
+
+            return Ok(new
+            {
+                // Admin
+                SoMonAn = soMonAn,
+                SoNhaCungCap = soNhaCungCap,
+                SoPhieuNhapThangNay = soPhieuNhapThangNay,
+                SoTaiKhoan = soTaiKhoan,
+
+                // Bán hàng
+                DoanhThuHomNay = doanhThuHomNay,
+                DonChoXuLy = donChoXuLy,
+                DonDangGiao = donDangGiao,
+                DonHoanThanhHomNay = donHoanThanhHomNay,
+
+                // CRM
+                TongKhachHang = tongKhachHang,
+                DiemDanhGiaTb = Math.Round(diemDanhGiaTb, 1),
+                PhanHoiChuaXuLy = phanHoiChuaXuLy,
+                KhaoSatDangMo = khaoSatDangMo
+            });
+        }
     }
 }

@@ -77,6 +77,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             (bool Success, string Message) result;
             if (_isEdit) {
                 monAnSave.MaMonAn = _monAnCurrent.MaMonAn;
+                monAnSave.SoLuongTon = _monAnCurrent.SoLuongTon;
                 result = await _monAnService.UpdateAsync(monAnSave.MaMonAn, monAnSave);
             } else {
                 result = await _monAnService.CreateAsync(monAnSave);

@@ -476,6 +476,7 @@ public partial class RestaurantCrmContext : DbContext
                 .HasColumnName("maVoucher");
             entity.Property(e => e.PhanTramGiam).HasColumnName("phanTramGiam");
             entity.Property(e => e.TienGiam).HasColumnName("tienGiam");
+            entity.Property(e => e.GiamToiDa).HasColumnName("giamToiDa");
 
             entity.HasOne(d => d.MaChuongTrinhNavigation).WithMany(p => p.KmTheoVoucher)
                 .HasForeignKey(d => d.MaChuongTrinh)

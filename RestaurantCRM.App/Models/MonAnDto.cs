@@ -14,12 +14,10 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("maLoaiMon")]
         public string MaLoaiMon { get; set; }
         
-        public string TenLoaiMon { get; set; }
-        
         [JsonIgnore]
         public bool TrangThai {
-            get => TrangThaiRaw == "Active";
-            set => TrangThaiRaw = value ? "Active" : "Inactive";
+            get => TrangThaiRaw != "Discontinued" && TrangThaiRaw != "Inactive";
+            set => TrangThaiRaw = value ? (SoLuongTon > 0 ? "InStock" : "OutOfStock") : "Discontinued";
         }
 
         [JsonPropertyName("trangThai")]

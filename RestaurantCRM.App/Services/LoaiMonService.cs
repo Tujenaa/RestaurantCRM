@@ -8,8 +8,8 @@ using RestaurantCRM.AdminApp.Models;
 namespace RestaurantCRM.AdminApp.Services {
     public class LoaiMonService {
         private readonly HttpClient _httpClient;
-        public LoaiMonService(HttpClient httpClient) {
-            _httpClient = httpClient;
+        public LoaiMonService(HttpClient httpClient = null) {
+            _httpClient = httpClient ?? new HttpClient { BaseAddress = new Uri(Config.ApiConfig.BaseUrl.TrimEnd('/') + "/") };
         }
 
         public async Task<List<LoaiMonDto>> GetAllAsync() {

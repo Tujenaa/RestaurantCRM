@@ -109,6 +109,27 @@ namespace RestaurantCRM.API.Controllers
             return Ok(lichSu);
         }
 
+        private static readonly Dictionary<string, int> StatusOrder = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Pending", 1 },
+            { "Confirmed", 2 },
+            { "Preparing", 3 },
+            { "Delivering", 4 },
+            { "Completed", 5 }
+        };
+
+        private static string NormalizeStatus(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "Pending";
+            var s = status.Trim().ToLower();
+            if (s.Contains("cancel") || s.Contains("hủy")) return "Cancelled";
+            if (s.Contains("complete") || s.Contains("hoàn thành")) return "Completed";
+            if (s.Contains("deliver") || s.Contains("giao") || s.Contains("shipping")) return "Delivering";
+            if (s.Contains("prepar") || s.Contains("chuẩn bị") || s.Contains("processing")) return "Preparing";
+            if (s.Contains("confirm") || s.Contains("xác nhận")) return "Confirmed";
+            return "Pending";
+        }
+
         // PUT: api/AdminHoaDon/{id}/TrangThai - Cập nhật trạng thái mới cho đơn hàng và lưu log
         [HttpPut("{id}/TrangThai")]
         public async Task<IActionResult> UpdateTrangThaiHoaDon(string id, UpdateOrderStatusRequest request)
@@ -122,11 +143,34 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy đơn hàng.");
             }
 
-            var trangThaiCu = hoaDon.TrangThai;
+            var trangThaiCu = hoaDon.TrangThai ?? "Pending";
+            var curNorm = NormalizeStatus(trangThaiCu);
+            var newNorm = NormalizeStatus(request.TrangThaiMoi);
 
-            // Logic hoàn kho: Chỉ cộng lại số lượng nếu đơn vừa chuyển sang Hủy và trạng thái cũ là Pending hoặc Processing
-            if ((request.TrangThaiMoi == "Cancelled" || request.TrangThaiMoi == "Đã hủy" || request.TrangThaiMoi == "Hủy") && 
-                (trangThaiCu == "Pending" || trangThaiCu == "Processing" || trangThaiCu == "Preparing" || trangThaiCu == "Đang chờ xác nhận" || trangThaiCu == "Đang xử lý"))
+            // Kiểm tra trạng thái kết thúc
+            if (curNorm == "Completed")
+            {
+                return BadRequest("Đơn hàng đã ở trạng thái 'Completed' (Hoàn thành), không thể cập nhật thêm.");
+            }
+            if (curNorm == "Cancelled")
+            {
+                return BadRequest("Đơn hàng đã ở trạng thái 'Cancelled' (Đã hủy), không thể cập nhật thêm.");
+            }
+
+            // Kiểm tra cập nhật 1 chiều
+            if (newNorm != "Cancelled")
+            {
+                int curStep = StatusOrder.GetValueOrDefault(curNorm, 1);
+                int newStep = StatusOrder.GetValueOrDefault(newNorm, 1);
+
+                if (newStep <= curStep)
+                {
+                    return BadRequest($"Trạng thái đơn hàng chỉ được phép cập nhật 1 chiều tiến tới: Pending -> Confirmed -> Preparing -> Delivering -> Completed. Không thể chuyển từ '{curNorm}' về '{newNorm}'.");
+                }
+            }
+
+            // Logic hoàn kho: Hoàn lại số lượng nếu đơn hủy
+            if (newNorm == "Cancelled")
             {
                 foreach (var chiTiet in hoaDon.ChiTietHoaDon)
                 {
@@ -141,35 +185,45 @@ namespace RestaurantCRM.API.Controllers
                             monAn.TrangThai = "InStock";
                         }
                     }
-                    
                 }
             }
 
-            // Gán nhân viên tiếp nhận đơn (nếu có MaNhanVien gửi lên và đơn chưa có người nhận)
-            if (!string.IsNullOrEmpty(request.MaNhanVien) && hoaDon.MaNhanVien == null && (request.TrangThaiMoi == "Preparing" || request.TrangThaiMoi == "Đang chuẩn bị"))
+            // Gán nhân viên tiếp nhận đơn (người đầu tiên xác nhận/xử lý đơn)
+            if (!string.IsNullOrEmpty(request.MaNhanVien) && string.IsNullOrEmpty(hoaDon.MaNhanVien))
             {
-                hoaDon.MaNhanVien = request.MaNhanVien;
+                var nv = await _context.NhanVien.FirstOrDefaultAsync(n => n.MaNhanVien == request.MaNhanVien || n.TenDangNhap == request.MaNhanVien);
+                hoaDon.MaNhanVien = nv != null ? nv.MaNhanVien : request.MaNhanVien;
             }
 
             // Nếu hoàn tất đơn hàng và chưa có ngày hoàn tất, lưu thời gian hiện tại
-            if ((request.TrangThaiMoi == "Completed" || request.TrangThaiMoi == "Hoàn thành") && hoaDon.NgayHoanTat == null)
+            if (newNorm == "Completed" && hoaDon.NgayHoanTat == null)
             {
                 hoaDon.NgayHoanTat = DateTime.Now;
             }
 
             // Cập nhật trạng thái mới
-            hoaDon.TrangThai = request.TrangThaiMoi;
+            hoaDon.TrangThai = newNorm;
 
-            // Ghi log vào bảng LichSuTrangThai
+            // Load tên nhân viên để ghi log chi tiết
+            if (hoaDon.MaNhanVienNavigation == null && !string.IsNullOrEmpty(hoaDon.MaNhanVien))
+            {
+                await _context.Entry(hoaDon).Reference(h => h.MaNhanVienNavigation).LoadAsync();
+            }
+
+            var tenNv = hoaDon.MaNhanVienNavigation?.HoTen;
+            var defaultNote = !string.IsNullOrEmpty(tenNv)
+                ? $"Nhân viên '{tenNv}' chuyển trạng thái: {trangThaiCu} -> {newNorm}"
+                : $"Chuyển trạng thái: {trangThaiCu} -> {newNorm}";
+
             var note = !string.IsNullOrWhiteSpace(request.GhiChu) 
                 ? request.GhiChu 
-                : $"Chuyển trạng thái: {trangThaiCu} -> {request.TrangThaiMoi}";
+                : defaultNote;
 
             var lichSu = new LichSuTrangThai
             {
                 MaLichSu = "LS" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                 MaHoaDon = id,
-                TrangThai = request.TrangThaiMoi,
+                TrangThai = newNorm,
                 ThoiGian = DateTime.Now,
                 GhiChu = note
             };
@@ -177,7 +231,7 @@ namespace RestaurantCRM.API.Controllers
             _context.LichSuTrangThai.Add(lichSu);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Cập nhật trạng thái thành công" });
+            return Ok(new { message = "Cập nhật trạng thái thành công", trangThai = newNorm });
         }
     }
 }

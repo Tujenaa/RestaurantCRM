@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
@@ -88,16 +89,18 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
         }
 
         private async void HoaDonDialog_Load(object sender, EventArgs e) {
-            cboCapNhatTrangThai.Items.Clear();
-            cboCapNhatTrangThai.Items.AddRange(new object[] {
-                "Pending",
-                "Preparing",
-                "Delivering",
-                "Completed",
-                "Cancelled"
-            });
-
             await LoadData();
+        }
+
+        private static string NormalizeStatus(string status) {
+            if (string.IsNullOrWhiteSpace(status)) return "Pending";
+            var s = status.Trim().ToLower();
+            if (s.Contains("cancel") || s.Contains("hủy")) return "Cancelled";
+            if (s.Contains("complete") || s.Contains("hoàn thành")) return "Completed";
+            if (s.Contains("deliver") || s.Contains("giao") || s.Contains("shipping")) return "Delivering";
+            if (s.Contains("prepar") || s.Contains("chuẩn bị")) return "Preparing";
+            if (s.Contains("confirm") || s.Contains("xác nhận")) return "Confirmed";
+            return "Pending";
         }
 
         private async Task LoadData() {
@@ -147,29 +150,70 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
                 var lichSuList = await _hoaDonService.GetLichSuTrangThaiAsync(_maHoaDon);
                 dgvLichSu.DataSource = lichSuList;
 
-                // Chọn trạng thái tương ứng trong combo box
-                SelectComboStatus(_detail.TrangThai);
+                // Cài đặt danh sách trạng thái cập nhật 1 chiều
+                SetupOneWayStatusOptions(_detail.TrangThai);
 
             } catch (Exception ex) {
                 MessageBox.Show("Lỗi khi tải chi tiết đơn hàng: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void SelectComboStatus(string currentStatus) {
-            if (string.IsNullOrEmpty(currentStatus)) return;
-            for (int i = 0; i < cboCapNhatTrangThai.Items.Count; i++) {
-                if (cboCapNhatTrangThai.Items[i].ToString().Equals(currentStatus, StringComparison.OrdinalIgnoreCase)) {
-                    cboCapNhatTrangThai.SelectedIndex = i;
-                    return;
-                }
+        private void SetupOneWayStatusOptions(string currentStatus) {
+            var norm = NormalizeStatus(currentStatus);
+            cboCapNhatTrangThai.Items.Clear();
+
+            // Nếu đơn đã kết thúc (Completed hoặc Cancelled): Khóa cập nhật
+            if (norm == "Completed" || norm == "Cancelled") {
+                cboCapNhatTrangThai.Items.Add(norm);
+                cboCapNhatTrangThai.SelectedIndex = 0;
+                cboCapNhatTrangThai.Enabled = false;
+                btnCapNhat.Enabled = false;
+                txtGhiChu.Enabled = false;
+                return;
             }
-            // Nếu trạng thái dạng tiếng Việt, ánh xạ sang mã tương ứng
-            var s = currentStatus.ToLower();
-            if (s.Contains("chờ") || s.Contains("pending")) cboCapNhatTrangThai.SelectedItem = "Pending";
-            else if (s.Contains("chuẩn bị") || s.Contains("preparing")) cboCapNhatTrangThai.SelectedItem = "Preparing";
-            else if (s.Contains("giao") || s.Contains("delivering")) cboCapNhatTrangThai.SelectedItem = "Delivering";
-            else if (s.Contains("hoàn thành") || s.Contains("completed")) cboCapNhatTrangThai.SelectedItem = "Completed";
-            else if (s.Contains("hủy") || s.Contains("cancelled")) cboCapNhatTrangThai.SelectedItem = "Cancelled";
+
+            cboCapNhatTrangThai.Enabled = true;
+            btnCapNhat.Enabled = true;
+            txtGhiChu.Enabled = true;
+
+            // Quy trình 1 chiều 6 trạng thái:
+            // Pending -> Confirmed -> Preparing -> Delivering -> Completed (+ Cancelled)
+            switch (norm) {
+                case "Pending":
+                    cboCapNhatTrangThai.Items.AddRange(new object[] {
+                        "Confirmed",
+                        "Preparing",
+                        "Delivering",
+                        "Completed",
+                        "Cancelled"
+                    });
+                    break;
+                case "Confirmed":
+                    cboCapNhatTrangThai.Items.AddRange(new object[] {
+                        "Preparing",
+                        "Delivering",
+                        "Completed",
+                        "Cancelled"
+                    });
+                    break;
+                case "Preparing":
+                    cboCapNhatTrangThai.Items.AddRange(new object[] {
+                        "Delivering",
+                        "Completed",
+                        "Cancelled"
+                    });
+                    break;
+                case "Delivering":
+                    cboCapNhatTrangThai.Items.AddRange(new object[] {
+                        "Completed",
+                        "Cancelled"
+                    });
+                    break;
+            }
+
+            if (cboCapNhatTrangThai.Items.Count > 0) {
+                cboCapNhatTrangThai.SelectedIndex = 0;
+            }
         }
 
         private void UpdateBadgeColor(string status) {
@@ -211,7 +255,8 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
 
             btnCapNhat.Enabled = false;
             try {
-                var (success, message) = await _hoaDonService.UpdateTrangThaiAsync(_maHoaDon, newStatus, note);
+                string staffId = UserSession.CurrentUserId ?? UserSession.CurrentUsername;
+                var (success, message) = await _hoaDonService.UpdateTrangThaiAsync(_maHoaDon, newStatus, note, staffId);
                 if (success) {
                     MessageBox.Show("Cập nhật trạng thái đơn hàng thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     this.DialogResult = DialogResult.OK;

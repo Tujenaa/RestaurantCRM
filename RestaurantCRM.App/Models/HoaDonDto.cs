@@ -139,4 +139,46 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("maNhanVien")]
         public string MaNhanVien { get; set; }
     }
+
+    public class CreateOrderRequestDto {
+        [JsonPropertyName("maKhachHang")]
+        public string MaKhachHang { get; set; }
+
+        [JsonPropertyName("tenKhachHang")]
+        public string TenKhachHang { get; set; }
+
+        [JsonPropertyName("soDienThoai")]
+        public string SoDienThoai { get; set; }
+
+        [JsonPropertyName("diaChiGiao")]
+        public string DiaChiGiao { get; set; }
+
+        [JsonPropertyName("maKmvoucher")]
+        public string MaKmvoucher { get; set; }
+
+        [JsonPropertyName("phuongThucThanhToan")]
+        public string PhuongThucThanhToan { get; set; }
+
+        [JsonPropertyName("maNhanVien")]
+        public string MaNhanVien { get; set; }
+
+        [JsonPropertyName("items")]
+        public List<CreateOrderItemDto> Items { get; set; } = new List<CreateOrderItemDto>();
+    }
+
+    public class CreateOrderItemDto {
+        [JsonPropertyName("maMon")]
+        public string MaMon { get; set; }
+
+        [JsonPropertyName("soLuong")]
+        public int SoLuong { get; set; }
+    }
+
+    public class CreateOrderResponseDto {
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+
+        [JsonPropertyName("maHoaDon")]
+        public string MaHoaDon { get; set; }
+    }
 }

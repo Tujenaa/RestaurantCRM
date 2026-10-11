@@ -75,6 +75,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             cboTrangThai.Items.AddRange(new object[] {
                 "Tất cả trạng thái",
                 "Chờ xử lý (Pending)",
+                "Đã xác nhận (Confirmed)",
                 "Đang chuẩn bị (Preparing)",
                 "Đang giao (Delivering)",
                 "Hoàn thành (Completed)",
@@ -146,15 +147,17 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
                 if (!matchKeyword) return false;
 
                 switch (filterIndex) {
-                    case 1: // Chờ xử lý / Đang chuẩn bị
-                        return IsPending(item.TrangThai);
-                    case 2: // Đang chuẩn bị
+                    case 1: // Chờ xử lý (Pending)
+                        return !string.IsNullOrEmpty(item.TrangThai) && (item.TrangThai.ToLower().Contains("pending") || item.TrangThai.ToLower().Contains("chờ"));
+                    case 2: // Đã xác nhận (Confirmed)
+                        return !string.IsNullOrEmpty(item.TrangThai) && (item.TrangThai.ToLower().Contains("confirmed") || item.TrangThai.ToLower().Contains("xác nhận"));
+                    case 3: // Đang chuẩn bị (Preparing)
                         return !string.IsNullOrEmpty(item.TrangThai) && (item.TrangThai.ToLower().Contains("preparing") || item.TrangThai.ToLower().Contains("chuẩn bị"));
-                    case 3: // Đang giao
+                    case 4: // Đang giao (Delivering)
                         return IsDelivering(item.TrangThai);
-                    case 4: // Hoàn thành
+                    case 5: // Hoàn thành (Completed)
                         return IsCompleted(item.TrangThai);
-                    case 5: // Đã hủy
+                    case 6: // Đã hủy (Cancelled)
                         return IsCancelled(item.TrangThai);
                     default:
                         return true;

@@ -61,7 +61,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // btnNgungKinhDoanh
             this.btnNgungKinhDoanh.Location = new System.Drawing.Point(174, 415);
             this.btnNgungKinhDoanh.Name = "btnNgungKinhDoanh";
-            this.btnNgungKinhDoanh.Size = new System.Drawing.Size(120, 23);
+            this.btnNgungKinhDoanh.Size = new System.Drawing.Size(140, 23);
             this.btnNgungKinhDoanh.TabIndex = 3;
             this.btnNgungKinhDoanh.Text = "Ngừng Kinh Doanh";
             this.btnNgungKinhDoanh.UseVisualStyleBackColor = true;

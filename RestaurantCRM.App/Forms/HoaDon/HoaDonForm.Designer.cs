@@ -143,7 +143,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             // 
             this.lblTimKiem.AutoSize = true;
             this.lblTimKiem.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.lblTimKiem.Location = new System.Drawing.Point(16, 131);
+            this.lblTimKiem.Location = new System.Drawing.Point(18, 129);
             this.lblTimKiem.Name = "lblTimKiem";
             this.lblTimKiem.Size = new System.Drawing.Size(63, 17);
             this.lblTimKiem.TabIndex = 3;
@@ -152,9 +152,9 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             // txtTimKiem
             // 
             this.txtTimKiem.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.txtTimKiem.Location = new System.Drawing.Point(82, 128);
+            this.txtTimKiem.Location = new System.Drawing.Point(84, 126);
             this.txtTimKiem.Name = "txtTimKiem";
-            this.txtTimKiem.Size = new System.Drawing.Size(210, 24);
+            this.txtTimKiem.Size = new System.Drawing.Size(185, 24);
             this.txtTimKiem.TabIndex = 4;
             this.txtTimKiem.TextChanged += new System.EventHandler(this.txtTimKiem_TextChanged);
             // 
@@ -162,7 +162,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             // 
             this.lblTrangThai.AutoSize = true;
             this.lblTrangThai.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.lblTrangThai.Location = new System.Drawing.Point(310, 131);
+            this.lblTrangThai.Location = new System.Drawing.Point(285, 129);
             this.lblTrangThai.Name = "lblTrangThai";
             this.lblTrangThai.Size = new System.Drawing.Size(69, 17);
             this.lblTrangThai.TabIndex = 5;
@@ -173,20 +173,20 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             this.cboTrangThai.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboTrangThai.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.cboTrangThai.FormattingEnabled = true;
-            this.cboTrangThai.Location = new System.Drawing.Point(385, 127);
+            this.cboTrangThai.Location = new System.Drawing.Point(360, 126);
             this.cboTrangThai.Name = "cboTrangThai";
-            this.cboTrangThai.Size = new System.Drawing.Size(170, 25);
+            this.cboTrangThai.Size = new System.Drawing.Size(190, 25);
             this.cboTrangThai.TabIndex = 6;
             this.cboTrangThai.SelectedIndexChanged += new System.EventHandler(this.cboTrangThai_SelectedIndexChanged);
             // 
             // btnLamMoi
             // 
             this.btnLamMoi.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.btnLamMoi.Location = new System.Drawing.Point(570, 126);
+            this.btnLamMoi.Location = new System.Drawing.Point(565, 124);
             this.btnLamMoi.Name = "btnLamMoi";
-            this.btnLamMoi.Size = new System.Drawing.Size(85, 28);
+            this.btnLamMoi.Size = new System.Drawing.Size(95, 28);
             this.btnLamMoi.TabIndex = 7;
-            this.btnLamMoi.Text = "Làm mới";
+            this.btnLamMoi.Text = "🔄 Làm mới";
             this.btnLamMoi.UseVisualStyleBackColor = true;
             this.btnLamMoi.Click += new System.EventHandler(this.btnLamMoi_Click);
             // 

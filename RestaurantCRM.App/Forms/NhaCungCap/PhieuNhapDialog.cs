@@ -39,11 +39,16 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 cboNhaCungCap.DisplayMember = "TenNhaCungCap";
                 cboNhaCungCap.ValueMember = "MaNhaCungCap";
 
-                // Tải món ăn
-                _allMonAn = await _monAnService.GetAllAsync();
-                cboMonAn.DataSource = _allMonAn;
+                // Tải món ăn (chỉ lấy các món đang kinh doanh / chưa bị ngừng kinh doanh)
+                var rawDishes = await _monAnService.GetAllAsync();
+                _allMonAn = rawDishes
+                    .Where(m => m.TrangThaiRaw != "Discontinued" && m.TrangThaiRaw != "Inactive")
+                    .OrderBy(m => m.TenMonAn)
+                    .ToList();
+
                 cboMonAn.DisplayMember = "TenMonAn";
                 cboMonAn.ValueMember = "MaMonAn";
+                cboMonAn.DataSource = _allMonAn;
             } catch (Exception ex) {
                 MessageBox.Show("Lỗi khi tải dữ liệu ban đầu: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }

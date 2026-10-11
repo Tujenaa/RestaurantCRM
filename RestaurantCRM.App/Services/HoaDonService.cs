@@ -57,5 +57,20 @@ namespace RestaurantCRM.AdminApp.Services {
                 return (false, "Lỗi kết nối API: " + ex.Message);
             }
         }
+
+        public async Task<(bool Success, string Message, string MaHoaDon)> CreateOrderAsync(CreateOrderRequestDto request) {
+            try {
+                var response = await _httpClient.PostAsJsonAsync("api/HoaDon", request);
+                if (response.IsSuccessStatusCode) {
+                    var result = await response.Content.ReadFromJsonAsync<CreateOrderResponseDto>();
+                    return (true, "Tạo đơn hàng thành công!", result?.MaHoaDon);
+                }
+
+                var err = await response.Content.ReadAsStringAsync();
+                return (false, string.IsNullOrWhiteSpace(err) ? "Tạo đơn hàng thất bại." : err.Trim('"', '\r', '\n'), null);
+            } catch (Exception ex) {
+                return (false, "Lỗi kết nối API: " + ex.Message, null);
+            }
+        }
     }
 }

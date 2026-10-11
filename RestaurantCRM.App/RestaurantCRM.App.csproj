@@ -92,7 +92,10 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Controls\UcThongKe.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\RoundedPanel.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="DTOs\Auth\LoginRequest.cs" />
     <Compile Include="DTOs\Auth\LoginResponse.cs" />
@@ -135,6 +138,14 @@
     <Compile Include="Forms\KhuyenMai\KhuyenMaiForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\KhuyenMai\ChuongTrinhDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\KhuyenMai\TaoVoucherDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Models\KhuyenMaiDto.cs" />
+    <Compile Include="Services\KhuyenMaiService.cs" />
     <Compile Include="Forms\KhaoSat\KhaoSatForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -159,6 +170,7 @@
     <Compile Include="Forms\ModuleFormBase.cs" />
     <Compile Include="Helpers\PermissionHelper.cs" />
     <Compile Include="Helpers\ThemeManager.cs" />
+    <Compile Include="Helpers\UiStyler.cs" />
     <Compile Include="Helpers\TokenHelper.cs" />
     <Compile Include="Helpers\ValidationHelper.cs" />
     <Compile Include="Program.cs" />
@@ -195,6 +207,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Models\MonAnDto.cs" />
+    <Compile Include="Models\DashboardMetricsDto.cs" />
     <Compile Include="Services\LoaiMonService.cs" />
     <Compile Include="Services\PhieuNhapService.cs" />
     <Compile Include="Services\HoaDonService.cs" />

@@ -96,37 +96,67 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Mã món ăn không khớp.");
             }
 
-            // Tự động điều chỉnh trạng thái dựa trên số lượng (nếu không phải là hàng đã ngừng kinh doanh)
-            if (monAn.TrangThai != "Discontinued")
+            var existing = await _context.MonAn.FindAsync(id);
+            if (existing == null)
             {
-                if (monAn.SoLuong <= 0)
-                {
-                    monAn.TrangThai = "OutOfStock";
-                }
-                else if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
-                {
-                    monAn.TrangThai = "InStock";
-                }
+                return NotFound("Không tìm thấy món ăn để cập nhật.");
             }
 
-            _context.Entry(monAn).State = EntityState.Modified;
-
-            try
+            // Cập nhật các trường thông tin cơ bản
+            if (!string.IsNullOrWhiteSpace(monAn.TenMon))
             {
-                await _context.SaveChangesAsync();
+                existing.TenMon = monAn.TenMon;
             }
-            catch (DbUpdateConcurrencyException)
+            if (monAn.DonGia.HasValue)
             {
-                if (!MonAnExists(id))
+                existing.DonGia = monAn.DonGia;
+            }
+            if (!string.IsNullOrWhiteSpace(monAn.MaLoaiMon))
+            {
+                existing.MaLoaiMon = monAn.MaLoaiMon;
+            }
+            if (monAn.DuongDanAnh != null)
+            {
+                existing.DuongDanAnh = monAn.DuongDanAnh;
+            }
+            if (monAn.MoTa != null)
+            {
+                existing.MoTa = monAn.MoTa;
+            }
+
+            // Cập nhật trạng thái nếu có
+            if (!string.IsNullOrWhiteSpace(monAn.TrangThai))
+            {
+                if (monAn.TrangThai == "Inactive")
                 {
-                    return NotFound("Không tìm thấy món ăn để cập nhật.");
+                    existing.TrangThai = "Discontinued";
                 }
                 else
                 {
-                    throw;
+                    existing.TrangThai = monAn.TrangThai;
                 }
             }
 
+            // Giữ nguyên số lượng hiện có khi sửa món, chỉ thay đổi nếu có gửi số lượng cụ thể > 0
+            if (monAn.SoLuong.HasValue && monAn.SoLuong.Value > 0)
+            {
+                existing.SoLuong = monAn.SoLuong.Value;
+            }
+
+            // Tự động điều chỉnh trạng thái InStock / OutOfStock dựa trên số lượng (nếu không phải là hàng đã ngừng kinh doanh)
+            if (existing.TrangThai != "Discontinued")
+            {
+                if ((existing.SoLuong ?? 0) <= 0)
+                {
+                    existing.TrangThai = "OutOfStock";
+                }
+                else
+                {
+                    existing.TrangThai = "InStock";
+                }
+            }
+
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
