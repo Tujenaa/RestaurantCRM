@@ -85,12 +85,18 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(PhieuNhapCreateRequest request)
         {
+            if (request == null || request.ChiTiet == null || !request.ChiTiet.Any())
+            {
+                return BadRequest("Phiếu nhập phải có ít nhất một mặt hàng.");
+            }
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                var maPN = await Helpers.CodeGenerator.GenerateMaPhieuNhapAsync(_context);
                 var phieuNhap = new PhieuNhapHang
                 {
-                    MaPhieuNhap = "PN" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
+                    MaPhieuNhap = maPN,
                     MaNhaCungCap = request.MaNhaCungCap,
                     MaNhanVien = request.MaNhanVien,
                     NgayNhap = DateTime.Now,

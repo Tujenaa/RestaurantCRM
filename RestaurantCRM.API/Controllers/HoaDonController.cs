@@ -29,20 +29,30 @@ namespace RestaurantCRM.API.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var maHoaDon = "DH" + DateTime.Now.Ticks.ToString().Substring(8, 6);
+                var maHoaDon = await Helpers.CodeGenerator.GenerateMaHoaDonAsync(_context);
 
                 var isOnline = string.Equals(request.PhuongThucThanhToan, "online", StringComparison.OrdinalIgnoreCase)
                             || string.Equals(request.PhuongThucThanhToan, "transfer", StringComparison.OrdinalIgnoreCase);
 
+                string? resolvedMaNhanVien = null;
+                if (!string.IsNullOrEmpty(request.MaNhanVien))
+                {
+                    var nv = await _context.NhanVien.FirstOrDefaultAsync(n => n.MaNhanVien == request.MaNhanVien || n.TenDangNhap == request.MaNhanVien);
+                    resolvedMaNhanVien = nv != null ? nv.MaNhanVien : request.MaNhanVien;
+                }
+
+                var initialStatus = !string.IsNullOrEmpty(resolvedMaNhanVien) ? "Confirmed" : "Pending";
+
                 var hoaDon = new HoaDon
                 {
                     MaHoaDon = maHoaDon,
-                    MaKhachHang = request.MaKhachHang,
-                    TenKhachHang = request.TenKhachHang,
+                    MaKhachHang = string.IsNullOrWhiteSpace(request.MaKhachHang) ? null : request.MaKhachHang,
+                    MaNhanVien = resolvedMaNhanVien,
+                    TenKhachHang = string.IsNullOrWhiteSpace(request.TenKhachHang) ? "Khách mua mang đi" : request.TenKhachHang,
                     SoDienThoai = request.SoDienThoai,
-                    DiaChiGiao = request.DiaChiGiao,
+                    DiaChiGiao = string.IsNullOrWhiteSpace(request.DiaChiGiao) ? "Bán mang đi tại quầy" : request.DiaChiGiao,
                     NgayDat = DateTime.Now,
-                    TrangThai = isOnline ? "Confirmed" : "Pending", // Đã thanh toán online thì đơn chuyển sang đã xác nhận
+                    TrangThai = initialStatus,
                     TongTienHang = 0,
                     TongThanhToan = 0,
                     TienGiamVoucher = 0
@@ -155,6 +165,10 @@ namespace RestaurantCRM.API.Controllers
                             if (voucher.PhanTramGiam.HasValue && voucher.PhanTramGiam.Value > 0)
                             {
                                 tienGiam = tongTienHang * voucher.PhanTramGiam.Value / 100.0;
+                                if (voucher.GiamToiDa.HasValue && voucher.GiamToiDa.Value > 0 && tienGiam > voucher.GiamToiDa.Value)
+                                {
+                                    tienGiam = voucher.GiamToiDa.Value;
+                                }
                             }
                             else if (voucher.TienGiam.HasValue && voucher.TienGiam.Value > 0)
                             {
@@ -168,14 +182,14 @@ namespace RestaurantCRM.API.Controllers
                     }
                 }
 
-                // Lưu lại thanh toán nếu online
-                if (isOnline)
+                // Lưu lại thanh toán nếu online hoặc nhân viên bán mang đi tại quầy
+                if (isOnline || !string.IsNullOrEmpty(resolvedMaNhanVien))
                 {
                     var thanhToan = new ThanhToan
                     {
                         MaThanhToan = "TT" + DateTime.Now.Ticks.ToString().Substring(8, 6),
                         MaHoaDon = maHoaDon,
-                        PhuongThuc = "Online",
+                        PhuongThuc = isOnline ? "Online" : "Tiền mặt (Tại quầy)",
                         TrangThai = "Paid",
                         NgayThanhToan = DateTime.Now,
                         SoTien = hoaDon.TongThanhToan
@@ -184,15 +198,19 @@ namespace RestaurantCRM.API.Controllers
                 }
 
                 // Lưu lại lịch sử trạng thái
+                var logNote = !string.IsNullOrEmpty(resolvedMaNhanVien)
+                    ? $"Đơn hàng mang đi/tại quầy do nhân viên tạo."
+                    : (isOnline 
+                        ? "Đơn hàng mới được tạo (Khách đã chọn chuyển khoản, đang chờ nhân viên nhà hàng xác nhận)" 
+                        : "Đơn hàng mới được tạo (Khách chọn thanh toán tiền mặt khi nhận hàng COD, đang chờ nhân viên nhà hàng xác nhận)");
+
                 var lichSu = new LichSuTrangThai
                 {
                     MaLichSu = "LS" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                     MaHoaDon = maHoaDon,
-                    TrangThai = isOnline ? "Confirmed" : "Pending",
+                    TrangThai = initialStatus,
                     ThoiGian = DateTime.Now,
-                    GhiChu = isOnline 
-                        ? "Đã thanh toán online thành công qua ngân hàng. Đơn hàng đã được xác nhận." 
-                        : "Đơn hàng mới được tạo (Thanh toán COD khi nhận món)"
+                    GhiChu = logNote
                 };
                 _context.LichSuTrangThai.Add(lichSu);
 

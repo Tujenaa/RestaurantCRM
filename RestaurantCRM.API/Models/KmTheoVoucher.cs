@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
@@ -16,6 +16,8 @@ public partial class KmTheoVoucher
     public double? PhanTramGiam { get; set; }
 
     public double? TienGiam { get; set; }
+
+    public double? GiamToiDa { get; set; }
 
     public virtual ICollection<HoaDon> HoaDon { get; set; } = new List<HoaDon>();
 
