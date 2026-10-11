@@ -34,17 +34,7 @@
     <form class="panel" asp-action="DatHang" method="post" id="checkoutForm">
         @Html.AntiForgeryToken()
         
-        <h3>Hình thức nhận món</h3>
-        <div style="display:flex; gap:16px; margin-bottom: 20px;">
-            <label class="choice" style="cursor:pointer; background:var(--cream); padding:10px 16px; border-radius:12px; border:1px solid var(--line); flex:1;">
-                <input asp-for="DatHang.HinhThucNhan" type="radio" value="delivery" id="typeDelivery" checked />
-                <span>🛵 <strong>Giao hàng tận nơi</strong></span>
-            </label>
-            <label class="choice" style="cursor:pointer; background:var(--cream); padding:10px 16px; border-radius:12px; border:1px solid var(--line); flex:1;">
-                <input asp-for="DatHang.HinhThucNhan" type="radio" value="pickup" id="typePickup" />
-                <span>🏬 <strong>Đến lấy tại quán</strong></span>
-            </label>
-        </div>
+
 
         <h3>Thông tin người nhận</h3>
         <div class="two">
@@ -259,27 +249,7 @@
 @section Scripts {
     <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
     <script>
-        const typePickup = document.getElementById('typePickup');
-        const typeDelivery = document.getElementById('typeDelivery');
-        const addressGroup = document.getElementById('deliveryAddressGroup');
-        const addressInput = document.querySelector('input[name="DatHang.DiaChiGiao"]');
 
-        function toggleAddress() {
-            if (typePickup && typePickup.checked) {
-                if (addressGroup) addressGroup.style.display = 'none';
-                if (addressInput) addressInput.value = 'Nhận tại quán (12 Lê Lợi, Q.1)';
-            } else {
-                if (addressGroup) addressGroup.style.display = 'block';
-                if (addressInput && addressInput.value === 'Nhận tại quán (12 Lê Lợi, Q.1)') {
-                    addressInput.value = '';
-                }
-            }
-        }
-
-        if (typePickup && typeDelivery) {
-            typePickup.addEventListener('change', toggleAddress);
-            typeDelivery.addEventListener('change', toggleAddress);
-        }
 
         // Online payment toggle & tabs
         const payCod = document.getElementById('payCod');

@@ -8,6 +8,7 @@ public class DonHangService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<DonHangService> _logger;
+    private readonly MonAnService _monAnService;
 
     // Fallback demo storage in case API is offline
     private readonly List<DonHangViewModel> _fallbackOrders = new()
@@ -27,9 +28,9 @@ public class DonHangService
             TienTrinh = Steps(),
             ChiTiet = new()
             {
-                new() { MaMon = "M01", TenMon = "Lẩu Thái chua cay", SoLuong = 1, DonGiaGoc = 180000, DonGiaSauGiam = 180000, ThanhTien = 180000 },
-                new() { MaMon = "M05", TenMon = "Bò Mỹ thái lát", SoLuong = 2, DonGiaGoc = 120000, DonGiaSauGiam = 120000, ThanhTien = 240000 },
-                new() { MaMon = "M09", TenMon = "Rau lẩu thập cẩm", SoLuong = 1, DonGiaGoc = 50000, DonGiaSauGiam = 50000, ThanhTien = 50000 }
+                new() { MaMon = "M01", TenMon = "Lẩu Thái chua cay", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 180000, DonGiaSauGiam = 180000, ThanhTien = 180000 },
+                new() { MaMon = "M05", TenMon = "Bò Mỹ thái lát", DuongDanAnh = "/images/default.jpg", SoLuong = 2, DonGiaGoc = 120000, DonGiaSauGiam = 120000, ThanhTien = 240000 },
+                new() { MaMon = "M09", TenMon = "Rau lẩu thập cẩm", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 50000, DonGiaSauGiam = 50000, ThanhTien = 50000 }
             }
         },
         new()
@@ -43,20 +44,21 @@ public class DonHangService
             TrangThai = "Completed",
             TrangThaiLoc = "done",
             DiaChiGiao = "45 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh",
-            BuocHienTai = 4,
+            BuocHienTai = 5,
             TienTrinh = Steps(),
             ChiTiet = new()
             {
-                new() { MaMon = "M03", TenMon = "Lẩu nấm thanh đạm", SoLuong = 1, DonGiaGoc = 170000, DonGiaSauGiam = 170000, ThanhTien = 170000 },
-                new() { MaMon = "M06", TenMon = "Tôm sú tươi", SoLuong = 1, DonGiaGoc = 140000, DonGiaSauGiam = 140000, ThanhTien = 140000 }
+                new() { MaMon = "M03", TenMon = "Lẩu nấm thanh đạm", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 170000, DonGiaSauGiam = 170000, ThanhTien = 170000 },
+                new() { MaMon = "M06", TenMon = "Tôm sú tươi", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 140000, DonGiaSauGiam = 140000, ThanhTien = 140000 }
             }
         }
     };
 
-    public DonHangService(IHttpClientFactory httpClientFactory, ILogger<DonHangService> logger)
+    public DonHangService(IHttpClientFactory httpClientFactory, ILogger<DonHangService> logger, MonAnService monAnService)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _monAnService = monAnService;
     }
 
     public async Task<(bool Success, string? OrderId, string? ErrorMessage)> CreateOrderAsync(
@@ -71,9 +73,7 @@ public class DonHangService
         }
 
         string customerId = string.IsNullOrWhiteSpace(maKhachHang) ? "KH01" : maKhachHang;
-        string address = customer.HinhThucNhan == "pickup"
-            ? "Nhận tại nhà hàng Lẩu Phố (12 Lê Lợi, Q.1)"
-            : $"{customer.DiaChiGiao}, {customer.TinhThanh}".Trim().Trim(',');
+        string address = $"{customer.DiaChiGiao}, {customer.TinhThanh}".Trim().Trim(',');
 
         var payload = new
         {
@@ -225,6 +225,7 @@ public class DonHangService
                         {
                             MaMon = c.MaMon,
                             TenMon = c.TenMon ?? "Món lẩu",
+                            DuongDanAnh = _monAnService.Find(c.MaMon)?.DuongDanAnh ?? "/images/default.jpg",
                             SoLuong = c.SoLuong,
                             DonGiaGoc = (decimal)c.DonGiaGoc,
                             DonGiaSauGiam = (decimal)c.DonGiaSauGiam,
@@ -300,6 +301,7 @@ public class DonHangService
             {
                 MaMon = x.MaMon,
                 TenMon = x.TenMon,
+                DuongDanAnh = !string.IsNullOrWhiteSpace(x.DuongDanAnh) ? x.DuongDanAnh : (_monAnService.Find(x.MaMon)?.DuongDanAnh ?? "/images/default.jpg"),
                 SoLuong = x.SoLuong,
                 DonGiaGoc = x.DonGia,
                 DonGiaSauGiam = x.DonGia,
@@ -333,7 +335,7 @@ public class DonHangService
         if (s == "pending") return "Đang chờ xác nhận";
         if (s == "confirmed") return "Đã xác nhận";
         if (s == "preparing") return "Đang chuẩn bị";
-        if (s == "shipping" || s == "delivering") return "Đang giao hàng (Đã thanh toán online)";
+        if (s == "shipping" || s == "delivering") return "Đang giao";
         if (s == "completed") return "Đã hoàn tất";
         if (s == "cancelled") return "Đã hủy đơn";
         return status ?? "Đang xử lý";
