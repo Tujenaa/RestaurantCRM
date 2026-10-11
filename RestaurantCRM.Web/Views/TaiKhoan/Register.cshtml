@@ -21,10 +21,6 @@
         <h2>Đăng ký tài khoản</h2>
         <p class="muted login-subtitle">Vui lòng điền các thông tin bên dưới để tạo tài khoản.</p>
 
-        @if (TempData["ThongBao"] is string message)
-        {
-            <p class="notice" role="alert">@message</p>
-        }
 
         <div class="field">
             <label for="regName">Họ và tên *</label>
@@ -44,7 +40,9 @@
 
         <div class="field">
             <label for="regPassword">Mật khẩu đăng nhập *</label>
-            <input id="regPassword" name="matKhau" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự" />
+            <input id="regPassword" name="matKhau" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự"
+                   oninvalid="this.setCustomValidity(this.validity.tooShort ? 'Vui lòng nhập mật khẩu tối thiểu 6 ký tự.' : (this.validity.valueMissing ? 'Vui lòng nhập mật khẩu đăng nhập.' : ''))"
+                   oninput="this.setCustomValidity('')" />
         </div>
 
         <button class="btn" type="submit" style="width:100%; margin-top:10px;">Tạo tài khoản mới →</button>

@@ -5,7 +5,6 @@
     var activeTab = (ViewBag.Tab as string) ?? "profile";
 }
 <div class="page-intro"><h1 class="page-title">Tài khoản của bạn</h1><p>Quản lý thông tin và trải nghiệm tại Lẩu Phố.</p></div>
-@if (TempData["ThongBao"] is string message) { <p class="notice" role="alert">@message</p> }
 <div class="account-layout" data-account-root data-current-tab="@activeTab">
     <aside class="side-menu">
         <div class="user-mini">
@@ -21,24 +20,174 @@
     </aside>
     <section class="panel" id="accountPanel">
         <div data-account-panel="profile" hidden="@(activeTab != "profile")">
-            <h3>Thông tin cá nhân</h3>
-            <form asp-action="CapNhat" method="post">
-                <div class="two"><div class="field"><label asp-for="HoTen">Họ và tên</label><input asp-for="HoTen" required /></div><div class="field"><label asp-for="SoDienThoai">Số điện thoại</label><input asp-for="SoDienThoai" required /></div></div>
-                <div class="two"><div class="field"><label asp-for="Email">Email</label><input asp-for="Email" type="email" /></div><div class="field"><label asp-for="NgaySinh">Ngày sinh</label><input asp-for="NgaySinh" type="date" /></div></div>
-                <div class="field"><label asp-for="GioiTinh">Giới tính</label><select asp-for="GioiTinh"><option>Không muốn tiết lộ</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
-                <button class="btn" type="submit">Lưu thay đổi</button>
+            <!-- Chế độ 1: Xem thông tin cá nhân -->
+            <div id="viewProfileSection">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="margin:0;">Thông tin cá nhân</h3>
+                    <button class="btn small" type="button" onclick="toggleProfileEdit(true)">✏️ Cập nhật thông tin</button>
+                </div>
+                <div class="profile-info-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; background:#fffcf8; border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:20px;">
+                    <div>
+                        <small class="muted" style="display:block; font-size:12px; margin-bottom:4px;">Họ và tên</small>
+                        <strong style="font-size:15px; color:var(--ink);">@Model.HoTen</strong>
+                    </div>
+                    <div>
+                        <small class="muted" style="display:block; font-size:12px; margin-bottom:4px;">Số điện thoại</small>
+                        <strong style="font-size:15px; color:var(--ink);">@Model.SoDienThoai</strong>
+                    </div>
+                    <div>
+                        <small class="muted" style="display:block; font-size:12px; margin-bottom:4px;">Địa chỉ Email</small>
+                        <span style="font-size:14px; color:@(string.IsNullOrWhiteSpace(Model.Email) ? "var(--muted)" : "var(--ink)"); font-weight:600;">
+                            @(string.IsNullOrWhiteSpace(Model.Email) ? "Chưa cập nhật" : Model.Email)
+                        </span>
+                    </div>
+                    <div>
+                        <small class="muted" style="display:block; font-size:12px; margin-bottom:4px;">Ngày sinh</small>
+                        <span style="font-size:14px; color:@(Model.NgaySinh.HasValue ? "var(--ink)" : "var(--muted)"); font-weight:600;">
+                            @(Model.NgaySinh.HasValue ? Model.NgaySinh.Value.ToString("dd/MM/yyyy") : "Chưa cập nhật")
+                        </span>
+                    </div>
+                    <div>
+                        <small class="muted" style="display:block; font-size:12px; margin-bottom:4px;">Giới tính</small>
+                        <span style="font-size:14px; color:@(string.IsNullOrWhiteSpace(Model.GioiTinh) ? "var(--muted)" : "var(--ink)"); font-weight:600;">
+                            @(string.IsNullOrWhiteSpace(Model.GioiTinh) ? "Chưa cập nhật" : Model.GioiTinh)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chế độ 2: Cập nhật thông tin cá nhân (Ẩn mặc định) -->
+            <div id="editProfileSection" style="display:none; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h3 style="margin:0;">Cập nhật thông tin cá nhân</h3>
+                    <button type="button" class="text-btn" onclick="toggleProfileEdit(false)">← Quay lại xem</button>
+                </div>
+                <form asp-action="CapNhat" method="post" style="background:#fffcf8; border:1px solid var(--line); border-radius:14px; padding:20px;">
+                    @Html.AntiForgeryToken()
+                    <div class="two">
+                        <div class="field">
+                            <label asp-for="HoTen">Họ và tên *</label>
+                            <input asp-for="HoTen" required placeholder="Nhập họ và tên" />
+                        </div>
+                        <div class="field">
+                            <label asp-for="SoDienThoai">Số điện thoại *</label>
+                            <input asp-for="SoDienThoai" required placeholder="Nhập số điện thoại" />
+                        </div>
+                    </div>
+                    <div class="two">
+                        <div class="field">
+                            <label asp-for="Email">Địa chỉ Email</label>
+                            <input asp-for="Email" type="email" placeholder="Ví dụ: ban@gmail.com" />
+                        </div>
+                        <div class="field">
+                            <label asp-for="NgaySinh">Ngày sinh</label>
+                            <input asp-for="NgaySinh" type="date" />
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label asp-for="GioiTinh">Giới tính</label>
+                        <select asp-for="GioiTinh">
+                            <option value="">-- Chưa chọn --</option>
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:16px;">
+                        <button class="btn" type="submit">💾 Lưu thay đổi</button>
+                        <button class="btn secondary" type="button" onclick="toggleProfileEdit(false)">✕ Hủy bỏ</button>
+                    </div>
+                </form>
+            </div>
+
+            <hr class="account-divider" style="margin: 24px 0; border: 0; border-top: 1px solid var(--line);" />
+            <h3>Đổi mật khẩu</h3>
+            <form asp-action="DoiMatKhau" method="post">
+                @Html.AntiForgeryToken()
+                <div class="two">
+                    <div class="field">
+                        <label for="oldPassword">Mật khẩu hiện tại *</label>
+                        <input id="oldPassword" name="matKhauCu" type="password" required placeholder="Nhập mật khẩu hiện tại" autocomplete="current-password"
+                               oninvalid="this.setCustomValidity('Vui lòng nhập mật khẩu hiện tại.')"
+                               oninput="this.setCustomValidity('')" />
+                    </div>
+                    <div class="field">
+                        <label for="newPassword">Mật khẩu mới *</label>
+                        <input id="newPassword" name="matKhauMoi" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password"
+                               oninvalid="this.setCustomValidity(this.validity.tooShort ? 'Vui lòng nhập mật khẩu mới tối thiểu 6 ký tự.' : (this.validity.valueMissing ? 'Vui lòng nhập mật khẩu mới.' : ''))"
+                               oninput="this.setCustomValidity('')" />
+                    </div>
+                </div>
+                <button class="btn secondary" type="submit">Cập nhật mật khẩu</button>
             </form>
-            <hr class="account-divider" />
-            <h3>Đổi mật khẩu</h3><div class="two"><div class="field"><label>Mật khẩu hiện tại</label><input type="password" placeholder="••••••••" /></div><div class="field"><label>Mật khẩu mới</label><input type="password" placeholder="Tối thiểu 8 ký tự" /></div></div><button class="btn secondary" type="button" data-toast="Chức năng đổi mật khẩu là bản demo">Cập nhật mật khẩu</button>
         </div>
         <div data-account-panel="login" hidden="@(activeTab != "login")"><h3>Đăng nhập</h3><p class="muted">Đăng nhập để xem lịch sử đơn và thông tin thành viên.</p><a class="btn" asp-action="DangNhap">Mở trang đăng nhập →</a><p class="account-register-prompt"><button class="text-btn" type="button" data-account="register">Chưa có tài khoản? Đăng ký</button></p></div>
         <div data-account-panel="register" hidden="@(activeTab != "register")">
             <h3>Tạo tài khoản Lẩu Phố</h3><form asp-action="DangKy" method="post">
                 <div class="field"><label for="regName">Họ và tên *</label><input id="regName" name="hoTen" required maxlength="100" placeholder="Nguyễn Văn A" /></div>
                 <div class="two"><div class="field"><label for="regPhone">Số điện thoại *</label><input id="regPhone" name="soDienThoai" required type="tel" placeholder="0901 234 567" /></div><div class="field"><label for="regEmail">Email</label><input id="regEmail" name="email" type="email" placeholder="ban@email.com" /></div></div>
-                <div class="field"><label for="regPassword">Mật khẩu *</label><input id="regPassword" name="matKhau" type="password" required minlength="8" placeholder="Ít nhất 8 ký tự" /></div><button class="btn" type="submit">Tạo tài khoản</button>
+                <div class="field"><label for="regPassword">Mật khẩu *</label><input id="regPassword" name="matKhau" type="password" required minlength="6" placeholder="Ít nhất 6 ký tự" oninvalid="this.setCustomValidity(this.validity.tooShort ? 'Vui lòng nhập mật khẩu tối thiểu 6 ký tự.' : (this.validity.valueMissing ? 'Vui lòng nhập mật khẩu.' : ''))" oninput="this.setCustomValidity('')" /></div><button class="btn" type="submit">Tạo tài khoản</button>
             </form><p class="muted account-caption">Tài khoản mới sẽ được tạo trên hệ thống.</p>
         </div>
-        <div data-account-panel="addresses" hidden="@(activeTab != "addresses")"><h3>Địa chỉ giao hàng</h3><div class="notice">📍 Nhà riêng · 12 Lê Lợi, Quận 1, TP. Hồ Chí Minh<br /><small>Người nhận: Nguyễn An · 0901 234 567</small></div><button class="btn" type="button" data-toast="Biểu mẫu thêm địa chỉ mới đang ở chế độ demo">＋ Thêm địa chỉ mới</button></div>
+        <div data-account-panel="addresses" hidden="@(activeTab != "addresses")">
+            <h3>Địa chỉ giao hàng</h3>
+            <div id="viewAddressSection">
+                @if (!string.IsNullOrWhiteSpace(Model.DiaChi))
+                {
+                    <div class="notice" style="background: #fffdf9; border: 1.5px solid #d4c3b3; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                        <div style="font-weight: 600; font-size: 16px; color: #2c1810; margin-bottom: 6px;">
+                            📍 @Model.DiaChi
+                        </div>
+                        <div class="muted" style="font-size: 14px;">
+                            Người nhận: <strong>@(string.IsNullOrWhiteSpace(Model.HoTen) ? "Khách hàng" : Model.HoTen)</strong> · @(string.IsNullOrWhiteSpace(Model.SoDienThoai) ? "Chưa có SĐT" : Model.SoDienThoai)
+                        </div>
+                    </div>
+                    <button class="btn secondary" type="button" onclick="toggleAddressEdit(true)">✏️ Đổi địa chỉ giao hàng</button>
+                }
+                else
+                {
+                    <div class="notice" style="margin-bottom: 16px;">
+                        Tài khoản của bạn chưa lưu địa chỉ nhận hàng mặc định.
+                    </div>
+                    <button class="btn" type="button" onclick="toggleAddressEdit(true)">＋ Thêm địa chỉ giao hàng</button>
+                }
+            </div>
+            <div id="editAddressSection" style="display: none; background: #fffdf9; border: 1.5px solid #d4c3b3; border-radius: 12px; padding: 20px;">
+                <h4 style="margin-top: 0; margin-bottom: 14px;">@(string.IsNullOrWhiteSpace(Model.DiaChi) ? "Thêm địa chỉ giao hàng mới" : "Cập nhật địa chỉ giao hàng")</h4>
+                <form asp-action="LuuDiaChi" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="field" style="margin-bottom: 16px;">
+                        <label for="inputDiaChi">Địa chỉ nhận hàng chi tiết *</label>
+                        <input id="inputDiaChi" name="diaChi" value="@Model.DiaChi" required placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..." />
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" type="submit">Lưu địa chỉ</button>
+                        <button class="btn secondary" type="button" onclick="toggleAddressEdit(false)">Hủy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </section>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleProfileEdit(showEdit) {
+            var v = document.getElementById('viewProfileSection');
+            var e = document.getElementById('editProfileSection');
+            if (v && e) {
+                v.style.display = showEdit ? 'none' : 'block';
+                e.style.display = showEdit ? 'block' : 'none';
+            }
+        }
+
+        function toggleAddressEdit(showEdit) {
+            var v = document.getElementById('viewAddressSection');
+            var e = document.getElementById('editAddressSection');
+            if (v && e) {
+                v.style.display = showEdit ? 'none' : 'block';
+                e.style.display = showEdit ? 'block' : 'none';
+            }
+        }
+    </script>
+}

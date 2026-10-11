@@ -51,9 +51,41 @@
         </div>
 
         <div id="deliveryAddressGroup">
-            <div class="field">
+            @{
+                var diaChiMacDinh = (string?)ViewBag.DiaChiMacDinh ?? "";
+                var coDiaChiMacDinh = !string.IsNullOrWhiteSpace(diaChiMacDinh);
+            }
+            <div class="field" style="margin-bottom: 12px;">
+                <label style="font-weight: 600; margin-bottom: 8px; display: block;">Địa chỉ nhận hàng</label>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
+                    <label class="choice" style="margin-bottom: 0; cursor: pointer; padding: 12px 14px; border: 1.5px solid #d4c3b3; border-radius: 12px; background: #fffdf9;">
+                        <input type="radio" name="addressChoice" id="addrChoiceDefault" value="default" @(coDiaChiMacDinh ? "checked" : "") onchange="onAddressChoiceChanged()" />
+                        <div>
+                            <strong>Địa chỉ hiện tại</strong>
+                            @if (coDiaChiMacDinh)
+                            {
+                                <div style="color: #666; font-size: 13px; margin-top: 3px;">📍 @diaChiMacDinh</div>
+                            }
+                            else
+                            {
+                                <div style="color: #999; font-size: 13px; margin-top: 3px;">(Tài khoản chưa lưu địa chỉ mặc định)</div>
+                            }
+                        </div>
+                    </label>
+
+                    <label class="choice" style="margin-bottom: 0; cursor: pointer; padding: 12px 14px; border: 1.5px solid #d4c3b3; border-radius: 12px; background: #fffdf9;">
+                        <input type="radio" name="addressChoice" id="addrChoiceCustom" value="custom" @(!coDiaChiMacDinh ? "checked" : "") onchange="onAddressChoiceChanged()" />
+                        <div>
+                            <strong>Địa chỉ giao hàng khác</strong>
+                            <div style="color: #666; font-size: 13px; margin-top: 3px;">Nhập địa chỉ mới cho đơn hàng này</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="field" id="deliveryAddressInputWrapper">
                 <label asp-for="DatHang.DiaChiGiao">Địa chỉ giao hàng chi tiết *</label>
-                <input asp-for="DatHang.DiaChiGiao" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required />
+                <input asp-for="DatHang.DiaChiGiao" id="diaChiGiaoInput" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required />
                 <span asp-validation-for="DatHang.DiaChiGiao" class="text-danger" style="font-size:12px;"></span>
             </div>
             <div class="two">
@@ -310,5 +342,37 @@
             payCod.addEventListener('change', togglePaymentMethod);
             payOnline.addEventListener('change', togglePaymentMethod);
         }
+
+        // Address selection radio handling
+        const savedDefaultAddress = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((string?)ViewBag.DiaChiMacDinh ?? ""));
+        const addrChoiceDefault = document.getElementById('addrChoiceDefault');
+        const addrChoiceCustom = document.getElementById('addrChoiceCustom');
+        const diaChiGiaoInput = document.getElementById('diaChiGiaoInput');
+
+        function onAddressChoiceChanged() {
+            if (!diaChiGiaoInput) return;
+            if (addrChoiceDefault && addrChoiceDefault.checked) {
+                if (savedDefaultAddress) {
+                    diaChiGiaoInput.value = savedDefaultAddress;
+                    diaChiGiaoInput.readOnly = true;
+                    diaChiGiaoInput.style.backgroundColor = '#f7f4ef';
+                } else {
+                    diaChiGiaoInput.readOnly = false;
+                    diaChiGiaoInput.style.backgroundColor = '#fff';
+                    diaChiGiaoInput.placeholder = 'Chưa có địa chỉ sẵn, vui lòng nhập tại đây...';
+                }
+            } else {
+                diaChiGiaoInput.readOnly = false;
+                diaChiGiaoInput.style.backgroundColor = '#fff';
+                if (diaChiGiaoInput.value === savedDefaultAddress) {
+                    diaChiGiaoInput.value = '';
+                }
+                diaChiGiaoInput.placeholder = 'Số nhà, tên đường, phường/xã, quận/huyện...';
+                diaChiGiaoInput.focus();
+            }
+        }
+
+        // Initialize address radio state on page load
+        onAddressChoiceChanged();
     </script>
 }
