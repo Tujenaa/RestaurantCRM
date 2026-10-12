@@ -99,6 +99,18 @@
     <Compile Include="Controls\RoundedPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\UcHighlightCard.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\UcGrowthChart.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\UcRightPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\UcCurrentMembersTable.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DTOs\Auth\LoginRequest.cs" />
     <Compile Include="DTOs\Auth\LoginResponse.cs" />
     <Compile Include="DTOs\DonHang\DonHangDto.cs" />

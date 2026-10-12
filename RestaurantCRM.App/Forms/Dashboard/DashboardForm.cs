@@ -34,6 +34,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
         private readonly Label _userLabel;
         private Color _accent;
         private UcSidebar _sidebar;
+        private UcRightPanel _rightPanel;
 
         public DashboardForm() : this("admin", "Trần An", new List<string> { "Admin" }) { }
         public DashboardForm(string role) : this("admin", "Trần An", new List<string> { role }) { }
@@ -48,8 +49,8 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
             _accent = ThemeManager.AccentFor(_role);
 
             Text = _role + " Workspace | RestaurantCRM";
-            Size = new Size(1180, 750);
-            MinimumSize = new Size(980, 640);
+            Size = new Size(1280, 800);
+            MinimumSize = new Size(1060, 680);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = ThemeManager.Bg;
             Font = new Font("Segoe UI", 9.5F);
@@ -57,15 +58,18 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
             _main = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Bg };
             Controls.Add(_main);
 
+            _rightPanel = new UcRightPanel();
+            Controls.Add(_rightPanel);
+
             _body = new Panel {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 BackColor = ThemeManager.Bg,
-                Padding = new Padding(28, 20, 28, 28)
+                Padding = new Padding(24, 16, 24, 24)
             };
             _main.Controls.Add(_body);
 
-            _header = new UcHeader { Dock = DockStyle.Top, Height = 74 };
+            _header = new UcHeader { Dock = DockStyle.Top, Height = 64 };
             _header.SetTitle("Dashboard", _role);
             _main.Controls.Add(_header);
 
@@ -75,7 +79,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink2,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(900, 26)
+                Location = new Point(900, 22)
             };
             _header.Controls.Add(_userLabel);
             _header.Resize += (s, e) => _userLabel.Left = _header.ClientSize.Width - _userLabel.Width - 28;
@@ -142,140 +146,162 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
             _body.Controls.Clear();
             _body.SuspendLayout();
 
-            int cardWidth = Math.Max(700, _body.ClientSize.Width - 56);
+            int contentW = Math.Max(720, _body.ClientSize.Width - 48);
 
-            // 1. Hero Welcome Banner with gradient
-            var heroBanner = new RoundedPanel {
+            // 1. Header: "Good Morning, Sandy!" & "Your Highlights"
+            var headerPanel = new Panel {
                 Location = new Point(0, 0),
-                Size = new Size(cardWidth, 100),
-                Radius = 14,
-                FillColor = ThemeManager.SoftFor(_accent),
-                GradientEnd = ThemeManager.Paper,
-                GradientAngle = 0f,
-                BorderColor = Color.FromArgb(60, _accent),
-                Padding = new Padding(20, 16, 20, 16)
-            };
-            heroBanner.Paint += (s, e) => {
-                // Left accent stripe drawn on top of base paint
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var brush2 = new LinearGradientBrush(
-                    new Rectangle(0, 0, 5, heroBanner.Height),
-                    _accent, ThemeManager.Violet,
-                    LinearGradientMode.Vertical))
-                    e.Graphics.FillRectangle(brush2, 0, 0, 5, heroBanner.Height);
+                Size = new Size(contentW, 64),
+                BackColor = Color.Transparent
             };
 
             var lblGreeting = new Label {
-                Text = "Xin chào, " + _displayName + " 👋",
+                Text = "Good Morning, " + _displayName + "!",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
+                ForeColor = ColorTranslator.FromHtml("#1E1B4B"),
                 AutoSize = true,
-                Location = new Point(26, 14),
+                Location = new Point(4, 4),
                 BackColor = Color.Transparent
             };
-            heroBanner.Controls.Add(lblGreeting);
+            headerPanel.Controls.Add(lblGreeting);
 
-            var lblSubtitle = new Label {
-                Text = "Hôm nay là " + DateTime.Now.ToString("dddd, dd/MM/yyyy") + ". Chúc bạn có phiên làm việc năng suất và thuận lợi!",
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = ThemeManager.Ink2,
+            var lblHighlights = new Label {
+                Text = "Your Highlights",
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = ColorTranslator.FromHtml("#8B5CF6"),
                 AutoSize = true,
-                Location = new Point(27, 46),
+                Location = new Point(6, 36),
                 BackColor = Color.Transparent
             };
-            heroBanner.Controls.Add(lblSubtitle);
+            headerPanel.Controls.Add(lblHighlights);
 
-            // Live status badge
-            var statusBadge = new Label {
-                Text = "  ●  Hệ thống sẵn sàng  ",
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                ForeColor = ThemeManager.Green,
-                BackColor = ThemeManager.GreenSoft,
-                Size = new Size(158, 28),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(heroBanner.Width - 174, 34)
+            var lblDateSub = new Label {
+                Text = "·  " + DateTime.Now.ToString("dddd, dd/MM/yyyy"),
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = ThemeManager.Muted,
+                AutoSize = true,
+                Location = new Point(106, 36),
+                BackColor = Color.Transparent
             };
-            statusBadge.Paint += (s, e) => {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, statusBadge.Width - 1, statusBadge.Height - 1), 12))
-                using (var brush = new SolidBrush(ThemeManager.GreenSoft))
-                using (var pen = new Pen(Color.FromArgb(80, ThemeManager.Green), 1)) {
-                    e.Graphics.FillPath(brush, path);
-                    e.Graphics.DrawPath(pen, path);
-                }
-                TextRenderer.DrawText(e.Graphics, statusBadge.Text,
-                    statusBadge.Font, statusBadge.ClientRectangle, ThemeManager.Green,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            headerPanel.Controls.Add(lblDateSub);
+
+            _body.Controls.Add(headerPanel);
+
+            // 2. The 3 Highlight Cards (Side-by-side)
+            int cardGap = 16;
+            int cardW = Math.Max(210, (contentW - cardGap * 2) / 3);
+
+            var cardsContainer = new Panel {
+                Location = new Point(0, 70),
+                Size = new Size(contentW, 245),
+                BackColor = Color.Transparent
             };
-            heroBanner.Controls.Add(statusBadge);
 
-            _body.Controls.Add(heroBanner);
+            var card1 = new UcHighlightCard(HighlightCardType.TeamStats, "Team Stats", "Dữ liệu 2024-2026", _accent) {
+                Location = new Point(0, 0),
+                Size = new Size(cardW, 240)
+            };
+            card1.DetailsClicked += (s, e) => {
+                if (_role == "Bán hàng") OnMenuSelected("Báo cáo bán hàng");
+                else if (_role == "CRM") OnMenuSelected("Khách hàng");
+                else OnMenuSelected("Món ăn");
+            };
+            cardsContainer.Controls.Add(card1);
 
-            // 2. Metric KPI Cards Flow
+            var card2 = new UcHighlightCard(HighlightCardType.Ideation, "Ideation Workshop", "Ý kiến & Khảo sát mới", ColorTranslator.FromHtml("#F59E0B")) {
+                Location = new Point(cardW + cardGap, 0),
+                Size = new Size(cardW, 240)
+            };
+            card2.DetailsClicked += (s, e) => {
+                if (_role == "Admin" || _role == "CRM") OnMenuSelected("Khảo sát");
+                else OnMenuSelected("Khuyến mãi");
+            };
+            cardsContainer.Controls.Add(card2);
+
+            var card3 = new UcHighlightCard(HighlightCardType.Training, "Upcoming Training", "Đơn hàng & Thực đơn", ColorTranslator.FromHtml("#0284C7")) {
+                Location = new Point((cardW + cardGap) * 2, 0),
+                Size = new Size(cardW, 240)
+            };
+            card3.DetailsClicked += (s, e) => {
+                if (_role == "Bán hàng" || _role == "Admin") OnMenuSelected("Tạo đơn hàng");
+                else OnMenuSelected("Đánh giá");
+            };
+            cardsContainer.Controls.Add(card3);
+
+            _body.Controls.Add(cardsContainer);
+
+            // 3. Middle Section: Current Team Members Table (Left) & Team Growth Chart (Right)
+            int midY = 328;
+            int halfW = Math.Max(330, (contentW - cardGap) / 2);
+
+            var membersTable = new UcCurrentMembersTable {
+                Location = new Point(0, midY),
+                Size = new Size(halfW, 270)
+            };
+            _body.Controls.Add(membersTable);
+
+            var growthChart = new UcGrowthChart {
+                Location = new Point(halfW + cardGap, midY),
+                Size = new Size(halfW, 270)
+            };
+            _body.Controls.Add(growthChart);
+
+            // 4. Metric KPI Cards Flow
+            int kpiY = midY + 286;
             var cardsFlow = new FlowLayoutPanel {
-                Location = new Point(0, 116),
-                Size = new Size(cardWidth, 142),
+                Location = new Point(0, kpiY),
+                Size = new Size(contentW, 142),
                 WrapContents = false,
                 BackColor = Color.Transparent,
                 AutoScroll = true
             };
 
-            UcThongKe card1 = null, card2 = null, card3 = null, card4 = null;
+            UcThongKe kpi1 = null, kpi2 = null, kpi3 = null, kpi4 = null;
             if (_role == "Admin") {
-                card1 = new UcThongKe("Món ăn", "...", "Trong thực đơn", "🍲", ThemeManager.Primary);
-                card2 = new UcThongKe("Nhà cung cấp", "...", "Đối tác cung ứng", "🏢", ThemeManager.Teal);
-                card3 = new UcThongKe("Phiếu nhập", "...", "Đã nhập tháng này", "📥", ThemeManager.Violet);
-                card4 = new UcThongKe("Tài khoản", "...", "Nhân viên hoạt động", "👤", ThemeManager.Sky);
+                kpi1 = new UcThongKe("Món ăn", "...", "Trong thực đơn", "🍲", ThemeManager.Primary);
+                kpi2 = new UcThongKe("Nhà cung cấp", "...", "Đối tác cung ứng", "🏢", ThemeManager.Teal);
+                kpi3 = new UcThongKe("Phiếu nhập", "...", "Đã nhập tháng này", "📥", ThemeManager.Violet);
+                kpi4 = new UcThongKe("Tài khoản", "...", "Nhân viên hoạt động", "👤", ThemeManager.Sky);
             } else if (_role == "Bán hàng") {
-                card1 = new UcThongKe("Doanh thu", "...", "Hôm nay", "💰", ThemeManager.Green);
-                card2 = new UcThongKe("Chờ xử lý", "...", "Đơn hàng mới", "⏳", ThemeManager.Amber);
-                card3 = new UcThongKe("Đang phục vụ", "...", "Bàn tại quán", "🍽️", ThemeManager.Teal);
-                card4 = new UcThongKe("Hoàn tất", "...", "Đơn giao thành công", "✅", ThemeManager.Primary);
+                kpi1 = new UcThongKe("Doanh thu", "...", "Hôm nay", "💰", ThemeManager.Green);
+                kpi2 = new UcThongKe("Chờ xử lý", "...", "Đơn hàng mới", "⏳", ThemeManager.Amber);
+                kpi3 = new UcThongKe("Đang phục vụ", "...", "Bàn tại quán", "🍽️", ThemeManager.Teal);
+                kpi4 = new UcThongKe("Hoàn tất", "...", "Đơn giao thành công", "✅", ThemeManager.Primary);
             } else {
-                card1 = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ khách", "👥", ThemeManager.Primary);
-                card2 = new UcThongKe("Đánh giá TB", "...", "Lượt đánh giá", "⭐", ThemeManager.Amber);
-                card3 = new UcThongKe("Phản hồi mới", "...", "Cần xử lý", "💬", ThemeManager.Violet);
-                card4 = new UcThongKe("Khảo sát mở", "...", "Đang thu thập ý kiến", "📋", ThemeManager.Teal);
+                kpi1 = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ khách", "👥", ThemeManager.Primary);
+                kpi2 = new UcThongKe("Đánh giá TB", "...", "Lượt đánh giá", "⭐", ThemeManager.Amber);
+                kpi3 = new UcThongKe("Phản hồi mới", "...", "Cần xử lý", "💬", ThemeManager.Violet);
+                kpi4 = new UcThongKe("Khảo sát mở", "...", "Đang thu thập ý kiến", "📋", ThemeManager.Teal);
             }
 
-            if (card1 != null) cardsFlow.Controls.Add(card1);
-            if (card2 != null) cardsFlow.Controls.Add(card2);
-            if (card3 != null) cardsFlow.Controls.Add(card3);
-            if (card4 != null) cardsFlow.Controls.Add(card4);
+            if (kpi1 != null) cardsFlow.Controls.Add(kpi1);
+            if (kpi2 != null) cardsFlow.Controls.Add(kpi2);
+            if (kpi3 != null) cardsFlow.Controls.Add(kpi3);
+            if (kpi4 != null) cardsFlow.Controls.Add(kpi4);
 
             _body.Controls.Add(cardsFlow);
-            LoadMetricsAsync(card1, card2, card3, card4);
+            LoadMetricsAsync(kpi1, kpi2, kpi3, kpi4);
 
-            // 3. Quick Actions Panel
+            // 5. Quick Actions Panel
+            int quickY = kpiY + 154;
             var quickPanel = new RoundedPanel {
-                Location = new Point(0, 274),
-                Size = new Size(cardWidth, 230),
+                Location = new Point(0, quickY),
+                Size = new Size(contentW, 200),
                 Radius = 14,
                 FillColor = ThemeManager.Paper,
                 BorderColor = ThemeManager.Line,
-                Padding = new Padding(24, 20, 24, 20)
+                Padding = new Padding(24, 18, 24, 18)
             };
 
             var lblQuickTitle = new Label {
-                Text = "⚡ Thao tác nhanh",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Text = "⚡ Thao tác nhanh & Phân hệ nghiệp vụ",
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 AutoSize = true,
-                Location = new Point(22, 16),
+                Location = new Point(20, 14),
                 BackColor = Color.Transparent
             };
             quickPanel.Controls.Add(lblQuickTitle);
-
-            var lblQuickSub = new Label {
-                Text = "Truy cập nhanh các phân hệ nghiệp vụ phổ biến nhất",
-                Font = new Font("Segoe UI", 8.5F),
-                ForeColor = ThemeManager.Muted,
-                AutoSize = true,
-                Location = new Point(23, 40),
-                BackColor = Color.Transparent
-            };
-            quickPanel.Controls.Add(lblQuickSub);
 
             (string Title, string Cmd, string Icon)[] actions;
             if (_role == "Admin") {
@@ -308,9 +334,8 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
                 };
             }
 
-            // Quick action mini-card buttons (icon + label, 4 per row)
-            int btnX = 22, btnY = 72;
-            int btnW = 174, btnH = 60;
+            int btnX = 20, btnY = 48;
+            int btnW = 160, btnH = 54;
             int colCount = 0;
             foreach (var act in actions) {
                 var btnPanel = new RoundedPanel {
@@ -324,27 +349,26 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
                 };
                 var iconLabel = new Label {
                     Text = act.Icon,
-                    Font = new Font("Segoe UI Emoji", 14F),
-                    Size = new Size(36, 36),
-                    Location = new Point(12, 12),
+                    Font = new Font("Segoe UI Emoji", 13F),
+                    Size = new Size(32, 32),
+                    Location = new Point(10, 10),
                     TextAlign = ContentAlignment.MiddleCenter,
                     BackColor = Color.Transparent,
                     ForeColor = _accent
                 };
                 var titleLabel2 = new Label {
                     Text = act.Title,
-                    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                    Font = new Font("Segoe UI", 8F, FontStyle.Bold),
                     ForeColor = ThemeManager.Ink2,
-                    Location = new Point(52, 20),
+                    Location = new Point(46, 17),
                     AutoSize = false,
-                    Size = new Size(btnW - 58, 20),
+                    Size = new Size(btnW - 50, 18),
                     TextAlign = ContentAlignment.MiddleLeft,
                     BackColor = Color.Transparent
                 };
                 btnPanel.Controls.Add(iconLabel);
                 btnPanel.Controls.Add(titleLabel2);
 
-                // Hover effect
                 EventHandler mouseEnter = (s, e) => {
                     btnPanel.FillColor = ThemeManager.PrimarySoft;
                     btnPanel.BorderColor = Color.FromArgb(120, _accent);
@@ -374,21 +398,20 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
 
                 colCount++;
                 btnX += btnW + 12;
-                if (colCount % 4 == 0 || btnX + btnW > quickPanel.ClientSize.Width - 20) {
-                    btnX = 22;
+                if (colCount % 4 == 0 || btnX + btnW > quickPanel.ClientSize.Width - 16) {
+                    btnX = 20;
                     btnY += btnH + 10;
                     colCount = 0;
                 }
             }
 
-            // Adjust height if needed
-            quickPanel.Height = Math.Max(220, btnY + btnH + 24);
+            quickPanel.Height = Math.Max(180, btnY + btnH + 20);
             _body.Controls.Add(quickPanel);
 
-            // 4. Helpful Tips Card
+            // 6. Helpful Tips Card
             var tipsPanel = new RoundedPanel {
                 Location = new Point(0, quickPanel.Bottom + 16),
-                Size = new Size(cardWidth, 54),
+                Size = new Size(contentW, 52),
                 Radius = 12,
                 FillColor = ThemeManager.PrimarySoft,
                 BorderColor = Color.FromArgb(70, ThemeManager.Primary),
@@ -396,11 +419,11 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
             };
 
             var lblTip = new Label {
-                Text = "💡  Mẹo làm việc: Bạn có thể nhanh chóng chuyển phân hệ bằng menu 'CHUYỂN PHÂN HỆ' trên thanh bên trái nếu tài khoản được cấp nhiều quyền.",
-                Font = new Font("Segoe UI", 9F),
+                Text = "💡  Mẹo làm việc: Nhấp vào nút 'DETAILS' trên các thẻ nổi bật để mở trực tiếp phân hệ tương ứng.",
+                Font = new Font("Segoe UI", 8.5F),
                 ForeColor = ThemeManager.PrimaryDark,
                 AutoSize = true,
-                Location = new Point(14, 16),
+                Location = new Point(14, 15),
                 BackColor = Color.Transparent
             };
             tipsPanel.Controls.Add(lblTip);
@@ -408,12 +431,21 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
 
             // Responsive resize handling
             _body.Resize += (s, e) => {
-                int w = Math.Max(700, _body.ClientSize.Width - 56);
-                heroBanner.Width = w;
+                int w = Math.Max(720, _body.ClientSize.Width - 48);
+                headerPanel.Width = w;
+                cardsContainer.Width = w;
+                int cW = Math.Max(210, (w - cardGap * 2) / 3);
+                card1.Width = cW;
+                card2.Width = cW; card2.Left = cW + cardGap;
+                card3.Width = cW; card3.Left = (cW + cardGap) * 2;
+
+                int hW = Math.Max(330, (w - cardGap) / 2);
+                membersTable.Width = hW;
+                growthChart.Width = hW; growthChart.Left = hW + cardGap;
+
                 cardsFlow.Width = w;
                 quickPanel.Width = w;
                 tipsPanel.Width = w;
-                statusBadge.Left = heroBanner.Width - statusBadge.Width - 20;
             };
 
             _body.ResumeLayout(true);
