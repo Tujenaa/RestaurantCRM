@@ -239,6 +239,7 @@ namespace RestaurantCRM.AdminApp.Controls {
                 AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
                 AddMenuItem(menuPanel, "Đơn hàng", "🧾  DANH SÁCH ĐƠN HÀNG", ref y);
                 AddMenuItem(menuPanel, "Thực đơn", "🍲  THỰC ĐƠN MÓN ĂN", ref y);
+                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
                 AddMenuItem(menuPanel, "Kho hàng", "📦  KIỂM TRA KHO", ref y);
                 AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  BÁO CÁO DOANH THU", ref y);
             } else {
