@@ -85,13 +85,6 @@
 
     <!-- Dish Grid Section -->
     <section class="menu-grid-section">
-        @if (TempData["ThongBao"] != null)
-        {
-            <div class="alert alert-info">
-                ℹ️ @TempData["ThongBao"]
-            </div>
-        }
-
         <div class="dish-grid" id="dishGrid">
             @if (Model.MonAns.Count == 0)
             {

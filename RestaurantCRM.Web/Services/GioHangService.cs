@@ -15,6 +15,14 @@ public class GioHangService
     {
         var json = session.GetString(CartKey);
         var cart = String.IsNullOrWhiteSpace(json) ? new List<GioHangItemViewModel>() : JsonSerializer.Deserialize<List<GioHangItemViewModel>>(json) ?? new();
+        foreach (var it in cart)
+        {
+            if (string.IsNullOrWhiteSpace(it.DuongDanAnh) || it.DuongDanAnh == "/images/default.jpg")
+            {
+                var d = _monAnService.Find(it.MaMon);
+                if (d != null && !string.IsNullOrWhiteSpace(d.DuongDanAnh)) it.DuongDanAnh = d.DuongDanAnh;
+            }
+        }
         var voucher = session.GetString(VoucherKey);
         var subtotal = cart.Sum(x => x.ThanhTien);
         var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscount(voucher, subtotal);
@@ -27,8 +35,12 @@ public class GioHangService
         if (dish is null) return;
         var cart = Get(session).Items;
         var item = cart.FirstOrDefault(x => x.MaMon == maMon);
-        if (item is null) cart.Add(new GioHangItemViewModel { MaMon = dish.MaMon, TenMon = dish.TenMon, BieuTuong = dish.BieuTuong, DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia, SoLuong = Math.Clamp(quantity, 1, 99) });
-        else item.SoLuong = Math.Min(99, item.SoLuong + Math.Clamp(quantity, 1, 99));
+        if (item is null) cart.Add(new GioHangItemViewModel { MaMon = dish.MaMon, TenMon = dish.TenMon, DuongDanAnh = dish.DuongDanAnh, BieuTuong = dish.BieuTuong, DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia, SoLuong = Math.Clamp(quantity, 1, 99) });
+        else
+        {
+            if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg") item.DuongDanAnh = dish.DuongDanAnh;
+            item.SoLuong = Math.Min(99, item.SoLuong + Math.Clamp(quantity, 1, 99));
+        }
         Save(session, cart);
         AutoApplyBestVoucher(session, cart);
     }

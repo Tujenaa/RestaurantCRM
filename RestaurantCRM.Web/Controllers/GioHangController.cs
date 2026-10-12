@@ -8,18 +8,20 @@ public class GioHangController : Controller
 {
     private readonly GioHangService _gioHangService;
     private readonly DonHangService _donHangService;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public GioHangController(GioHangService gioHangService, DonHangService donHangService)
+    public GioHangController(GioHangService gioHangService, DonHangService donHangService, IHttpClientFactory httpClientFactory)
     {
         _gioHangService = gioHangService;
         _donHangService = donHangService;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet]
     public IActionResult Index() => View(BuildPage());
 
     [HttpGet]
-    public IActionResult Checkout()
+    public async Task<IActionResult> Checkout()
     {
         var token = HttpContext.Session.GetString("Token");
         if (string.IsNullOrEmpty(token))
@@ -34,11 +36,43 @@ public class GioHangController : Controller
         // Pre-fill user information if logged in
         var hoTen = HttpContext.Session.GetString("HoTen") ?? "";
         var phone = HttpContext.Session.GetString("SoDienThoai") ?? "";
+        var defaultAddress = HttpContext.Session.GetString("DiaChiGiaoHang") ?? "";
+
+        if (string.IsNullOrWhiteSpace(defaultAddress))
+        {
+            try
+            {
+                var customerId = HttpContext.Session.GetString("MaKhachHang");
+                if (!string.IsNullOrEmpty(customerId))
+                {
+                    var client = _httpClientFactory.CreateClient("ApiClient");
+                    var response = await client.GetAsync($"/api/KhachHang/ThongTin/{Uri.EscapeDataString(customerId)}");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var jsonStr = await response.Content.ReadAsStringAsync();
+                        using var doc = System.Text.Json.JsonDocument.Parse(jsonStr);
+                        if (doc.RootElement.TryGetProperty("soThich", out var pAddr) && pAddr.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            var addr = pAddr.GetString() ?? "";
+                            if (!string.IsNullOrWhiteSpace(addr))
+                            {
+                                defaultAddress = addr;
+                                HttpContext.Session.SetString("DiaChiGiaoHang", defaultAddress);
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        ViewBag.DiaChiMacDinh = defaultAddress;
 
         var datHang = new DatHangViewModel
         {
             HoTen = hoTen,
-            SoDienThoai = phone
+            SoDienThoai = phone,
+            DiaChiGiao = defaultAddress
         };
 
         return View(new CheckoutPageViewModel { GioHang = cart, DatHang = datHang });

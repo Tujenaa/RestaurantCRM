@@ -146,10 +146,10 @@ namespace RestaurantCRM.API.Controllers
             }
 
             khachHang.HoTen = request.HoTen;
-            khachHang.Email = request.Email;
+            khachHang.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
             khachHang.SoDienThoai = request.SoDienThoai;
             khachHang.NgaySinh = request.NgaySinh;
-            khachHang.GioiTinh = request.GioiTinh;
+            khachHang.GioiTinh = string.IsNullOrWhiteSpace(request.GioiTinh) ? null : (request.GioiTinh.Length > 10 ? request.GioiTinh.Substring(0, 10) : request.GioiTinh);
             khachHang.SoThich = request.SoThich;
 
             await _context.SaveChangesAsync();
@@ -167,7 +167,7 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy thông tin khách hàng.");
             }
 
-            if (!BCrypt.Net.BCrypt.Verify(request.MatKhauCu, khachHang.MatKhau))
+            if (!PasswordVerifier.Verify(request.MatKhauCu, khachHang.MatKhau))
             {
                 return BadRequest("Mật khẩu cũ không chính xác.");
             }
