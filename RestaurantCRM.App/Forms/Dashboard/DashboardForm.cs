@@ -144,22 +144,33 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
 
             int cardWidth = Math.Max(700, _body.ClientSize.Width - 56);
 
-            // 1. Hero Welcome Banner
+            // 1. Hero Welcome Banner with gradient
             var heroBanner = new RoundedPanel {
                 Location = new Point(0, 0),
-                Size = new Size(cardWidth, 90),
+                Size = new Size(cardWidth, 100),
                 Radius = 14,
-                FillColor = ThemeManager.Paper,
-                BorderColor = ThemeManager.Line,
+                FillColor = ThemeManager.SoftFor(_accent),
+                GradientEnd = ThemeManager.Paper,
+                GradientAngle = 0f,
+                BorderColor = Color.FromArgb(60, _accent),
                 Padding = new Padding(20, 16, 20, 16)
+            };
+            heroBanner.Paint += (s, e) => {
+                // Left accent stripe drawn on top of base paint
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var brush2 = new LinearGradientBrush(
+                    new Rectangle(0, 0, 5, heroBanner.Height),
+                    _accent, ThemeManager.Violet,
+                    LinearGradientMode.Vertical))
+                    e.Graphics.FillRectangle(brush2, 0, 0, 5, heroBanner.Height);
             };
 
             var lblGreeting = new Label {
                 Text = "Xin chào, " + _displayName + " 👋",
-                Font = new Font("Segoe UI", 15F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 AutoSize = true,
-                Location = new Point(20, 16),
+                Location = new Point(26, 14),
                 BackColor = Color.Transparent
             };
             heroBanner.Controls.Add(lblGreeting);
@@ -167,30 +178,35 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
             var lblSubtitle = new Label {
                 Text = "Hôm nay là " + DateTime.Now.ToString("dddd, dd/MM/yyyy") + ". Chúc bạn có phiên làm việc năng suất và thuận lợi!",
                 Font = new Font("Segoe UI", 9F),
-                ForeColor = ThemeManager.Muted,
+                ForeColor = ThemeManager.Ink2,
                 AutoSize = true,
-                Location = new Point(21, 48),
+                Location = new Point(27, 46),
                 BackColor = Color.Transparent
             };
             heroBanner.Controls.Add(lblSubtitle);
 
             // Live status badge
             var statusBadge = new Label {
-                Text = "● Hệ thống sẵn sàng",
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Text = "  ●  Hệ thống sẵn sàng  ",
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
                 ForeColor = ThemeManager.Green,
                 BackColor = ThemeManager.GreenSoft,
-                Size = new Size(140, 30),
+                Size = new Size(158, 28),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(heroBanner.Width - 160, 24)
+                Location = new Point(heroBanner.Width - 174, 34)
             };
             statusBadge.Paint += (s, e) => {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, statusBadge.Width - 1, statusBadge.Height - 1), 10))
-                using (var pen = new Pen(Color.FromArgb(60, ThemeManager.Green), 1)) {
+                using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, statusBadge.Width - 1, statusBadge.Height - 1), 12))
+                using (var brush = new SolidBrush(ThemeManager.GreenSoft))
+                using (var pen = new Pen(Color.FromArgb(80, ThemeManager.Green), 1)) {
+                    e.Graphics.FillPath(brush, path);
                     e.Graphics.DrawPath(pen, path);
                 }
+                TextRenderer.DrawText(e.Graphics, statusBadge.Text,
+                    statusBadge.Font, statusBadge.ClientRectangle, ThemeManager.Green,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             };
             heroBanner.Controls.Add(statusBadge);
 
@@ -198,8 +214,8 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
 
             // 2. Metric KPI Cards Flow
             var cardsFlow = new FlowLayoutPanel {
-                Location = new Point(0, 106),
-                Size = new Size(cardWidth, 134),
+                Location = new Point(0, 116),
+                Size = new Size(cardWidth, 142),
                 WrapContents = false,
                 BackColor = Color.Transparent,
                 AutoScroll = true
@@ -233,7 +249,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
 
             // 3. Quick Actions Panel
             var quickPanel = new RoundedPanel {
-                Location = new Point(0, 256),
+                Location = new Point(0, 274),
                 Size = new Size(cardWidth, 230),
                 Radius = 14,
                 FillColor = ThemeManager.Paper,
@@ -292,32 +308,76 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard {
                 };
             }
 
+            // Quick action mini-card buttons (icon + label, 4 per row)
             int btnX = 22, btnY = 72;
-            int btnW = 200, btnH = 46;
+            int btnW = 174, btnH = 60;
+            int colCount = 0;
             foreach (var act in actions) {
-                var btn = new Button {
-                    Text = "  " + act.Icon + "  " + act.Title,
-                    Tag = act.Cmd,
-                    Size = new Size(btnW, btnH),
+                var btnPanel = new RoundedPanel {
                     Location = new Point(btnX, btnY),
-                    BackColor = ThemeManager.Surface2,
-                    ForeColor = ThemeManager.Ink2,
-                    FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Cursor = Cursors.Hand
+                    Size = new Size(btnW, btnH),
+                    Radius = 10,
+                    FillColor = ThemeManager.Surface2,
+                    BorderColor = ThemeManager.Line,
+                    Cursor = Cursors.Hand,
+                    Tag = act.Cmd
                 };
-                btn.FlatAppearance.BorderColor = ThemeManager.Line;
-                btn.FlatAppearance.MouseOverBackColor = ThemeManager.PrimarySoft;
-                btn.MouseEnter += (s, e) => btn.ForeColor = ThemeManager.Primary;
-                btn.MouseLeave += (s, e) => btn.ForeColor = ThemeManager.Ink2;
-                btn.Click += (s, e) => OnMenuSelected((string)((Button)s).Tag);
-                quickPanel.Controls.Add(btn);
+                var iconLabel = new Label {
+                    Text = act.Icon,
+                    Font = new Font("Segoe UI Emoji", 14F),
+                    Size = new Size(36, 36),
+                    Location = new Point(12, 12),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    BackColor = Color.Transparent,
+                    ForeColor = _accent
+                };
+                var titleLabel2 = new Label {
+                    Text = act.Title,
+                    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                    ForeColor = ThemeManager.Ink2,
+                    Location = new Point(52, 20),
+                    AutoSize = false,
+                    Size = new Size(btnW - 58, 20),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    BackColor = Color.Transparent
+                };
+                btnPanel.Controls.Add(iconLabel);
+                btnPanel.Controls.Add(titleLabel2);
 
-                btnX += btnW + 14;
-                if (btnX + btnW > quickPanel.ClientSize.Width - 20) {
+                // Hover effect
+                EventHandler mouseEnter = (s, e) => {
+                    btnPanel.FillColor = ThemeManager.PrimarySoft;
+                    btnPanel.BorderColor = Color.FromArgb(120, _accent);
+                    titleLabel2.ForeColor = _accent;
+                    btnPanel.Invalidate();
+                };
+                EventHandler mouseLeave = (s, e) => {
+                    btnPanel.FillColor = ThemeManager.Surface2;
+                    btnPanel.BorderColor = ThemeManager.Line;
+                    titleLabel2.ForeColor = ThemeManager.Ink2;
+                    btnPanel.Invalidate();
+                };
+                MouseEventHandler mouseClick = (s, e) => OnMenuSelected((string)btnPanel.Tag);
+                btnPanel.MouseEnter += mouseEnter;
+                btnPanel.MouseLeave += mouseLeave;
+                btnPanel.MouseClick += mouseClick;
+                iconLabel.MouseEnter += mouseEnter;
+                iconLabel.MouseLeave += mouseLeave;
+                iconLabel.MouseClick += mouseClick;
+                titleLabel2.MouseEnter += mouseEnter;
+                titleLabel2.MouseLeave += mouseLeave;
+                titleLabel2.MouseClick += mouseClick;
+                iconLabel.Cursor = Cursors.Hand;
+                titleLabel2.Cursor = Cursors.Hand;
+
+                quickPanel.Controls.Add(btnPanel);
+
+                colCount++;
+                btnX += btnW + 12;
+                if (colCount % 4 == 0 || btnX + btnW > quickPanel.ClientSize.Width - 20) {
                     btnX = 22;
-                    btnY += btnH + 12;
+                    btnY += btnH + 10;
+                    colCount = 0;
                 }
             }
 

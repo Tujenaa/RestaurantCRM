@@ -21,11 +21,9 @@ namespace RestaurantCRM.AdminApp.Forms {
     public class ModuleFormBase : Form {
         private readonly DataTable _table = new DataTable();
         private readonly UcDataGridView _grid = new UcDataGridView();
-        private readonly TextBox _search = new TextBox();
         private readonly ComboBox _filterColumn = new ComboBox();
         private readonly ComboBox _filterMode = new ComboBox();
         private readonly TextBox _filterValue = new TextBox();
-        private string _advancedFilter = "";
         private int _sortColumn = -1;
         private bool _sortAscending = true;
         private readonly ModuleField[] _fields;
@@ -55,34 +53,106 @@ namespace RestaurantCRM.AdminApp.Forms {
             intro.Controls.Add(titleLabel); intro.Controls.Add(descLabel);
 
             panel.Paint += (s, e) => { using (var pen = new Pen(ThemeManager.Line)) e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1); };
-            var toolbar = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.FromArgb(250, 251, 254), Padding = new Padding(14, 10, 14, 8) };
-            panel.Controls.Add(toolbar);
-            _search.Width = 270; _search.Location = new Point(14, 13); _search.Font = Font;
-            _search.ForeColor = ThemeManager.Muted; _search.Text = "Tìm kiếm...";
-            _search.GotFocus += (s, e) => { if (_search.Text == "Tìm kiếm...") { _search.Text = ""; _search.ForeColor = ThemeManager.Ink; } };
-            _search.LostFocus += (s, e) => { if (_search.Text.Length == 0) { _search.Text = "Tìm kiếm..."; _search.ForeColor = ThemeManager.Muted; } };
-            _search.TextChanged += (s, e) => ApplySearch();
-            toolbar.Controls.Add(_search);
-            var btnAdd = MakeButton("＋ Thêm mới", true); btnAdd.Width = 130; btnAdd.Click += (s, e) => EditRow(null);
-            var btnEdit = MakeButton("Sửa", false); btnEdit.Click += (s, e) => EditSelected();
-            var btnDelete = MakeButton("Xóa", false); btnDelete.Click += (s, e) => DeleteSelected();
-            var buttonsPanel = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, WrapContents = false };
-            buttonsPanel.Controls.Add(btnAdd); buttonsPanel.Controls.Add(btnEdit); buttonsPanel.Controls.Add(btnDelete);
-            buttonsPanel.Location = new Point(toolbar.Width - buttonsPanel.Width - 14, 11);
-            buttonsPanel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            toolbar.Controls.Add(buttonsPanel);
 
-            var filterbar = new Panel { Dock = DockStyle.Top, Height = 48, BackColor = Color.White, Padding = new Padding(14, 7, 14, 5) };
-            panel.Controls.Add(filterbar);
-            _filterColumn.DropDownStyle = ComboBoxStyle.DropDownList; _filterColumn.Width = 190; _filterColumn.Location = new Point(14, 8);
+            // Toolbar - premium tonal design
+            var toolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 56,
+                BackColor = ThemeManager.Paper
+            };
+            toolbar.Paint += (s, e) => {
+                using (var pen = new Pen(ThemeManager.Line, 1))
+                    e.Graphics.DrawLine(pen, 0, toolbar.Height - 1, toolbar.Width, toolbar.Height - 1);
+                // top accent gradient strip
+                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                    new Rectangle(0, 0, toolbar.Width, 3),
+                    _accent, ThemeManager.Violet,
+                    System.Drawing.Drawing2D.LinearGradientMode.Horizontal))
+                    e.Graphics.FillRectangle(brush, 0, 0, toolbar.Width, 3);
+            };
+            panel.Controls.Add(toolbar);
+
+            // Bên phải: Các nút hành động (Thêm mới, Sửa, Xóa) neo sát cạnh phải
+            var btnAdd = MakeButton("＋ Thêm mới", true);
+            btnAdd.Size = new Size(114, 34);
+            btnAdd.Margin = new Padding(6, 0, 0, 0);
+            btnAdd.Click += (s, e) => OnAdd();
+
+            var btnEdit = MakeButton("✏  Sửa", false);
+            btnEdit.Size = new Size(80, 34);
+            btnEdit.Margin = new Padding(6, 0, 0, 0);
+            btnEdit.Click += (s, e) => OnEdit();
+
+            var btnDelete = MakeButton("🗑  Xóa", false);
+            btnDelete.Size = new Size(80, 34);
+            btnDelete.Margin = new Padding(6, 0, 0, 0);
+            btnDelete.ForeColor = ThemeManager.Red;
+            btnDelete.FlatAppearance.BorderColor = Color.FromArgb(220, ThemeManager.Red);
+            btnDelete.Click += (s, e) => OnDelete();
+
+            var pnlRight = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                Padding = new Padding(0, 11, 14, 0),
+                BackColor = Color.Transparent
+            };
+            pnlRight.Controls.Add(btnAdd);
+            pnlRight.Controls.Add(btnEdit);
+            pnlRight.Controls.Add(btnDelete);
+            toolbar.Controls.Add(pnlRight);
+
+            // Bên trái: Bộ lọc tìm kiếm neo sát cạnh trái
+            _filterColumn.DropDownStyle = ComboBoxStyle.DropDownList;
+            _filterColumn.Width = 130;
+            _filterColumn.Font = Font;
+            _filterColumn.Margin = new Padding(0, 0, 6, 0);
+            _filterColumn.Items.Add("Tất cả cột");
             foreach (string column in columns) _filterColumn.Items.Add(column);
-            if (_filterColumn.Items.Count > 0) _filterColumn.SelectedIndex = 0;
-            filterbar.Controls.Add(_filterColumn);
-            _filterMode.DropDownStyle = ComboBoxStyle.DropDownList; _filterMode.Width = 105; _filterMode.Location = new Point(212, 8);
-            _filterMode.Items.AddRange(new object[] { "Chứa", "Bằng" }); _filterMode.SelectedIndex = 0; filterbar.Controls.Add(_filterMode);
-            _filterValue.Width = 230; _filterValue.Location = new Point(324, 8); _filterValue.Font = Font; filterbar.Controls.Add(_filterValue);
-            var applyFilter = MakeButton("Lọc", false); applyFilter.Location = new Point(562, 6); applyFilter.Click += (s, e) => ApplyAdvancedFilter(); filterbar.Controls.Add(applyFilter);
-            var clearFilter = MakeButton("Xóa lọc", false); clearFilter.Width = 90; clearFilter.Location = new Point(650, 6); clearFilter.Click += (s, e) => { _advancedFilter = ""; _filterValue.Clear(); ApplySearch(); }; filterbar.Controls.Add(clearFilter);
+            _filterColumn.SelectedIndex = 0;
+
+            _filterMode.DropDownStyle = ComboBoxStyle.DropDownList;
+            _filterMode.Width = 72;
+            _filterMode.Font = Font;
+            _filterMode.Margin = new Padding(0, 0, 6, 0);
+            _filterMode.Items.AddRange(new object[] { "Chứa", "Bằng" });
+            _filterMode.SelectedIndex = 0;
+
+            _filterValue.Width = 170;
+            _filterValue.Font = Font;
+            _filterValue.Margin = new Padding(0, 0, 6, 0);
+            _filterValue.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ApplyAdvancedFilter(); } };
+
+            var applyFilter = MakeButton("🔍  Lọc", false);
+            applyFilter.Size = new Size(75, 34);
+            applyFilter.Margin = new Padding(0, 0, 6, 0);
+            applyFilter.Click += (s, e) => ApplyAdvancedFilter();
+
+            var clearFilter = MakeButton("✕ Xóa lọc", false);
+            clearFilter.Size = new Size(80, 34);
+            clearFilter.Margin = new Padding(0, 0, 0, 0);
+            clearFilter.Click += (s, e) => { _filterValue.Clear(); _filterColumn.SelectedIndex = 0; ApplyAdvancedFilter(); };
+
+            var pnlLeft = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(14, 11, 0, 0),
+                BackColor = Color.Transparent
+            };
+            pnlLeft.Controls.Add(_filterColumn);
+            pnlLeft.Controls.Add(_filterMode);
+            pnlLeft.Controls.Add(_filterValue);
+            pnlLeft.Controls.Add(applyFilter);
+            pnlLeft.Controls.Add(clearFilter);
+            toolbar.Controls.Add(pnlLeft);
 
             _grid.Dock = DockStyle.Fill;
             _grid.AutoGenerateColumns = false;
@@ -100,31 +170,103 @@ namespace RestaurantCRM.AdminApp.Forms {
                     if (!string.IsNullOrEmpty(path)) { try { e.Value = Image.FromFile(path); } catch { e.Value = null; } } else e.Value = null;
                 }
             };
-            panel.Controls.Add(_grid); _grid.BringToFront();
+            _grid.CellDoubleClick += (s, e) => {
+                if (e.RowIndex >= 0)
+                {
+                    string id = GetSelectedId();
+                    DataRow row = SelectedRow();
+                    OnRowDoubleClick(id, row);
+                }
+            };
+            panel.Controls.Add(_grid);
+            _grid.BringToFront();
+        }
+
+        protected virtual void OnAdd() {
+            EditRow(null);
+        }
+
+        protected virtual void OnEdit() {
+            EditSelected();
+        }
+
+        protected virtual void OnDelete() {
+            DeleteSelected();
+        }
+
+        protected virtual void OnRowDoubleClick(string id, DataRow row) {
+            if (row != null) EditRow(row);
+        }
+
+        public void SetTableData(System.Collections.Generic.IEnumerable<object[]> rows) {
+            if (_grid.InvokeRequired) {
+                _grid.Invoke(new Action(() => SetTableData(rows)));
+                return;
+            }
+            _table.Rows.Clear();
+            if (rows != null) {
+                foreach (var r in rows) _table.Rows.Add(r);
+            }
+            // Mặc định sắp xếp tăng dần theo cột Mã (C0) để hiển thị KS01, KS02... hoặc KH01, KH02...
+            if (_table.Columns.Count > 0) {
+                _table.DefaultView.Sort = "[C0] ASC";
+            }
+        }
+
+        public string GetSelectedId() {
+            if (_grid.CurrentRow == null || _grid.CurrentRow.IsNewRow) return null;
+            return _grid.CurrentRow.Cells[0].Value?.ToString();
         }
 
         private Button MakeButton(string text, bool primary) {
-            var b = new Button { Text = text, Size = new Size(82, 35), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, BackColor = primary ? _accent : Color.White, ForeColor = primary ? Color.White : ThemeManager.Ink };
+            var b = new Button {
+                Text = text,
+                Size = new Size(82, 34),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                BackColor = primary ? _accent : ThemeManager.Paper,
+                ForeColor = primary ? Color.White : ThemeManager.Ink2
+            };
             b.FlatAppearance.BorderColor = primary ? _accent : ThemeManager.Line;
+            b.FlatAppearance.BorderSize = 1;
+            if (primary) {
+                b.MouseEnter += (s, e) => b.BackColor = ThemeManager.PrimaryDark;
+                b.MouseLeave += (s, e) => b.BackColor = _accent;
+            } else {
+                b.MouseEnter += (s, e) => b.BackColor = ThemeManager.Surface2;
+                b.MouseLeave += (s, e) => b.BackColor = ThemeManager.Paper;
+            }
             return b;
         }
 
         private void ApplySearch() {
-            if (_search.Text == "Tìm kiếm...") { _table.DefaultView.RowFilter = ""; return; }
-            string query = _search.Text.Replace("'", "''");
-            string filter = "";
-            foreach (DataColumn column in _table.Columns) filter += (filter.Length == 0 ? "" : " OR ") + "Convert([" + column.ColumnName + "], 'System.String') LIKE '%" + query + "%'";
-            _table.DefaultView.RowFilter = filter;
+            ApplyAdvancedFilter();
         }
 
         private void ApplyAdvancedFilter() {
-            if (_filterColumn.SelectedIndex < 0 || String.IsNullOrWhiteSpace(_filterValue.Text)) { ApplySearch(); return; }
             string value = _filterValue.Text.Trim().Replace("'", "''");
-            string column = "C" + _filterColumn.SelectedIndex;
-            string extra = _filterMode.SelectedIndex == 1
-                ? "Convert([" + column + "], 'System.String') = '" + value + "'"
-                : "Convert([" + column + "], 'System.String') LIKE '%" + value.Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]") + "%" + "'";
-            _table.DefaultView.RowFilter = extra;
+            if (string.IsNullOrWhiteSpace(value)) {
+                _table.DefaultView.RowFilter = "";
+                return;
+            }
+
+            if (_filterColumn.SelectedIndex <= 0) {
+                // Tất cả cột
+                string filter = "";
+                foreach (DataColumn column in _table.Columns) {
+                    filter += (filter.Length == 0 ? "" : " OR ") + "Convert([" + column.ColumnName + "], 'System.String') LIKE '%" + value + "%'";
+                }
+                _table.DefaultView.RowFilter = filter;
+            } else {
+                // Cột cụ thể
+                int colIdx = _filterColumn.SelectedIndex - 1;
+                string column = "C" + colIdx;
+                string extra = _filterMode.SelectedIndex == 1
+                    ? "Convert([" + column + "], 'System.String') = '" + value + "'"
+                    : "Convert([" + column + "], 'System.String') LIKE '%" + value.Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]") + "%'";
+                _table.DefaultView.RowFilter = extra;
+            }
         }
 
         private void SortByColumn(int index) {
@@ -135,7 +277,7 @@ namespace RestaurantCRM.AdminApp.Forms {
             for (int i = 0; i < _grid.Columns.Count; i++) _grid.Columns[i].HeaderCell.SortGlyphDirection = i == index ? (_sortAscending ? SortOrder.Ascending : SortOrder.Descending) : SortOrder.None;
         }
 
-        private DataRow SelectedRow() {
+        public DataRow SelectedRow() {
             if (_grid.CurrentRow == null || _grid.CurrentRow.IsNewRow) return null;
             var view = _grid.CurrentRow.DataBoundItem as DataRowView;
             return view == null ? null : view.Row;

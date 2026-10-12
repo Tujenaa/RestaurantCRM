@@ -26,7 +26,7 @@ namespace RestaurantCRM.AdminApp.Controls {
             _displayName = displayName;
             _accent = ThemeManager.AccentFor(role);
 
-            Width = 260;
+            Width = 252;
             Dock = DockStyle.Left;
             BackColor = _sidebarBg;
             Font = new Font("Segoe UI", 9.5F);
@@ -37,26 +37,37 @@ namespace RestaurantCRM.AdminApp.Controls {
         private void BuildLayout() {
             Controls.Clear();
 
-            // 1. Top Header (Brand / Logo)
+            // 1. Top Header (Brand / Logo) with gradient
             var topPanel = new Panel {
                 Dock = DockStyle.Top,
                 Height = 88,
                 BackColor = Color.Transparent,
                 Padding = new Padding(20, 18, 20, 10)
             };
+            topPanel.Paint += (s, e) => {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var brush = new LinearGradientBrush(
+                    topPanel.ClientRectangle,
+                    Color.FromArgb(25, _accent),
+                    Color.Transparent,
+                    LinearGradientMode.Vertical))
+                    e.Graphics.FillRectangle(brush, topPanel.ClientRectangle);
+                using (var pen = new Pen(Color.FromArgb(20, _accent), 1))
+                    e.Graphics.DrawLine(pen, 0, topPanel.Height - 1, topPanel.Width, topPanel.Height - 1);
+            };
 
             var logoBadge = new Label {
                 Text = "🍽️",
                 Font = new Font("Segoe UI Emoji", 14F),
                 Size = new Size(38, 38),
-                Location = new Point(20, 18),
+                Location = new Point(18, 18),
                 TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.FromArgb(40, 255, 255, 255)
+                BackColor = Color.Transparent
             };
             logoBadge.Paint += (s, e) => {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, logoBadge.Width - 1, logoBadge.Height - 1), 10))
-                using (var brush = new SolidBrush(Color.FromArgb(30, _accent)))
+                using (var brush = new LinearGradientBrush(logoBadge.ClientRectangle, _accent, ThemeManager.Violet, 135f))
                 using (var pen = new Pen(Color.FromArgb(80, _accent), 1)) {
                     e.Graphics.FillPath(brush, path);
                     e.Graphics.DrawPath(pen, path);
@@ -66,19 +77,21 @@ namespace RestaurantCRM.AdminApp.Controls {
 
             var lblTitle = new Label {
                 Text = "RestaurantCRM",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
-                Location = new Point(66, 17)
+                Location = new Point(64, 16),
+                BackColor = Color.Transparent
             };
             topPanel.Controls.Add(lblTitle);
 
             var lblRoleBadge = new Label {
                 Text = _role.ToUpper() + " WORKSPACE",
-                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
                 ForeColor = _accent,
                 AutoSize = true,
-                Location = new Point(68, 40)
+                Location = new Point(64, 39),
+                BackColor = Color.Transparent
             };
             topPanel.Controls.Add(lblRoleBadge);
 
@@ -248,28 +261,36 @@ namespace RestaurantCRM.AdminApp.Controls {
         }
 
         private void AddMenuItem(Panel parent, string commandKey, string displayTitle, ref int y) {
+            bool isDefault = commandKey == "Dashboard";
             var btn = new Button {
-                Text = "  " + displayTitle,
+                Text = "    " + displayTitle,
                 Tag = commandKey,
-                Location = new Point(10, y),
-                Size = new Size(224, 36),
+                Location = new Point(8, y),
+                Size = new Size(228, 36),
                 FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = _textNormal,
-                BackColor = Color.Transparent,
-                Font = new Font("Segoe UI", 9F),
+                ForeColor = isDefault ? Color.White : _textNormal,
+                BackColor = isDefault ? Color.FromArgb(50, _accent) : Color.Transparent,
+                Font = new Font("Segoe UI", 9F, isDefault ? FontStyle.Bold : FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseOverBackColor = _itemHover;
 
-            // Highlight if dashboard
-            if (commandKey == "Dashboard") {
-                _activeBtn = btn;
-                btn.ForeColor = Color.White;
-                btn.BackColor = Color.FromArgb(40, _accent);
-                btn.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            }
+            if (isDefault) _activeBtn = btn;
+
+            // Paint left accent indicator for active item
+            btn.Paint += (s, e) => {
+                if (btn == _activeBtn) {
+                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        new Rectangle(0, 4, 3, btn.Height - 8),
+                        _accent, ThemeManager.Violet,
+                        System.Drawing.Drawing2D.LinearGradientMode.Vertical))
+                    using (var path = ThemeManager.RoundedRect(new Rectangle(0, 6, 3, btn.Height - 12), 2))
+                        e.Graphics.FillPath(brush, path);
+                }
+            };
 
             btn.Click += (s, e) => {
                 var clicked = (Button)s;
@@ -277,17 +298,19 @@ namespace RestaurantCRM.AdminApp.Controls {
                     _activeBtn.ForeColor = _textNormal;
                     _activeBtn.BackColor = Color.Transparent;
                     _activeBtn.Font = new Font("Segoe UI", 9F);
+                    _activeBtn.Invalidate();
                 }
                 _activeBtn = clicked;
                 _activeBtn.ForeColor = Color.White;
                 _activeBtn.BackColor = Color.FromArgb(50, _accent);
                 _activeBtn.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                _activeBtn.Invalidate();
 
                 MenuSelected?.Invoke((string)clicked.Tag);
             };
 
             parent.Controls.Add(btn);
-            y += 40;
+            y += 38;
         }
     }
 }

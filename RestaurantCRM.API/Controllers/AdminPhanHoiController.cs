@@ -32,7 +32,7 @@ namespace RestaurantCRM.API.Controllers
             }
 
             var phanHois = await query
-                .OrderByDescending(p => p.NgayPhanHoi)
+                .OrderBy(p => p.MaPhanHoi)
                 .Select(p => new
                 {
                     p.MaPhanHoi,
