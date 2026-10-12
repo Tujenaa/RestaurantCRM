@@ -97,80 +97,34 @@ namespace RestaurantCRM.AdminApp.Controls {
 
             Controls.Add(topPanel);
 
-            // 2. Bottom Footer: Cụm sóng nghệ thuật + Profile Avatar + Settings
+            // 2. Bottom Footer: Thông tin người dùng tối giản & nút Đăng xuất (không màu mè)
             var footPanel = new Panel {
                 Dock = DockStyle.Bottom,
-                Height = 175,
-                BackColor = Color.White
+                Height = 72,
+                BackColor = ColorTranslator.FromHtml("#F8FAFC"),
+                Padding = new Padding(12, 10, 12, 10)
             };
             footPanel.Paint += (s, e) => {
-                var g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                int h = footPanel.Height;
-                int w = footPanel.Width;
-
-                // Lớp 1: Sóng Tím đậm (Violet)
-                using (var path = new GraphicsPath()) {
-                    path.AddLine(0, h * 0.42f, w, h * 0.22f);
-                    path.AddLine(w, h, 0, h);
-                    path.CloseFigure();
-                    using (var brush = new LinearGradientBrush(new Rectangle(0, 0, w, h),
-                        ColorTranslator.FromHtml("#581C87"), ColorTranslator.FromHtml("#6D28D9"), 120f))
-                        g.FillPath(brush, path);
-                }
-
-                // Lớp 2: Sóng Cam lượn sóng (Orange wave)
-                using (var path = new GraphicsPath()) {
-                    PointF[] pts = {
-                        new PointF(0, h * 0.68f),
-                        new PointF(w * 0.35f, h * 0.48f),
-                        new PointF(w * 0.70f, h * 0.74f),
-                        new PointF(w, h * 0.52f)
-                    };
-                    path.AddCurve(pts, 0.5f);
-                    path.AddLine(pts[3].X, pts[3].Y, w, h);
-                    path.AddLine(w, h, 0, h);
-                    path.CloseFigure();
-                    using (var brush = new LinearGradientBrush(new Rectangle(0, 0, w, h),
-                        ColorTranslator.FromHtml("#EA580C"), ColorTranslator.FromHtml("#F97316"), 45f))
-                        g.FillPath(brush, path);
-                }
-
-                // Lớp 3: Sóng Vàng ấm / Hổ phách (Amber curve)
-                using (var path = new GraphicsPath()) {
-                    PointF[] pts = {
-                        new PointF(w * 0.38f, h),
-                        new PointF(w * 0.62f, h * 0.64f),
-                        new PointF(w * 0.88f, h * 0.80f),
-                        new PointF(w, h * 0.74f)
-                    };
-                    path.AddCurve(pts, 0.4f);
-                    path.AddLine(pts[3].X, pts[3].Y, w, h);
-                    path.CloseFigure();
-                    using (var brush = new SolidBrush(ColorTranslator.FromHtml("#F59E0B")))
-                        g.FillPath(brush, path);
-                }
+                using (var pen = new Pen(ColorTranslator.FromHtml("#E2E8F0"), 1))
+                    e.Graphics.DrawLine(pen, 0, 0, footPanel.Width, 0);
             };
 
-            // Avatar tròn nổi trên nền sóng
+            // Avatar tròn chữ cái đầu tối giản
             var avatar = new Label {
                 Text = ThemeManager.Initials(_displayName),
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 ForeColor = Color.White,
-                Size = new Size(42, 42),
-                Location = new Point(22, 10),
+                Size = new Size(36, 36),
+                Location = new Point(14, 18),
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent
             };
             avatar.Paint += (s, e) => {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 using (var path = new GraphicsPath()) {
-                    path.AddEllipse(0, 0, 41, 41);
-                    using (var brush = new LinearGradientBrush(avatar.ClientRectangle, ColorTranslator.FromHtml("#F59E0B"), ColorTranslator.FromHtml("#DC2626"), 45f))
-                    using (var pen = new Pen(Color.White, 2f)) {
+                    path.AddEllipse(0, 0, 35, 35);
+                    using (var brush = new SolidBrush(ThemeManager.Primary))
                         e.Graphics.FillPath(brush, path);
-                        e.Graphics.DrawPath(pen, path);
-                    }
                 }
                 TextRenderer.DrawText(e.Graphics, avatar.Text, avatar.Font,
                     avatar.ClientRectangle, Color.White,
@@ -180,40 +134,40 @@ namespace RestaurantCRM.AdminApp.Controls {
 
             var lblUser = new Label {
                 Text = _displayName,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 AutoSize = true,
-                Location = new Point(22, 56),
+                Location = new Point(56, 17),
                 BackColor = Color.Transparent
             };
             footPanel.Controls.Add(lblUser);
 
             var lblSub = new Label {
-                Text = _role.ToUpper() + " USER",
-                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#8B5CF6"),
+                Text = _role,
+                Font = new Font("Segoe UI", 7.5F),
+                ForeColor = ThemeManager.Muted,
                 AutoSize = true,
-                Location = new Point(23, 74),
+                Location = new Point(57, 36),
                 BackColor = Color.Transparent
             };
             footPanel.Controls.Add(lblSub);
 
-            // Nút Settings / Đăng xuất ở chân trang
-            var btnSettings = new Button {
-                Text = "⚙  SETTINGS / ĐĂNG XUẤT",
-                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
-                ForeColor = Color.White,
+            // Nút Đăng xuất gọn gàng
+            var btnLogout = new Button {
+                Text = "🚪",
+                Font = new Font("Segoe UI Emoji", 11F),
+                ForeColor = ColorTranslator.FromHtml("#EF4444"),
                 BackColor = Color.Transparent,
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(186, 28),
-                Location = new Point(22, 134),
-                Cursor = Cursors.Hand,
-                TextAlign = ContentAlignment.MiddleLeft
+                Size = new Size(32, 32),
+                Location = new Point(footPanel.Width - 44, 20),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Cursor = Cursors.Hand
             };
-            btnSettings.FlatAppearance.BorderSize = 0;
-            btnSettings.FlatAppearance.MouseOverBackColor = Color.FromArgb(60, Color.White);
-            btnSettings.Click += (s, e) => MenuSelected?.Invoke("Đăng xuất");
-            footPanel.Controls.Add(btnSettings);
+            btnLogout.FlatAppearance.BorderSize = 0;
+            btnLogout.FlatAppearance.MouseOverBackColor = ColorTranslator.FromHtml("#FEE2E2");
+            btnLogout.Click += (s, e) => MenuSelected?.Invoke("Đăng xuất");
+            footPanel.Controls.Add(btnLogout);
 
             Controls.Add(footPanel);
 
