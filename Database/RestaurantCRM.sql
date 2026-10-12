@@ -46,7 +46,7 @@ CREATE TABLE KHACH_HANG (
     matKhau NVARCHAR(100),
     ngaySinh DATE,
     gioiTinh NVARCHAR(10),
-    soThich NVARCHAR(255),
+    diaChi NVARCHAR(255),
     trangThai NVARCHAR(20) CONSTRAINT CK_KHACH_HANG_trangThai CHECK (trangThai IN ('Active', 'Locked'))
 );
 

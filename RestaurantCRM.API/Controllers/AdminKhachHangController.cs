@@ -30,7 +30,7 @@ namespace RestaurantCRM.API.Controllers
                     k.Email,
                     k.NgaySinh,
                     k.GioiTinh,
-                    k.SoThich,
+                    k.DiaChi,
                     k.TrangThai
                 })
                 .ToListAsync();
@@ -53,7 +53,7 @@ namespace RestaurantCRM.API.Controllers
                     k.Email,
                     k.NgaySinh,
                     k.GioiTinh,
-                    k.SoThich,
+                    k.DiaChi,
                     k.TrangThai,
                     LichSuHoaDon = k.HoaDon.Select(d => new
                     {

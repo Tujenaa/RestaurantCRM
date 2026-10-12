@@ -7,7 +7,7 @@ namespace RestaurantCRM.API.DTOs
         public string? Email { get; set; }
         public DateOnly? NgaySinh { get; set; }
         public string? GioiTinh { get; set; }
-        public string? SoThich { get; set; }
+        public string? DiaChi { get; set; }
     }
 
     public class ChangePasswordRequest

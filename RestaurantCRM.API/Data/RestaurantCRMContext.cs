@@ -386,9 +386,9 @@ public partial class RestaurantCrmContext : DbContext
                 .HasMaxLength(15)
                 .IsUnicode(false)
                 .HasColumnName("soDienThoai");
-            entity.Property(e => e.SoThich)
+            entity.Property(e => e.DiaChi)
                 .HasMaxLength(255)
-                .HasColumnName("soThich");
+                .HasColumnName("diaChi");
             entity.Property(e => e.TrangThai)
                 .HasMaxLength(20)
                 .HasColumnName("trangThai");

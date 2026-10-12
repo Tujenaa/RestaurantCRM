@@ -21,20 +21,20 @@ INSERT INTO NHAN_VIEN (maNhanVien, maVaiTro, tenDangNhap, matKhau, hoTen, trangT
 ('NV09', 'VT01', 'admin2', 'e10adc3949ba59abbe56e057f20f883e', N'Trần Minh Khôi', 'Active');
 GO
 
--- 3. KHACH_HANG (maKhachHang, hoTen, soDienThoai, email, matKhau, ngaySinh, gioiTinh, soThich, trangThai)
-INSERT INTO KHACH_HANG (maKhachHang, hoTen, soDienThoai, email, matKhau, ngaySinh, gioiTinh, soThich, trangThai) VALUES
-('KH01', N'Nguyễn Thị Lan Anh', '0901234561', 'lananh.nguyen@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1995-03-14', N'Nữ', N'Lẩu Thái, đồ uống ít đường', 'Active'),
-('KH02', N'Trần Văn Minh', '0902345672', 'minh.tran@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1990-07-22', N'Nam', N'Lẩu bò nhúng dấm, trà đào', 'Active'),
-('KH03', N'Lê Hoàng Phúc', '0903456783', 'phuc.le@yahoo.com', 'e10adc3949ba59abbe56e057f20f883e', '1988-11-05', N'Nam', N'Bò Mỹ, ba chỉ heo', 'Active'),
-('KH04', N'Phạm Ngọc Diệp', '0904567894', 'diep.pham@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1993-01-30', N'Nữ', N'Lẩu hải sản, tôm sú', 'Active'),
-('KH05', N'Võ Thanh Tùng', '0905678905', 'tung.vo@outlook.com', 'e10adc3949ba59abbe56e057f20f883e', '1999-09-18', N'Nam', N'Lẩu nấm, rau xanh', 'Active'),
-('KH06', N'Đặng Thị Kim Ngân', '0906789016', 'ngan.dang@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '2000-05-02', N'Nữ', N'Tráng miệng, trà trái cây', 'Active'),
-('KH07', N'Bùi Anh Khoa', '0907890127', 'khoa.bui@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1985-12-25', N'Nam', N'Lẩu cay, món cay', 'Active'),
-('KH08', N'Hồ Thị Thanh Thảo', '0908901238', 'thao.ho@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1997-08-09', N'Nữ', N'Lẩu chay, ăn thanh đạm', 'Active'),
-('KH09', N'Ngô Đức Thịnh', '0909012349', 'thinh.ngo@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1982-04-17', N'Nam', N'Lẩu cho nhóm đông, bia', 'Active'),
-('KH10', N'Dương Mỹ Linh', '0910123450', 'linh.duong@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1996-10-11', N'Nữ', N'Lẩu gà lá é, nấm', 'Active'),
-('KH11', N'Trịnh Quốc Việt', '0911234561', 'viet.trinh@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1992-02-28', N'Nam', N'Lẩu Thái, hải sản', 'Active'),
-('KH12', N'Lý Bảo Châu', '0912345672', 'chau.ly@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '2001-06-06', N'Nữ', N'Đồ ngọt, trà trái cây', 'Locked');
+-- 3. KHACH_HANG (maKhachHang, hoTen, soDienThoai, email, matKhau, ngaySinh, gioiTinh, diaChi, trangThai)
+INSERT INTO KHACH_HANG (maKhachHang, hoTen, soDienThoai, email, matKhau, ngaySinh, gioiTinh, diaChi, trangThai) VALUES
+('KH01', N'Nguyễn Thị Lan Anh', '0901234561', 'lananh.nguyen@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1995-03-14', N'Nữ', N'12 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH02', N'Trần Văn Minh', '0902345672', 'minh.tran@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1990-07-22', N'Nam', N'45 Nguyễn Thị Minh Khai, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH03', N'Lê Hoàng Phúc', '0903456783', 'phuc.le@yahoo.com', 'e10adc3949ba59abbe56e057f20f883e', '1988-11-05', N'Nam', N'88 Hai Bà Trưng, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH04', N'Phạm Ngọc Diệp', '0904567894', 'diep.pham@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1993-01-30', N'Nữ', N'120 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh', 'Active'),
+('KH05', N'Võ Thanh Tùng', '0905678905', 'tung.vo@outlook.com', 'e10adc3949ba59abbe56e057f20f883e', '1999-09-18', N'Nam', N'215 Điện Biên Phủ, Phường 15, Quận Bình Thạnh, TP. Hồ Chí Minh', 'Active'),
+('KH06', N'Đặng Thị Kim Ngân', '0906789016', 'ngan.dang@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '2000-05-02', N'Nữ', N'68 Nam Kỳ Khởi Nghĩa, Phường Nguyễn Thái Bình, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH07', N'Bùi Anh Khoa', '0907890127', 'khoa.bui@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1985-12-25', N'Nam', N'15 Cách Mạng Tháng Tám, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH08', N'Hồ Thị Thanh Thảo', '0908901238', 'thao.ho@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1997-08-09', N'Nữ', N'34 Nguyễn Đình Chiểu, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH09', N'Ngô Đức Thịnh', '0909012349', 'thinh.ngo@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1982-04-17', N'Nam', N'50 Lê Duẩn, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH10', N'Dương Mỹ Linh', '0910123450', 'linh.duong@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1996-10-11', N'Nữ', N'77 Trần Hưng Đạo, Phường Cầu Ông Lãnh, Quận 1, TP. Hồ Chí Minh', 'Active'),
+('KH11', N'Trịnh Quốc Việt', '0911234561', 'viet.trinh@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '1992-02-28', N'Nam', N'102 Võ Văn Tần, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh', 'Active'),
+('KH12', N'Lý Bảo Châu', '0912345672', 'chau.ly@gmail.com', 'e10adc3949ba59abbe56e057f20f883e', '2001-06-06', N'Nữ', N'250 Lý Thường Kiệt, Phường 14, Quận 10, TP. Hồ Chí Minh', 'Locked');
 GO
 
 -- 4. LOAI_MON (maLoaiMon, tenLoaiMon)

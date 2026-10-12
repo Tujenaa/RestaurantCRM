@@ -51,7 +51,7 @@ public class GioHangController : Controller
                     {
                         var jsonStr = await response.Content.ReadAsStringAsync();
                         using var doc = System.Text.Json.JsonDocument.Parse(jsonStr);
-                        if (doc.RootElement.TryGetProperty("soThich", out var pAddr) && pAddr.ValueKind == System.Text.Json.JsonValueKind.String)
+                        if ((doc.RootElement.TryGetProperty("diaChi", out var pAddr) || doc.RootElement.TryGetProperty("soThich", out pAddr)) && pAddr.ValueKind == System.Text.Json.JsonValueKind.String)
                         {
                             var addr = pAddr.GetString() ?? "";
                             if (!string.IsNullOrWhiteSpace(addr))
