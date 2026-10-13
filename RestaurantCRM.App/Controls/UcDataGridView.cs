@@ -9,7 +9,7 @@ namespace RestaurantCRM.AdminApp.Controls {
             BackgroundColor = ThemeManager.Paper;
             BorderStyle = BorderStyle.None;
             CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            GridColor = Color.FromArgb(237, 240, 245);
+            GridColor = ThemeManager.Line;
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             RowHeadersVisible = false;
             AllowUserToAddRows = false;
@@ -18,17 +18,32 @@ namespace RestaurantCRM.AdminApp.Controls {
             SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             ReadOnly = true;
             EnableHeadersVisualStyles = false;
-            ColumnHeadersHeight = 42;
-            RowTemplate.Height = 40;
+
+            // Header
+            ColumnHeadersHeight = 44;
+            ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            ColumnHeadersDefaultCellStyle.BackColor = ThemeManager.Surface2;
+            ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Ink2;
+            ColumnHeadersDefaultCellStyle.SelectionBackColor = ThemeManager.Surface2;
+            ColumnHeadersDefaultCellStyle.SelectionForeColor = ThemeManager.Ink2;
+            ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5F);
+            ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 0, 0);
+            ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+
+            // Row
+            RowTemplate.Height = 42;
             Font = new Font("Segoe UI", 9.5F);
-            ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 254);
-            ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Muted;
-            ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(250, 251, 254);
-            ColumnHeadersDefaultCellStyle.SelectionForeColor = ThemeManager.Muted;
-            ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
-            DefaultCellStyle.SelectionBackColor = Color.FromArgb(234, 241, 255);
-            DefaultCellStyle.SelectionForeColor = ThemeManager.Ink;
-            DefaultCellStyle.Padding = new Padding(5, 0, 5, 0);
+            DefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
+            DefaultCellStyle.SelectionBackColor = ThemeManager.PrimarySoft;
+            DefaultCellStyle.SelectionForeColor = ThemeManager.PrimaryDark;
+            DefaultCellStyle.BackColor = ThemeManager.Paper;
+            DefaultCellStyle.ForeColor = ThemeManager.Ink2;
+
+            // Alternating row color
+            AlternatingRowsDefaultCellStyle.BackColor = ThemeManager.Surface2;
+            AlternatingRowsDefaultCellStyle.ForeColor = ThemeManager.Ink2;
+            AlternatingRowsDefaultCellStyle.SelectionBackColor = ThemeManager.PrimarySoft;
+            AlternatingRowsDefaultCellStyle.SelectionForeColor = ThemeManager.PrimaryDark;
         }
     }
 }

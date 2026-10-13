@@ -23,6 +23,19 @@ namespace RestaurantCRM.API.DTOs
         public string? Email { get; set; }
         public DateOnly? NgaySinh { get; set; }
         public string? GioiTinh { get; set; }
+        public string? SoThich { get; set; }
+        public string? TrangThai { get; set; }
+    }
+
+    public class AdminUpdateKhachHangRequest
+    {
+        public string? HoTen { get; set; }
+        public string? SoDienThoai { get; set; }
+        public string? Email { get; set; }
+        public DateOnly? NgaySinh { get; set; }
+        public string? GioiTinh { get; set; }
+        public string? SoThich { get; set; }
+        public string? TrangThai { get; set; }
     }
 
     public class AdminLockKhachHangRequest
