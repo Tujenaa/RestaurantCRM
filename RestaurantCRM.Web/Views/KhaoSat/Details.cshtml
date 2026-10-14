@@ -1,0 +1,74 @@
+﻿@model KhaoSatViewModel
+@{
+    ViewData["Title"] = Model.TieuDe + " — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+    var posted = ViewBag.Posted as GuiPhieuTraLoiViewModel;
+
+    bool IsChecked(string maCauHoi, string maTuyChon) =>
+        posted?.Answers.Any(a => a.MaCauHoi == maCauHoi && a.MaTuyChons.Contains(maTuyChon)) == true;
+
+    string GetText(string maCauHoi) =>
+        posted?.Answers.FirstOrDefault(a => a.MaCauHoi == maCauHoi)?.NoiDungTuDien ?? "";
+}
+<div class="page-intro"><h1 class="page-title">Khảo sát khách hàng</h1><p>Chia sẻ trải nghiệm để chúng tôi hiểu bạn hơn.</p></div>
+
+<form class="panel" asp-action="Gui" method="post" id="surveyForm">
+    <div asp-validation-summary="All" class="validation"></div>
+    <a class="text-btn" asp-action="Index">← Quay lại danh sách</a>
+    <h2 class="survey-form-title">@Model.TieuDe</h2>
+    <p class="muted survey-form-intro">Các câu trả lời được dùng để cải thiện dịch vụ.</p>
+    <div class="progress"><span style="width:0%"></span></div>
+
+    <input type="hidden" name="MaKhaoSat" value="@Model.MaKhaoSat" />
+
+    @for (var i = 0; i < Model.CauHoi.Count; i++)
+    {
+        var q = Model.CauHoi[i];
+        <div class="survey-q">
+            <h4>@(i + 1). @q.NoiDungCauHoi@(q.IsTuDien ? "" : " *")</h4>
+            <input type="hidden" name="Answers[@i].MaCauHoi" value="@q.MaCauHoi" />
+
+            @if (q.IsTuDien)
+            {
+                <textarea name="Answers[@i].NoiDungTuDien" rows="3" maxlength="1000"
+                  placeholder="Chia sẻ ý kiến của bạn...">@GetText(q.MaCauHoi)</textarea>
+            }
+            else
+            {
+                foreach (var t in q.TuyChon)
+                {
+                    <label class="choice">
+                        <input type="@(q.IsNhieu ? "checkbox" : "radio")"
+                               name="Answers[@i].MaTuyChons"
+                               value="@t.MaTuyChon"
+                               checked="@IsChecked(q.MaCauHoi, t.MaTuyChon)" /> @t.NoiDungTuyChon
+                    </label>
+                }
+            }
+        </div>
+    }
+
+    <button class="btn" type="submit">Gửi khảo sát</button>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.getElementById('surveyForm');
+            if (!form) return;
+            var bar = form.querySelector('.progress span');
+            var questions = form.querySelectorAll('.survey-q');
+            function update() {
+                var answered = 0;
+                questions.forEach(function (q) {
+                    var text = q.querySelector('textarea');
+                    if (text ? text.value.trim() !== '' : q.querySelector('input:checked')) answered++;
+                });
+                bar.style.width = (questions.length ? answered * 100 / questions.length : 0) + '%';
+            }
+            form.addEventListener('input', update);
+            form.addEventListener('change', update);
+            update();
+        })();
+    </script>
+}
