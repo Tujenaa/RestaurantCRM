@@ -22,7 +22,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         public KhachHangForm() : base(
             title: "Quản lý Khách Hàng",
             description: "Danh sách khách hàng của nhà hàng",
-            columns: new[] { "Mã KH", "Họ Tên", "Số Điện Thoại", "Email", "Giới Tính", "Sở Thích", "Trạng Thái" },
+            columns: new[] { "Mã KH", "Họ Tên", "Số Điện Thoại", "Email", "Giới Tính", "Địa Chỉ", "Trạng Thái" },
             fields: new ModuleField[]
             {
                 new ModuleField("MaKhachHang", "Mã Khách Hàng", false),
@@ -30,7 +30,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 new ModuleField("SoDienThoai", "Số Điện Thoại", true),
                 new ModuleField("Email",       "Email",         false),
                 new ModuleField("GioiTinh",    "Giới Tính",     false, options: new[] { "Nam", "Nữ", "Khác" }),
-                new ModuleField("SoThich",     "Sở Thích",      false),
+                new ModuleField("DiaChi",      "Địa Chỉ",       false),
                 new ModuleField("TrangThai",   "Trạng Thái",    false, options: new[] { "Active", "Locked" }),
             },
             rows: new string[][] { },
@@ -58,7 +58,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                         kh.SoDienThoai ?? "",
                         kh.Email ?? "",
                         kh.GioiTinh ?? "",
-                        kh.SoThich ?? "",
+                        kh.DiaChi ?? "",
                         kh.TrangThai ?? "Active"
                     });
                 }
@@ -193,8 +193,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 cboTrangThai.SelectedItem = !string.IsNullOrEmpty(kh?.TrangThai) ? kh.TrangThai : "Active";
 
                 // Hàng 4 (Full Width: X = 24, Width = 472)
-                var lblSoThich = new Label { Text = "Sở Thích / Ghi Chú", Location = new Point(24, 262), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var txtSoThich = new TextBox { Location = new Point(24, 283), Width = 472, Text = kh?.SoThich ?? "" };
+                var lblDiaChi = new Label { Text = "Địa Chỉ", Location = new Point(24, 262), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
+                var txtDiaChi = new TextBox { Location = new Point(24, 283), Width = 472, Text = kh?.DiaChi ?? "" };
 
                 // Divider line
                 var pnlDivider = new Panel
@@ -260,7 +260,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                             Email = string.IsNullOrWhiteSpace(txtEmail.Text) ? null : txtEmail.Text.Trim(),
                             GioiTinh = cboGioiTinh.SelectedItem?.ToString(),
                             NgaySinh = string.IsNullOrWhiteSpace(txtNgaySinh.Text) ? null : txtNgaySinh.Text.Trim(),
-                            SoThich = string.IsNullOrWhiteSpace(txtSoThich.Text) ? null : txtSoThich.Text.Trim(),
+                            DiaChi = string.IsNullOrWhiteSpace(txtDiaChi.Text) ? null : txtDiaChi.Text.Trim(),
                             TrangThai = cboTrangThai.SelectedItem?.ToString() ?? "Active"
                         };
 
@@ -305,7 +305,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                     lblGioiTinh, cboGioiTinh,
                     lblNgaySinh, txtNgaySinh,
                     lblTrangThai, cboTrangThai,
-                    lblSoThich, txtSoThich,
+                    lblDiaChi, txtDiaChi,
                     pnlDivider,
                     btnHuy, btnLuu
                 });
@@ -356,7 +356,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         public string Email { get; set; }
         public string NgaySinh { get; set; }
         public string GioiTinh { get; set; }
-        public string SoThich { get; set; }
+        public string DiaChi { get; set; }
         public string TrangThai { get; set; }
     }
 }

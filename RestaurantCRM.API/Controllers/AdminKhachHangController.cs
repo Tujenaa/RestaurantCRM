@@ -109,7 +109,7 @@ namespace RestaurantCRM.API.Controllers
                 Email = request.Email,
                 NgaySinh = request.NgaySinh,
                 GioiTinh = request.GioiTinh,
-                SoThich = request.SoThich,
+                DiaChi = request.DiaChi,
                 MatKhau = BCrypt.Net.BCrypt.HashPassword("123456"), // Mật khẩu mặc định
                 TrangThai = !string.IsNullOrEmpty(request.TrangThai) ? request.TrangThai : "Active"
             };
@@ -147,7 +147,7 @@ namespace RestaurantCRM.API.Controllers
             khachHang.Email = request.Email?.Trim();
             khachHang.NgaySinh = request.NgaySinh;
             khachHang.GioiTinh = request.GioiTinh;
-            khachHang.SoThich = request.SoThich;
+            khachHang.DiaChi = request.DiaChi;
             if (!string.IsNullOrEmpty(request.TrangThai))
                 khachHang.TrangThai = request.TrangThai;
 
