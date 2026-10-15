@@ -23,6 +23,8 @@ namespace RestaurantCRM.API.Controllers
             var query = _context.MonAn
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock"))
                 .AsNoTracking();
 
@@ -42,8 +44,23 @@ namespace RestaurantCRM.API.Controllers
                 if (activeKm != null) {
                     giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
                 }
+
+                int soSuatKhaDung = 0;
+                if (m.DinhLuong != null && m.DinhLuong.Any())
+                {
+                    soSuatKhaDung = (int)m.DinhLuong.Min(dl =>
+                    {
+                        var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                        if (dl.SoLuongCan <= 0) return 0;
+                        return Math.Floor(ton / dl.SoLuongCan);
+                    });
+                    if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+                }
+
                 return new {
-                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
+                    SoLuong = soSuatKhaDung,
+                    m.TrangThai,
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
             }).ToList();
@@ -73,6 +90,8 @@ namespace RestaurantCRM.API.Controllers
             var list = await _context.MonAn
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock")))
                 .AsNoTracking()
                 .ToListAsync();
@@ -84,8 +103,23 @@ namespace RestaurantCRM.API.Controllers
                 if (activeKm != null) {
                     giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
                 }
+
+                int soSuatKhaDung = 0;
+                if (m.DinhLuong != null && m.DinhLuong.Any())
+                {
+                    soSuatKhaDung = (int)m.DinhLuong.Min(dl =>
+                    {
+                        var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                        if (dl.SoLuongCan <= 0) return 0;
+                        return Math.Floor(ton / dl.SoLuongCan);
+                    });
+                    if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+                }
+
                 return new {
-                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
+                    SoLuong = soSuatKhaDung,
+                    m.TrangThai,
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
             }));
@@ -100,6 +134,8 @@ namespace RestaurantCRM.API.Controllers
             var monAn = await _context.MonAn
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)
@@ -114,8 +150,22 @@ namespace RestaurantCRM.API.Controllers
                 giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
             }
 
+            int soSuatKhaDung = 0;
+            if (monAn.DinhLuong != null && monAn.DinhLuong.Any())
+            {
+                soSuatKhaDung = (int)monAn.DinhLuong.Min(dl =>
+                {
+                    var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                    if (dl.SoLuongCan <= 0) return 0;
+                    return Math.Floor(ton / dl.SoLuongCan);
+                });
+                if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+            }
+
             return Ok(new {
-                monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia, monAn.SoLuong, monAn.TrangThai,
+                monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia,
+                SoLuong = soSuatKhaDung,
+                monAn.TrangThai,
                 DonGiaSauGiam = Math.Max(0, giaSauGiam)
             });
         }

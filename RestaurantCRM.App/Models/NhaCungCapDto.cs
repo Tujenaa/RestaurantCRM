@@ -56,26 +56,42 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("maPhieuNhap")]
         public string MaPhieuNhap { get; set; }
 
+        [JsonPropertyName("maNguyenLieu")]
+        public string MaNguyenLieu { get; set; }
+
+        [JsonPropertyName("tenNguyenLieu")]
+        public string TenNguyenLieu { get; set; }
+
+        [JsonPropertyName("donViTinh")]
+        public string DonViTinh { get; set; }
+
+        // Tương thích ngược
         [JsonPropertyName("maMon")]
-        public string MaMon { get; set; }
+        public string MaMon {
+            get => MaNguyenLieu;
+            set => MaNguyenLieu = value;
+        }
 
         [JsonIgnore]
         public string MaMonAn {
-            get => MaMon;
-            set => MaMon = value;
+            get => MaNguyenLieu;
+            set => MaNguyenLieu = value;
         }
 
         [JsonPropertyName("tenMon")]
-        public string TenMon { get; set; }
+        public string TenMon {
+            get => TenNguyenLieu;
+            set => TenNguyenLieu = value;
+        }
 
         [JsonIgnore]
         public string TenMonAn {
-            get => TenMon;
-            set => TenMon = value;
+            get => TenNguyenLieu;
+            set => TenNguyenLieu = value;
         }
 
         [JsonPropertyName("soLuong")]
-        public int SoLuong { get; set; }
+        public decimal SoLuong { get; set; }
 
         [JsonPropertyName("donGiaNhap")]
         public decimal DonGiaNhap { get; set; }
@@ -99,11 +115,18 @@ namespace RestaurantCRM.AdminApp.Models {
     }
 
     public class ChiTietPhieuNhapCreateDto {
+        [JsonPropertyName("maNguyenLieu")]
+        public string MaNguyenLieu { get; set; }
+
+        // Tương thích ngược
         [JsonPropertyName("maMon")]
-        public string MaMon { get; set; }
+        public string MaMon {
+            get => MaNguyenLieu;
+            set => MaNguyenLieu = value;
+        }
 
         [JsonPropertyName("soLuong")]
-        public int SoLuong { get; set; }
+        public decimal SoLuong { get; set; }
 
         [JsonPropertyName("donGiaNhap")]
         public double DonGiaNhap { get; set; }

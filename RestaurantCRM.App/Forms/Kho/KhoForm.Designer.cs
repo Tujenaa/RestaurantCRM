@@ -65,9 +65,9 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblTieuDe.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(36)))), ((int)(((byte)(43)))));
             this.lblTieuDe.Location = new System.Drawing.Point(14, 12);
             this.lblTieuDe.Name = "lblTieuDe";
-            this.lblTieuDe.Size = new System.Drawing.Size(262, 25);
+            this.lblTieuDe.Size = new System.Drawing.Size(330, 25);
             this.lblTieuDe.TabIndex = 0;
-            this.lblTieuDe.Text = "Quản Lý Kho Hàng & Tồn Kho";
+            this.lblTieuDe.Text = "📦 Quản Lý Kho Nguyên Vật Liệu";
             // 
             // lblSub
             // 
@@ -76,9 +76,9 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblSub.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(100)))), ((int)(((byte)(116)))), ((int)(((byte)(139)))));
             this.lblSub.Location = new System.Drawing.Point(16, 40);
             this.lblSub.Name = "lblSub";
-            this.lblSub.Size = new System.Drawing.Size(395, 15);
+            this.lblSub.Size = new System.Drawing.Size(430, 15);
             this.lblSub.TabIndex = 1;
-            this.lblSub.Text = "Theo dõi số lượng tồn kho theo thời gian thực và cảnh báo sắp hết nguyên liệu.";
+            this.lblSub.Text = "Theo dõi số lượng tồn kho nguyên liệu, đơn vị tính và cảnh báo hết hàng.";
             // 
             // pnlThongKe
             // 
@@ -104,7 +104,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblHetHang.Name = "lblHetHang";
             this.lblHetHang.Size = new System.Drawing.Size(107, 17);
             this.lblHetHang.TabIndex = 3;
-            this.lblHetHang.Text = "Đã hết: 0 món";
+            this.lblHetHang.Text = "Đã hết: 0 loại";
             // 
             // lblSapHet
             // 
@@ -115,7 +115,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblSapHet.Name = "lblSapHet";
             this.lblSapHet.Size = new System.Drawing.Size(139, 17);
             this.lblSapHet.TabIndex = 2;
-            this.lblSapHet.Text = "Sắp hết (<= 10): 0 món";
+            this.lblSapHet.Text = "Sắp hết (<= 10): 0 loại";
             // 
             // lblDuHang
             // 
@@ -126,7 +126,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblDuHang.Name = "lblDuHang";
             this.lblDuHang.Size = new System.Drawing.Size(126, 17);
             this.lblDuHang.TabIndex = 1;
-            this.lblDuHang.Text = "Đủ hàng: 0 món";
+            this.lblDuHang.Text = "Đủ hàng: 0 loại";
             // 
             // lblTongMon
             // 
@@ -137,7 +137,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblTongMon.Name = "lblTongMon";
             this.lblTongMon.Size = new System.Drawing.Size(117, 17);
             this.lblTongMon.TabIndex = 0;
-            this.lblTongMon.Text = "Tổng số: 0 món";
+            this.lblTongMon.Text = "Tổng số: 0 loại";
             // 
             // lblTimKiem
             // 
@@ -257,40 +257,41 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             // 
             // colMaMon
             // 
-            this.colMaMon.DataPropertyName = "MaMon";
+            this.colMaMon.DataPropertyName = "MaNguyenLieu";
             this.colMaMon.FillWeight = 50F;
-            this.colMaMon.HeaderText = "Mã Món";
-            this.colMaMon.MinimumWidth = 70;
+            this.colMaMon.HeaderText = "Mã NL";
+            this.colMaMon.MinimumWidth = 65;
             this.colMaMon.Name = "colMaMon";
             this.colMaMon.ReadOnly = true;
             // 
             // colTenMon
             // 
-            this.colTenMon.DataPropertyName = "TenMon";
-            this.colTenMon.FillWeight = 120F;
-            this.colTenMon.HeaderText = "Tên Món Ăn";
+            this.colTenMon.DataPropertyName = "TenNguyenLieu";
+            this.colTenMon.FillWeight = 130F;
+            this.colTenMon.HeaderText = "Tên Nguyên Vật Liệu";
             this.colTenMon.MinimumWidth = 140;
             this.colTenMon.Name = "colTenMon";
             this.colTenMon.ReadOnly = true;
             // 
             // colLoaiMon
             // 
-            this.colLoaiMon.DataPropertyName = "TenLoaiMon";
-            this.colLoaiMon.FillWeight = 80F;
-            this.colLoaiMon.HeaderText = "Loại Món";
-            this.colLoaiMon.MinimumWidth = 90;
+            this.colLoaiMon.DataPropertyName = "DonViTinh";
+            this.colLoaiMon.FillWeight = 45F;
+            this.colLoaiMon.HeaderText = "ĐVT";
+            this.colLoaiMon.MinimumWidth = 50;
             this.colLoaiMon.Name = "colLoaiMon";
             this.colLoaiMon.ReadOnly = true;
+            this.colLoaiMon.DefaultCellStyle = new System.Windows.Forms.DataGridViewCellStyle { Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter };
             // 
             // colDonGia
             // 
-            this.colDonGia.DataPropertyName = "DonGia";
+            this.colDonGia.DataPropertyName = "GiaNhapGanNhat";
             dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             dataGridViewCellStyle1.Format = "N0";
             this.colDonGia.DefaultCellStyle = dataGridViewCellStyle1;
-            this.colDonGia.FillWeight = 70F;
-            this.colDonGia.HeaderText = "Đơn Giá (đ)";
-            this.colDonGia.MinimumWidth = 80;
+            this.colDonGia.FillWeight = 75F;
+            this.colDonGia.HeaderText = "Giá Nhập (đ)";
+            this.colDonGia.MinimumWidth = 85;
             this.colDonGia.Name = "colDonGia";
             this.colDonGia.ReadOnly = true;
             // 
@@ -299,7 +300,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.colSoLuongTon.DataPropertyName = "SoLuongTon";
             dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             dataGridViewCellStyle2.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            dataGridViewCellStyle2.Format = "N0";
+            dataGridViewCellStyle2.Format = "N2";
             this.colSoLuongTon.DefaultCellStyle = dataGridViewCellStyle2;
             this.colSoLuongTon.FillWeight = 65F;
             this.colSoLuongTon.HeaderText = "Số Lượng Tồn";

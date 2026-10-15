@@ -207,8 +207,10 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Models\MonAnDto.cs" />
+    <Compile Include="Models\NguyenLieuDto.cs" />
     <Compile Include="Models\DashboardMetricsDto.cs" />
     <Compile Include="Services\LoaiMonService.cs" />
+    <Compile Include="Services\NguyenLieuService.cs" />
     <Compile Include="Services\PhieuNhapService.cs" />
     <Compile Include="Services\HoaDonService.cs" />
     <Compile Include="Forms\MonAn\MonAnForm.Designer.cs">

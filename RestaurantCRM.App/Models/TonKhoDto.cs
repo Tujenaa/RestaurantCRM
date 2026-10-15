@@ -2,11 +2,27 @@ using System.Text.Json.Serialization;
 
 namespace RestaurantCRM.AdminApp.Models {
     public class TonKhoDto {
+        [JsonPropertyName("maNguyenLieu")]
+        public string MaNguyenLieu { get; set; }
+
+        // Tương thích ngược với client cũ
         [JsonPropertyName("maMon")]
-        public string MaMon { get; set; }
+        public string MaMon {
+            get => MaNguyenLieu;
+            set => MaNguyenLieu = value;
+        }
+
+        [JsonPropertyName("tenNguyenLieu")]
+        public string TenNguyenLieu { get; set; }
 
         [JsonPropertyName("tenMon")]
-        public string TenMon { get; set; }
+        public string TenMon {
+            get => TenNguyenLieu;
+            set => TenNguyenLieu = value;
+        }
+
+        [JsonPropertyName("donViTinh")]
+        public string DonViTinh { get; set; }
 
         [JsonPropertyName("maLoaiMon")]
         public string MaLoaiMon { get; set; }
@@ -17,8 +33,11 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("donGia")]
         public decimal DonGia { get; set; }
 
+        [JsonPropertyName("giaNhapGanNhat")]
+        public decimal GiaNhapGanNhat { get; set; }
+
         [JsonPropertyName("soLuongTon")]
-        public int SoLuongTon { get; set; }
+        public decimal SoLuongTon { get; set; }
 
         [JsonPropertyName("trangThai")]
         public string TrangThai { get; set; }
@@ -34,7 +53,7 @@ namespace RestaurantCRM.AdminApp.Models {
 
     public class DieuChinhTonKhoDto {
         [JsonPropertyName("soLuongMoi")]
-        public int SoLuongMoi { get; set; }
+        public decimal SoLuongMoi { get; set; }
 
         [JsonPropertyName("ghiChu")]
         public string GhiChu { get; set; }

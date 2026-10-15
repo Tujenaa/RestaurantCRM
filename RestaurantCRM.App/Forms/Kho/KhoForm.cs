@@ -83,10 +83,10 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             int sapHet = _allTonKho.Count(x => x.SoLuongTon > 0 && x.SoLuongTon <= 10);
             int duHang = _allTonKho.Count(x => x.SoLuongTon > 10);
 
-            lblTongMon.Text = $"Tổng số: {tongSo} món";
-            lblDuHang.Text = $"Đủ hàng: {duHang} món";
-            lblSapHet.Text = $"Sắp hết (<= 10): {sapHet} món";
-            lblHetHang.Text = $"Đã hết: {hetHang} món";
+            lblTongMon.Text = $"Tổng số: {tongSo} loại NL";
+            lblDuHang.Text = $"Đủ hàng: {duHang} loại";
+            lblSapHet.Text = $"Sắp hết (<= 10): {sapHet} loại";
+            lblHetHang.Text = $"Đã hết: {hetHang} loại";
         }
 
         private void FilterData() {
@@ -96,9 +96,10 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             var filtered = _allTonKho.Where(item => {
                 // Lọc từ khóa
                 bool matchKeyword = string.IsNullOrEmpty(keyword) ||
-                    (!string.IsNullOrEmpty(item.TenMon) && item.TenMon.ToLower().Contains(keyword)) ||
-                    (!string.IsNullOrEmpty(item.MaMon) && item.MaMon.ToLower().Contains(keyword)) ||
-                    (!string.IsNullOrEmpty(item.TenLoaiMon) && item.TenLoaiMon.ToLower().Contains(keyword));
+                    (!string.IsNullOrEmpty(item.TenNguyenLieu) && item.TenNguyenLieu.ToLower().Contains(keyword)) ||
+                    (!string.IsNullOrEmpty(item.MaNguyenLieu) && item.MaNguyenLieu.ToLower().Contains(keyword)) ||
+                    (!string.IsNullOrEmpty(item.DonViTinh) && item.DonViTinh.ToLower().Contains(keyword)) ||
+                    (!string.IsNullOrEmpty(item.TenMon) && item.TenMon.ToLower().Contains(keyword));
 
                 if (!matchKeyword) return false;
 

@@ -8,13 +8,15 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
         private readonly KhoService _khoService;
         private readonly string _maMon;
         private readonly string _tenMon;
-        private readonly int _soLuongHienTai;
+        private readonly string _dvt;
+        private readonly decimal _soLuongHienTai;
 
         public DieuChinhTonKhoDialog(TonKhoDto item, KhoService khoService) {
             InitializeComponent();
             _khoService = khoService;
-            _maMon = item.MaMon;
-            _tenMon = item.TenMon;
+            _maMon = item.MaNguyenLieu ?? item.MaMon;
+            _tenMon = item.TenNguyenLieu ?? item.TenMon;
+            _dvt = item.DonViTinh ?? "";
             _soLuongHienTai = item.SoLuongTon;
         }
 
@@ -22,18 +24,19 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             InitializeComponent();
             _maMon = monAn.MaMonAn;
             _tenMon = monAn.TenMonAn;
+            _dvt = "suất";
             _soLuongHienTai = monAn.SoLuongTon;
         }
 
         private void DieuChinhTonKhoDialog_Load(object sender, EventArgs e) {
-            txtTenMon.Text = _tenMon ?? "";
-            txtSoLuongHienTai.Text = _soLuongHienTai.ToString("N0");
+            txtTenMon.Text = !string.IsNullOrEmpty(_dvt) ? $"{_tenMon} ({_dvt})" : (_tenMon ?? "");
+            txtSoLuongHienTai.Text = _soLuongHienTai.ToString("N2");
             numSoLuongMoi.Value = Math.Max(0, _soLuongHienTai);
             numSoLuongMoi.Focus();
         }
 
         private async void btnLuu_Click(object sender, EventArgs e) {
-            int soLuongMoi = (int)numSoLuongMoi.Value;
+            decimal soLuongMoi = numSoLuongMoi.Value;
             string ghiChu = txtGhiChu.Text.Trim();
 
             if (_khoService != null) {

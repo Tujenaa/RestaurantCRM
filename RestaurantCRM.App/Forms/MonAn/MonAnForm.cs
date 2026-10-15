@@ -52,7 +52,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             pnlKpis.Controls.Add(card2, 1, 0);
 
             // Card 3: Hết hàng
-            var card3 = CreateKpiCard("⚠️", "HẾT HÀNG TẠM THỜI", "0 món", "Số lượng tồn kho = 0", Color.FromArgb(217, 119, 6), out lblKpiHetHang);
+            var card3 = CreateKpiCard("⚠️", "HẾT NGUYÊN LIỆU", "0 món", "Khả dụng = 0 suất", Color.FromArgb(217, 119, 6), out lblKpiHetHang);
             pnlKpis.Controls.Add(card3, 2, 0);
 
             // Card 4: Ngừng kinh doanh
@@ -249,17 +249,23 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 dgvMonAn.Columns["MaMonAn"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
                 dgvMonAn.Columns["TenMonAn"].HeaderText = "Tên Món Ăn";
-                dgvMonAn.Columns["TenMonAn"].FillWeight = 160;
+                dgvMonAn.Columns["TenMonAn"].FillWeight = 150;
 
                 dgvMonAn.Columns["MaLoaiMon"].HeaderText = "Loại Món";
-                dgvMonAn.Columns["MaLoaiMon"].FillWeight = 90;
+                dgvMonAn.Columns["MaLoaiMon"].FillWeight = 85;
 
-                dgvMonAn.Columns["Gia"].HeaderText = "Đơn Giá";
+                dgvMonAn.Columns["Gia"].HeaderText = "Giá Bán";
                 dgvMonAn.Columns["Gia"].FillWeight = 75;
                 dgvMonAn.Columns["Gia"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
 
-                dgvMonAn.Columns["SoLuongTon"].HeaderText = "Số Lượng Tồn";
-                dgvMonAn.Columns["SoLuongTon"].FillWeight = 70;
+                if (dgvMonAn.Columns["GiaVonUocTinh"] != null) {
+                    dgvMonAn.Columns["GiaVonUocTinh"].HeaderText = "Giá Vốn (COGS)";
+                    dgvMonAn.Columns["GiaVonUocTinh"].FillWeight = 80;
+                    dgvMonAn.Columns["GiaVonUocTinh"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+
+                dgvMonAn.Columns["SoLuongTon"].HeaderText = "Khả Dụng";
+                dgvMonAn.Columns["SoLuongTon"].FillWeight = 75;
                 dgvMonAn.Columns["SoLuongTon"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
                 dgvMonAn.Columns["TrangThaiRaw"].HeaderText = "Trạng Thái";
@@ -268,6 +274,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
 
                 if (dgvMonAn.Columns["TrangThai"] != null) dgvMonAn.Columns["TrangThai"].Visible = false;
                 if (dgvMonAn.Columns["HinhAnhUrl"] != null) dgvMonAn.Columns["HinhAnhUrl"].Visible = false;
+                if (dgvMonAn.Columns["MoTa"] != null) dgvMonAn.Columns["MoTa"].Visible = false;
+                if (dgvMonAn.Columns["TenLoaiMon"] != null) dgvMonAn.Columns["TenLoaiMon"].Visible = false;
+                if (dgvMonAn.Columns["SoSuatKhaDung"] != null) dgvMonAn.Columns["SoSuatKhaDung"].Visible = false;
+                if (dgvMonAn.Columns["DinhLuong"] != null) dgvMonAn.Columns["DinhLuong"].Visible = false;
             }
 
             if (!string.IsNullOrEmpty(selectId)) {
@@ -317,19 +327,28 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 e.CellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
                 e.CellStyle.ForeColor = Color.FromArgb(15, 23, 42);
             }
-            // Số lượng tồn
+            // Giá vốn ước tính (COGS)
+            else if (colName == "GiaVonUocTinh" && e.Value != null) {
+                if (decimal.TryParse(e.Value.ToString(), out decimal giaVon)) {
+                    e.Value = $"{giaVon:N0} đ";
+                    e.FormattingApplied = true;
+                }
+                e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+                e.CellStyle.ForeColor = Color.FromArgb(100, 116, 139);
+            }
+            // Số lượng tồn khả dụng (suất)
             else if (colName == "SoLuongTon" && e.Value != null) {
                 if (int.TryParse(e.Value.ToString(), out int sl)) {
                     if (sl <= 0) {
-                        e.Value = "0 (Hết)";
+                        e.Value = "0 (Hết NL)";
                         e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
                         e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                     } else if (sl <= 5) {
-                        e.Value = $"{sl} (Sắp hết)";
+                        e.Value = $"{sl} suất (Sắp hết)";
                         e.CellStyle.ForeColor = Color.FromArgb(217, 119, 6);
                         e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                     } else {
-                        e.Value = $"{sl}";
+                        e.Value = $"{sl} suất";
                         e.CellStyle.ForeColor = Color.FromArgb(5, 150, 105);
                         e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                     }
@@ -379,7 +398,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                     }
 
                     string catName = _allLoaiMon.FirstOrDefault(x => x.MaLoaiMon == monAn.MaLoaiMon)?.TenLoaiMon ?? monAn.MaLoaiMon;
-                    lblSelectionInfo.Text = $"Đang chọn: {monAn.TenMonAn} ({monAn.MaMonAn})  ·  Loại: {catName}  ·  Đơn giá: {monAn.Gia:N0} đ  ·  Kho: {monAn.SoLuongTon}";
+                    lblSelectionInfo.Text = $"Đang chọn: {monAn.TenMonAn} ({monAn.MaMonAn})  ·  Loại: {catName}  ·  Giá bán: {monAn.Gia:N0} đ  ·  Giá vốn: {monAn.GiaVonUocTinh:N0} đ  ·  Khả dụng: {monAn.SoLuongTon} suất";
                     return;
                 }
             }

@@ -28,6 +28,8 @@ public partial class RestaurantCrmContext : DbContext
 
     public virtual DbSet<DanhGia> DanhGia { get; set; }
 
+    public virtual DbSet<DinhLuong> DinhLuong { get; set; }
+
     public virtual DbSet<DoiTuongKhaoSat> DoiTuongKhaoSat { get; set; }
 
     public virtual DbSet<HoaDon> HoaDon { get; set; }
@@ -45,6 +47,8 @@ public partial class RestaurantCrmContext : DbContext
     public virtual DbSet<LoaiMon> LoaiMon { get; set; }
 
     public virtual DbSet<MonAn> MonAn { get; set; }
+
+    public virtual DbSet<NguyenLieu> NguyenLieu { get; set; }
 
     public virtual DbSet<NhaCungCap> NhaCungCap { get; set; }
 
@@ -185,7 +189,7 @@ public partial class RestaurantCrmContext : DbContext
 
         modelBuilder.Entity<ChiTietPhieuNhap>(entity =>
         {
-            entity.HasKey(e => e.MaChiTiet).HasName("PK__CHI_TIET__99964888CC649751");
+            entity.HasKey(e => e.MaChiTiet);
 
             entity.ToTable("CHI_TIET_PHIEU_NHAP");
 
@@ -194,24 +198,54 @@ public partial class RestaurantCrmContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("maChiTiet");
             entity.Property(e => e.DonGiaNhap).HasColumnName("donGiaNhap");
-            entity.Property(e => e.MaMon)
+            entity.Property(e => e.MaNguyenLieu)
                 .HasMaxLength(20)
                 .IsUnicode(false)
-                .HasColumnName("maMon");
+                .HasColumnName("maNguyenLieu");
             entity.Property(e => e.MaPhieuNhap)
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("maPhieuNhap");
-            entity.Property(e => e.SoLuong).HasColumnName("soLuong");
+            entity.Property(e => e.SoLuong)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("soLuong");
             entity.Property(e => e.ThanhTien).HasColumnName("thanhTien");
 
-            entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.ChiTietPhieuNhap)
-                .HasForeignKey(d => d.MaMon)
-                .HasConstraintName("FK__CHI_TIET___maMon__4CA06362");
+            entity.HasOne(d => d.MaNguyenLieuNavigation).WithMany(p => p.ChiTietPhieuNhap)
+                .HasForeignKey(d => d.MaNguyenLieu);
 
             entity.HasOne(d => d.MaPhieuNhapNavigation).WithMany(p => p.ChiTietPhieuNhap)
-                .HasForeignKey(d => d.MaPhieuNhap)
-                .HasConstraintName("FK__CHI_TIET___maPhi__4BAC3F29");
+                .HasForeignKey(d => d.MaPhieuNhap);
+        });
+
+        modelBuilder.Entity<DinhLuong>(entity =>
+        {
+            entity.HasKey(e => e.MaDinhLuong);
+
+            entity.ToTable("DINH_LUONG");
+
+            entity.Property(e => e.MaDinhLuong)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maDinhLuong");
+            entity.Property(e => e.MaMon)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maMon");
+            entity.Property(e => e.MaNguyenLieu)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maNguyenLieu");
+            entity.Property(e => e.SoLuongCan)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("soLuongCan");
+
+            entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.DinhLuong)
+                .HasForeignKey(d => d.MaMon)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.MaNguyenLieuNavigation).WithMany(p => p.DinhLuong)
+                .HasForeignKey(d => d.MaNguyenLieu);
         });
 
         modelBuilder.Entity<ChuongTrinhKhuyenMai>(entity =>
@@ -529,7 +563,7 @@ public partial class RestaurantCrmContext : DbContext
 
         modelBuilder.Entity<MonAn>(entity =>
         {
-            entity.HasKey(e => e.MaMon).HasName("PK__MON_AN__27547BFA7696FAA3");
+            entity.HasKey(e => e.MaMon);
 
             entity.ToTable("MON_AN");
 
@@ -546,7 +580,6 @@ public partial class RestaurantCrmContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("maLoaiMon");
             entity.Property(e => e.MoTa).HasColumnName("moTa");
-            entity.Property(e => e.SoLuong).HasColumnName("soLuong");
             entity.Property(e => e.TenMon)
                 .HasMaxLength(150)
                 .HasColumnName("tenMon");
@@ -555,8 +588,33 @@ public partial class RestaurantCrmContext : DbContext
                 .HasColumnName("trangThai");
 
             entity.HasOne(d => d.MaLoaiMonNavigation).WithMany(p => p.MonAn)
-                .HasForeignKey(d => d.MaLoaiMon)
-                .HasConstraintName("FK__MON_AN__maLoaiMo__4222D4EF");
+                .HasForeignKey(d => d.MaLoaiMon);
+        });
+
+        modelBuilder.Entity<NguyenLieu>(entity =>
+        {
+            entity.HasKey(e => e.MaNguyenLieu);
+
+            entity.ToTable("NGUYEN_LIEU");
+
+            entity.Property(e => e.MaNguyenLieu)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maNguyenLieu");
+            entity.Property(e => e.TenNguyenLieu)
+                .HasMaxLength(150)
+                .HasColumnName("tenNguyenLieu");
+            entity.Property(e => e.DonViTinh)
+                .HasMaxLength(30)
+                .HasColumnName("donViTinh");
+            entity.Property(e => e.SoLuongTon)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("soLuongTon");
+            entity.Property(e => e.GiaNhapGanNhat)
+                .HasColumnName("giaNhapGanNhat");
+            entity.Property(e => e.TrangThai)
+                .HasMaxLength(30)
+                .HasColumnName("trangThai");
         });
 
         modelBuilder.Entity<NhaCungCap>(entity =>

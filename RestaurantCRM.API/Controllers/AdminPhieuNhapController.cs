@@ -49,7 +49,7 @@ namespace RestaurantCRM.API.Controllers
                 .Include(p => p.MaNhaCungCapNavigation)
                 .Include(p => p.MaNhanVienNavigation)
                 .Include(p => p.ChiTietPhieuNhap)
-                    .ThenInclude(c => c.MaMonNavigation)
+                    .ThenInclude(c => c.MaNguyenLieuNavigation)
                 .FirstOrDefaultAsync(p => p.MaPhieuNhap == id);
 
             if (phieuNhap == null)
@@ -70,24 +70,28 @@ namespace RestaurantCRM.API.Controllers
                 ChiTiet = phieuNhap.ChiTietPhieuNhap.Select(c => new
                 {
                     c.MaChiTiet,
-                    c.MaMon,
-                    TenMon = c.MaMonNavigation?.TenMon,
+                    c.MaNguyenLieu,
+                    TenNguyenLieu = c.MaNguyenLieuNavigation?.TenNguyenLieu,
+                    DonViTinh = c.MaNguyenLieuNavigation?.DonViTinh,
                     c.SoLuong,
                     c.DonGiaNhap,
-                    c.ThanhTien
+                    c.ThanhTien,
+                    // Tương thích ngược với client cũ
+                    MaMon = c.MaNguyenLieu,
+                    TenMon = c.MaNguyenLieuNavigation?.TenNguyenLieu
                 })
             };
 
             return Ok(result);
         }
 
-        // POST: api/AdminPhieuNhap - Lập phiếu nhập và cộng tồn kho
+        // POST: api/AdminPhieuNhap - Lập phiếu nhập và cộng tồn kho nguyên liệu
         [HttpPost]
         public async Task<IActionResult> Create(PhieuNhapCreateRequest request)
         {
             if (request == null || request.ChiTiet == null || !request.ChiTiet.Any())
             {
-                return BadRequest("Phiếu nhập phải có ít nhất một mặt hàng.");
+                return BadRequest("Phiếu nhập phải có ít nhất một mặt hàng nguyên liệu.");
             }
 
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -110,26 +114,28 @@ namespace RestaurantCRM.API.Controllers
 
                 foreach (var item in request.ChiTiet)
                 {
-                    var thanhTien = item.SoLuong * item.DonGiaNhap;
+                    string maNl = item.TargetMaNguyenLieu;
+                    var thanhTien = (double)item.SoLuong * item.DonGiaNhap;
                     tongTien += thanhTien;
 
                     var chiTiet = new ChiTietPhieuNhap
                     {
                         MaChiTiet = "CTPN" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper(),
                         MaPhieuNhap = phieuNhap.MaPhieuNhap,
-                        MaMon = item.MaMon,
+                        MaNguyenLieu = maNl,
                         SoLuong = item.SoLuong,
                         DonGiaNhap = item.DonGiaNhap,
                         ThanhTien = thanhTien
                     };
                     _context.ChiTietPhieuNhap.Add(chiTiet);
 
-                    // Cập nhật tồn kho trong bảng MonAn
-                    var monAn = await _context.MonAn.FindAsync(item.MaMon);
-                    if (monAn != null)
+                    // Cập nhật tồn kho và giá nhập gần nhất trong bảng NGUYEN_LIEU
+                    var nguyenLieu = await _context.NguyenLieu.FindAsync(maNl);
+                    if (nguyenLieu != null)
                     {
-                        monAn.SoLuong = (monAn.SoLuong ?? 0) + item.SoLuong;
-                        _context.MonAn.Update(monAn);
+                        nguyenLieu.SoLuongTon = (nguyenLieu.SoLuongTon ?? 0) + item.SoLuong;
+                        nguyenLieu.GiaNhapGanNhat = item.DonGiaNhap;
+                        _context.NguyenLieu.Update(nguyenLieu);
                     }
                 }
 

@@ -9,6 +9,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         private System.Windows.Forms.DataGridView dgvChiTiet;
         private System.Windows.Forms.DataGridViewTextBoxColumn colMaMon;
         private System.Windows.Forms.DataGridViewTextBoxColumn colTenMon;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colDonViTinh;
         private System.Windows.Forms.DataGridViewTextBoxColumn colSoLuong;
         private System.Windows.Forms.DataGridViewTextBoxColumn colDonGia;
         private System.Windows.Forms.DataGridViewTextBoxColumn colThanhTien;
@@ -34,6 +35,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.dgvChiTiet = new System.Windows.Forms.DataGridView();
             this.colMaMon = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colTenMon = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colDonViTinh = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colSoLuong = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colDonGia = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colThanhTien = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -106,6 +108,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.dgvChiTiet.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.colMaMon,
             this.colTenMon,
+            this.colDonViTinh,
             this.colSoLuong,
             this.colDonGia,
             this.colThanhTien});
@@ -120,28 +123,39 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             // colMaMon
             // 
-            this.colMaMon.DataPropertyName = "MaMon";
-            this.colMaMon.FillWeight = 60F;
-            this.colMaMon.HeaderText = "Mã Món";
-            this.colMaMon.MinimumWidth = 70;
+            this.colMaMon.DataPropertyName = "MaNguyenLieu";
+            this.colMaMon.FillWeight = 55F;
+            this.colMaMon.HeaderText = "Mã NL";
+            this.colMaMon.MinimumWidth = 65;
             this.colMaMon.Name = "colMaMon";
             this.colMaMon.ReadOnly = true;
             // 
             // colTenMon
             // 
-            this.colTenMon.DataPropertyName = "TenMon";
-            this.colTenMon.FillWeight = 120F;
-            this.colTenMon.HeaderText = "Tên Món Ăn";
-            this.colTenMon.MinimumWidth = 130;
+            this.colTenMon.DataPropertyName = "TenNguyenLieu";
+            this.colTenMon.FillWeight = 130F;
+            this.colTenMon.HeaderText = "Tên Nguyên Vật Liệu";
+            this.colTenMon.MinimumWidth = 140;
             this.colTenMon.Name = "colTenMon";
             this.colTenMon.ReadOnly = true;
+            // 
+            // colDonViTinh
+            // 
+            this.colDonViTinh.DataPropertyName = "DonViTinh";
+            this.colDonViTinh.FillWeight = 45F;
+            this.colDonViTinh.HeaderText = "ĐVT";
+            this.colDonViTinh.MinimumWidth = 50;
+            this.colDonViTinh.Name = "colDonViTinh";
+            this.colDonViTinh.ReadOnly = true;
+            this.colDonViTinh.DefaultCellStyle = new System.Windows.Forms.DataGridViewCellStyle { Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter };
             // 
             // colSoLuong
             // 
             this.colSoLuong.DataPropertyName = "SoLuong";
             dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            dataGridViewCellStyle1.Format = "N2";
             this.colSoLuong.DefaultCellStyle = dataGridViewCellStyle1;
-            this.colSoLuong.FillWeight = 50F;
+            this.colSoLuong.FillWeight = 55F;
             this.colSoLuong.HeaderText = "Số Lượng";
             this.colSoLuong.MinimumWidth = 70;
             this.colSoLuong.Name = "colSoLuong";
