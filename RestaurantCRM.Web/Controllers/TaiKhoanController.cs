@@ -68,7 +68,7 @@ public class TaiKhoanController : Controller
                 }
                 if (root.TryGetProperty("gioiTinh", out var pGender) && pGender.ValueKind == JsonValueKind.String) model.GioiTinh = pGender.GetString() ?? "Không muốn tiết lộ";
                 if (root.TryGetProperty("ngaySinh", out var pDob) && pDob.ValueKind == JsonValueKind.String && DateTime.TryParse(pDob.GetString(), out var dob)) model.NgaySinh = dob;
-                if ((root.TryGetProperty("diaChi", out var pAddr) || root.TryGetProperty("soThich", out pAddr)) && pAddr.ValueKind == JsonValueKind.String)
+                if (root.TryGetProperty("diaChi", out var pAddr) && pAddr.ValueKind == JsonValueKind.String)
                 {
                     var addr = pAddr.GetString();
                     if (!string.IsNullOrWhiteSpace(addr))
