@@ -2,6 +2,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
     partial class PhieuNhapDialog {
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.Label lblTieuDe;
+        private System.Windows.Forms.Label lblNhanVienLap;
         private System.Windows.Forms.Label lblNhaCungCap;
         private System.Windows.Forms.ComboBox cboNhaCungCap;
         private System.Windows.Forms.Label lblGhiChu;
@@ -9,6 +10,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         private System.Windows.Forms.GroupBox grpThemMon;
         private System.Windows.Forms.Label lblMonAn;
         private System.Windows.Forms.ComboBox cboMonAn;
+        private System.Windows.Forms.Button btnThemNguyenLieuMoi;
+        private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.Label lblSoLuong;
         private System.Windows.Forms.NumericUpDown numSoLuong;
         private System.Windows.Forms.Label lblDonGia;
@@ -38,6 +41,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
             this.lblTieuDe = new System.Windows.Forms.Label();
+            this.lblNhanVienLap = new System.Windows.Forms.Label();
             this.lblNhaCungCap = new System.Windows.Forms.Label();
             this.cboNhaCungCap = new System.Windows.Forms.ComboBox();
             this.lblGhiChu = new System.Windows.Forms.Label();
@@ -45,6 +49,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.grpThemMon = new System.Windows.Forms.GroupBox();
             this.lblMonAn = new System.Windows.Forms.Label();
             this.cboMonAn = new System.Windows.Forms.ComboBox();
+            this.btnThemNguyenLieuMoi = new System.Windows.Forms.Button();
+            this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.lblSoLuong = new System.Windows.Forms.Label();
             this.numSoLuong = new System.Windows.Forms.NumericUpDown();
             this.lblDonGia = new System.Windows.Forms.Label();
@@ -72,17 +78,29 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.lblTieuDe.AutoSize = true;
             this.lblTieuDe.Font = new System.Drawing.Font("Segoe UI", 13F, System.Drawing.FontStyle.Bold);
             this.lblTieuDe.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(36)))), ((int)(((byte)(43)))));
-            this.lblTieuDe.Location = new System.Drawing.Point(16, 12);
+            this.lblTieuDe.Location = new System.Drawing.Point(14, 12);
             this.lblTieuDe.Name = "lblTieuDe";
-            this.lblTieuDe.Size = new System.Drawing.Size(320, 25);
+            this.lblTieuDe.Size = new System.Drawing.Size(278, 25);
             this.lblTieuDe.TabIndex = 0;
             this.lblTieuDe.Text = "Lập Phiếu Nhập Kho Nguyên Liệu";
+            // 
+            // lblNhanVienLap
+            // 
+            this.lblNhanVienLap.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblNhanVienLap.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular);
+            this.lblNhanVienLap.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(71)))), ((int)(((byte)(85)))), ((int)(((byte)(105)))));
+            this.lblNhanVienLap.Location = new System.Drawing.Point(380, 16);
+            this.lblNhanVienLap.Name = "lblNhanVienLap";
+            this.lblNhanVienLap.Size = new System.Drawing.Size(340, 20);
+            this.lblNhanVienLap.TabIndex = 20;
+            this.lblNhanVienLap.Text = "👤 Nhân viên: -";
+            this.lblNhanVienLap.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // lblNhaCungCap
             // 
             this.lblNhaCungCap.AutoSize = true;
             this.lblNhaCungCap.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblNhaCungCap.Location = new System.Drawing.Point(18, 48);
+            this.lblNhaCungCap.Location = new System.Drawing.Point(16, 48);
             this.lblNhaCungCap.Name = "lblNhaCungCap";
             this.lblNhaCungCap.Size = new System.Drawing.Size(107, 15);
             this.lblNhaCungCap.TabIndex = 1;
@@ -126,6 +144,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.grpThemMon.Controls.Add(this.lblDonGia);
             this.grpThemMon.Controls.Add(this.numSoLuong);
             this.grpThemMon.Controls.Add(this.lblSoLuong);
+            this.grpThemMon.Controls.Add(this.btnThemNguyenLieuMoi);
             this.grpThemMon.Controls.Add(this.cboMonAn);
             this.grpThemMon.Controls.Add(this.lblMonAn);
             this.grpThemMon.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
@@ -154,17 +173,33 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.cboMonAn.FormattingEnabled = true;
             this.cboMonAn.Location = new System.Drawing.Point(12, 40);
             this.cboMonAn.Name = "cboMonAn";
-            this.cboMonAn.Size = new System.Drawing.Size(200, 23);
+            this.cboMonAn.Size = new System.Drawing.Size(162, 23);
             this.cboMonAn.TabIndex = 1;
+            // 
+            // btnThemNguyenLieuMoi
+            // 
+            this.btnThemNguyenLieuMoi.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(238)))), ((int)(((byte)(242)))), ((int)(((byte)(255)))));
+            this.btnThemNguyenLieuMoi.FlatAppearance.BorderSize = 0;
+            this.btnThemNguyenLieuMoi.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnThemNguyenLieuMoi.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnThemNguyenLieuMoi.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(79)))), ((int)(((byte)(70)))), ((int)(((byte)(229)))));
+            this.btnThemNguyenLieuMoi.Location = new System.Drawing.Point(178, 38);
+            this.btnThemNguyenLieuMoi.Name = "btnThemNguyenLieuMoi";
+            this.btnThemNguyenLieuMoi.Size = new System.Drawing.Size(36, 26);
+            this.btnThemNguyenLieuMoi.TabIndex = 2;
+            this.btnThemNguyenLieuMoi.Text = "＋";
+            this.toolTip.SetToolTip(this.btnThemNguyenLieuMoi, "Thêm nguyên liệu mới vào hệ thống");
+            this.btnThemNguyenLieuMoi.UseVisualStyleBackColor = false;
+            this.btnThemNguyenLieuMoi.Click += new System.EventHandler(this.btnThemNguyenLieuMoi_Click);
             // 
             // lblSoLuong
             // 
             this.lblSoLuong.AutoSize = true;
             this.lblSoLuong.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblSoLuong.Location = new System.Drawing.Point(225, 22);
+            this.lblSoLuong.Location = new System.Drawing.Point(224, 22);
             this.lblSoLuong.Name = "lblSoLuong";
             this.lblSoLuong.Size = new System.Drawing.Size(70, 15);
-            this.lblSoLuong.TabIndex = 2;
+            this.lblSoLuong.TabIndex = 3;
             this.lblSoLuong.Text = "Số lượng (*):";
             // 
             // numSoLuong
@@ -172,12 +207,12 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.numSoLuong.DecimalPlaces = 2;
             this.numSoLuong.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.numSoLuong.Increment = new decimal(new int[] { 5, 0, 0, 65536 });
-            this.numSoLuong.Location = new System.Drawing.Point(228, 40);
+            this.numSoLuong.Location = new System.Drawing.Point(226, 40);
             this.numSoLuong.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
             this.numSoLuong.Minimum = new decimal(new int[] { 1, 0, 0, 131072 });
             this.numSoLuong.Name = "numSoLuong";
-            this.numSoLuong.Size = new System.Drawing.Size(80, 23);
-            this.numSoLuong.TabIndex = 3;
+            this.numSoLuong.Size = new System.Drawing.Size(72, 23);
+            this.numSoLuong.TabIndex = 4;
             this.numSoLuong.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.numSoLuong.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
@@ -185,21 +220,21 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.lblDonGia.AutoSize = true;
             this.lblDonGia.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblDonGia.Location = new System.Drawing.Point(322, 22);
+            this.lblDonGia.Location = new System.Drawing.Point(310, 22);
             this.lblDonGia.Name = "lblDonGia";
             this.lblDonGia.Size = new System.Drawing.Size(94, 15);
-            this.lblDonGia.TabIndex = 4;
+            this.lblDonGia.TabIndex = 5;
             this.lblDonGia.Text = "Đơn giá nhập (đ):";
             // 
             // numDonGiaNhap
             // 
             this.numDonGiaNhap.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.numDonGiaNhap.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
-            this.numDonGiaNhap.Location = new System.Drawing.Point(325, 40);
+            this.numDonGiaNhap.Location = new System.Drawing.Point(312, 40);
             this.numDonGiaNhap.Maximum = new decimal(new int[] { 100000000, 0, 0, 0 });
             this.numDonGiaNhap.Name = "numDonGiaNhap";
-            this.numDonGiaNhap.Size = new System.Drawing.Size(125, 23);
-            this.numDonGiaNhap.TabIndex = 5;
+            this.numDonGiaNhap.Size = new System.Drawing.Size(115, 23);
+            this.numDonGiaNhap.TabIndex = 6;
             this.numDonGiaNhap.ThousandsSeparator = true;
             this.numDonGiaNhap.Value = new decimal(new int[] { 10000, 0, 0, 0 });
             // 
@@ -210,10 +245,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.btnThemChiTiet.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnThemChiTiet.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
             this.btnThemChiTiet.ForeColor = System.Drawing.Color.White;
-            this.btnThemChiTiet.Location = new System.Drawing.Point(465, 38);
+            this.btnThemChiTiet.Location = new System.Drawing.Point(440, 38);
             this.btnThemChiTiet.Name = "btnThemChiTiet";
-            this.btnThemChiTiet.Size = new System.Drawing.Size(125, 27);
-            this.btnThemChiTiet.TabIndex = 6;
+            this.btnThemChiTiet.Size = new System.Drawing.Size(136, 27);
+            this.btnThemChiTiet.TabIndex = 7;
             this.btnThemChiTiet.Text = "＋ Thêm vào phiếu";
             this.btnThemChiTiet.UseVisualStyleBackColor = false;
             this.btnThemChiTiet.Click += new System.EventHandler(this.btnThemChiTiet_Click);
@@ -222,10 +257,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.btnXoaChiTiet.Font = new System.Drawing.Font("Segoe UI", 8.5F);
             this.btnXoaChiTiet.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(190)))), ((int)(((byte)(18)))), ((int)(((byte)(60)))));
-            this.btnXoaChiTiet.Location = new System.Drawing.Point(598, 38);
+            this.btnXoaChiTiet.Location = new System.Drawing.Point(588, 38);
             this.btnXoaChiTiet.Name = "btnXoaChiTiet";
-            this.btnXoaChiTiet.Size = new System.Drawing.Size(90, 27);
-            this.btnXoaChiTiet.TabIndex = 7;
+            this.btnXoaChiTiet.Size = new System.Drawing.Size(95, 27);
+            this.btnXoaChiTiet.TabIndex = 8;
             this.btnXoaChiTiet.Text = "🗑 Bỏ món";
             this.btnXoaChiTiet.UseVisualStyleBackColor = true;
             this.btnXoaChiTiet.Click += new System.EventHandler(this.btnXoaChiTiet_Click);
@@ -379,6 +414,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.Controls.Add(this.lblGhiChu);
             this.Controls.Add(this.cboNhaCungCap);
             this.Controls.Add(this.lblNhaCungCap);
+            this.Controls.Add(this.lblNhanVienLap);
             this.Controls.Add(this.lblTieuDe);
             this.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;

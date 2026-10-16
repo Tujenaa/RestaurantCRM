@@ -20,36 +20,60 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
 
         private void SetupGridColumns() {
             dgvHoaDon.AutoGenerateColumns = false;
+            dgvHoaDon.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            dgvHoaDon.ScrollBars = ScrollBars.Both;
+            dgvHoaDon.AllowUserToResizeColumns = true;
             dgvHoaDon.Columns.Clear();
 
             dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn {
+                Name = "MaHoaDon",
                 DataPropertyName = "MaHoaDon",
                 HeaderText = "Mã Đơn",
-                Width = 120
+                Width = 130,
+                MinimumWidth = 100
             });
 
             dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn {
+                Name = "NgayDatHienThi",
                 DataPropertyName = "NgayDatHienThi",
                 HeaderText = "Thời Gian Đặt",
-                Width = 140
+                Width = 160,
+                MinimumWidth = 130
             });
 
             dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn {
+                Name = "TenKhachHang",
                 DataPropertyName = "TenKhachHang",
                 HeaderText = "Khách Hàng",
-                Width = 180
+                Width = 220,
+                MinimumWidth = 160
             });
 
             dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn {
+                Name = "MaNhanVien",
+                DataPropertyName = "MaNhanVien",
+                HeaderText = "Mã NV",
+                Width = 100,
+                MinimumWidth = 80,
+                DefaultCellStyle = new DataGridViewCellStyle {
+                    Alignment = DataGridViewContentAlignment.MiddleCenter
+                }
+            });
+
+            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn {
+                Name = "TenNhanVien",
                 DataPropertyName = "TenNhanVien",
                 HeaderText = "Nhân Viên Phụ Trách",
-                Width = 150
+                Width = 180,
+                MinimumWidth = 140
             });
 
             var colTongTien = new DataGridViewTextBoxColumn {
+                Name = "TongTienHienThi",
                 DataPropertyName = "TongTienHienThi",
                 HeaderText = "Tổng Thanh Toán",
-                Width = 140,
+                Width = 160,
+                MinimumWidth = 130,
                 DefaultCellStyle = new DataGridViewCellStyle {
                     Alignment = DataGridViewContentAlignment.MiddleRight,
                     Font = new Font("Segoe UI", 9F, FontStyle.Bold),
@@ -59,9 +83,11 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             dgvHoaDon.Columns.Add(colTongTien);
 
             var colTrangThai = new DataGridViewTextBoxColumn {
+                Name = "TrangThai",
                 DataPropertyName = "TrangThai",
                 HeaderText = "Trạng Thái",
-                Width = 130,
+                Width = 160,
+                MinimumWidth = 130,
                 DefaultCellStyle = new DataGridViewCellStyle {
                     Alignment = DataGridViewContentAlignment.MiddleCenter,
                     Font = new Font("Segoe UI", 9F, FontStyle.Bold)
@@ -169,17 +195,18 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
         }
 
         private void ColorGridRows() {
+            int trangThaiColIndex = dgvHoaDon.Columns["TrangThai"]?.Index ?? -1;
             foreach (DataGridViewRow row in dgvHoaDon.Rows) {
                 var item = row.DataBoundItem as HoaDonDto;
-                if (item != null) {
+                if (item != null && trangThaiColIndex >= 0 && trangThaiColIndex < row.Cells.Count) {
                     if (IsCompleted(item.TrangThai)) {
-                        row.Cells[5].Style.ForeColor = Color.FromArgb(22, 163, 74);
+                        row.Cells[trangThaiColIndex].Style.ForeColor = Color.FromArgb(22, 163, 74);
                     } else if (IsCancelled(item.TrangThai)) {
-                        row.Cells[5].Style.ForeColor = Color.FromArgb(225, 29, 72);
+                        row.Cells[trangThaiColIndex].Style.ForeColor = Color.FromArgb(225, 29, 72);
                     } else if (IsDelivering(item.TrangThai)) {
-                        row.Cells[5].Style.ForeColor = Color.FromArgb(2, 132, 199);
+                        row.Cells[trangThaiColIndex].Style.ForeColor = Color.FromArgb(2, 132, 199);
                     } else {
-                        row.Cells[5].Style.ForeColor = Color.FromArgb(217, 119, 6);
+                        row.Cells[trangThaiColIndex].Style.ForeColor = Color.FromArgb(217, 119, 6);
                     }
                 }
             }

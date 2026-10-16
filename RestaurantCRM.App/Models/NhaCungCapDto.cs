@@ -36,6 +36,22 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("tenNhanVien")]
         public string TenNhanVien { get; set; }
 
+        [JsonIgnore]
+        public string NhanVienHienThi {
+            get {
+                if (!string.IsNullOrWhiteSpace(TenNhanVien) && !string.IsNullOrWhiteSpace(MaNhanVien)) {
+                    return $"{TenNhanVien} ({MaNhanVien})";
+                }
+                if (!string.IsNullOrWhiteSpace(TenNhanVien)) {
+                    return TenNhanVien;
+                }
+                if (!string.IsNullOrWhiteSpace(MaNhanVien)) {
+                    return MaNhanVien;
+                }
+                return "-";
+            }
+        }
+
         [JsonPropertyName("ngayNhap")]
         public DateTime? NgayNhap { get; set; }
 

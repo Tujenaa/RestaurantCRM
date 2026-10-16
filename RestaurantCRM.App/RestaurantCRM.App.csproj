@@ -272,6 +272,12 @@
     <Compile Include="Forms\Kho\DieuChinhTonKhoDialog.Designer.cs">
       <DependentUpon>DieuChinhTonKhoDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuDialog.Designer.cs">
+      <DependentUpon>NguyenLieuDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Models\NhaCungCapDto.cs" />
     <Compile Include="Models\TonKhoDto.cs" />
     <Compile Include="Services\KhoService.cs" />

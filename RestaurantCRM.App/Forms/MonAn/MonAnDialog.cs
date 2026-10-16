@@ -34,19 +34,54 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             _monAnCurrent = monAn;
             _isEdit = monAn != null;
 
+            this.DoubleBuffered = true;
+            picHinhAnh.Paint += picHinhAnh_Paint;
+
             SetupDinhLuongGrid();
             numGia.ValueChanged += (s, e) => RecalculateCogs();
         }
 
         private void SetupDinhLuongGrid() {
+            // Kích hoạt DoubleBuffering cho DataGridView định lượng
+            typeof(Control).InvokeMember("DoubleBuffered",
+                System.Reflection.BindingFlags.NonPublic | 
+                System.Reflection.BindingFlags.Instance | 
+                System.Reflection.BindingFlags.SetProperty,
+                null, dgvDinhLuong, new object[] { true });
+
             dgvDinhLuong.AutoGenerateColumns = false;
             dgvDinhLuong.Columns.Clear();
             dgvDinhLuong.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvDinhLuong.BackgroundColor = Color.White;
+            dgvDinhLuong.BorderStyle = BorderStyle.None;
+            dgvDinhLuong.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvDinhLuong.GridColor = Color.FromArgb(226, 232, 240);
+            dgvDinhLuong.RowHeadersVisible = false;
+            dgvDinhLuong.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvDinhLuong.MultiSelect = false;
+
+            // Header styling hiện đại
+            dgvDinhLuong.EnableHeadersVisualStyles = false;
+            dgvDinhLuong.ColumnHeadersHeight = 36;
+            dgvDinhLuong.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            dgvDinhLuong.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+            dgvDinhLuong.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
+            dgvDinhLuong.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
+            dgvDinhLuong.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            dgvDinhLuong.ColumnHeadersDefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
+
+            // Row styling
+            dgvDinhLuong.RowTemplate.Height = 34;
+            dgvDinhLuong.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+            dgvDinhLuong.DefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
+            dgvDinhLuong.DefaultCellStyle.SelectionBackColor = Color.FromArgb(224, 231, 255);
+            dgvDinhLuong.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
 
             var colTenNL = new DataGridViewTextBoxColumn {
                 DataPropertyName = "TenNguyenLieu",
                 HeaderText = "Nguyên Liệu",
-                FillWeight = 140,
+                FillWeight = 145,
+                MinimumWidth = 110,
                 ReadOnly = true
             };
             dgvDinhLuong.Columns.Add(colTenNL);
@@ -55,10 +90,12 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 DataPropertyName = "SoLuongCan",
                 HeaderText = "Định Lượng",
                 FillWeight = 75,
+                MinimumWidth = 70,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle {
                     Alignment = DataGridViewContentAlignment.MiddleRight,
-                    Format = "N2"
+                    Format = "0.##",
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold)
                 }
             };
             dgvDinhLuong.Columns.Add(colSoLuong);
@@ -67,6 +104,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 DataPropertyName = "DonViTinh",
                 HeaderText = "ĐVT",
                 FillWeight = 45,
+                MinimumWidth = 45,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle {
                     Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -78,6 +116,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 DataPropertyName = "GiaNhapGanNhat",
                 HeaderText = "Giá Nhập",
                 FillWeight = 85,
+                MinimumWidth = 75,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle {
                     Alignment = DataGridViewContentAlignment.MiddleRight,
@@ -90,20 +129,25 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 DataPropertyName = "ThanhTienGiaVon",
                 HeaderText = "Thành Tiền",
                 FillWeight = 95,
+                MinimumWidth = 85,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle {
                     Alignment = DataGridViewContentAlignment.MiddleRight,
-                    Format = "N0"
+                    Format = "N0",
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(2, 132, 199)
                 }
             };
             dgvDinhLuong.Columns.Add(colThanhTien);
 
             var colXoa = new DataGridViewButtonColumn {
                 Name = "colXoa",
-                HeaderText = "",
-                Text = "❌",
+                HeaderText = "Xóa",
+                Text = "✕",
                 UseColumnTextForButtonValue = true,
-                FillWeight = 40
+                FillWeight = 40,
+                MinimumWidth = 40,
+                FlatStyle = FlatStyle.Flat
             };
             dgvDinhLuong.Columns.Add(colXoa);
 
@@ -134,6 +178,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 // 3. Nếu là chế độ chỉnh sửa: Tải chi tiết món ăn và danh sách định lượng (BOM)
                 if (_isEdit) {
                     this.Text = $"Cập nhật Món Ăn: {_monAnCurrent.TenMonAn} ({_monAnCurrent.MaMonAn})";
+                    lblFormTitle.Text = $"🍲 Cập Nhật Món Ăn: {_monAnCurrent.TenMonAn}";
+                    lblFormSub.Text = $"Mã món: {_monAnCurrent.MaMonAn} - Điều chỉnh thông tin chi tiết và định mức nguyên vật liệu tiêu hao";
                     txtTenMon.Text = _monAnCurrent.TenMonAn;
                     numGia.Value = _monAnCurrent.Gia;
                     cboLoaiMon.SelectedValue = _monAnCurrent.MaLoaiMon;
@@ -162,6 +208,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                     }
                 } else {
                     this.Text = "Thêm Món Ăn Mới & Thiết Lập Công Thức Định Lượng (BOM)";
+                    lblFormTitle.Text = "🍲 Thiết Lập Món Ăn Mới & Công Thức Định Lượng (BOM)";
+                    lblFormSub.Text = "Khai báo thông tin chi tiết món ăn, giá bán và định mức nguyên vật liệu tiêu hao từ kho khi bán hàng.";
                 }
 
                 RecalculateCogs();
@@ -179,7 +227,27 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         private void UpdateNguyenLieuInfo(NguyenLieuDto nl) {
             if (nl == null) return;
             lblDvtInfo.Text = nl.DonViTinh ?? "đơn vị";
-            lblGiaNhapInfo.Text = $"Giá nhập gần nhất: {nl.GiaNhapGanNhat:N0} đ / {nl.DonViTinh}";
+            lblGiaNhapInfo.Text = $"Giá nhập: {nl.GiaNhapGanNhat:N0} đ/{nl.DonViTinh}";
+        }
+
+        private async void btnThemNguyenLieuMoi_Click(object sender, EventArgs e) {
+            using (var dialog = new RestaurantCRM.AdminApp.Forms.Kho.NguyenLieuDialog(_nguyenLieuService)) {
+                if (dialog.ShowDialog(this) == DialogResult.OK && dialog.CreatedOrUpdatedNguyenLieu != null) {
+                    var newNl = dialog.CreatedOrUpdatedNguyenLieu;
+                    _allNguyenLieu = await _nguyenLieuService.GetAllAsync() ?? new List<NguyenLieuDto>();
+                    cboNguyenLieu.DataSource = null;
+                    cboNguyenLieu.DisplayMember = "DisplayText";
+                    cboNguyenLieu.ValueMember = "MaNguyenLieu";
+                    cboNguyenLieu.DataSource = _allNguyenLieu;
+
+                    var found = _allNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == newNl.MaNguyenLieu);
+                    if (found != null) {
+                        cboNguyenLieu.SelectedItem = found;
+                        UpdateNguyenLieuInfo(found);
+                    }
+                    numSoLuongCan.Focus();
+                }
+            }
         }
 
         private void btnThemNL_Click(object sender, EventArgs e) {
@@ -236,15 +304,32 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             decimal loiNhuanGop = giaBan - tongGiaVon;
             decimal tiLeLoiNhuan = giaBan > 0 ? (loiNhuanGop / giaBan) * 100 : 0;
 
-            lblLoiNhuanGopValue.Text = $"Lợi nhuận gộp dự kiến: {loiNhuanGop:N0} đ ({tiLeLoiNhuan:F1}%)";
+            lblLoiNhuanGopValue.Text = $"{loiNhuanGop:N0} đ ({tiLeLoiNhuan:F1}%)";
 
             if (giaBan > 0 && giaBan < tongGiaVon) {
                 lblCanhBaoGia.Visible = true;
-                lblCanhBaoGia.Text = "⚠️ Cảnh báo: Giá bán đang thấp hơn giá vốn!";
+                lblCanhBaoGia.Text = $"⚠️ Cảnh báo: Giá bán ({giaBan:N0} đ) đang thấp hơn giá vốn ({tongGiaVon:N0} đ)!";
                 lblLoiNhuanGopValue.ForeColor = Color.FromArgb(220, 38, 38);
             } else {
                 lblCanhBaoGia.Visible = false;
                 lblLoiNhuanGopValue.ForeColor = Color.FromArgb(5, 150, 105);
+            }
+        }
+
+        private void picHinhAnh_Paint(object sender, PaintEventArgs e) {
+            if (picHinhAnh.Image == null) {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var brush = new SolidBrush(Color.FromArgb(148, 163, 184))) {
+                    var text = "🖼️ Chưa có hình ảnh món ăn\nNhấn 'Chọn ảnh' phía trên để tải lên";
+                    using (var font = new Font("Segoe UI", 9.5F, FontStyle.Regular)) {
+                        var sf = new StringFormat {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center
+                        };
+                        g.DrawString(text, font, brush, picHinhAnh.ClientRectangle, sf);
+                    }
+                }
             }
         }
 
@@ -256,6 +341,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                     try {
                         picHinhAnh.Image = Image.FromFile(ofd.FileName);
                     } catch { }
+                    picHinhAnh.Invalidate();
                 }
             }
         }

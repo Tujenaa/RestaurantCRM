@@ -5,6 +5,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Config;
+using RestaurantCRM.AdminApp.Forms.Kho;
+using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
@@ -24,9 +26,22 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             _pnService = new PhieuNhapService(httpClient);
             _nccService = new NhaCungCapService(httpClient);
             _nguyenLieuService = new NguyenLieuService(httpClient);
+
+            cboMonAn.SelectedIndexChanged += CboMonAn_SelectedIndexChanged;
+        }
+
+        private void CboMonAn_SelectedIndexChanged(object sender, EventArgs e) {
+            var selected = cboMonAn.SelectedItem as NguyenLieuDto;
+            if (selected != null && selected.GiaNhapGanNhat > 0) {
+                numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, selected.GiaNhapGanNhat);
+            }
         }
 
         private async void PhieuNhapDialog_Load(object sender, EventArgs e) {
+            string staffName = UserSession.CurrentDisplayName ?? UserSession.CurrentUsername ?? "Nhân viên";
+            string staffId = UserSession.CurrentUserId ?? UserSession.CurrentUsername ?? "";
+            lblNhanVienLap.Text = !string.IsNullOrEmpty(staffId) ? $"👤 Nhân viên: {staffName} ({staffId})" : $"👤 Nhân viên: {staffName}";
+
             await LoadDropdowns();
             UpdateGrid();
         }
@@ -40,23 +55,38 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 cboNhaCungCap.ValueMember = "MaNhaCungCap";
 
                 // 2. Tải danh mục nguyên vật liệu
-                _allNguyenLieu = await _nguyenLieuService.GetAllAsync();
-                cboMonAn.DisplayMember = "DisplayText";
-                cboMonAn.ValueMember = "MaNguyenLieu";
-                cboMonAn.DataSource = _allNguyenLieu;
-
-                cboMonAn.SelectedIndexChanged += (s, e) => {
-                    var selected = cboMonAn.SelectedItem as NguyenLieuDto;
-                    if (selected != null && selected.GiaNhapGanNhat > 0) {
-                        numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, selected.GiaNhapGanNhat);
-                    }
-                };
-
-                if (_allNguyenLieu.Any()) {
-                    numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, _allNguyenLieu[0].GiaNhapGanNhat);
-                }
+                await ReloadNguyenLieuDropdown();
             } catch (Exception ex) {
                 MessageBox.Show("Lỗi khi tải dữ liệu ban đầu: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task ReloadNguyenLieuDropdown(string selectedMaNL = null) {
+            _allNguyenLieu = await _nguyenLieuService.GetAllAsync() ?? new List<NguyenLieuDto>();
+            cboMonAn.DataSource = null;
+            cboMonAn.DisplayMember = "DisplayText";
+            cboMonAn.ValueMember = "MaNguyenLieu";
+            cboMonAn.DataSource = _allNguyenLieu;
+
+            if (!string.IsNullOrEmpty(selectedMaNL)) {
+                var found = _allNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == selectedMaNL);
+                if (found != null) {
+                    cboMonAn.SelectedItem = found;
+                }
+            }
+
+            if (cboMonAn.SelectedItem is NguyenLieuDto current && current.GiaNhapGanNhat > 0) {
+                numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, current.GiaNhapGanNhat);
+            }
+        }
+
+        private async void btnThemNguyenLieuMoi_Click(object sender, EventArgs e) {
+            using (var dialog = new NguyenLieuDialog(_nguyenLieuService)) {
+                if (dialog.ShowDialog(this) == DialogResult.OK && dialog.CreatedOrUpdatedNguyenLieu != null) {
+                    var newNl = dialog.CreatedOrUpdatedNguyenLieu;
+                    await ReloadNguyenLieuDropdown(newNl.MaNguyenLieu);
+                    numSoLuong.Focus();
+                }
             }
         }
 
@@ -124,8 +154,11 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 return;
             }
 
+            string staffId = UserSession.CurrentUserId ?? UserSession.CurrentUsername;
+
             var dto = new PhieuNhapCreateDto {
                 MaNhaCungCap = cboNhaCungCap.SelectedValue.ToString(),
+                MaNhanVien = staffId,
                 GhiChu = txtGhiChu.Text.Trim(),
                 ChiTiet = _items.Select(x => new ChiTietPhieuNhapCreateDto {
                     MaNguyenLieu = x.MaNguyenLieu,

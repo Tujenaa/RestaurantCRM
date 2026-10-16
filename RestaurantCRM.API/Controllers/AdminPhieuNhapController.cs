@@ -21,6 +21,21 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
+            // Tự động gán mã nhân viên cho các phiếu nhập cũ bị thiếu MaNhanVien
+            var missingStaffPns = await _context.PhieuNhapHang.Where(p => string.IsNullOrEmpty(p.MaNhanVien)).ToListAsync();
+            if (missingStaffPns.Any())
+            {
+                var defaultStaff = await _context.NhanVien.OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
+                if (defaultStaff != null)
+                {
+                    foreach (var pn in missingStaffPns)
+                    {
+                        pn.MaNhanVien = defaultStaff.MaNhanVien;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             var phieuNhaps = await _context.PhieuNhapHang
                 .Include(p => p.MaNhaCungCapNavigation)
                 .Include(p => p.MaNhanVienNavigation)
@@ -31,7 +46,7 @@ namespace RestaurantCRM.API.Controllers
                     p.MaNhaCungCap,
                     TenNhaCungCap = p.MaNhaCungCapNavigation != null ? p.MaNhaCungCapNavigation.TenNhaCungCap : null,
                     p.MaNhanVien,
-                    TenNhanVien = p.MaNhanVienNavigation != null ? p.MaNhanVienNavigation.HoTen : null,
+                    TenNhanVien = p.MaNhanVienNavigation != null ? p.MaNhanVienNavigation.HoTen : (p.MaNhanVien ?? "Quản trị viên"),
                     p.NgayNhap,
                     p.TongTien,
                     p.GhiChu
@@ -63,7 +78,7 @@ namespace RestaurantCRM.API.Controllers
                 phieuNhap.MaNhaCungCap,
                 TenNhaCungCap = phieuNhap.MaNhaCungCapNavigation?.TenNhaCungCap,
                 phieuNhap.MaNhanVien,
-                TenNhanVien = phieuNhap.MaNhanVienNavigation?.HoTen,
+                TenNhanVien = phieuNhap.MaNhanVienNavigation?.HoTen ?? phieuNhap.MaNhanVien ?? "Quản trị viên",
                 phieuNhap.NgayNhap,
                 phieuNhap.TongTien,
                 phieuNhap.GhiChu,
@@ -98,11 +113,33 @@ namespace RestaurantCRM.API.Controllers
             try
             {
                 var maPN = await Helpers.CodeGenerator.GenerateMaPhieuNhapAsync(_context);
+
+                // Xác định mã nhân viên hợp lệ
+                string? maNhanVien = request.MaNhanVien;
+                if (!string.IsNullOrWhiteSpace(maNhanVien))
+                {
+                    var nv = await _context.NhanVien.FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien || n.TenDangNhap == maNhanVien);
+                    if (nv != null)
+                    {
+                        maNhanVien = nv.MaNhanVien;
+                    }
+                    else
+                    {
+                        var defaultNv = await _context.NhanVien.OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
+                        maNhanVien = defaultNv?.MaNhanVien;
+                    }
+                }
+                else
+                {
+                    var defaultNv = await _context.NhanVien.OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
+                    maNhanVien = defaultNv?.MaNhanVien;
+                }
+
                 var phieuNhap = new PhieuNhapHang
                 {
                     MaPhieuNhap = maPN,
                     MaNhaCungCap = request.MaNhaCungCap,
-                    MaNhanVien = request.MaNhanVien,
+                    MaNhanVien = maNhanVien,
                     NgayNhap = DateTime.Now,
                     GhiChu = request.GhiChu,
                     TongTien = 0
