@@ -1,4 +1,4 @@
-﻿USE RestaurantCRM;
+USE RestaurantCRM;
 GO
 
 -- 1. VAI_TRO (maVaiTro, tenVaiTro, moTa)
@@ -122,7 +122,9 @@ INSERT INTO PHIEU_NHAP_HANG (maPhieuNhap, maNhaCungCap, maNhanVien, ngayNhap, to
 ('PN02', 'NCC02', 'NV06', '2026-08-26T09:00:00', 8100000, N'Bò Mỹ và ba chỉ heo tươi'),
 ('PN03', 'NCC03', 'NV06', '2026-08-28T14:15:00', 3400000, N'Nguyên liệu đồ uống và tráng miệng'),
 ('PN04', 'NCC04', 'NV06', '2026-08-30T10:00:00', 15900000, N'Nước cốt các loại lẩu'),
-('PN05', 'NCC05', 'NV06', '2026-09-02T07:45:00', 7950000, N'Tôm sú và viên thả lẩu');
+('PN05', 'NCC05', 'NV06', '2026-09-02T07:45:00', 7950000, N'Tôm sú và viên thả lẩu'),
+('PN261015-001', 'NCC01', 'NV01', '2026-10-15T23:33:06', 220000, N'Nhập thử nghiệm nguyên liệu mới'),
+('PN261015-002', 'NCC01', 'NV01', '2026-10-15T23:36:58', 165000, N'Nhập bổ sung ba chỉ heo');
 GO
 
 -- 10. CHI_TIET_PHIEU_NHAP (maChiTiet, maPhieuNhap, maNguyenLieu, soLuong, donGiaNhap, thanhTien)
@@ -140,7 +142,10 @@ INSERT INTO CHI_TIET_PHIEU_NHAP (maChiTiet, maPhieuNhap, maNguyenLieu, soLuong, 
 ('CTPN11', 'PN04', 'NL11', 30.00, 100000, 3000000),
 ('CTPN12', 'PN04', 'NL12', 30.00, 120000, 3600000),
 ('CTPN13', 'PN05', 'NL02', 50.00, 95000, 4750000),
-('CTPN14', 'PN05', 'NL03', 80.00, 40000, 3200000);
+('CTPN14', 'PN05', 'NL03', 80.00, 40000, 3200000),
+('CTPN42E8D5', 'PN261015-001', 'NL01', 1.00, 80000, 80000),
+('CTPN468EAF', 'PN261015-001', 'NL10', 1.00, 140000, 140000),
+('CTPNEBD894', 'PN261015-002', 'NL04', 3.00, 55000, 165000);
 GO
 
 -- 11. CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, ngayBatDau, ngayKetThuc)
