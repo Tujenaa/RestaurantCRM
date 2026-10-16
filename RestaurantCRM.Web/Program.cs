@@ -18,6 +18,12 @@ builder.Services.AddHttpClient("ApiClient", c => {
     c.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5275");
 });
 
+builder.Services.AddScoped<RestaurantCRM.Web.Services.KhaoSatService>();
+builder.Services.AddHttpClient("ApiClient", c => {
+    c.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5275");
+});
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

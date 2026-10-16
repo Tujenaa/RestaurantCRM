@@ -24,7 +24,7 @@ namespace RestaurantCRM.API.Controllers
             var khaoSat = await _context.KhaoSat
                 .Include(k => k.CauHoiKhaoSat)
                     .ThenInclude(c => c.TuyChonCauHoi)
-                .Where(k => k.TrangThai == "Active")
+                .Where(k => k.TrangThai == "Open")
                 .OrderByDescending(k => k.NgayTao)
                 .FirstOrDefaultAsync();
 
