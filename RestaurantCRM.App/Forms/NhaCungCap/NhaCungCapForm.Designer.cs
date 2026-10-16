@@ -126,10 +126,13 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.dgvNhaCungCap.AllowUserToAddRows = false;
             this.dgvNhaCungCap.AllowUserToDeleteRows = false;
+            this.dgvNhaCungCap.AllowUserToResizeColumns = true;
             this.dgvNhaCungCap.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.dgvNhaCungCap.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dgvNhaCungCap.AutoGenerateColumns = false;
+            this.dgvNhaCungCap.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.None;
+            this.dgvNhaCungCap.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.dgvNhaCungCap.BackgroundColor = System.Drawing.Color.White;
             this.dgvNhaCungCap.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvNhaCungCap.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
@@ -151,45 +154,45 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // colMaNCC
             // 
             this.colMaNCC.DataPropertyName = "MaNhaCungCap";
-            this.colMaNCC.FillWeight = 50F;
             this.colMaNCC.HeaderText = "Mã NCC";
-            this.colMaNCC.MinimumWidth = 70;
+            this.colMaNCC.Width = 110;
+            this.colMaNCC.MinimumWidth = 85;
             this.colMaNCC.Name = "colMaNCC";
             this.colMaNCC.ReadOnly = true;
             // 
             // colTenNCC
             // 
             this.colTenNCC.DataPropertyName = "TenNhaCungCap";
-            this.colTenNCC.FillWeight = 110F;
             this.colTenNCC.HeaderText = "Tên Nhà Cung Cấp";
-            this.colTenNCC.MinimumWidth = 140;
+            this.colTenNCC.Width = 260;
+            this.colTenNCC.MinimumWidth = 180;
             this.colTenNCC.Name = "colTenNCC";
             this.colTenNCC.ReadOnly = true;
             // 
             // colSDT
             // 
             this.colSDT.DataPropertyName = "SoDienThoai";
-            this.colSDT.FillWeight = 65F;
             this.colSDT.HeaderText = "Số Điện Thoại";
-            this.colSDT.MinimumWidth = 90;
+            this.colSDT.Width = 140;
+            this.colSDT.MinimumWidth = 110;
             this.colSDT.Name = "colSDT";
             this.colSDT.ReadOnly = true;
             // 
             // colEmail
             // 
             this.colEmail.DataPropertyName = "Email";
-            this.colEmail.FillWeight = 85F;
             this.colEmail.HeaderText = "Email";
-            this.colEmail.MinimumWidth = 110;
+            this.colEmail.Width = 220;
+            this.colEmail.MinimumWidth = 150;
             this.colEmail.Name = "colEmail";
             this.colEmail.ReadOnly = true;
             // 
             // colDiaChi
             // 
             this.colDiaChi.DataPropertyName = "DiaChi";
-            this.colDiaChi.FillWeight = 120F;
             this.colDiaChi.HeaderText = "Địa Chỉ";
-            this.colDiaChi.MinimumWidth = 140;
+            this.colDiaChi.Width = 320;
+            this.colDiaChi.MinimumWidth = 200;
             this.colDiaChi.Name = "colDiaChi";
             this.colDiaChi.ReadOnly = true;
             // 

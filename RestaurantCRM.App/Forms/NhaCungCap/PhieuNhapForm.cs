@@ -15,6 +15,11 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
 
         public PhieuNhapForm() {
             InitializeComponent();
+            dgvPhieuNhap.AutoGenerateColumns = false;
+            dgvPhieuNhap.AllowUserToResizeColumns = true;
+            dgvPhieuNhap.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            dgvPhieuNhap.ScrollBars = ScrollBars.Both;
+
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _pnService = new PhieuNhapService(httpClient);
@@ -40,6 +45,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 string.IsNullOrEmpty(keyword) ||
                 (!string.IsNullOrEmpty(p.MaPhieuNhap) && p.MaPhieuNhap.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(p.TenNhaCungCap) && p.TenNhaCungCap.ToLower().Contains(keyword)) ||
+                (!string.IsNullOrEmpty(p.MaNhanVien) && p.MaNhanVien.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(p.TenNhanVien) && p.TenNhanVien.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(p.GhiChu) && p.GhiChu.ToLower().Contains(keyword))
             ).ToList();

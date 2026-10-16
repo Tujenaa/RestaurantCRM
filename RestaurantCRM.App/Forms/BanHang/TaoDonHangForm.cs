@@ -77,7 +77,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
             BackColor = ThemeManager.Bg;
             Font = new Font("Segoe UI", 9.5F);
 
-            _autoRefreshTimer = new Timer { Interval = 5000 };
+            _autoRefreshTimer = new Timer { Interval = 15000 };
             _autoRefreshTimer.Tick += async (s, e) => await RefreshStockContinuouslyAsync();
             this.Activated += async (s, e) => await RefreshStockContinuouslyAsync();
             this.FormClosing += (s, e) => {
@@ -173,6 +173,11 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
                 BackColor = ThemeManager.Paper,
                 Padding = new Padding(0, 10, 0, 0)
             };
+            try {
+                typeof(FlowLayoutPanel).InvokeMember("DoubleBuffered",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
+                    null, _productsPanel, new object[] { true });
+            } catch { }
             menuPanel.Controls.Add(_productsPanel);
             _productsPanel.BringToFront();
 
@@ -354,7 +359,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
                 _cart.Clear();
                 _appliedVoucher = null;
                 RenderCart();
-                RenderProducts();
+                UpdateProductsInPlace();
             };
             cartPanel.Controls.Add(clear);
 
@@ -366,12 +371,21 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
 
         private async Task RefreshStockContinuouslyAsync() {
             if (_isRefreshing || IsDisposed) return;
+            // Nếu người dùng đang tập trung gõ tìm kiếm, không làm mới để tránh ngắt quãng thao tác
+            if (_txtSearch.Focused) return;
+
             _isRefreshing = true;
             try {
                 var list = await _monAnService.GetAllAsync();
                 if (list == null || !list.Any() || IsDisposed) return;
 
                 var available = list.Where(m => m.TrangThaiRaw != "Discontinued" && m.TrangThaiRaw != "Inactive").ToList();
+
+                // Smart Refresh: Chỉ cập nhật khi tồn kho, giá hoặc trạng thái món thực sự thay đổi
+                if (!HasMonAnStockChanged(_allMonAn, available)) {
+                    return; // Dữ liệu không đổi -> giữ nguyên 100% giao diện và thanh cuộn
+                }
+
                 _allMonAn = available;
 
                 try {
@@ -400,8 +414,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
                     }
                 }
 
-                // Cập nhật lại giao diện thực đơn (giữ nguyên scroll)
-                RenderProducts();
+                // Cập nhật lại giao diện thực đơn tại chỗ (KHÔNG xóa controls, giữ nguyên 100% vị trí scroll)
+                UpdateProductsInPlace();
 
                 // Cập nhật lại giỏ hàng nếu số lượng bị thay đổi
                 if (cartAltered) {
@@ -415,6 +429,23 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
             } finally {
                 _isRefreshing = false;
             }
+        }
+
+        private bool HasMonAnStockChanged(List<MonAnDto> oldList, List<MonAnDto> newList) {
+            if (oldList == null || newList == null) return true;
+            if (oldList.Count != newList.Count) return true;
+            for (int i = 0; i < oldList.Count; i++) {
+                var a = oldList[i];
+                var b = newList[i];
+                if (a.MaMonAn != b.MaMonAn ||
+                    a.SoLuongTon != b.SoLuongTon ||
+                    a.Gia != b.Gia ||
+                    a.TrangThaiRaw != b.TrangThaiRaw ||
+                    a.TenMonAn != b.TenMonAn) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private async Task InitData() {
@@ -462,6 +493,102 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
             return (mon.Gia, null);
         }
 
+        private void UpdateProductsInPlace() {
+            var currentCards = _productsPanel.Controls.OfType<RoundedPanel>().ToList();
+            if (!currentCards.Any()) {
+                RenderProducts();
+                return;
+            }
+
+            string query = (_txtSearch.Text == "Tìm món..." ? "" : _txtSearch.Text).Trim().ToLowerInvariant();
+            string selectedCatName = _cboCategory.SelectedItem?.ToString() ?? "Tất cả loại món";
+
+            string selectedCatId = "";
+            if (selectedCatName != "Tất cả loại món") {
+                var foundCat = _allLoaiMon.FirstOrDefault(c => c.TenLoaiMon == selectedCatName);
+                if (foundCat != null) selectedCatId = foundCat.MaLoaiMon;
+            }
+
+            var filtered = _allMonAn.Where(m => {
+                bool matchName = string.IsNullOrEmpty(query) || (m.TenMonAn != null && m.TenMonAn.ToLowerInvariant().Contains(query));
+                bool matchCat = string.IsNullOrEmpty(selectedCatId) || m.MaLoaiMon == selectedCatId;
+                bool matchStock = !_chkOnlyInStock.Checked || m.SoLuongTon > 0;
+                return matchName && matchCat && matchStock;
+            }).ToList();
+
+            var currentCardIds = new HashSet<string>(currentCards.Select(c => c.Tag as string).Where(id => !string.IsNullOrEmpty(id)));
+            var filteredIds = new HashSet<string>(filtered.Select(m => m.MaMonAn));
+
+            // Nếu tập hợp món ăn bị thay đổi (có món mới thêm vào hoặc bị lọc mất) => Gọi RenderProducts()
+            if (!currentCardIds.SetEquals(filteredIds)) {
+                RenderProducts();
+                return;
+            }
+
+            // Cập nhật tại chỗ: Giữ nguyên 100% controls và vị trí thanh cuộn
+            _productsPanel.SuspendLayout();
+            foreach (var card in currentCards) {
+                string maMon = card.Tag as string;
+                var mon = filtered.FirstOrDefault(m => m.MaMonAn == maMon);
+                if (mon != null) {
+                    UpdateDishCardState(card, mon);
+                }
+            }
+            _productsPanel.ResumeLayout();
+        }
+
+        private void UpdateDishCardState(RoundedPanel card, MonAnDto mon) {
+            int inCartQty = _cart.FirstOrDefault(x => x.MaMon == mon.MaMonAn)?.Quantity ?? 0;
+            int virtualRemaining = Math.Max(0, mon.SoLuongTon - inCartQty);
+            bool canAddMore = virtualRemaining > 0;
+            bool rawInStock = mon.SoLuongTon > 0;
+
+            var (effPrice, promoText) = GetDishPriceInfo(mon);
+            bool hasPromo = promoText != null;
+
+            card.BorderColor = rawInStock ? (hasPromo ? Color.FromArgb(254, 202, 202) : ThemeManager.Line) : Color.FromArgb(241, 245, 249);
+            card.FillColor = rawInStock ? Color.White : Color.FromArgb(248, 250, 252);
+            card.Cursor = canAddMore ? Cursors.Hand : Cursors.Default;
+
+            var lblStock = card.Controls["lblStock"] as Label;
+            if (lblStock != null) {
+                if (!rawInStock) {
+                    lblStock.Text = "● Hết món";
+                    lblStock.ForeColor = ThemeManager.Red;
+                    lblStock.BackColor = ThemeManager.RedSoft;
+                } else if (virtualRemaining == 0) {
+                    lblStock.Text = inCartQty > 0 ? $"● Hết suất (Đã lấy {inCartQty})" : "● Hết món";
+                    lblStock.ForeColor = ThemeManager.Red;
+                    lblStock.BackColor = ThemeManager.RedSoft;
+                } else if (virtualRemaining <= 5) {
+                    lblStock.Text = inCartQty > 0 ? $"● Còn: {virtualRemaining} (giỏ: {inCartQty})" : $"● Còn: {virtualRemaining}";
+                    lblStock.ForeColor = ThemeManager.Amber;
+                    lblStock.BackColor = ThemeManager.AmberSoft;
+                } else {
+                    lblStock.Text = inCartQty > 0 ? $"● Còn: {virtualRemaining} (giỏ: {inCartQty})" : $"● Còn: {virtualRemaining}";
+                    lblStock.ForeColor = ThemeManager.Green;
+                    lblStock.BackColor = ThemeManager.GreenSoft;
+                }
+            }
+
+            var btnAdd = card.Controls["btnAdd"] as Button;
+            if (btnAdd != null) {
+                if (canAddMore) {
+                    btnAdd.Text = "+ Thêm";
+                    btnAdd.BackColor = _accent;
+                    btnAdd.ForeColor = Color.White;
+                    btnAdd.Enabled = true;
+                    btnAdd.Cursor = Cursors.Hand;
+                } else {
+                    btnAdd.Text = inCartQty > 0 ? "Đầy" : "Hết";
+                    btnAdd.BackColor = Color.FromArgb(226, 232, 240);
+                    btnAdd.ForeColor = ThemeManager.Muted;
+                    btnAdd.Enabled = false;
+                    btnAdd.Cursor = Cursors.No;
+                }
+            }
+        }
+
         private void RenderProducts() {
             Point scrollPos = new Point(Math.Abs(_productsPanel.AutoScrollPosition.X), Math.Abs(_productsPanel.AutoScrollPosition.Y));
             _productsPanel.SuspendLayout();
@@ -497,7 +624,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
                 var card = CreateDishCard(mon);
                 _productsPanel.Controls.Add(card);
             }
-            _productsPanel.ResumeLayout();
+            _productsPanel.ResumeLayout(true);
+            _productsPanel.PerformLayout();
             try { _productsPanel.AutoScrollPosition = scrollPos; } catch { }
         }
 
@@ -511,6 +639,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
             bool hasPromo = promoText != null;
 
             var card = new RoundedPanel {
+                Name = "card_" + mon.MaMonAn,
+                Tag = mon.MaMonAn,
                 Size = new Size(182, 114),
                 Margin = new Padding(6),
                 Radius = 10,
@@ -521,6 +651,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
             };
 
             var lblTen = new Label {
+                Name = "lblTen",
                 Text = mon.TenMonAn,
                 Location = new Point(8, 6),
                 Size = new Size(hasPromo ? 110 : 162, 34),
@@ -547,6 +678,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
             }
 
             var lblGia = new Label {
+                Name = "lblGia",
                 Text = $"{effPrice:N0} đ",
                 Location = new Point(8, 44),
                 AutoSize = true,
@@ -571,6 +703,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
 
             // Badge hiển thị số lượng còn (ảo: trừ theo số lượng đang có trong giỏ hàng)
             var lblStock = new Label {
+                Name = "lblStock",
                 Location = new Point(8, 72),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 8F, FontStyle.Bold),
@@ -598,6 +731,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
 
             // Nút Thêm vào đơn
             var btnAdd = new Button {
+                Name = "btnAdd",
                 Location = new Point(112, 68),
                 Size = new Size(60, 30),
                 FlatStyle = FlatStyle.Flat,
@@ -621,15 +755,21 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
             card.Controls.Add(btnAdd);
 
             Action onCardClick = () => {
-                if (canAddMore) {
-                    AddItem(mon);
-                } else if (!rawInStock) {
+                var currentMon = _allMonAn.FirstOrDefault(m => m.MaMonAn == mon.MaMonAn) ?? mon;
+                int currentInCartQty = _cart.FirstOrDefault(x => x.MaMon == currentMon.MaMonAn)?.Quantity ?? 0;
+                int currentVirtualRemaining = Math.Max(0, currentMon.SoLuongTon - currentInCartQty);
+                bool currentCanAddMore = currentVirtualRemaining > 0;
+                bool currentRawInStock = currentMon.SoLuongTon > 0;
+
+                if (currentCanAddMore) {
+                    AddItem(currentMon);
+                } else if (!currentRawInStock) {
                     MessageBox.Show(this,
-                        $"Món '{mon.TenMonAn}' hiện đã hết hàng trong kho (số lượng còn: 0).",
+                        $"Món '{currentMon.TenMonAn}' hiện đã hết hàng trong kho (số lượng còn: 0).",
                         "Hết hàng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 } else {
                     MessageBox.Show(this,
-                        $"Món '{mon.TenMonAn}' chỉ còn {mon.SoLuongTon} suất trong kho và bạn đã thêm tối đa ({inCartQty} suất) vào giỏ hàng.",
+                        $"Món '{currentMon.TenMonAn}' chỉ còn {currentMon.SoLuongTon} suất trong kho và bạn đã thêm tối đa ({currentInCartQty} suất) vào giỏ hàng.",
                         "Đã đạt số lượng tối đa", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
@@ -681,7 +821,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
                 item.Quantity++;
             }
             RenderCart();
-            RenderProducts();
+            UpdateProductsInPlace();
         }
 
         // ================== LOGIC TÍNH TOÁN SMART BEST DEAL VOUCHER ==================
@@ -785,7 +925,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
                     if (item.Quantity > 1) item.Quantity--;
                     else _cart.Remove(item);
                     RenderCart();
-                    RenderProducts();
+                    UpdateProductsInPlace();
                 };
                 row.Controls.Add(btnMinus);
 
@@ -809,7 +949,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang {
                     }
                     item.Quantity++;
                     RenderCart();
-                    RenderProducts();
+                    UpdateProductsInPlace();
                 };
                 row.Controls.Add(btnPlus);
 

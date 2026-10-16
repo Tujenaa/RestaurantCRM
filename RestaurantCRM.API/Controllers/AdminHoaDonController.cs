@@ -169,20 +169,18 @@ namespace RestaurantCRM.API.Controllers
                 }
             }
 
-            // Logic hoàn kho: Hoàn lại số lượng nếu đơn hủy
+            // Logic hoàn kho: Hoàn lại số lượng nguyên liệu nếu đơn hủy
             if (newNorm == "Cancelled")
             {
                 foreach (var chiTiet in hoaDon.ChiTietHoaDon)
                 {
-                    var monAn = await _context.MonAn.FindAsync(chiTiet.MaMon);
-                    if (monAn != null && monAn.SoLuong.HasValue)
+                    var dinhLuongs = await _context.DinhLuong.Where(dl => dl.MaMon == chiTiet.MaMon).ToListAsync();
+                    foreach (var dl in dinhLuongs)
                     {
-                        monAn.SoLuong += chiTiet.SoLuong;
-
-                        // Nếu hoàn lại kho làm số lượng > 0 và món đang ở trạng thái hết hàng (không phải Discontinued), mở lại InStock
-                        if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
+                        var nl = await _context.NguyenLieu.FindAsync(dl.MaNguyenLieu);
+                        if (nl != null)
                         {
-                            monAn.TrangThai = "InStock";
+                            nl.SoLuongTon = (nl.SoLuongTon ?? 0) + (decimal)(chiTiet.SoLuong ?? 0) * dl.SoLuongCan;
                         }
                     }
                 }

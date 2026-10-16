@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace RestaurantCRM.AdminApp.Models {
@@ -13,11 +14,17 @@ namespace RestaurantCRM.AdminApp.Models {
         
         [JsonPropertyName("maLoaiMon")]
         public string MaLoaiMon { get; set; }
+
+        [JsonPropertyName("tenLoaiMon")]
+        public string TenLoaiMon { get; set; }
+
+        [JsonPropertyName("moTa")]
+        public string MoTa { get; set; }
         
         [JsonIgnore]
         public bool TrangThai {
             get => TrangThaiRaw != "Discontinued" && TrangThaiRaw != "Inactive";
-            set => TrangThaiRaw = value ? (SoLuongTon > 0 ? "InStock" : "OutOfStock") : "Discontinued";
+            set => TrangThaiRaw = value ? (SoSuatKhaDung > 0 ? "InStock" : "OutOfStock") : "Discontinued";
         }
 
         [JsonPropertyName("trangThai")]
@@ -26,8 +33,18 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("duongDanAnh")]
         public string HinhAnhUrl { get; set; }
         
+        // Tương thích ngược với UI cũ: SoLuongTon đại diện cho số suất khả dụng
         [JsonPropertyName("soLuong")]
         public int SoLuongTon { get; set; }
+
+        [JsonPropertyName("soSuatKhaDung")]
+        public int SoSuatKhaDung { get; set; }
+
+        [JsonPropertyName("giaVonUocTinh")]
+        public decimal GiaVonUocTinh { get; set; }
+
+        [JsonPropertyName("dinhLuong")]
+        public List<DinhLuongItemDto> DinhLuong { get; set; } = new List<DinhLuongItemDto>();
     }
 
     public class LoaiMonDto {

@@ -243,6 +243,15 @@ namespace RestaurantCRM.AdminApp.Controls
                 AddMenuItem(menuPanel, "Khảo sát", "📋  Khảo sát ý kiến", ref y);
                 y += 8;
 
+                AddSectionHeader(menuPanel, "BÁN HÀNG & KHO", ref y);
+                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Đơn hàng", "🧾  QUẢN LÝ ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Món ăn", "🍲  THỰC ĐƠN & MÓN ĂN", ref y);
+                AddMenuItem(menuPanel, "Kho hàng", "📦  QUẢN LÝ TỒN KHO", ref y);
+                AddMenuItem(menuPanel, "Phiếu nhập hàng", "📥  QUẢN LÝ PHIẾU NHẬP", ref y);
+                AddMenuItem(menuPanel, "Nguyên vật liệu", "🥕  NGUYÊN VẬT LIỆU", ref y);
+                AddMenuItem(menuPanel, "Nhà cung cấp", "🏢  NHÀ CUNG CẤP", ref y);
+                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
                 AddSectionHeader(menuPanel, "Bán hàng & Kho", ref y);
                 AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  Tạo đơn hàng", ref y);
                 AddMenuItem(menuPanel, "Đơn hàng", "🧾  Quản lý đơn hàng", ref y);
@@ -252,28 +261,26 @@ namespace RestaurantCRM.AdminApp.Controls
                 AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  Khuyến mãi", ref y);
                 y += 8;
 
-                AddSectionHeader(menuPanel, "Hệ thống", ref y);
-                AddMenuItem(menuPanel, "Tài khoản", "👤  Tài khoản", ref y);
-                AddMenuItem(menuPanel, "Vai trò & phân quyền", "🛡️  Vai trò & Phân quyền", ref y);
-            }
-            else if (_role == "Bán hàng")
-            {
-                AddSectionHeader(menuPanel, "Vận hành bán hàng", ref y);
-                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  Tạo đơn hàng", ref y);
-                AddMenuItem(menuPanel, "Đơn hàng", "🧾  Danh sách đơn hàng", ref y);
-                AddMenuItem(menuPanel, "Thực đơn", "🍲  Thực đơn món ăn", ref y);
-                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  Khuyến mãi", ref y);
-                AddMenuItem(menuPanel, "Kho hàng", "📦  Kiểm tra kho", ref y);
-                AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  Báo cáo doanh thu", ref y);
-            }
-            else
-            {
-                AddSectionHeader(menuPanel, "Chăm sóc khách hàng", ref y);
-                AddMenuItem(menuPanel, "Khách hàng", "👥  Khách hàng", ref y);
-                AddMenuItem(menuPanel, "Đánh giá", "⭐  Đánh giá dịch vụ", ref y);
-                AddMenuItem(menuPanel, "Phản hồi", "💬  Góp ý & Phản hồi", ref y);
-                AddMenuItem(menuPanel, "Khảo sát", "📋  Khảo sát ý kiến", ref y);
-                AddMenuItem(menuPanel, "Phân tích khách hàng", "📊  Phân tích khách hàng", ref y);
+                AddSectionHeader(menuPanel, "HỆ THỐNG", ref y);
+                AddMenuItem(menuPanel, "Tài khoản", "👤  TÀI KHOẢN", ref y);
+                AddMenuItem(menuPanel, "Vai trò & phân quyền", "🛡️  PHÂN QUYỀN", ref y);
+            } else if (_role == "Bán hàng") {
+                AddSectionHeader(menuPanel, "VẬN HÀNH BÁN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Đơn hàng", "🧾  DANH SÁCH ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Thực đơn", "🍲  THỰC ĐƠN MÓN ĂN", ref y);
+                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
+                AddMenuItem(menuPanel, "Kho hàng", "📦  KIỂM TRA KHO", ref y);
+                AddMenuItem(menuPanel, "Phiếu nhập hàng", "📥  QUẢN LÝ PHIẾU NHẬP", ref y);
+                AddMenuItem(menuPanel, "Nguyên vật liệu", "🥕  NGUYÊN VẬT LIỆU", ref y);
+                AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  BÁO CÁO DOANH THU", ref y);
+            } else {
+                AddSectionHeader(menuPanel, "CHĂM SÓC KHÁCH HÀNG", ref y);
+                AddMenuItem(menuPanel, "Khách hàng", "👥  TEAM / KHÁCH HÀNG", ref y);
+                AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
+                AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
+                AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
+                AddMenuItem(menuPanel, "Phân tích khách hàng", "📊  PHÂN TÍCH KHÁCH", ref y);
             }
         }
 

@@ -121,6 +121,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 case "Món ăn": case "Thực đơn": return new MonAnForm();
                 case "Loại món": return new LoaiMonForm();
                 case "Kho hàng": case "Tồn kho": return new KhoForm();
+                case "Nguyên vật liệu": case "Nguyên liệu": return new NguyenLieuForm();
                 case "Nhà cung cấp": return new NhaCungCapForm();
                 case "Phiếu nhập hàng": case "Phiếu nhập": return new PhieuNhapForm();
                 case "Khuyến mãi": return new KhuyenMaiForm();

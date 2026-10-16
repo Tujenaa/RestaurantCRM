@@ -239,8 +239,10 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Models\MonAnDto.cs" />
+    <Compile Include="Models\NguyenLieuDto.cs" />
     <Compile Include="Models\DashboardMetricsDto.cs" />
     <Compile Include="Services\LoaiMonService.cs" />
+    <Compile Include="Services\NguyenLieuService.cs" />
     <Compile Include="Services\PhieuNhapService.cs" />
     <Compile Include="Services\HoaDonService.cs" />
     <Compile Include="Forms\MonAn\MonAnForm.Designer.cs">
@@ -269,6 +271,18 @@
     </Compile>
     <Compile Include="Forms\Kho\DieuChinhTonKhoDialog.Designer.cs">
       <DependentUpon>DieuChinhTonKhoDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuDialog.Designer.cs">
+      <DependentUpon>NguyenLieuDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuForm.Designer.cs">
+      <DependentUpon>NguyenLieuForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Models\NhaCungCapDto.cs" />
     <Compile Include="Models\TonKhoDto.cs" />

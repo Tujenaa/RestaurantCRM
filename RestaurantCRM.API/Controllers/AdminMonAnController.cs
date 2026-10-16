@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.API.Data;
+using RestaurantCRM.API.DTOs;
 using RestaurantCRM.API.Models;
 
 namespace RestaurantCRM.API.Controllers
@@ -16,158 +17,330 @@ namespace RestaurantCRM.API.Controllers
             _context = context;
         }
 
-        // GET: api/AdminMonAn - Lấy toàn bộ danh sách món ăn (kể cả món ngừng kinh doanh)
+        // GET: api/AdminMonAn - Lấy danh sách món ăn kèm định lượng, giá vốn ước tính và số suất khả dụng
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAns()
+        public async Task<ActionResult<IEnumerable<object>>> GetMonAns()
         {
-            // Admin cần xem toàn bộ các món (kể cả ngừng kinh doanh)
-            return await _context.MonAn
+            var dsMonAn = await _context.MonAn
+                .Include(m => m.MaLoaiMonNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var result = dsMonAn.Select(m =>
+            {
+                var dinhLuongList = m.DinhLuong.Select(dl => new DinhLuongDetailDto
+                {
+                    MaDinhLuong = dl.MaDinhLuong,
+                    MaNguyenLieu = dl.MaNguyenLieu,
+                    TenNguyenLieu = dl.MaNguyenLieuNavigation?.TenNguyenLieu ?? "",
+                    DonViTinh = dl.MaNguyenLieuNavigation?.DonViTinh ?? "",
+                    SoLuongCan = dl.SoLuongCan,
+                    GiaNhapGanNhat = dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0
+                }).ToList();
+
+                // Tính giá vốn ước tính = SUM(soLuongCan * giaNhapGanNhat)
+                double giaVonUocTinh = dinhLuongList.Sum(dl => dl.ThanhTienGiaVon);
+
+                // Tính số suất có thể phục vụ từ tồn kho nguyên liệu hiện có: Min(Floor(TonKho / SoLuongCan))
+                int soSuatKhaDung = 0;
+                if (m.DinhLuong.Any())
+                {
+                    soSuatKhaDung = (int)m.DinhLuong.Min(dl =>
+                    {
+                        var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                        if (dl.SoLuongCan <= 0) return 0;
+                        return Math.Floor(ton / dl.SoLuongCan);
+                    });
+                    if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+                }
+
+                return new
+                {
+                    m.MaMon,
+                    m.TenMon,
+                    m.MaLoaiMon,
+                    TenLoaiMon = m.MaLoaiMonNavigation?.TenLoaiMon,
+                    m.DonGia,
+                    m.MoTa,
+                    m.DuongDanAnh,
+                    m.TrangThai,
+                    GiaVonUocTinh = giaVonUocTinh,
+                    SoSuatKhaDung = soSuatKhaDung,
+                    // Giữ trường SoLuong để tương thích ngược với WinForms/Web
+                    SoLuong = soSuatKhaDung,
+                    DinhLuong = dinhLuongList
+                };
+            }).ToList();
+
+            return Ok(result);
         }
 
-        // GET: api/AdminMonAn/5 - Xem chi tiết 1 món ăn
+        // GET: api/AdminMonAn/{id} - Xem chi tiết 1 món ăn cùng công thức định lượng (BOM)
         [HttpGet("{id}")]
-        public async Task<ActionResult<MonAn>> GetMonAn(string id)
+        public async Task<ActionResult<object>> GetMonAn(string id)
         {
-            var monAn = await _context.MonAn.FindAsync(id);
+            var monAn = await _context.MonAn
+                .Include(m => m.MaLoaiMonNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)
             {
-                return NotFound();
+                return NotFound("Không tìm thấy món ăn.");
             }
 
-            return monAn;
+            var dinhLuongList = monAn.DinhLuong.Select(dl => new DinhLuongDetailDto
+            {
+                MaDinhLuong = dl.MaDinhLuong,
+                MaNguyenLieu = dl.MaNguyenLieu,
+                TenNguyenLieu = dl.MaNguyenLieuNavigation?.TenNguyenLieu ?? "",
+                DonViTinh = dl.MaNguyenLieuNavigation?.DonViTinh ?? "",
+                SoLuongCan = dl.SoLuongCan,
+                GiaNhapGanNhat = dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0
+            }).ToList();
+
+            double giaVonUocTinh = dinhLuongList.Sum(dl => dl.ThanhTienGiaVon);
+
+            int soSuatKhaDung = 0;
+            if (monAn.DinhLuong.Any())
+            {
+                soSuatKhaDung = (int)monAn.DinhLuong.Min(dl =>
+                {
+                    var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                    if (dl.SoLuongCan <= 0) return 0;
+                    return Math.Floor(ton / dl.SoLuongCan);
+                });
+                if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+            }
+
+            return Ok(new
+            {
+                monAn.MaMon,
+                monAn.TenMon,
+                monAn.MaLoaiMon,
+                TenLoaiMon = monAn.MaLoaiMonNavigation?.TenLoaiMon,
+                monAn.DonGia,
+                monAn.MoTa,
+                monAn.DuongDanAnh,
+                monAn.TrangThai,
+                GiaVonUocTinh = giaVonUocTinh,
+                SoSuatKhaDung = soSuatKhaDung,
+                SoLuong = soSuatKhaDung,
+                DinhLuong = dinhLuongList
+            });
         }
 
-        // POST: api/AdminMonAn - Thêm món ăn mới
+        // POST: api/AdminMonAn - Thêm món ăn mới kèm bảng định lượng (Database Transaction)
         [HttpPost]
-        public async Task<ActionResult<MonAn>> PostMonAn(MonAn monAn)
+        public async Task<IActionResult> PostMonAn([FromBody] TaoMonAnRequest request)
         {
-            if (string.IsNullOrWhiteSpace(monAn.MaMon))
+            if (string.IsNullOrWhiteSpace(request.TenMon))
             {
-                monAn.MaMon = await Helpers.CodeGenerator.GenerateMaMonAnAsync(_context);
+                return BadRequest("Tên món ăn không được để trống.");
             }
 
-            if (string.IsNullOrEmpty(monAn.TrangThai) || monAn.TrangThai == "Active")
+            if (string.IsNullOrWhiteSpace(request.MaLoaiMon))
             {
-                monAn.TrangThai = "InStock";
+                return BadRequest("Vui lòng chọn loại món ăn.");
             }
 
-            // Tự động điều chỉnh trạng thái dựa trên số lượng (nếu không phải là hàng đã ngừng kinh doanh)
-            if (monAn.TrangThai != "Discontinued")
+            if (request.DonGia < 0)
             {
-                if ((monAn.SoLuong ?? 0) <= 0 && monAn.TrangThai != "InStock")
+                return BadRequest("Đơn giá món ăn không hợp lệ.");
+            }
+
+            // RÀNG BUỘC BẮT BUỘC: Món ăn phải có ít nhất 1 định lượng nguyên liệu
+            if (request.DinhLuong == null || !request.DinhLuong.Any())
+            {
+                return BadRequest("Món ăn bắt buộc phải có ít nhất 1 nguyên vật liệu định lượng.");
+            }
+
+            // Kiểm tra tính hợp lệ của từng nguyên liệu
+            var dsMaNl = request.DinhLuong.Select(d => d.MaNguyenLieu).Distinct().ToList();
+            var countExistingNl = await _context.NguyenLieu.CountAsync(nl => dsMaNl.Contains(nl.MaNguyenLieu));
+            if (countExistingNl != dsMaNl.Count)
+            {
+                return BadRequest("Danh sách định lượng chứa mã nguyên liệu không tồn tại trong hệ thống.");
+            }
+
+            foreach (var item in request.DinhLuong)
+            {
+                if (item.SoLuongCan <= 0)
                 {
-                    monAn.TrangThai = "OutOfStock";
-                }
-                else if ((monAn.SoLuong ?? 0) > 0 && monAn.TrangThai == "OutOfStock")
-                {
-                    monAn.TrangThai = "InStock";
+                    return BadRequest($"Số lượng tiêu hao cho nguyên liệu '{item.MaNguyenLieu}' phải lớn hơn 0.");
                 }
             }
 
-            _context.MonAn.Add(monAn);
+            // Mở Database Transaction để đảm bảo tính toàn vẹn
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                if (MonAnExists(monAn.MaMon))
-                {
-                    return Conflict("Mã món ăn đã tồn tại.");
-                }
-                else
-                {
-                    throw;
-                }
-            }
+                // 1. Tạo Món ăn mới
+                var maMon = await Helpers.CodeGenerator.GenerateMaMonAnAsync(_context);
 
-            return CreatedAtAction(nameof(GetMonAn), new { id = monAn.MaMon }, monAn);
+                string trangThai = "InStock";
+                if (!string.IsNullOrWhiteSpace(request.TrangThai))
+                {
+                    trangThai = (request.TrangThai == "Discontinued" || request.TrangThai == "Inactive")
+                        ? "Discontinued"
+                        : (request.TrangThai == "OutOfStock" ? "OutOfStock" : "InStock");
+                }
+
+                var monAn = new MonAn
+                {
+                    MaMon = maMon,
+                    TenMon = request.TenMon.Trim(),
+                    MaLoaiMon = request.MaLoaiMon,
+                    DonGia = request.DonGia,
+                    MoTa = request.MoTa,
+                    DuongDanAnh = request.DuongDanAnh,
+                    TrangThai = trangThai
+                };
+
+                _context.MonAn.Add(monAn);
+                await _context.SaveChangesAsync();
+
+                // 2. Thêm các bản ghi Định lượng
+                int stt = 1;
+                foreach (var item in request.DinhLuong)
+                {
+                    var maDl = await Helpers.CodeGenerator.GenerateMaDinhLuongAsync(_context);
+                    var dinhLuong = new DinhLuong
+                    {
+                        MaDinhLuong = maDl,
+                        MaMon = maMon,
+                        MaNguyenLieu = item.MaNguyenLieu,
+                        SoLuongCan = item.SoLuongCan
+                    };
+                    _context.DinhLuong.Add(dinhLuong);
+                    await _context.SaveChangesAsync(); // Lưu từng dòng để đảm bảo sinh mã duy nhất
+                    stt++;
+                }
+
+                await transaction.CommitAsync();
+
+                return CreatedAtAction(nameof(GetMonAn), new { id = maMon }, new
+                {
+                    Message = "Thêm món ăn và công thức định lượng thành công.",
+                    MaMon = maMon,
+                    TenMon = monAn.TenMon
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, $"Lỗi hệ thống khi lưu món ăn: {ex.Message}");
+            }
         }
 
-        // PUT: api/AdminMonAn/5 - Sửa thông tin món ăn
+        // PUT: api/AdminMonAn/{id} - Sửa món ăn & cập nhật công thức định lượng (Database Transaction)
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutMonAn(string id, MonAn monAn)
+        public async Task<IActionResult> PutMonAn(string id, [FromBody] CapNhatMonAnRequest request)
         {
-            if (id != monAn.MaMon)
-            {
-                return BadRequest("Mã món ăn không khớp.");
-            }
+            var monAn = await _context.MonAn
+                .Include(m => m.DinhLuong)
+                .FirstOrDefaultAsync(m => m.MaMon == id);
 
-            var existing = await _context.MonAn.FindAsync(id);
-            if (existing == null)
+            if (monAn == null)
             {
                 return NotFound("Không tìm thấy món ăn để cập nhật.");
             }
 
-            // Cập nhật các trường thông tin cơ bản
-            if (!string.IsNullOrWhiteSpace(monAn.TenMon))
+            if (string.IsNullOrWhiteSpace(request.TenMon))
             {
-                existing.TenMon = monAn.TenMon;
-            }
-            if (monAn.DonGia.HasValue)
-            {
-                existing.DonGia = monAn.DonGia;
-            }
-            if (!string.IsNullOrWhiteSpace(monAn.MaLoaiMon))
-            {
-                existing.MaLoaiMon = monAn.MaLoaiMon;
-            }
-            if (monAn.DuongDanAnh != null)
-            {
-                existing.DuongDanAnh = monAn.DuongDanAnh;
-            }
-            if (monAn.MoTa != null)
-            {
-                existing.MoTa = monAn.MoTa;
+                return BadRequest("Tên món ăn không được để trống.");
             }
 
-            // Cập nhật trạng thái nếu có
-            if (!string.IsNullOrWhiteSpace(monAn.TrangThai))
+            if (request.DonGia < 0)
             {
-                if (monAn.TrangThai == "Inactive")
-                {
-                    existing.TrangThai = "Discontinued";
-                }
-                else
-                {
-                    existing.TrangThai = monAn.TrangThai;
-                }
+                return BadRequest("Đơn giá không hợp lệ.");
             }
 
-            // Giữ nguyên số lượng hiện có khi sửa món, chỉ thay đổi nếu có gửi số lượng cụ thể > 0
-            if (monAn.SoLuong.HasValue && monAn.SoLuong.Value > 0)
+            // Nếu người dùng gửi kèm danh sách định lượng mới, bắt buộc phải có ít nhất 1 dòng
+            if (request.DinhLuong != null && !request.DinhLuong.Any())
             {
-                existing.SoLuong = monAn.SoLuong.Value;
+                return BadRequest("Món ăn bắt buộc phải có ít nhất 1 nguyên vật liệu định lượng.");
             }
 
-            // Tự động điều chỉnh trạng thái InStock / OutOfStock dựa trên số lượng (nếu không phải là hàng đã ngừng kinh doanh)
-            if (existing.TrangThai != "Discontinued")
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                if ((existing.SoLuong ?? 0) <= 0)
+                // 1. Cập nhật thông tin cơ bản món ăn
+                monAn.TenMon = request.TenMon.Trim();
+                monAn.DonGia = request.DonGia;
+                if (!string.IsNullOrWhiteSpace(request.MaLoaiMon))
                 {
-                    existing.TrangThai = "OutOfStock";
+                    monAn.MaLoaiMon = request.MaLoaiMon;
                 }
-                else
+                if (request.DuongDanAnh != null)
                 {
-                    existing.TrangThai = "InStock";
+                    monAn.DuongDanAnh = request.DuongDanAnh;
                 }
-            }
+                if (request.MoTa != null)
+                {
+                    monAn.MoTa = request.MoTa;
+                }
 
-            await _context.SaveChangesAsync();
-            return NoContent();
+                if (!string.IsNullOrWhiteSpace(request.TrangThai))
+                {
+                    monAn.TrangThai = (request.TrangThai == "Discontinued" || request.TrangThai == "Inactive")
+                        ? "Discontinued"
+                        : (request.TrangThai == "OutOfStock" ? "OutOfStock" : "InStock");
+                }
+
+                // 2. Cập nhật danh sách định lượng (nếu client gửi danh sách mới)
+                if (request.DinhLuong != null && request.DinhLuong.Any())
+                {
+                    // Validate các mã nguyên liệu
+                    var dsMaNl = request.DinhLuong.Select(d => d.MaNguyenLieu).Distinct().ToList();
+                    var countExisting = await _context.NguyenLieu.CountAsync(nl => dsMaNl.Contains(nl.MaNguyenLieu));
+                    if (countExisting != dsMaNl.Count)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest("Danh sách định lượng chứa nguyên liệu không hợp lệ.");
+                    }
+
+                    // Xóa các dòng định lượng cũ
+                    _context.DinhLuong.RemoveRange(monAn.DinhLuong);
+                    await _context.SaveChangesAsync();
+
+                    // Thêm lại các dòng định lượng mới
+                    foreach (var item in request.DinhLuong)
+                    {
+                        var maDl = await Helpers.CodeGenerator.GenerateMaDinhLuongAsync(_context);
+                        _context.DinhLuong.Add(new DinhLuong
+                        {
+                            MaDinhLuong = maDl,
+                            MaMon = id,
+                            MaNguyenLieu = item.MaNguyenLieu,
+                            SoLuongCan = item.SoLuongCan
+                        });
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { Message = "Cập nhật món ăn và định lượng thành công." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, $"Lỗi khi cập nhật món ăn: {ex.Message}");
+            }
         }
 
-        // DELETE: api/AdminMonAn/5 - Xóa cứng món ăn có kiểm tra điều kiện ràng buộc
+        // DELETE: api/AdminMonAn/{id} - Xóa món ăn (kiểm tra ràng buộc đơn hàng)
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMonAn(string id)
         {
             var monAn = await _context.MonAn
                 .Include(m => m.ChiTietHoaDon)
-                .Include(m => m.ChiTietPhieuNhap)
-                .Include(m => m.DanhGia) // Đã sửa DanhGias thành DanhGia theo đúng Model
+                .Include(m => m.DinhLuong)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)
@@ -175,21 +348,17 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy món ăn để xóa.");
             }
 
-            // Kiểm tra ràng buộc trước khi xóa cứng
-            if (monAn.ChiTietHoaDon.Any() || monAn.ChiTietPhieuNhap.Any())
+            // Nếu món đã từng có trong hóa đơn bán, không cho xóa cứng để bảo vệ dữ liệu kế toán
+            if (monAn.ChiTietHoaDon.Any())
             {
-                return BadRequest("Không thể xóa món ăn này vì đã có dữ liệu liên quan trong Đơn hàng hoặc Phiếu nhập. Vui lòng chuyển trạng thái thành 'Ngừng kinh doanh' (Inactive) thay vì xóa.");
+                return BadRequest("Không thể xóa món ăn này vì đã phát sinh hóa đơn bán hàng. Vui lòng chuyển trạng thái sang 'Ngừng kinh doanh' (Discontinued).");
             }
 
+            // Khóa ngoại ON DELETE CASCADE sẽ tự động xóa các dòng DINH_LUONG liên quan
             _context.MonAn.Remove(monAn);
             await _context.SaveChangesAsync();
 
-            return NoContent();
-        }
-
-        private bool MonAnExists(string id)
-        {
-            return _context.MonAn.Any(e => e.MaMon == id);
+            return Ok(new { Message = "Đã xóa món ăn thành công." });
         }
     }
 }

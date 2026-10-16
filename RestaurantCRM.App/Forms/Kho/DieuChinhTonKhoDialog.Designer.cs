@@ -39,9 +39,9 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblTenMon.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.lblTenMon.Location = new System.Drawing.Point(20, 20);
             this.lblTenMon.Name = "lblTenMon";
-            this.lblTenMon.Size = new System.Drawing.Size(55, 15);
+            this.lblTenMon.Size = new System.Drawing.Size(74, 15);
             this.lblTenMon.TabIndex = 0;
-            this.lblTenMon.Text = "Tên món:";
+            this.lblTenMon.Text = "Nguyên liệu:";
             // 
             // txtTenMon
             // 
@@ -72,6 +72,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.txtSoLuongHienTai.ReadOnly = true;
             this.txtSoLuongHienTai.Size = new System.Drawing.Size(185, 24);
             this.txtSoLuongHienTai.TabIndex = 3;
+            this.txtSoLuongHienTai.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // lblSoLuongMoi
             // 
@@ -85,12 +86,15 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             // 
             // numSoLuongMoi
             // 
+            this.numSoLuongMoi.DecimalPlaces = 2;
             this.numSoLuongMoi.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.numSoLuongMoi.Increment = new decimal(new int[] { 5, 0, 0, 65536 });
             this.numSoLuongMoi.Location = new System.Drawing.Point(125, 92);
-            this.numSoLuongMoi.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
+            this.numSoLuongMoi.Maximum = new decimal(new int[] { 1000000, 0, 0, 0 });
             this.numSoLuongMoi.Name = "numSoLuongMoi";
             this.numSoLuongMoi.Size = new System.Drawing.Size(185, 24);
             this.numSoLuongMoi.TabIndex = 5;
+            this.numSoLuongMoi.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // lblGhiChu
             // 
