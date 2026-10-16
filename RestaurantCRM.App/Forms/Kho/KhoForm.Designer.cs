@@ -14,7 +14,6 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
         private System.Windows.Forms.ComboBox cboBoLoc;
         private System.Windows.Forms.Button btnLamMoi;
         private System.Windows.Forms.Button btnThemNguyenLieu;
-        private System.Windows.Forms.Button btnKiemKe;
         private System.Windows.Forms.Button btnLapPhieuNhap;
         private System.Windows.Forms.DataGridView dgvKho;
         private System.Windows.Forms.DataGridViewTextBoxColumn colMaMon;
@@ -47,7 +46,6 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.cboBoLoc = new System.Windows.Forms.ComboBox();
             this.btnLamMoi = new System.Windows.Forms.Button();
             this.btnThemNguyenLieu = new System.Windows.Forms.Button();
-            this.btnKiemKe = new System.Windows.Forms.Button();
             this.btnLapPhieuNhap = new System.Windows.Forms.Button();
             this.dgvKho = new System.Windows.Forms.DataGridView();
             this.colMaMon = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -80,7 +78,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.lblSub.Name = "lblSub";
             this.lblSub.Size = new System.Drawing.Size(430, 15);
             this.lblSub.TabIndex = 1;
-            this.lblSub.Text = "Theo dõi số lượng tồn kho nguyên liệu, đơn vị tính và cảnh báo hết hàng.";
+            this.lblSub.Text = "Theo dõi số lượng tồn kho nguyên liệu, đơn vị tính và cảnh báo hết hàng. ℹ️ (Những món ngừng nhập chuyển màu xám)";
             // 
             // pnlThongKe
             // 
@@ -205,29 +203,13 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.btnThemNguyenLieu.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnThemNguyenLieu.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnThemNguyenLieu.ForeColor = System.Drawing.Color.White;
-            this.btnThemNguyenLieu.Location = new System.Drawing.Point(520, 126);
+            this.btnThemNguyenLieu.Location = new System.Drawing.Point(596, 126);
             this.btnThemNguyenLieu.Name = "btnThemNguyenLieu";
-            this.btnThemNguyenLieu.Size = new System.Drawing.Size(110, 27);
+            this.btnThemNguyenLieu.Size = new System.Drawing.Size(126, 27);
             this.btnThemNguyenLieu.TabIndex = 8;
-            this.btnThemNguyenLieu.Text = "＋ Thêm mới";
+            this.btnThemNguyenLieu.Text = "🥕 Nguyên liệu";
             this.btnThemNguyenLieu.UseVisualStyleBackColor = false;
             this.btnThemNguyenLieu.Click += new System.EventHandler(this.btnThemNguyenLieu_Click);
-            // 
-            // btnKiemKe
-            // 
-            this.btnKiemKe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnKiemKe.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
-            this.btnKiemKe.FlatAppearance.BorderSize = 0;
-            this.btnKiemKe.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnKiemKe.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnKiemKe.ForeColor = System.Drawing.Color.White;
-            this.btnKiemKe.Location = new System.Drawing.Point(636, 126);
-            this.btnKiemKe.Name = "btnKiemKe";
-            this.btnKiemKe.Size = new System.Drawing.Size(110, 27);
-            this.btnKiemKe.TabIndex = 9;
-            this.btnKiemKe.Text = "✎ Điều chỉnh";
-            this.btnKiemKe.UseVisualStyleBackColor = false;
-            this.btnKiemKe.Click += new System.EventHandler(this.btnKiemKe_Click);
             // 
             // btnLapPhieuNhap
             // 
@@ -237,10 +219,10 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.btnLapPhieuNhap.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnLapPhieuNhap.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnLapPhieuNhap.ForeColor = System.Drawing.Color.White;
-            this.btnLapPhieuNhap.Location = new System.Drawing.Point(752, 126);
+            this.btnLapPhieuNhap.Location = new System.Drawing.Point(732, 126);
             this.btnLapPhieuNhap.Name = "btnLapPhieuNhap";
-            this.btnLapPhieuNhap.Size = new System.Drawing.Size(106, 27);
-            this.btnLapPhieuNhap.TabIndex = 10;
+            this.btnLapPhieuNhap.Size = new System.Drawing.Size(126, 27);
+            this.btnLapPhieuNhap.TabIndex = 9;
             this.btnLapPhieuNhap.Text = "📥 Nhập hàng";
             this.btnLapPhieuNhap.UseVisualStyleBackColor = false;
             this.btnLapPhieuNhap.Click += new System.EventHandler(this.btnLapPhieuNhap_Click);
@@ -361,7 +343,6 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             this.ClientSize = new System.Drawing.Size(874, 541);
             this.Controls.Add(this.dgvKho);
             this.Controls.Add(this.btnLapPhieuNhap);
-            this.Controls.Add(this.btnKiemKe);
             this.Controls.Add(this.btnThemNguyenLieu);
             this.Controls.Add(this.btnLamMoi);
             this.Controls.Add(this.cboBoLoc);

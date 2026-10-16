@@ -156,16 +156,39 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             _dinhLuongList.ListChanged += (s, e) => RecalculateCogs();
         }
 
+        private async Task LoadLoaiMonDropdown(string selectedMa = null) {
+            try {
+                var loaiMonList = await _loaiMonService.GetAllAsync() ?? new List<LoaiMonDto>();
+                cboLoaiMon.DataSource = null;
+                cboLoaiMon.DisplayMember = "TenLoaiMon";
+                cboLoaiMon.ValueMember = "MaLoaiMon";
+                cboLoaiMon.DataSource = loaiMonList;
+
+                if (!string.IsNullOrEmpty(selectedMa)) {
+                    cboLoaiMon.SelectedValue = selectedMa;
+                } else if (_isEdit && _monAnCurrent != null) {
+                    cboLoaiMon.SelectedValue = _monAnCurrent.MaLoaiMon;
+                }
+            } catch (Exception ex) {
+                MessageBox.Show("Lỗi khi tải danh mục loại món: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void btnThemLoaiMon_Click(object sender, EventArgs e) {
+            using (var form = new LoaiMonForm()) {
+                form.ShowDialog(this);
+                string current = cboLoaiMon.SelectedValue?.ToString();
+                await LoadLoaiMonDropdown(current);
+            }
+        }
+
         private async void MonAnDialog_Load(object sender, EventArgs e) {
             try {
                 // 1. Tải danh mục loại món
-                var loaiMonList = await _loaiMonService.GetAllAsync() ?? new List<LoaiMonDto>();
-                cboLoaiMon.DataSource = loaiMonList;
-                cboLoaiMon.DisplayMember = "TenLoaiMon";
-                cboLoaiMon.ValueMember = "MaLoaiMon";
+                await LoadLoaiMonDropdown();
 
-                // 2. Tải danh sách nguyên vật liệu kho
-                _allNguyenLieu = await _nguyenLieuService.GetAllAsync() ?? new List<NguyenLieuDto>();
+                // 2. Tải danh sách nguyên vật liệu kho (chỉ lấy các nguyên liệu Active)
+                _allNguyenLieu = await _nguyenLieuService.GetAllAsync("Active") ?? new List<NguyenLieuDto>();
                 cboNguyenLieu.DataSource = _allNguyenLieu;
                 cboNguyenLieu.DisplayMember = "DisplayText";
                 cboNguyenLieu.ValueMember = "MaNguyenLieu";
@@ -176,9 +199,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 }
 
                 // 3. Nếu là chế độ chỉnh sửa: Tải chi tiết món ăn và danh sách định lượng (BOM)
+                lblIconBadge.Text = "🍲";
                 if (_isEdit) {
                     this.Text = $"Cập nhật Món Ăn: {_monAnCurrent.TenMonAn} ({_monAnCurrent.MaMonAn})";
-                    lblFormTitle.Text = $"🍲 Cập Nhật Món Ăn: {_monAnCurrent.TenMonAn}";
+                    lblFormTitle.Text = $"Cập Nhật Món Ăn: {_monAnCurrent.TenMonAn}";
                     lblFormSub.Text = $"Mã món: {_monAnCurrent.MaMonAn} - Điều chỉnh thông tin chi tiết và định mức nguyên vật liệu tiêu hao";
                     txtTenMon.Text = _monAnCurrent.TenMonAn;
                     numGia.Value = _monAnCurrent.Gia;
@@ -208,7 +232,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                     }
                 } else {
                     this.Text = "Thêm Món Ăn Mới & Thiết Lập Công Thức Định Lượng (BOM)";
-                    lblFormTitle.Text = "🍲 Thiết Lập Món Ăn Mới & Công Thức Định Lượng (BOM)";
+                    lblFormTitle.Text = "Thiết Lập Món Ăn Mới & Công Thức Định Lượng (BOM)";
                     lblFormSub.Text = "Khai báo thông tin chi tiết món ăn, giá bán và định mức nguyên vật liệu tiêu hao từ kho khi bán hàng.";
                 }
 

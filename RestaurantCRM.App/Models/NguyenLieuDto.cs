@@ -22,6 +22,12 @@ namespace RestaurantCRM.AdminApp.Models {
 
         [JsonIgnore]
         public string DisplayText => $"{TenNguyenLieu} ({DonViTinh})";
+
+        [JsonIgnore]
+        public bool IsActive => !string.Equals(TrangThai, "Inactive", System.StringComparison.OrdinalIgnoreCase);
+
+        [JsonIgnore]
+        public string TrangThaiHienThi => IsActive ? "🟢 Đang nhập" : "⚪ Ngừng nhập";
     }
 
     public class DinhLuongItemDto {

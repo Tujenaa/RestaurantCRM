@@ -227,6 +227,8 @@ namespace RestaurantCRM.AdminApp.Controls {
                 AddMenuItem(menuPanel, "Đơn hàng", "🧾  QUẢN LÝ ĐƠN HÀNG", ref y);
                 AddMenuItem(menuPanel, "Món ăn", "🍲  THỰC ĐƠN & MÓN ĂN", ref y);
                 AddMenuItem(menuPanel, "Kho hàng", "📦  QUẢN LÝ TỒN KHO", ref y);
+                AddMenuItem(menuPanel, "Phiếu nhập hàng", "📥  QUẢN LÝ PHIẾU NHẬP", ref y);
+                AddMenuItem(menuPanel, "Nguyên vật liệu", "🥕  NGUYÊN VẬT LIỆU", ref y);
                 AddMenuItem(menuPanel, "Nhà cung cấp", "🏢  NHÀ CUNG CẤP", ref y);
                 AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
                 y += 8;
@@ -241,6 +243,8 @@ namespace RestaurantCRM.AdminApp.Controls {
                 AddMenuItem(menuPanel, "Thực đơn", "🍲  THỰC ĐƠN MÓN ĂN", ref y);
                 AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
                 AddMenuItem(menuPanel, "Kho hàng", "📦  KIỂM TRA KHO", ref y);
+                AddMenuItem(menuPanel, "Phiếu nhập hàng", "📥  QUẢN LÝ PHIẾU NHẬP", ref y);
+                AddMenuItem(menuPanel, "Nguyên vật liệu", "🥕  NGUYÊN VẬT LIỆU", ref y);
                 AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  BÁO CÁO DOANH THU", ref y);
             } else {
                 AddSectionHeader(menuPanel, "CHĂM SÓC KHÁCH HÀNG", ref y);

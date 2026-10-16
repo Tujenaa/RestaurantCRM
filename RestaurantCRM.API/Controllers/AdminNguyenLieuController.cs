@@ -16,12 +16,16 @@ namespace RestaurantCRM.API.Controllers
             _context = context;
         }
 
-        // GET: api/AdminNguyenLieu - Lấy danh sách tất cả nguyên vật liệu
+        // GET: api/AdminNguyenLieu - Lấy danh sách tất cả nguyên vật liệu (có lọc theo trạng thái nếu có)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<NguyenLieu>>> GetNguyenLieus()
+        public async Task<ActionResult<IEnumerable<NguyenLieu>>> GetNguyenLieus([FromQuery] string? trangThai = null)
         {
-            return await _context.NguyenLieu
-                .AsNoTracking()
+            var query = _context.NguyenLieu.AsNoTracking();
+            if (!string.IsNullOrWhiteSpace(trangThai))
+            {
+                query = query.Where(nl => nl.TrangThai == trangThai);
+            }
+            return await query
                 .OrderBy(nl => nl.TenNguyenLieu)
                 .ToListAsync();
         }

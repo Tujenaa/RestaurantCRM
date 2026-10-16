@@ -4,6 +4,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
 
         // Dải Header hiện đại phía trên
         private System.Windows.Forms.Panel pnlHeader;
+        private System.Windows.Forms.Label lblIconBadge;
         private System.Windows.Forms.Label lblFormTitle;
         private System.Windows.Forms.Label lblFormSub;
         private System.Windows.Forms.Panel pnlHeaderDivider;
@@ -14,6 +15,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         private System.Windows.Forms.TextBox txtTenMon;
         private System.Windows.Forms.Label lblLoaiMon;
         private System.Windows.Forms.ComboBox cboLoaiMon;
+        private System.Windows.Forms.Button btnThemLoaiMon;
+        private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.Label lblGia;
         private System.Windows.Forms.NumericUpDown numGia;
         private System.Windows.Forms.CheckBox chkTrangThai;
@@ -55,7 +58,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         }
 
         private void InitializeComponent() {
+            this.components = new System.ComponentModel.Container();
             this.pnlHeader = new System.Windows.Forms.Panel();
+            this.lblIconBadge = new System.Windows.Forms.Label();
             this.lblFormTitle = new System.Windows.Forms.Label();
             this.lblFormSub = new System.Windows.Forms.Label();
             this.pnlHeaderDivider = new System.Windows.Forms.Panel();
@@ -65,6 +70,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.txtTenMon = new System.Windows.Forms.TextBox();
             this.lblLoaiMon = new System.Windows.Forms.Label();
             this.cboLoaiMon = new System.Windows.Forms.ComboBox();
+            this.btnThemLoaiMon = new System.Windows.Forms.Button();
+            this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.lblGia = new System.Windows.Forms.Label();
             this.numGia = new System.Windows.Forms.NumericUpDown();
             this.chkTrangThai = new System.Windows.Forms.CheckBox();
@@ -111,26 +118,38 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // pnlHeader
             // 
             this.pnlHeader.BackColor = System.Drawing.Color.White;
+            this.pnlHeader.Controls.Add(this.lblIconBadge);
             this.pnlHeader.Controls.Add(this.pnlHeaderDivider);
             this.pnlHeader.Controls.Add(this.lblFormSub);
             this.pnlHeader.Controls.Add(this.lblFormTitle);
             this.pnlHeader.Dock = System.Windows.Forms.DockStyle.Top;
             this.pnlHeader.Location = new System.Drawing.Point(0, 0);
             this.pnlHeader.Name = "pnlHeader";
-            this.pnlHeader.Size = new System.Drawing.Size(1024, 60);
+            this.pnlHeader.Size = new System.Drawing.Size(1060, 62);
             this.pnlHeader.TabIndex = 4;
+
+            // 
+            // lblIconBadge
+            // 
+            this.lblIconBadge.Font = new System.Drawing.Font("Segoe UI Emoji", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.lblIconBadge.Location = new System.Drawing.Point(16, 12);
+            this.lblIconBadge.Name = "lblIconBadge";
+            this.lblIconBadge.Size = new System.Drawing.Size(36, 36);
+            this.lblIconBadge.TabIndex = 3;
+            this.lblIconBadge.Text = "🍲";
+            this.lblIconBadge.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 
             // 
             // lblFormTitle
             // 
             this.lblFormTitle.AutoSize = true;
-            this.lblFormTitle.Font = new System.Drawing.Font("Segoe UI", 12.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.lblFormTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.lblFormTitle.ForeColor = System.Drawing.Color.FromArgb(15, 23, 42);
-            this.lblFormTitle.Location = new System.Drawing.Point(18, 9);
+            this.lblFormTitle.Location = new System.Drawing.Point(56, 10);
             this.lblFormTitle.Name = "lblFormTitle";
-            this.lblFormTitle.Size = new System.Drawing.Size(465, 23);
+            this.lblFormTitle.Size = new System.Drawing.Size(465, 21);
             this.lblFormTitle.TabIndex = 0;
-            this.lblFormTitle.Text = "🍲 Thiết Lập Món Ăn Mới & Công Thức Định Lượng (BOM)";
+            this.lblFormTitle.Text = "Thiết Lập Món Ăn Mới && Công Thức Định Lượng (BOM)";
 
             // 
             // lblFormSub
@@ -138,7 +157,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblFormSub.AutoSize = true;
             this.lblFormSub.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.lblFormSub.ForeColor = System.Drawing.Color.FromArgb(100, 116, 139);
-            this.lblFormSub.Location = new System.Drawing.Point(21, 34);
+            this.lblFormSub.Location = new System.Drawing.Point(58, 34);
             this.lblFormSub.Name = "lblFormSub";
             this.lblFormSub.Size = new System.Drawing.Size(532, 15);
             this.lblFormSub.TabIndex = 1;
@@ -149,9 +168,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // 
             this.pnlHeaderDivider.BackColor = System.Drawing.Color.FromArgb(226, 232, 240);
             this.pnlHeaderDivider.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlHeaderDivider.Location = new System.Drawing.Point(0, 59);
+            this.pnlHeaderDivider.Location = new System.Drawing.Point(0, 61);
             this.pnlHeaderDivider.Name = "pnlHeaderDivider";
-            this.pnlHeaderDivider.Size = new System.Drawing.Size(1024, 1);
+            this.pnlHeaderDivider.Size = new System.Drawing.Size(1060, 1);
             this.pnlHeaderDivider.TabIndex = 2;
 
             // 
@@ -167,6 +186,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.grpThongTinCoBan.Controls.Add(this.chkTrangThai);
             this.grpThongTinCoBan.Controls.Add(this.numGia);
             this.grpThongTinCoBan.Controls.Add(this.lblGia);
+            this.grpThongTinCoBan.Controls.Add(this.btnThemLoaiMon);
             this.grpThongTinCoBan.Controls.Add(this.cboLoaiMon);
             this.grpThongTinCoBan.Controls.Add(this.lblLoaiMon);
             this.grpThongTinCoBan.Controls.Add(this.txtTenMon);
@@ -175,10 +195,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.grpThongTinCoBan.ForeColor = System.Drawing.Color.FromArgb(30, 41, 59);
             this.grpThongTinCoBan.Location = new System.Drawing.Point(16, 72);
             this.grpThongTinCoBan.Name = "grpThongTinCoBan";
-            this.grpThongTinCoBan.Size = new System.Drawing.Size(425, 498);
+            this.grpThongTinCoBan.Size = new System.Drawing.Size(470, 508);
             this.grpThongTinCoBan.TabIndex = 0;
             this.grpThongTinCoBan.TabStop = false;
-            this.grpThongTinCoBan.Text = "  1. Thông tin món ăn & Giá bán  ";
+            this.grpThongTinCoBan.Text = "  1. Thông tin món ăn && Giá bán  ";
 
             // 
             // lblTenMon
@@ -196,9 +216,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // txtTenMon
             // 
             this.txtTenMon.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtTenMon.Location = new System.Drawing.Point(16, 45);
+            this.txtTenMon.Location = new System.Drawing.Point(16, 46);
             this.txtTenMon.Name = "txtTenMon";
-            this.txtTenMon.Size = new System.Drawing.Size(392, 24);
+            this.txtTenMon.Size = new System.Drawing.Size(436, 24);
             this.txtTenMon.TabIndex = 1;
 
             // 
@@ -221,8 +241,25 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.cboLoaiMon.FormattingEnabled = true;
             this.cboLoaiMon.Location = new System.Drawing.Point(16, 97);
             this.cboLoaiMon.Name = "cboLoaiMon";
-            this.cboLoaiMon.Size = new System.Drawing.Size(186, 23);
+            this.cboLoaiMon.Size = new System.Drawing.Size(166, 23);
             this.cboLoaiMon.TabIndex = 3;
+
+            // 
+            // btnThemLoaiMon
+            // 
+            this.btnThemLoaiMon.BackColor = System.Drawing.Color.FromArgb(238, 242, 255);
+            this.btnThemLoaiMon.FlatAppearance.BorderSize = 0;
+            this.btnThemLoaiMon.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnThemLoaiMon.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnThemLoaiMon.ForeColor = System.Drawing.Color.FromArgb(79, 70, 229);
+            this.btnThemLoaiMon.Location = new System.Drawing.Point(188, 96);
+            this.btnThemLoaiMon.Name = "btnThemLoaiMon";
+            this.btnThemLoaiMon.Size = new System.Drawing.Size(32, 25);
+            this.btnThemLoaiMon.TabIndex = 4;
+            this.btnThemLoaiMon.Text = "＋";
+            this.toolTip.SetToolTip(this.btnThemLoaiMon, "Thêm loại món mới hoặc quản lý danh mục loại món");
+            this.btnThemLoaiMon.UseVisualStyleBackColor = false;
+            this.btnThemLoaiMon.Click += new System.EventHandler(this.btnThemLoaiMon_Click);
 
             // 
             // lblGia
@@ -230,24 +267,24 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblGia.AutoSize = true;
             this.lblGia.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.lblGia.ForeColor = System.Drawing.Color.FromArgb(51, 65, 85);
-            this.lblGia.Location = new System.Drawing.Point(218, 78);
+            this.lblGia.Location = new System.Drawing.Point(232, 78);
             this.lblGia.Name = "lblGia";
             this.lblGia.Size = new System.Drawing.Size(110, 15);
-            this.lblGia.TabIndex = 4;
+            this.lblGia.TabIndex = 5;
             this.lblGia.Text = "Giá bán (VNĐ) (*):";
 
             // 
             // numGia
             // 
             this.numGia.DecimalPlaces = 0;
-            this.numGia.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.numGia.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.numGia.ForeColor = System.Drawing.Color.FromArgb(2, 132, 199);
             this.numGia.Increment = new decimal(new int[] { 5000, 0, 0, 0 });
-            this.numGia.Location = new System.Drawing.Point(218, 96);
+            this.numGia.Location = new System.Drawing.Point(232, 96);
             this.numGia.Maximum = new decimal(new int[] { 100000000, 0, 0, 0 });
             this.numGia.Name = "numGia";
-            this.numGia.Size = new System.Drawing.Size(190, 25);
-            this.numGia.TabIndex = 5;
+            this.numGia.Size = new System.Drawing.Size(220, 24);
+            this.numGia.TabIndex = 6;
             this.numGia.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.numGia.ThousandsSeparator = true;
 
@@ -259,10 +296,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.chkTrangThai.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkTrangThai.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.chkTrangThai.ForeColor = System.Drawing.Color.FromArgb(5, 150, 105);
-            this.chkTrangThai.Location = new System.Drawing.Point(16, 130);
+            this.chkTrangThai.Location = new System.Drawing.Point(16, 134);
             this.chkTrangThai.Name = "chkTrangThai";
             this.chkTrangThai.Size = new System.Drawing.Size(232, 19);
-            this.chkTrangThai.TabIndex = 6;
+            this.chkTrangThai.TabIndex = 7;
             this.chkTrangThai.Text = "✓ Đang áp dụng kinh doanh trên menu";
             this.chkTrangThai.UseVisualStyleBackColor = true;
 
@@ -272,22 +309,22 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblMoTa.AutoSize = true;
             this.lblMoTa.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.lblMoTa.ForeColor = System.Drawing.Color.FromArgb(71, 85, 105);
-            this.lblMoTa.Location = new System.Drawing.Point(16, 157);
+            this.lblMoTa.Location = new System.Drawing.Point(16, 162);
             this.lblMoTa.Name = "lblMoTa";
             this.lblMoTa.Size = new System.Drawing.Size(73, 15);
-            this.lblMoTa.TabIndex = 7;
+            this.lblMoTa.TabIndex = 8;
             this.lblMoTa.Text = "Mô tả ngắn:";
 
             // 
             // txtMoTa
             // 
             this.txtMoTa.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtMoTa.Location = new System.Drawing.Point(16, 175);
+            this.txtMoTa.Location = new System.Drawing.Point(16, 180);
             this.txtMoTa.Multiline = true;
             this.txtMoTa.Name = "txtMoTa";
             this.txtMoTa.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtMoTa.Size = new System.Drawing.Size(392, 46);
-            this.txtMoTa.TabIndex = 8;
+            this.txtMoTa.Size = new System.Drawing.Size(436, 46);
+            this.txtMoTa.TabIndex = 9;
 
             // 
             // lblHinhAnh
@@ -295,10 +332,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblHinhAnh.AutoSize = true;
             this.lblHinhAnh.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.lblHinhAnh.ForeColor = System.Drawing.Color.FromArgb(71, 85, 105);
-            this.lblHinhAnh.Location = new System.Drawing.Point(16, 230);
+            this.lblHinhAnh.Location = new System.Drawing.Point(16, 234);
             this.lblHinhAnh.Name = "lblHinhAnh";
             this.lblHinhAnh.Size = new System.Drawing.Size(107, 15);
-            this.lblHinhAnh.TabIndex = 9;
+            this.lblHinhAnh.TabIndex = 10;
             this.lblHinhAnh.Text = "Hình ảnh đại diện:";
 
             // 
@@ -306,11 +343,11 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // 
             this.txtHinhAnhUrl.BackColor = System.Drawing.Color.FromArgb(248, 250, 252);
             this.txtHinhAnhUrl.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtHinhAnhUrl.Location = new System.Drawing.Point(16, 249);
+            this.txtHinhAnhUrl.Location = new System.Drawing.Point(16, 252);
             this.txtHinhAnhUrl.Name = "txtHinhAnhUrl";
             this.txtHinhAnhUrl.ReadOnly = true;
-            this.txtHinhAnhUrl.Size = new System.Drawing.Size(300, 23);
-            this.txtHinhAnhUrl.TabIndex = 10;
+            this.txtHinhAnhUrl.Size = new System.Drawing.Size(334, 23);
+            this.txtHinhAnhUrl.TabIndex = 11;
 
             // 
             // btnChonHinh
@@ -320,10 +357,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.btnChonHinh.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnChonHinh.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.btnChonHinh.ForeColor = System.Drawing.Color.FromArgb(30, 41, 59);
-            this.btnChonHinh.Location = new System.Drawing.Point(322, 248);
+            this.btnChonHinh.Location = new System.Drawing.Point(356, 251);
             this.btnChonHinh.Name = "btnChonHinh";
-            this.btnChonHinh.Size = new System.Drawing.Size(86, 25);
-            this.btnChonHinh.TabIndex = 11;
+            this.btnChonHinh.Size = new System.Drawing.Size(96, 26);
+            this.btnChonHinh.TabIndex = 12;
             this.btnChonHinh.Text = "📁 Chọn ảnh";
             this.btnChonHinh.UseVisualStyleBackColor = false;
             this.btnChonHinh.Click += new System.EventHandler(this.btnChonHinh_Click);
@@ -333,11 +370,11 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // 
             this.picHinhAnh.BackColor = System.Drawing.Color.FromArgb(248, 250, 252);
             this.picHinhAnh.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.picHinhAnh.Location = new System.Drawing.Point(16, 280);
+            this.picHinhAnh.Location = new System.Drawing.Point(16, 286);
             this.picHinhAnh.Name = "picHinhAnh";
-            this.picHinhAnh.Size = new System.Drawing.Size(392, 204);
+            this.picHinhAnh.Size = new System.Drawing.Size(436, 206);
             this.picHinhAnh.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.picHinhAnh.TabIndex = 12;
+            this.picHinhAnh.TabIndex = 13;
             this.picHinhAnh.TabStop = false;
 
             // 
@@ -349,9 +386,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.grpDinhLuong.Controls.Add(this.pnlThemDinhLuong);
             this.grpDinhLuong.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.grpDinhLuong.ForeColor = System.Drawing.Color.FromArgb(30, 41, 59);
-            this.grpDinhLuong.Location = new System.Drawing.Point(452, 72);
+            this.grpDinhLuong.Location = new System.Drawing.Point(498, 72);
             this.grpDinhLuong.Name = "grpDinhLuong";
-            this.grpDinhLuong.Size = new System.Drawing.Size(556, 498);
+            this.grpDinhLuong.Size = new System.Drawing.Size(546, 508);
             this.grpDinhLuong.TabIndex = 1;
             this.grpDinhLuong.TabStop = false;
             this.grpDinhLuong.Text = "  2. Công thức định lượng nguyên vật liệu (BOM)  ";
@@ -368,9 +405,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.pnlThemDinhLuong.Controls.Add(this.btnThemNguyenLieuMoi);
             this.pnlThemDinhLuong.Controls.Add(this.cboNguyenLieu);
             this.pnlThemDinhLuong.Controls.Add(this.lblChonNL);
-            this.pnlThemDinhLuong.Location = new System.Drawing.Point(14, 25);
+            this.pnlThemDinhLuong.Location = new System.Drawing.Point(14, 24);
             this.pnlThemDinhLuong.Name = "pnlThemDinhLuong";
-            this.pnlThemDinhLuong.Size = new System.Drawing.Size(528, 76);
+            this.pnlThemDinhLuong.Size = new System.Drawing.Size(518, 76);
             this.pnlThemDinhLuong.TabIndex = 0;
 
             // 
@@ -391,9 +428,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.cboNguyenLieu.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboNguyenLieu.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.cboNguyenLieu.FormattingEnabled = true;
-            this.cboNguyenLieu.Location = new System.Drawing.Point(140, 9);
+            this.cboNguyenLieu.Location = new System.Drawing.Point(138, 9);
             this.cboNguyenLieu.Name = "cboNguyenLieu";
-            this.cboNguyenLieu.Size = new System.Drawing.Size(195, 23);
+            this.cboNguyenLieu.Size = new System.Drawing.Size(185, 23);
             this.cboNguyenLieu.TabIndex = 1;
 
             // 
@@ -404,9 +441,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.btnThemNguyenLieuMoi.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnThemNguyenLieuMoi.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnThemNguyenLieuMoi.ForeColor = System.Drawing.Color.FromArgb(79, 70, 229);
-            this.btnThemNguyenLieuMoi.Location = new System.Drawing.Point(340, 8);
+            this.btnThemNguyenLieuMoi.Location = new System.Drawing.Point(328, 8);
             this.btnThemNguyenLieuMoi.Name = "btnThemNguyenLieuMoi";
-            this.btnThemNguyenLieuMoi.Size = new System.Drawing.Size(35, 25);
+            this.btnThemNguyenLieuMoi.Size = new System.Drawing.Size(32, 25);
             this.btnThemNguyenLieuMoi.TabIndex = 2;
             this.btnThemNguyenLieuMoi.Text = "＋";
             this.btnThemNguyenLieuMoi.UseVisualStyleBackColor = false;
@@ -430,7 +467,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.numSoLuongCan.DecimalPlaces = 2;
             this.numSoLuongCan.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.numSoLuongCan.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.numSoLuongCan.Location = new System.Drawing.Point(140, 41);
+            this.numSoLuongCan.Location = new System.Drawing.Point(138, 41);
             this.numSoLuongCan.Maximum = new decimal(new int[] { 99999, 0, 0, 0 });
             this.numSoLuongCan.Name = "numSoLuongCan";
             this.numSoLuongCan.Size = new System.Drawing.Size(78, 24);
@@ -444,7 +481,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblDvtInfo.AutoSize = true;
             this.lblDvtInfo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.lblDvtInfo.ForeColor = System.Drawing.Color.FromArgb(71, 85, 105);
-            this.lblDvtInfo.Location = new System.Drawing.Point(222, 44);
+            this.lblDvtInfo.Location = new System.Drawing.Point(220, 44);
             this.lblDvtInfo.Name = "lblDvtInfo";
             this.lblDvtInfo.Size = new System.Drawing.Size(20, 15);
             this.lblDvtInfo.TabIndex = 4;
@@ -456,7 +493,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblGiaNhapInfo.AutoSize = true;
             this.lblGiaNhapInfo.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point);
             this.lblGiaNhapInfo.ForeColor = System.Drawing.Color.FromArgb(100, 116, 139);
-            this.lblGiaNhapInfo.Location = new System.Drawing.Point(252, 45);
+            this.lblGiaNhapInfo.Location = new System.Drawing.Point(248, 45);
             this.lblGiaNhapInfo.Name = "lblGiaNhapInfo";
             this.lblGiaNhapInfo.Size = new System.Drawing.Size(115, 13);
             this.lblGiaNhapInfo.TabIndex = 5;
@@ -470,9 +507,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.btnThemNL.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnThemNL.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.btnThemNL.ForeColor = System.Drawing.Color.White;
-            this.btnThemNL.Location = new System.Drawing.Point(384, 8);
+            this.btnThemNL.Location = new System.Drawing.Point(368, 8);
             this.btnThemNL.Name = "btnThemNL";
-            this.btnThemNL.Size = new System.Drawing.Size(134, 58);
+            this.btnThemNL.Size = new System.Drawing.Size(140, 58);
             this.btnThemNL.TabIndex = 6;
             this.btnThemNL.Text = "＋ Thêm vào\r\n    công thức";
             this.btnThemNL.UseVisualStyleBackColor = false;
@@ -486,12 +523,12 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.dgvDinhLuong.BackgroundColor = System.Drawing.Color.White;
             this.dgvDinhLuong.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.dgvDinhLuong.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvDinhLuong.Location = new System.Drawing.Point(14, 109);
+            this.dgvDinhLuong.Location = new System.Drawing.Point(14, 108);
             this.dgvDinhLuong.Name = "dgvDinhLuong";
             this.dgvDinhLuong.ReadOnly = true;
             this.dgvDinhLuong.RowHeadersVisible = false;
             this.dgvDinhLuong.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvDinhLuong.Size = new System.Drawing.Size(528, 260);
+            this.dgvDinhLuong.Size = new System.Drawing.Size(518, 268);
             this.dgvDinhLuong.TabIndex = 1;
 
             // 
@@ -504,9 +541,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.pnlCogsSummary.Controls.Add(this.lblLoiNhuanTitle);
             this.pnlCogsSummary.Controls.Add(this.lblGiaVonValue);
             this.pnlCogsSummary.Controls.Add(this.lblGiaVonTitle);
-            this.pnlCogsSummary.Location = new System.Drawing.Point(14, 377);
+            this.pnlCogsSummary.Location = new System.Drawing.Point(14, 384);
             this.pnlCogsSummary.Name = "pnlCogsSummary";
-            this.pnlCogsSummary.Size = new System.Drawing.Size(528, 108);
+            this.pnlCogsSummary.Size = new System.Drawing.Size(518, 108);
             this.pnlCogsSummary.TabIndex = 2;
 
             // 
@@ -539,7 +576,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblLoiNhuanTitle.AutoSize = true;
             this.lblLoiNhuanTitle.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.lblLoiNhuanTitle.ForeColor = System.Drawing.Color.FromArgb(100, 116, 139);
-            this.lblLoiNhuanTitle.Location = new System.Drawing.Point(265, 12);
+            this.lblLoiNhuanTitle.Location = new System.Drawing.Point(260, 12);
             this.lblLoiNhuanTitle.Name = "lblLoiNhuanTitle";
             this.lblLoiNhuanTitle.Size = new System.Drawing.Size(193, 13);
             this.lblLoiNhuanTitle.TabIndex = 2;
@@ -551,7 +588,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblLoiNhuanGopValue.AutoSize = true;
             this.lblLoiNhuanGopValue.Font = new System.Drawing.Font("Segoe UI", 13.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.lblLoiNhuanGopValue.ForeColor = System.Drawing.Color.FromArgb(5, 150, 105);
-            this.lblLoiNhuanGopValue.Location = new System.Drawing.Point(264, 30);
+            this.lblLoiNhuanGopValue.Location = new System.Drawing.Point(259, 30);
             this.lblLoiNhuanGopValue.Name = "lblLoiNhuanGopValue";
             this.lblLoiNhuanGopValue.Size = new System.Drawing.Size(120, 25);
             this.lblLoiNhuanGopValue.TabIndex = 3;
@@ -578,9 +615,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.btnLuu.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnLuu.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.btnLuu.ForeColor = System.Drawing.Color.White;
-            this.btnLuu.Location = new System.Drawing.Point(725, 582);
+            this.btnLuu.Location = new System.Drawing.Point(760, 590);
             this.btnLuu.Name = "btnLuu";
-            this.btnLuu.Size = new System.Drawing.Size(155, 38);
+            this.btnLuu.Size = new System.Drawing.Size(160, 40);
             this.btnLuu.TabIndex = 2;
             this.btnLuu.Text = "💾 Lưu Món Ăn";
             this.btnLuu.UseVisualStyleBackColor = false;
@@ -594,9 +631,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.btnHuy.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnHuy.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.btnHuy.ForeColor = System.Drawing.Color.FromArgb(51, 65, 85);
-            this.btnHuy.Location = new System.Drawing.Point(892, 582);
+            this.btnHuy.Location = new System.Drawing.Point(928, 590);
             this.btnHuy.Name = "btnHuy";
-            this.btnHuy.Size = new System.Drawing.Size(116, 38);
+            this.btnHuy.Size = new System.Drawing.Size(116, 40);
             this.btnHuy.TabIndex = 3;
             this.btnHuy.Text = "✕ Đóng";
             this.btnHuy.UseVisualStyleBackColor = false;
@@ -608,7 +645,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(248, 250, 252);
-            this.ClientSize = new System.Drawing.Size(1024, 632);
+            this.ClientSize = new System.Drawing.Size(1060, 642);
             this.Controls.Add(this.btnHuy);
             this.Controls.Add(this.btnLuu);
             this.Controls.Add(this.grpDinhLuong);

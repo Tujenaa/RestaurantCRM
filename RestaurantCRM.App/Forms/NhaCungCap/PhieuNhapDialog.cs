@@ -18,9 +18,11 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
 
         private List<NguyenLieuDto> _allNguyenLieu = new List<NguyenLieuDto>();
         private List<ChiTietPhieuNhapDto> _items = new List<ChiTietPhieuNhapDto>();
+        private readonly string _initialMaNL;
 
-        public PhieuNhapDialog() {
+        public PhieuNhapDialog(string defaultMaNguyenLieu = null) {
             InitializeComponent();
+            _initialMaNL = defaultMaNguyenLieu;
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _pnService = new PhieuNhapService(httpClient);
@@ -80,14 +82,14 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 cboNhaCungCap.ValueMember = "MaNhaCungCap";
 
                 // 2. Tải danh mục nguyên vật liệu
-                await ReloadNguyenLieuDropdown();
+                await ReloadNguyenLieuDropdown(_initialMaNL);
             } catch (Exception ex) {
                 MessageBox.Show("Lỗi khi tải dữ liệu ban đầu: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private async Task ReloadNguyenLieuDropdown(string selectedMaNL = null) {
-            _allNguyenLieu = await _nguyenLieuService.GetAllAsync() ?? new List<NguyenLieuDto>();
+            _allNguyenLieu = await _nguyenLieuService.GetAllAsync("Active") ?? new List<NguyenLieuDto>();
             cboMonAn.DataSource = null;
             cboMonAn.DisplayMember = "DisplayText";
             cboMonAn.ValueMember = "MaNguyenLieu";
@@ -102,16 +104,6 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
 
             if (cboMonAn.SelectedItem is NguyenLieuDto current && current.GiaNhapGanNhat > 0) {
                 numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, current.GiaNhapGanNhat);
-            }
-        }
-
-        private async void btnThemNguyenLieuMoi_Click(object sender, EventArgs e) {
-            using (var dialog = new NguyenLieuDialog(_nguyenLieuService)) {
-                if (dialog.ShowDialog(this) == DialogResult.OK && dialog.CreatedOrUpdatedNguyenLieu != null) {
-                    var newNl = dialog.CreatedOrUpdatedNguyenLieu;
-                    await ReloadNguyenLieuDropdown(newNl.MaNguyenLieu);
-                    numSoLuong.Focus();
-                }
             }
         }
 

@@ -10,7 +10,6 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         private System.Windows.Forms.GroupBox grpThemMon;
         private System.Windows.Forms.Label lblMonAn;
         private System.Windows.Forms.ComboBox cboMonAn;
-        private System.Windows.Forms.Button btnThemNguyenLieuMoi;
         private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.Label lblSoLuong;
         private System.Windows.Forms.NumericUpDown numSoLuong;
@@ -50,7 +49,6 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.grpThemMon = new System.Windows.Forms.GroupBox();
             this.lblMonAn = new System.Windows.Forms.Label();
             this.cboMonAn = new System.Windows.Forms.ComboBox();
-            this.btnThemNguyenLieuMoi = new System.Windows.Forms.Button();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.lblSoLuong = new System.Windows.Forms.Label();
             this.numSoLuong = new System.Windows.Forms.NumericUpDown();
@@ -147,7 +145,6 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.grpThemMon.Controls.Add(this.lblDonGia);
             this.grpThemMon.Controls.Add(this.numSoLuong);
             this.grpThemMon.Controls.Add(this.lblSoLuong);
-            this.grpThemMon.Controls.Add(this.btnThemNguyenLieuMoi);
             this.grpThemMon.Controls.Add(this.cboMonAn);
             this.grpThemMon.Controls.Add(this.lblMonAn);
             this.grpThemMon.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
@@ -176,24 +173,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.cboMonAn.FormattingEnabled = true;
             this.cboMonAn.Location = new System.Drawing.Point(14, 42);
             this.cboMonAn.Name = "cboMonAn";
-            this.cboMonAn.Size = new System.Drawing.Size(260, 23);
+            this.cboMonAn.Size = new System.Drawing.Size(298, 23);
             this.cboMonAn.TabIndex = 1;
-            // 
-            // btnThemNguyenLieuMoi
-            // 
-            this.btnThemNguyenLieuMoi.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(238)))), ((int)(((byte)(242)))), ((int)(((byte)(255)))));
-            this.btnThemNguyenLieuMoi.FlatAppearance.BorderSize = 0;
-            this.btnThemNguyenLieuMoi.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnThemNguyenLieuMoi.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnThemNguyenLieuMoi.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(79)))), ((int)(((byte)(70)))), ((int)(((byte)(229)))));
-            this.btnThemNguyenLieuMoi.Location = new System.Drawing.Point(278, 40);
-            this.btnThemNguyenLieuMoi.Name = "btnThemNguyenLieuMoi";
-            this.btnThemNguyenLieuMoi.Size = new System.Drawing.Size(34, 26);
-            this.btnThemNguyenLieuMoi.TabIndex = 2;
-            this.btnThemNguyenLieuMoi.Text = "＋";
-            this.toolTip.SetToolTip(this.btnThemNguyenLieuMoi, "Thêm nguyên liệu mới vào hệ thống");
-            this.btnThemNguyenLieuMoi.UseVisualStyleBackColor = false;
-            this.btnThemNguyenLieuMoi.Click += new System.EventHandler(this.btnThemNguyenLieuMoi_Click);
             // 
             // lblSoLuong
             // 

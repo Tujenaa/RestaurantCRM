@@ -54,14 +54,10 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
 
         private void SetupContextMenu() {
             var contextMenu = new ContextMenuStrip();
-            var mnuThem = new ToolStripMenuItem("＋ Thêm nguyên liệu mới", null, btnThemNguyenLieu_Click);
+            var mnuQuanLyNL = new ToolStripMenuItem("🥕 Quản lý danh mục nguyên liệu", null, btnThemNguyenLieu_Click);
             var mnuSua = new ToolStripMenuItem("✎ Sửa thông tin nguyên liệu", null, (s, e) => SuaNguyenLieu_Click(s, e));
-            var mnuKiemKe = new ToolStripMenuItem("⚖ Điều chỉnh tồn kho (Kiểm kê)", null, btnKiemKe_Click);
-            var mnuSep = new ToolStripSeparator();
-            var mnuXoa = new ToolStripMenuItem("🗑 Xóa nguyên liệu", null, (s, e) => XoaNguyenLieu_Click(s, e));
-            mnuXoa.ForeColor = Color.FromArgb(190, 18, 60);
 
-            contextMenu.Items.AddRange(new ToolStripItem[] { mnuThem, mnuSua, mnuKiemKe, mnuSep, mnuXoa });
+            contextMenu.Items.AddRange(new ToolStripItem[] { mnuQuanLyNL, mnuSua });
             dgvKho.ContextMenuStrip = contextMenu;
         }
 
@@ -120,7 +116,8 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
                     a.GiaNhapGanNhat != b.GiaNhapGanNhat ||
                     a.CanhBao != b.CanhBao ||
                     a.TenNguyenLieu != b.TenNguyenLieu ||
-                    a.DonViTinh != b.DonViTinh) {
+                    a.DonViTinh != b.DonViTinh ||
+                    a.TrangThai != b.TrangThai) {
                     return true;
                 }
             }
@@ -197,7 +194,15 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
 
             var row = dgvKho.Rows[e.RowIndex];
             if (row.DataBoundItem is TonKhoDto item) {
-                if (item.SoLuongTon <= 0) {
+                bool isNgungNhap = string.Equals(item.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase);
+
+                if (isNgungNhap) {
+                    // Những món ngừng nhập chuyển màu xám toàn bộ dòng
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
+                    row.DefaultCellStyle.ForeColor = Color.FromArgb(148, 163, 184);
+                    row.DefaultCellStyle.SelectionBackColor = Color.FromArgb(226, 232, 240);
+                    row.DefaultCellStyle.SelectionForeColor = Color.FromArgb(100, 116, 139);
+                } else if (item.SoLuongTon <= 0) {
                     // Đã hết hàng: đỏ nhạt dịu mắt
                     row.DefaultCellStyle.BackColor = Color.FromArgb(254, 226, 226);
                     row.DefaultCellStyle.ForeColor = Color.FromArgb(185, 28, 28);
@@ -251,37 +256,26 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             await LoadKho();
         }
 
-        private async void btnKiemKe_Click(object sender, EventArgs e) {
+        private async void btnLapPhieuNhap_Click(object sender, EventArgs e) {
             var selected = GetSelected();
-            if (selected == null) {
-                MessageBox.Show("Vui lòng chọn một mặt hàng trong danh sách để điều chỉnh tồn kho.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            string defaultMaNL = (selected != null && selected.TrangThai == "Active") ? selected.MaNguyenLieu : null;
 
-            using (var dialog = new DieuChinhTonKhoDialog(selected, _khoService)) {
+            using (var dialog = new PhieuNhapDialog(defaultMaNL)) {
                 if (dialog.ShowDialog(this) == DialogResult.OK) {
+                    // Sau khi nhập kho thành công, tự động tải lại bảng tồn kho
                     await LoadKho();
                 }
-            }
-        }
-
-        private void btnLapPhieuNhap_Click(object sender, EventArgs e) {
-            using (var form = new PhieuNhapForm()) {
-                form.ShowDialog(this);
-                // Sau khi đóng form nhập hàng, tự động tải lại tồn kho
-                _ = LoadKho();
             }
         }
 
         private void dgvKho_DoubleClick(object sender, EventArgs e) {
-            btnKiemKe_Click(sender, e);
+            SuaNguyenLieu_Click(sender, e);
         }
 
         private async void btnThemNguyenLieu_Click(object sender, EventArgs e) {
-            using (var dialog = new NguyenLieuDialog(_nguyenLieuService)) {
-                if (dialog.ShowDialog(this) == DialogResult.OK) {
-                    await LoadKho();
-                }
+            using (var form = new NguyenLieuForm()) {
+                form.ShowDialog(this);
+                await LoadKho();
             }
         }
 
@@ -304,24 +298,6 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             using (var dialog = new NguyenLieuDialog(_nguyenLieuService, nlDto)) {
                 if (dialog.ShowDialog(this) == DialogResult.OK) {
                     await LoadKho();
-                }
-            }
-        }
-
-        private async void XoaNguyenLieu_Click(object sender, EventArgs e) {
-            var selected = GetSelected();
-            if (selected == null) {
-                MessageBox.Show("Vui lòng chọn một mặt hàng trong danh sách để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (MessageBox.Show($"Bạn có chắc chắn muốn xóa nguyên vật liệu '{selected.TenNguyenLieu}' (Mã: {selected.MaNguyenLieu}) không?", "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
-                var result = await _nguyenLieuService.DeleteAsync(selected.MaNguyenLieu);
-                if (result.Success) {
-                    MessageBox.Show(result.Message, "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadKho();
-                } else {
-                    MessageBox.Show(result.Message, "Lỗi xóa", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

@@ -14,11 +14,34 @@ namespace RestaurantCRM.AdminApp.Services {
             _httpClient = httpClient ?? new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") };
         }
 
-        public async Task<List<NguyenLieuDto>> GetAllAsync() {
+        public async Task<List<NguyenLieuDto>> GetAllAsync(string trangThai = null) {
             try {
-                return await _httpClient.GetFromJsonAsync<List<NguyenLieuDto>>("api/AdminNguyenLieu") ?? new List<NguyenLieuDto>();
+                var url = string.IsNullOrEmpty(trangThai) 
+                    ? "api/AdminNguyenLieu" 
+                    : $"api/AdminNguyenLieu?trangThai={Uri.EscapeDataString(trangThai)}";
+                return await _httpClient.GetFromJsonAsync<List<NguyenLieuDto>>(url) ?? new List<NguyenLieuDto>();
             } catch {
                 return new List<NguyenLieuDto>();
+            }
+        }
+
+        public async Task<(bool Success, string Message)> ToggleTrangThaiAsync(string id, string currentTrangThai) {
+            try {
+                var item = await GetByIdAsync(id);
+                if (item == null) {
+                    return (false, "Không tìm thấy thông tin nguyên vật liệu.");
+                }
+                bool isCurrentlyActive = !string.Equals(currentTrangThai, "Inactive", StringComparison.OrdinalIgnoreCase);
+                item.TrangThai = isCurrentlyActive ? "Inactive" : "Active";
+                
+                var updateRes = await UpdateAsync(id, item);
+                if (updateRes.Success) {
+                    string actionText = isCurrentlyActive ? "ngừng nhập" : "cho phép nhập lại";
+                    return (true, $"Đã {actionText} nguyên vật liệu '{item.TenNguyenLieu}' thành công!");
+                }
+                return updateRes;
+            } catch (Exception ex) {
+                return (false, "Lỗi khi đổi trạng thái: " + ex.Message);
             }
         }
 
