@@ -10,9 +10,9 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class KhaoSatController : ControllerBase
     {
-        private readonly RestaurantCRMContext _context;
+        private readonly RestaurantCrmContext _context;
 
-        public KhaoSatController(RestaurantCRMContext context)
+        public KhaoSatController(RestaurantCrmContext context)
         {
             _context = context;
         }

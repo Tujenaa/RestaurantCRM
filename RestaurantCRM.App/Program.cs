@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp {
     static class Program {
@@ -7,6 +8,7 @@ namespace RestaurantCRM.AdminApp {
         static void Main() {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            UiStyler.EnableGlobal();
             while (true) {
                 var login = new Forms.Auth.LoginForm();
                 if (login.ShowDialog() != DialogResult.OK) {

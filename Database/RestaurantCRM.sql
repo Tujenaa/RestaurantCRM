@@ -1,7 +1,20 @@
-﻿-- ============================================
--- CSDL: Hệ thống quản lý đặt món & CRM khách hàng
--- SQL Server
 -- ============================================
+-- CSDL: Hệ thống quản lý đặt món & CRM khách hàng
+-- SQL Server | Các cột trạng thái/loại đã được cố định bằng CHECK constraint
+-- Phiên bản đã chỉnh: gộp admin vào nhân viên, khuyến mãi tách 2 loại (theo SP / voucher),
+-- gộp đơn hàng và hóa đơn thành HOA_DON, mỗi món 1 ảnh
+-- ============================================
+
+USE master;
+GO
+
+-- Xóa CSDL cũ (nếu có) để tạo lại từ đầu. CẢNH BÁO: mất toàn bộ dữ liệu hiện có.
+IF DB_ID('RestaurantCRM') IS NOT NULL
+BEGIN
+    ALTER DATABASE RestaurantCRM SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE RestaurantCRM;
+END
+GO
 
 CREATE DATABASE RestaurantCRM;
 GO
@@ -9,17 +22,11 @@ GO
 USE RestaurantCRM;
 GO
 
--- 1. Tài khoản & phân quyền
-CREATE TABLE TAI_KHOAN_ADMIN (
-    maAdmin VARCHAR(20) PRIMARY KEY,
-    tenDangNhap NVARCHAR(50),
-    matKhau NVARCHAR(100),
-    hoTen NVARCHAR(100)
-);
-
+-- 1. Tài khoản & phân quyền (admin là nhân viên có vai trò ADMIN)
 CREATE TABLE VAI_TRO (
     maVaiTro VARCHAR(20) PRIMARY KEY,
-    tenVaiTro NVARCHAR(100)
+    tenVaiTro NVARCHAR(100),
+    moTa NVARCHAR(255)
 );
 
 CREATE TABLE NHAN_VIEN (
@@ -28,7 +35,7 @@ CREATE TABLE NHAN_VIEN (
     tenDangNhap NVARCHAR(50),
     matKhau NVARCHAR(100),
     hoTen NVARCHAR(100),
-    trangThai NVARCHAR(20)
+    trangThai NVARCHAR(20) CONSTRAINT CK_NHAN_VIEN_trangThai CHECK (trangThai IN ('Active', 'Inactive'))
 );
 
 CREATE TABLE KHACH_HANG (
@@ -39,11 +46,11 @@ CREATE TABLE KHACH_HANG (
     matKhau NVARCHAR(100),
     ngaySinh DATE,
     gioiTinh NVARCHAR(10),
-    soThich NVARCHAR(255),
-    trangThai NVARCHAR(20)
+    diaChi NVARCHAR(255),
+    trangThai NVARCHAR(20) CONSTRAINT CK_KHACH_HANG_trangThai CHECK (trangThai IN ('Active', 'Locked'))
 );
 
--- 2. Thực đơn
+-- 2. Thực đơn (mỗi món 1 ảnh)
 CREATE TABLE LOAI_MON (
     maLoaiMon VARCHAR(20) PRIMARY KEY,
     tenLoaiMon NVARCHAR(100)
@@ -54,17 +61,10 @@ CREATE TABLE MON_AN (
     maLoaiMon VARCHAR(20) FOREIGN KEY REFERENCES LOAI_MON(maLoaiMon),
     tenMon NVARCHAR(150),
     moTa NVARCHAR(MAX),
+    duongDanAnh NVARCHAR(255),
     donGia FLOAT,
     soLuong INT,
-    trangThai NVARCHAR(20)
-);
-
-CREATE TABLE HINH_ANH_MON_AN (
-    maHinhAnh VARCHAR(20) PRIMARY KEY,
-    maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
-    duongDanAnh NVARCHAR(255),
-    laAnhDaiDien BIT,
-    thuTuHienThi INT
+    trangThai NVARCHAR(20) CONSTRAINT CK_MON_AN_trangThai CHECK (trangThai IN ('InStock', 'OutOfStock', 'Discontinued'))
 );
 
 -- 3. Nhà cung cấp & nhập hàng
@@ -95,44 +95,67 @@ CREATE TABLE CHI_TIET_PHIEU_NHAP (
 );
 
 -- 4. Khuyến mãi
+-- Mỗi dòng ở KM_THEO_SP / KM_THEO_VOUCHER chỉ dùng MỘT trong hai: phanTramGiam hoặc tienGiam
 CREATE TABLE CHUONG_TRINH_KHUYEN_MAI (
     maChuongTrinh VARCHAR(20) PRIMARY KEY,
     tenChuongTrinh NVARCHAR(150),
-    loaiKhuyenMai VARCHAR(20),
-    loaiGiam VARCHAR(20),
-    giaTriGiam FLOAT,
-    giaTriDonToiThieu FLOAT,
     ngayBatDau DATE,
     ngayKetThuc DATE,
-    trangThai NVARCHAR(20)
+    CONSTRAINT CK_CHUONG_TRINH_KHUYEN_MAI_ngay CHECK (ngayKetThuc >= ngayBatDau)
 );
 
-CREATE TABLE CHI_TIET_KHUYEN_MAI_MON (
-    maChiTietKM VARCHAR(20) PRIMARY KEY,
+CREATE TABLE KM_THEO_SP (
+    maKMSP VARCHAR(20) PRIMARY KEY,
     maChuongTrinh VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
     maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
-    soLuongApDung INT
+    phanTramGiam FLOAT NULL,
+    tienGiam FLOAT NULL,
+    CONSTRAINT CK_KM_THEO_SP_giamHopLe CHECK (
+        (phanTramGiam IS NOT NULL AND tienGiam IS NULL AND phanTramGiam > 0 AND phanTramGiam <= 100) OR
+        (tienGiam IS NOT NULL AND phanTramGiam IS NULL AND tienGiam > 0)
+    )
 );
 
--- 5. Đơn hàng
-CREATE TABLE DON_HANG (
-    maDonHang VARCHAR(20) PRIMARY KEY,
+CREATE TABLE KM_THEO_VOUCHER (
+    maKMVoucher VARCHAR(20) PRIMARY KEY,
+    maChuongTrinh VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
+    maVoucher VARCHAR(30) CONSTRAINT UQ_KM_THEO_VOUCHER_maVoucher UNIQUE,
+    giaTriDonToiThieu FLOAT,
+    phanTramGiam FLOAT NULL,
+    tienGiam FLOAT NULL,
+    giamToiDa FLOAT NULL,
+    CONSTRAINT CK_KM_THEO_VOUCHER_giamHopLe CHECK (
+        (phanTramGiam IS NOT NULL AND tienGiam IS NULL AND phanTramGiam > 0 AND phanTramGiam <= 100) OR
+        (tienGiam IS NOT NULL AND phanTramGiam IS NULL AND tienGiam > 0)
+    )
+);
+
+-- 5. Hóa đơn (gộp đơn hàng + hóa đơn)
+-- Các cột tenKhachHang, soDienThoai, diaChiGiao, tenMon là dữ liệu sao chép cứng tại thời điểm đặt.
+-- Thống kê doanh thu: lọc trangThai = 'Completed' (ngayHoanTat IS NOT NULL).
+-- Ứng dụng nên khóa không cho sửa hóa đơn đã Completed.
+CREATE TABLE HOA_DON (
+    maHoaDon VARCHAR(20) PRIMARY KEY,
     maKhachHang VARCHAR(20) FOREIGN KEY REFERENCES KHACH_HANG(maKhachHang),
-    maNhanVien VARCHAR(20) FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
-    maChuongTrinhVoucher VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
+    maNhanVien VARCHAR(20) NULL FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
+    maKMVoucher VARCHAR(20) NULL FOREIGN KEY REFERENCES KM_THEO_VOUCHER(maKMVoucher),
+    tenKhachHang NVARCHAR(100),
+    soDienThoai VARCHAR(15),
     diaChiGiao NVARCHAR(255),
     ngayDat DATETIME,
-    trangThai NVARCHAR(30),
+    ngayHoanTat DATETIME NULL,
+    trangThai NVARCHAR(30) CONSTRAINT CK_HOA_DON_trangThai CHECK (trangThai IN ('Pending', 'Confirmed', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
     tongTienHang FLOAT,
     tienGiamVoucher FLOAT,
     tongThanhToan FLOAT
 );
 
-CREATE TABLE CHI_TIET_DON_HANG (
+CREATE TABLE CHI_TIET_HOA_DON (
     maChiTiet VARCHAR(20) PRIMARY KEY,
-    maDonHang VARCHAR(20) FOREIGN KEY REFERENCES DON_HANG(maDonHang),
+    maHoaDon VARCHAR(20) FOREIGN KEY REFERENCES HOA_DON(maHoaDon),
     maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
-    maChuongTrinhKM VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
+    maKMSP VARCHAR(20) NULL FOREIGN KEY REFERENCES KM_THEO_SP(maKMSP),
+    tenMon NVARCHAR(150),
     soLuong INT,
     donGiaGoc FLOAT,
     tienGiamMon FLOAT,
@@ -142,9 +165,9 @@ CREATE TABLE CHI_TIET_DON_HANG (
 
 CREATE TABLE THANH_TOAN (
     maThanhToan VARCHAR(20) PRIMARY KEY,
-    maDonHang VARCHAR(20) FOREIGN KEY REFERENCES DON_HANG(maDonHang),
+    maHoaDon VARCHAR(20) FOREIGN KEY REFERENCES HOA_DON(maHoaDon),
     phuongThuc NVARCHAR(30),
-    trangThai NVARCHAR(20),
+    trangThai NVARCHAR(20) CONSTRAINT CK_THANH_TOAN_trangThai CHECK (trangThai IN ('Pending', 'Paid', 'Failed', 'Refunded')),
     ngayThanhToan DATETIME,
     soTien FLOAT
 );
@@ -152,7 +175,7 @@ CREATE TABLE THANH_TOAN (
 CREATE TABLE DANH_GIA (
     maDanhGia VARCHAR(20) PRIMARY KEY,
     maKhachHang VARCHAR(20) FOREIGN KEY REFERENCES KHACH_HANG(maKhachHang),
-    maDonHang VARCHAR(20) FOREIGN KEY REFERENCES DON_HANG(maDonHang),
+    maHoaDon VARCHAR(20) FOREIGN KEY REFERENCES HOA_DON(maHoaDon),
     maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
     soSao INT,
     noiDung NVARCHAR(MAX),
@@ -161,8 +184,8 @@ CREATE TABLE DANH_GIA (
 
 CREATE TABLE LICH_SU_TRANG_THAI (
     maLichSu VARCHAR(20) PRIMARY KEY,
-    maDonHang VARCHAR(20) FOREIGN KEY REFERENCES DON_HANG(maDonHang),
-    trangThai NVARCHAR(30),
+    maHoaDon VARCHAR(20) FOREIGN KEY REFERENCES HOA_DON(maHoaDon),
+    trangThai NVARCHAR(30) CONSTRAINT CK_LICH_SU_TRANG_THAI_trangThai CHECK (trangThai IN ('Pending', 'Confirmed', 'Preparing', 'Delivering', 'Completed', 'Cancelled')),
     thoiGian DATETIME,
     ghiChu NVARCHAR(255)
 );
@@ -175,14 +198,14 @@ CREATE TABLE PHAN_HOI (
     noiDung NVARCHAR(MAX),
     danhGia INT,
     ngayPhanHoi DATETIME,
-    trangThai NVARCHAR(20)
+    trangThai NVARCHAR(20) CONSTRAINT CK_PHAN_HOI_trangThai CHECK (trangThai IN ('Unresolved', 'Resolved'))
 );
 
 CREATE TABLE KHAO_SAT (
     maKhaoSat VARCHAR(20) PRIMARY KEY,
     maNhanVien VARCHAR(20) FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
     tieuDe NVARCHAR(200),
-    trangThai NVARCHAR(20),
+    trangThai NVARCHAR(20) CONSTRAINT CK_KHAO_SAT_trangThai CHECK (trangThai IN ('Draft', 'Open', 'Closed')),
     ngayTao DATETIME
 );
 
@@ -190,7 +213,7 @@ CREATE TABLE CAU_HOI_KHAO_SAT (
     maCauHoi VARCHAR(20) PRIMARY KEY,
     maKhaoSat VARCHAR(20) FOREIGN KEY REFERENCES KHAO_SAT(maKhaoSat),
     noiDungCauHoi NVARCHAR(500),
-    loaiCauHoi VARCHAR(20)
+    loaiCauHoi VARCHAR(20) CONSTRAINT CK_CAU_HOI_KHAO_SAT_loaiCauHoi CHECK (loaiCauHoi IN ('Option', 'Text'))
 );
 
 CREATE TABLE TUY_CHON_CAU_HOI (
@@ -217,6 +240,36 @@ CREATE TABLE CAU_TRA_LOI (
     maCauTraLoi VARCHAR(20) PRIMARY KEY,
     maPhieuTraLoi VARCHAR(20) FOREIGN KEY REFERENCES PHIEU_TRA_LOI(maPhieuTraLoi),
     maCauHoi VARCHAR(20) FOREIGN KEY REFERENCES CAU_HOI_KHAO_SAT(maCauHoi),
-    maTuyChon VARCHAR(20) FOREIGN KEY REFERENCES TUY_CHON_CAU_HOI(maTuyChon),
+    maTuyChon VARCHAR(20) NULL FOREIGN KEY REFERENCES TUY_CHON_CAU_HOI(maTuyChon),
     noiDungTuDien NVARCHAR(MAX)
+);
+
+-- 7. Hội thoại trả lời qua lại (khách <-> nhân viên CRM)
+-- nguoiGui = 'KhachHang' thì chỉ điền maKhachHang; nguoiGui = 'NhanVien' thì chỉ điền maNhanVien
+CREATE TABLE TRA_LOI_DANH_GIA (
+    maTraLoi VARCHAR(20) PRIMARY KEY,
+    maDanhGia VARCHAR(20) FOREIGN KEY REFERENCES DANH_GIA(maDanhGia),
+    nguoiGui VARCHAR(20) CONSTRAINT CK_TRA_LOI_DANH_GIA_nguoiGui CHECK (nguoiGui IN ('KhachHang', 'NhanVien')),
+    maKhachHang VARCHAR(20) NULL FOREIGN KEY REFERENCES KHACH_HANG(maKhachHang),
+    maNhanVien VARCHAR(20) NULL FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
+    noiDung NVARCHAR(MAX),
+    ngayGui DATETIME,
+    CONSTRAINT CK_TRA_LOI_DANH_GIA_nguoiGuiHopLe CHECK (
+        (nguoiGui = 'KhachHang' AND maKhachHang IS NOT NULL AND maNhanVien IS NULL) OR
+        (nguoiGui = 'NhanVien' AND maNhanVien IS NOT NULL AND maKhachHang IS NULL)
+    )
+);
+
+CREATE TABLE TRA_LOI_PHAN_HOI (
+    maTraLoi VARCHAR(20) PRIMARY KEY,
+    maPhanHoi VARCHAR(20) FOREIGN KEY REFERENCES PHAN_HOI(maPhanHoi),
+    nguoiGui VARCHAR(20) CONSTRAINT CK_TRA_LOI_PHAN_HOI_nguoiGui CHECK (nguoiGui IN ('KhachHang', 'NhanVien')),
+    maKhachHang VARCHAR(20) NULL FOREIGN KEY REFERENCES KHACH_HANG(maKhachHang),
+    maNhanVien VARCHAR(20) NULL FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
+    noiDung NVARCHAR(MAX),
+    ngayGui DATETIME,
+    CONSTRAINT CK_TRA_LOI_PHAN_HOI_nguoiGuiHopLe CHECK (
+        (nguoiGui = 'KhachHang' AND maKhachHang IS NOT NULL AND maNhanVien IS NULL) OR
+        (nguoiGui = 'NhanVien' AND maNhanVien IS NOT NULL AND maKhachHang IS NULL)
+    )
 );

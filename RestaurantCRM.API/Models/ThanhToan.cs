@@ -7,7 +7,7 @@ public partial class ThanhToan
 {
     public string MaThanhToan { get; set; } = null!;
 
-    public string? MaDonHang { get; set; }
+    public string? MaHoaDon { get; set; }
 
     public string? PhuongThuc { get; set; }
 
@@ -17,5 +17,5 @@ public partial class ThanhToan
 
     public double? SoTien { get; set; }
 
-    public virtual DonHang? MaDonHangNavigation { get; set; }
+    public virtual HoaDon? MaHoaDonNavigation { get; set; }
 }

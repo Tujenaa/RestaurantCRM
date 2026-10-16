@@ -17,7 +17,7 @@ public partial class PhieuNhapHang
 
     public string? GhiChu { get; set; }
 
-    public virtual ICollection<ChiTietPhieuNhap> ChiTietPhieuNhaps { get; set; } = new List<ChiTietPhieuNhap>();
+    public virtual ICollection<ChiTietPhieuNhap> ChiTietPhieuNhap { get; set; } = new List<ChiTietPhieuNhap>();
 
     public virtual NhaCungCap? MaNhaCungCapNavigation { get; set; }
 

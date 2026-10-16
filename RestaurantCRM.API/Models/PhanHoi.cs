@@ -22,4 +22,6 @@ public partial class PhanHoi
     public virtual KhachHang? MaKhachHangNavigation { get; set; }
 
     public virtual NhanVien? MaNhanVienNavigation { get; set; }
+
+    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHoi { get; set; } = new List<TraLoiPhanHoi>();
 }

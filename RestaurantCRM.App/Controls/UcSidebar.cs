@@ -1,60 +1,325 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Controls {
+    /// <summary>
+    /// Thanh điều hướng Sidebar phong cách hiện đại khớp 100% với giao diện tham khảo:
+    /// Nền sáng tinh tế, menu tối giản, và cụm chân trang có sóng lượn nghệ thuật tím/cam/vàng cùng avatar.
+    /// </summary>
     public class UcSidebar : UserControl {
         public event Action<string> MenuSelected;
         public event Action<string> WorkspaceSelected;
+
+        private readonly string _role;
+        private readonly IList<string> _roles;
+        private readonly string _displayName;
+        private readonly Color _sidebarBg = Color.White;
+        private readonly Color _itemHover = ColorTranslator.FromHtml("#F8FAFC");
+        private readonly Color _textNormal = ColorTranslator.FromHtml("#475569");
+        private readonly Color _textHeader = ColorTranslator.FromHtml("#94A3B8");
+        private readonly Color _accent;
+        private Button _activeBtn;
+
         public UcSidebar(string role, IList<string> roles, string displayName) {
-            Width = 252; Dock = DockStyle.Left; AutoScroll = true;
-            BackColor = role == "CRM" ? Color.FromArgb(56, 35, 77) : role == "Bán hàng" ? Color.FromArgb(11, 77, 71) : Color.FromArgb(23, 61, 114);
-            var brand = new Label { Text = "◆  RestaurantCRM\n    " + role, ForeColor = Color.White, Font = new Font("Segoe UI", 12F, FontStyle.Bold), AutoSize = true, Location = new Point(22, 24) };
-            Controls.Add(brand);
-            int top = 92;
-            if (roles != null && roles.Count > 1) {
-                Controls.Add(new Label { Text = "CHUYỂN PHÂN HỆ", ForeColor = Color.FromArgb(194, 212, 239), Font = new Font("Segoe UI", 8F, FontStyle.Bold), AutoSize = true, Location = new Point(20, top) });
-                top += 21;
-                foreach (string permittedRole in roles) {
-                    var switchButton = MakeButton("↔  " + permittedRole, top);
-                    switchButton.Height = 31;
-                    switchButton.BackColor = permittedRole == role ? Color.FromArgb(65, 255, 255, 255) : Color.Transparent;
-                    switchButton.Click += (s, e) => WorkspaceSelected?.Invoke(permittedRole);
-                    Controls.Add(switchButton); top += 34;
+            _role = role;
+            _roles = roles;
+            _displayName = displayName;
+            _accent = ThemeManager.AccentFor(role);
+
+            Width = 230;
+            Dock = DockStyle.Left;
+            BackColor = _sidebarBg;
+            Font = new Font("Segoe UI", 9.5F);
+
+            BuildLayout();
+        }
+
+        protected override void OnPaint(PaintEventArgs e) {
+            base.OnPaint(e);
+            // Kẻ viền phải thanh mảnh phân tách với vùng nội dung chính
+            using (var pen = new Pen(ColorTranslator.FromHtml("#E2E8F0"), 1))
+                e.Graphics.DrawLine(pen, Width - 1, 0, Width - 1, Height);
+        }
+
+        private void BuildLayout() {
+            Controls.Clear();
+
+            // 1. Top Header: Logo "LK CORP" / "RestaurantCRM"
+            var topPanel = new Panel {
+                Dock = DockStyle.Top,
+                Height = 82,
+                BackColor = Color.White,
+                Padding = new Padding(20, 18, 20, 10)
+            };
+
+            var logoBadge = new Label {
+                Text = "🍽️",
+                Font = new Font("Segoe UI Emoji", 13F),
+                Size = new Size(34, 34),
+                Location = new Point(18, 20),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Transparent
+            };
+            logoBadge.Paint += (s, e) => {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, 33, 33), 8))
+                using (var brush = new LinearGradientBrush(logoBadge.ClientRectangle, ColorTranslator.FromHtml("#F5F3FF"), ColorTranslator.FromHtml("#EDE9FE"), 135f))
+                using (var pen = new Pen(ColorTranslator.FromHtml("#C4B5FD"), 1)) {
+                    e.Graphics.FillPath(brush, path);
+                    e.Graphics.DrawPath(pen, path);
                 }
-                top += 11;
+            };
+            topPanel.Controls.Add(logoBadge);
+
+            var lblTitle = new Label {
+                Text = "LK CORP",
+                Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
+                ForeColor = ColorTranslator.FromHtml("#1E1B4B"),
+                AutoSize = true,
+                Location = new Point(60, 18),
+                BackColor = Color.Transparent
+            };
+            topPanel.Controls.Add(lblTitle);
+
+            var lblRoleBadge = new Label {
+                Text = "RESTAURANT CRM",
+                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
+                ForeColor = _accent,
+                AutoSize = true,
+                Location = new Point(60, 40),
+                BackColor = Color.Transparent
+            };
+            topPanel.Controls.Add(lblRoleBadge);
+
+            Controls.Add(topPanel);
+
+            // 2. Bottom Footer: Thông tin người dùng tối giản & nút Đăng xuất (không màu mè)
+            var footPanel = new Panel {
+                Dock = DockStyle.Bottom,
+                Height = 72,
+                BackColor = ColorTranslator.FromHtml("#F8FAFC"),
+                Padding = new Padding(12, 10, 12, 10)
+            };
+            footPanel.Paint += (s, e) => {
+                using (var pen = new Pen(ColorTranslator.FromHtml("#E2E8F0"), 1))
+                    e.Graphics.DrawLine(pen, 0, 0, footPanel.Width, 0);
+            };
+
+            // Avatar tròn chữ cái đầu tối giản
+            var avatar = new Label {
+                Text = ThemeManager.Initials(_displayName),
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.White,
+                Size = new Size(36, 36),
+                Location = new Point(14, 18),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Transparent
+            };
+            avatar.Paint += (s, e) => {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var path = new GraphicsPath()) {
+                    path.AddEllipse(0, 0, 35, 35);
+                    using (var brush = new SolidBrush(ThemeManager.Primary))
+                        e.Graphics.FillPath(brush, path);
+                }
+                TextRenderer.DrawText(e.Graphics, avatar.Text, avatar.Font,
+                    avatar.ClientRectangle, Color.White,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            };
+            footPanel.Controls.Add(avatar);
+
+            var lblUser = new Label {
+                Text = _displayName,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                AutoSize = true,
+                Location = new Point(56, 17),
+                BackColor = Color.Transparent
+            };
+            footPanel.Controls.Add(lblUser);
+
+            var lblSub = new Label {
+                Text = _role,
+                Font = new Font("Segoe UI", 7.5F),
+                ForeColor = ThemeManager.Muted,
+                AutoSize = true,
+                Location = new Point(57, 36),
+                BackColor = Color.Transparent
+            };
+            footPanel.Controls.Add(lblSub);
+
+            // Nút Đăng xuất gọn gàng
+            var btnLogout = new Button {
+                Text = "🚪",
+                Font = new Font("Segoe UI Emoji", 11F),
+                ForeColor = ColorTranslator.FromHtml("#EF4444"),
+                BackColor = Color.Transparent,
+                FlatStyle = FlatStyle.Flat,
+                Size = new Size(32, 32),
+                Location = new Point(footPanel.Width - 44, 20),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Cursor = Cursors.Hand
+            };
+            btnLogout.FlatAppearance.BorderSize = 0;
+            btnLogout.FlatAppearance.MouseOverBackColor = ColorTranslator.FromHtml("#FEE2E2");
+            btnLogout.Click += (s, e) => MenuSelected?.Invoke("Đăng xuất");
+            footPanel.Controls.Add(btnLogout);
+
+            Controls.Add(footPanel);
+
+            // 3. Scrollable Center Menu Panel
+            var menuPanel = new Panel {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = Color.Transparent,
+                Padding = new Padding(12, 4, 12, 12)
+            };
+            Controls.Add(menuPanel);
+            menuPanel.BringToFront();
+
+            int y = 6;
+
+            // Workspace Switcher (nếu tài khoản có nhiều quyền)
+            if (_roles != null && _roles.Count > 1) {
+                AddSectionHeader(menuPanel, "CHUYỂN PHÂN HỆ", ref y);
+                foreach (string r in _roles) {
+                    bool isActive = (r == _role);
+                    var btnSwitch = new Button {
+                        Text = "  🔄  " + r,
+                        Location = new Point(8, y),
+                        Size = new Size(200, 32),
+                        FlatStyle = FlatStyle.Flat,
+                        TextAlign = ContentAlignment.MiddleLeft,
+                        ForeColor = isActive ? _accent : _textNormal,
+                        BackColor = isActive ? ColorTranslator.FromHtml("#EEF2FF") : Color.Transparent,
+                        Font = new Font("Segoe UI", 8.5F, isActive ? FontStyle.Bold : FontStyle.Regular),
+                        Cursor = Cursors.Hand
+                    };
+                    btnSwitch.FlatAppearance.BorderSize = 0;
+                    btnSwitch.FlatAppearance.MouseOverBackColor = _itemHover;
+                    string target = r;
+                    btnSwitch.Click += (s, e) => WorkspaceSelected?.Invoke(target);
+                    menuPanel.Controls.Add(btnSwitch);
+                    y += 34;
+                }
+                y += 8;
             }
 
-            AddSection("TỔNG QUAN", new[] { "Dashboard" }, top); top += 61;
-            if (role == "Admin") {
-                AddSection("BÁN HÀNG & KHO", new[] { "Món ăn", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi" }, top); top += 165;
-                AddSection("HỆ THỐNG", new[] { "Tài khoản", "Vai trò & phân quyền" }, top);
-            } else if (role == "Bán hàng") {
-                AddSection("BÁN HÀNG & KHO", new[] { "Tạo đơn hàng", "Đơn hàng", "Thực đơn", "Món ăn", "Nhà cung cấp", "Phiếu nhập hàng", "Khuyến mãi", "Báo cáo bán hàng" }, top);
+            // Menu Items by Role
+            AddSectionHeader(menuPanel, "TỔNG QUAN", ref y);
+            AddMenuItem(menuPanel, "Dashboard", "📊  DASHBOARD", ref y);
+            y += 8;
+
+            if (_role == "Admin") {
+                AddSectionHeader(menuPanel, "CRM & KHÁCH HÀNG", ref y);
+                AddMenuItem(menuPanel, "Khách hàng", "👥  TEAM / KHÁCH HÀNG", ref y);
+                AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
+                AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
+                AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
+                y += 8;
+
+                AddSectionHeader(menuPanel, "BÁN HÀNG & KHO", ref y);
+                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Đơn hàng", "🧾  QUẢN LÝ ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Món ăn", "🍲  THỰC ĐƠN & MÓN ĂN", ref y);
+                AddMenuItem(menuPanel, "Kho hàng", "📦  QUẢN LÝ TỒN KHO", ref y);
+                AddMenuItem(menuPanel, "Nhà cung cấp", "🏢  NHÀ CUNG CẤP", ref y);
+                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
+                y += 8;
+
+                AddSectionHeader(menuPanel, "HỆ THỐNG", ref y);
+                AddMenuItem(menuPanel, "Tài khoản", "👤  TÀI KHOẢN", ref y);
+                AddMenuItem(menuPanel, "Vai trò & phân quyền", "🛡️  PHÂN QUYỀN", ref y);
+            } else if (_role == "Bán hàng") {
+                AddSectionHeader(menuPanel, "VẬN HÀNH BÁN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Đơn hàng", "🧾  DANH SÁCH ĐƠN HÀNG", ref y);
+                AddMenuItem(menuPanel, "Thực đơn", "🍲  THỰC ĐƠN MÓN ĂN", ref y);
+                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
+                AddMenuItem(menuPanel, "Kho hàng", "📦  KIỂM TRA KHO", ref y);
+                AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  BÁO CÁO DOANH THU", ref y);
             } else {
-                AddSection("KHÁCH HÀNG", new[] { "Khách hàng", "Đánh giá", "Phản hồi" }, top); top += 127;
-                AddSection("KHẢO SÁT & BÁO CÁO", new[] { "Khảo sát", "Phân tích khách hàng" }, top);
+                AddSectionHeader(menuPanel, "CHĂM SÓC KHÁCH HÀNG", ref y);
+                AddMenuItem(menuPanel, "Khách hàng", "👥  TEAM / KHÁCH HÀNG", ref y);
+                AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
+                AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
+                AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
+                AddMenuItem(menuPanel, "Phân tích khách hàng", "📊  PHÂN TÍCH KHÁCH", ref y);
             }
-
-            var foot = new Panel { Dock = DockStyle.Bottom, Height = 82, Padding = new Padding(16, 8, 12, 8), BackColor = Color.Transparent };
-            foot.Controls.Add(new Label { Text = displayName + "\n" + role, ForeColor = Color.FromArgb(220, 233, 255), AutoSize = true, Location = new Point(4, 3), Font = new Font("Segoe UI", 9F, FontStyle.Bold) });
-            var logout = new Button { Text = "Đăng xuất", ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, TextAlign = ContentAlignment.MiddleLeft, Dock = DockStyle.Bottom, Height = 34, Cursor = Cursors.Hand };
-            logout.FlatAppearance.BorderSize = 0; logout.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 255, 255, 255); logout.Click += (s, e) => MenuSelected?.Invoke("Đăng xuất"); foot.Controls.Add(logout); Controls.Add(foot);
         }
 
-        private Button MakeButton(string text, int y) {
-            var button = new Button { Text = "  " + text, ForeColor = Color.FromArgb(235, 241, 255), BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, TextAlign = ContentAlignment.MiddleLeft, Size = new Size(228, 32), Location = new Point(12, y), Cursor = Cursors.Hand, Font = new Font("Segoe UI", 9F) };
-            button.FlatAppearance.BorderSize = 0; button.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 255, 255, 255); return button;
+        private void AddSectionHeader(Panel parent, string title, ref int y) {
+            var lbl = new Label {
+                Text = title,
+                ForeColor = _textHeader,
+                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
+                AutoSize = true,
+                Location = new Point(14, y)
+            };
+            parent.Controls.Add(lbl);
+            y += 20;
         }
-        private void AddSection(string title, string[] items, int top) {
-            Controls.Add(new Label { Text = title, ForeColor = Color.FromArgb(194, 212, 239), Font = new Font("Segoe UI", 8F, FontStyle.Bold), AutoSize = true, Location = new Point(20, top) });
-            int y = top + 22;
-            foreach (string item in items) {
-                var button = MakeButton(item, y); button.Tag = item;
-                button.Click += (s, e) => MenuSelected?.Invoke((string)((Button)s).Tag);
-                Controls.Add(button); y += 35;
-            }
+
+        private void AddMenuItem(Panel parent, string commandKey, string displayTitle, ref int y) {
+            bool isDefault = commandKey == "Dashboard";
+            var btn = new Button {
+                Text = "  " + displayTitle,
+                Tag = commandKey,
+                Location = new Point(6, y),
+                Size = new Size(204, 36),
+                FlatStyle = FlatStyle.Flat,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = isDefault ? _accent : _textNormal,
+                BackColor = isDefault ? ColorTranslator.FromHtml("#F5F3FF") : Color.Transparent,
+                Font = new Font("Segoe UI", 8.5F, isDefault ? FontStyle.Bold : FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = _itemHover;
+
+            if (isDefault) _activeBtn = btn;
+
+            // Bo góc nhẹ và vạch nhấn bên trái khi active
+            btn.Paint += (s, e) => {
+                if (btn == _activeBtn) {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, btn.Width - 1, btn.Height - 1), 8))
+                    using (var brush = new SolidBrush(ColorTranslator.FromHtml("#F5F3FF")))
+                        e.Graphics.FillPath(brush, path);
+
+                    using (var brush = new SolidBrush(_accent))
+                    using (var barPath = ThemeManager.RoundedRect(new Rectangle(2, 6, 3, btn.Height - 12), 2))
+                        e.Graphics.FillPath(brush, barPath);
+
+                    TextRenderer.DrawText(e.Graphics, btn.Text, btn.Font,
+                        new Rectangle(6, 0, btn.Width - 10, btn.Height), _accent,
+                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+                }
+            };
+
+            btn.Click += (s, e) => {
+                var clicked = (Button)s;
+                if (_activeBtn != null && _activeBtn != clicked) {
+                    _activeBtn.ForeColor = _textNormal;
+                    _activeBtn.BackColor = Color.Transparent;
+                    _activeBtn.Font = new Font("Segoe UI", 8.5F);
+                    _activeBtn.Invalidate();
+                }
+                _activeBtn = clicked;
+                _activeBtn.ForeColor = _accent;
+                _activeBtn.BackColor = ColorTranslator.FromHtml("#F5F3FF");
+                _activeBtn.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+                _activeBtn.Invalidate();
+
+                MenuSelected?.Invoke((string)clicked.Tag);
+            };
+
+            parent.Controls.Add(btn);
+            y += 38;
         }
     }
 }

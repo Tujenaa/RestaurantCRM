@@ -9,7 +9,7 @@ public partial class DanhGia
 
     public string? MaKhachHang { get; set; }
 
-    public string? MaDonHang { get; set; }
+    public string? MaHoaDon { get; set; }
 
     public string? MaMon { get; set; }
 
@@ -19,9 +19,11 @@ public partial class DanhGia
 
     public DateTime? NgayDanhGia { get; set; }
 
-    public virtual DonHang? MaDonHangNavigation { get; set; }
+    public virtual HoaDon? MaHoaDonNavigation { get; set; }
 
     public virtual KhachHang? MaKhachHangNavigation { get; set; }
 
     public virtual MonAn? MaMonNavigation { get; set; }
+
+    public virtual ICollection<TraLoiDanhGia> TraLoiDanhGia { get; set; } = new List<TraLoiDanhGia>();
 }

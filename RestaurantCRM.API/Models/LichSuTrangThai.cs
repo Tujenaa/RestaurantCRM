@@ -7,7 +7,7 @@ public partial class LichSuTrangThai
 {
     public string MaLichSu { get; set; } = null!;
 
-    public string? MaDonHang { get; set; }
+    public string? MaHoaDon { get; set; }
 
     public string? TrangThai { get; set; }
 
@@ -15,5 +15,5 @@ public partial class LichSuTrangThai
 
     public string? GhiChu { get; set; }
 
-    public virtual DonHang? MaDonHangNavigation { get; set; }
+    public virtual HoaDon? MaHoaDonNavigation { get; set; }
 }
