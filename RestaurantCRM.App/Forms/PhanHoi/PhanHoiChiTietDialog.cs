@@ -160,18 +160,20 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 return;
             }
 
-            await _http.PutAsJsonAsync(
-                $"/api/AdminPhanHoi/{_maPH}/TrangThai",
-                new { TrangThai = "Đã xử lý" });
-
             MessageBox.Show("Gửi trả lời thành công!", "Thành công",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             this.Close();
         }
     }
 
-    public class PhanHoiChiTietDTO : PhanHoiDTO
+    // PhanHoiChiTietDTO định nghĩa độc lập (không kế thừa PhanHoiDTO)
+    public class PhanHoiChiTietDTO
     {
+        public string MaPhanHoi { get; set; }
+        public string TenKhachHang { get; set; }
+        public string NoiDung { get; set; }
+        public string TrangThai { get; set; }
+        public DateTime? NgayGui { get; set; }
         public List<HoiThoaiDTO> HoiThoai { get; set; }
     }
 

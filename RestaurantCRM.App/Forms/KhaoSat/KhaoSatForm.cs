@@ -182,8 +182,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                     Width = 200,
                     DropDownStyle = ComboBoxStyle.DropDownList
                 };
-                cboTrangThai.Items.AddRange(new object[] { "Đóng", "Mở" });
-                cboTrangThai.SelectedItem = chiTiet?.TrangThai ?? "Đóng";
+                cboTrangThai.Items.AddRange(new object[] { "Draft", "Active", "Closed" });
+                cboTrangThai.SelectedItem = chiTiet?.TrangThai ?? "Draft";
 
                 // --- Danh sách câu hỏi ---
                 var lblCauHoi = new Label
@@ -261,18 +261,29 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                         return;
                     }
 
-                    var dto = new
-                    {
-                        TieuDe = txtTieuDe.Text.Trim(),
-                        MoTa = txtMoTa.Text.Trim(),
-                        TrangThai = cboTrangThai.SelectedItem?.ToString()
-                    };
-
                     HttpResponseMessage res;
                     if (isNew)
+                    {
+                        var dto = new
+                        {
+                            TieuDe = txtTieuDe.Text.Trim(),
+                            MaNhanVien = (string)null,
+                            CauHois = new List<object>()
+                        };
                         res = await _http.PostAsJsonAsync("/api/AdminKhaoSat", dto);
+                    }
                     else
-                        res = await _http.PutAsJsonAsync($"/api/AdminKhaoSat/{maKS}", dto);
+                    {
+                        // Cập nhật tiêu đề
+                        res = await _http.PutAsJsonAsync($"/api/AdminKhaoSat/{maKS}",
+                            new { TieuDe = txtTieuDe.Text.Trim() });
+
+                        // Cập nhật trạng thái nếu đã chọn
+                        var trangThai = cboTrangThai.SelectedItem?.ToString();
+                        if (!string.IsNullOrEmpty(trangThai))
+                            await _http.PutAsJsonAsync(
+                                $"/api/AdminKhaoSat/{maKS}/status", trangThai);
+                    }
 
                     if (res.IsSuccessStatusCode)
                     {
@@ -312,9 +323,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             foreach (var ch in cauHois)
             {
                 // Label câu hỏi
+                string loaiHien = ch.LoaiCauHoi == "TuLuan" ? "Tự luận" : "Trắc nghiệm";
                 var lblCH = new Label
                 {
-                    Text = $"• [{ch.LoaiCauHoi}] {ch.NoiDung}",
+                    Text = $"• [{loaiHien}] {ch.NoiDung}",
                     Location = new Point(8, y),
                     Width = 520,
                     AutoSize = false,
@@ -371,7 +383,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 y += 26;
 
                 // Hiển thị tùy chọn nếu không phải tự luận
-                if (ch.LoaiCauHoi != "TuLuan" && ch.TuyChons != null)
+                if (ch.LoaiCauHoi != "TuLuan" && ch.LoaiCauHoi != "Tự luận" && ch.TuyChons != null)
                 {
                     foreach (var tc in ch.TuyChons)
                     {
@@ -401,7 +413,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             using (var form = new Form())
             {
                 form.Text = isNew ? "Thêm câu hỏi" : "Sửa câu hỏi";
-                form.Size = new Size(520, 480);
+                form.Size = new Size(520, 560);
                 form.StartPosition = FormStartPosition.CenterParent;
                 form.FormBorderStyle = FormBorderStyle.FixedDialog;
                 form.MaximizeBox = false;
@@ -421,8 +433,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                     Width = 200,
                     DropDownStyle = ComboBoxStyle.DropDownList
                 };
-                cboLoai.Items.AddRange(new object[] { "TracNghiem", "TuLuan" });
-                cboLoai.SelectedItem = cauHoi?.LoaiCauHoi ?? "TracNghiem";
+                cboLoai.Items.AddRange(new object[] { "Trắc nghiệm", "Tự luận" });
+                // Map API value → tên hiển thị
+                string loaiHienThi = (cauHoi?.LoaiCauHoi == "TuLuan") ? "Tự luận" : "Trắc nghiệm";
+                cboLoai.SelectedItem = loaiHienThi;
 
                 // --- Panel tùy chọn ---
                 var lblTuyChon = new Label
@@ -488,10 +502,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
                 RenderTuyChons();
 
-                // Ẩn/hiện tùy chọn theo loại câu hỏi
+                // Ẩn/hiện tùy chọn theo loại câu hỏi (btnThemDong sẽ được gán sau)
                 cboLoai.SelectedIndexChanged += (s, e) =>
                 {
-                    bool isTuLuan = cboLoai.SelectedItem?.ToString() == "TuLuan";
+                    bool isTuLuan = cboLoai.SelectedItem?.ToString() == "Tự luận";
                     lblTuyChon.Visible = !isTuLuan;
                     panelTuyChon.Visible = !isTuLuan;
                 };
@@ -507,8 +521,16 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                     Text = "+ Thêm tùy chọn",
                     Location = new Point(16, 380),
                     Size = new Size(140, 28),
-                    FlatStyle = FlatStyle.Flat
+                    FlatStyle = FlatStyle.Flat,
+                    Visible = cauHoi?.LoaiCauHoi != "TuLuan"
                 };
+
+                // Gán thêm logic ẩn/hiện btnThemDong sau khi đã khai báo
+                cboLoai.SelectedIndexChanged += (s, e) =>
+                {
+                    btnThemDong.Visible = cboLoai.SelectedItem?.ToString() != "Tự luận";
+                };
+
                 btnThemDong.Click += (s, e) =>
                 {
                     // Thêm TextBox mới vào panelTuyChon
@@ -537,7 +559,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 var btnLuu = new Button
                 {
                     Text = "Lưu",
-                    Location = new Point(374, 420),
+                    Location = new Point(374, 474),
                     Size = new Size(112, 36),
                     BackColor = Color.FromArgb(139, 92, 246),
                     ForeColor = Color.White,
@@ -547,7 +569,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 var btnHuy = new Button
                 {
                     Text = "Hủy",
-                    Location = new Point(254, 420),
+                    Location = new Point(254, 474),
                     Size = new Size(112, 36),
                     FlatStyle = FlatStyle.Flat
                 };
@@ -562,16 +584,20 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                         return;
                     }
 
-                    var tuyChons = new List<object>();
-                    if (cboLoai.SelectedItem?.ToString() != "TuLuan")
+                    var tuyChons = new List<string>();
+                    bool isTuLuan = cboLoai.SelectedItem?.ToString() == "Tự luận";
+                    if (!isTuLuan)
                         foreach (var t in tuyChonInputs)
                             if (!string.IsNullOrWhiteSpace(t.Text))
-                                tuyChons.Add(new { NoiDung = t.Text.Trim() });
+                                tuyChons.Add(t.Text.Trim());
+
+                    // Map tên hiển thị → giá trị API
+                    string loaiApi = isTuLuan ? "TuLuan" : "TracNghiem";
 
                     var dto = new
                     {
                         NoiDung = txtNoiDung.Text.Trim(),
-                        LoaiCauHoi = cboLoai.SelectedItem?.ToString(),
+                        LoaiCauHoi = loaiApi,
                         TuyChons = tuyChons
                     };
 
@@ -611,14 +637,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         // ==================== MO / DONG KHAO SAT ====================
         public async Task DoiTrangThaiKhaoSat(string maKS, string trangThai)
         {
-            string msg = trangThai == "Mở" ? "mở" : "đóng";
+            // trangThai phải là "Draft", "Active" hoặc "Closed"
+            string msg = trangThai == "Active" ? "kích hoạt" : "đóng";
             var cf = MessageBox.Show($"Bạn có chắc muốn {msg} khảo sát này?",
                 "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (cf != DialogResult.Yes) return;
 
             var res = await _http.PutAsJsonAsync(
-                $"/api/AdminKhaoSat/{maKS}/status",
-                new { TrangThai = trangThai });
+                $"/api/AdminKhaoSat/{maKS}/status", trangThai);
 
             if (res.IsSuccessStatusCode)
             {
@@ -648,7 +674,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         public void XemThongKeDongDangChon(DataGridView dgv)
         {
             if (dgv.CurrentRow == null) return;
-            string maKS   = dgv.CurrentRow.Cells[0].Value?.ToString();
+            string maKS = dgv.CurrentRow.Cells[0].Value?.ToString();
             string tieuDe = dgv.CurrentRow.Cells[1].Value?.ToString();
             if (string.IsNullOrEmpty(maKS)) return;
             MoFormThongKe(maKS, tieuDe ?? "");
