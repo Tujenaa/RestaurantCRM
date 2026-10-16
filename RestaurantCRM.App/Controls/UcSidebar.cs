@@ -5,12 +5,14 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
-namespace RestaurantCRM.AdminApp.Controls {
+namespace RestaurantCRM.AdminApp.Controls
+{
     /// <summary>
     /// Thanh điều hướng Sidebar phong cách hiện đại khớp 100% với giao diện tham khảo:
     /// Nền sáng tinh tế, menu tối giản, và cụm chân trang có sóng lượn nghệ thuật tím/cam/vàng cùng avatar.
     /// </summary>
-    public class UcSidebar : UserControl {
+    public class UcSidebar : UserControl
+    {
         public event Action<string> MenuSelected;
         public event Action<string> WorkspaceSelected;
 
@@ -24,7 +26,8 @@ namespace RestaurantCRM.AdminApp.Controls {
         private readonly Color _accent;
         private Button _activeBtn;
 
-        public UcSidebar(string role, IList<string> roles, string displayName) {
+        public UcSidebar(string role, IList<string> roles, string displayName)
+        {
             _role = role;
             _roles = roles;
             _displayName = displayName;
@@ -38,25 +41,29 @@ namespace RestaurantCRM.AdminApp.Controls {
             BuildLayout();
         }
 
-        protected override void OnPaint(PaintEventArgs e) {
+        protected override void OnPaint(PaintEventArgs e)
+        {
             base.OnPaint(e);
             // Kẻ viền phải thanh mảnh phân tách với vùng nội dung chính
             using (var pen = new Pen(ColorTranslator.FromHtml("#E2E8F0"), 1))
                 e.Graphics.DrawLine(pen, Width - 1, 0, Width - 1, Height);
         }
 
-        private void BuildLayout() {
+        private void BuildLayout()
+        {
             Controls.Clear();
 
             // 1. Top Header: Logo "LK CORP" / "RestaurantCRM"
-            var topPanel = new Panel {
+            var topPanel = new Panel
+            {
                 Dock = DockStyle.Top,
                 Height = 82,
                 BackColor = Color.White,
                 Padding = new Padding(20, 18, 20, 10)
             };
 
-            var logoBadge = new Label {
+            var logoBadge = new Label
+            {
                 Text = "🍽️",
                 Font = new Font("Segoe UI Emoji", 13F),
                 Size = new Size(34, 34),
@@ -68,14 +75,16 @@ namespace RestaurantCRM.AdminApp.Controls {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, 33, 33), 8))
                 using (var brush = new LinearGradientBrush(logoBadge.ClientRectangle, ColorTranslator.FromHtml("#F5F3FF"), ColorTranslator.FromHtml("#EDE9FE"), 135f))
-                using (var pen = new Pen(ColorTranslator.FromHtml("#C4B5FD"), 1)) {
+                using (var pen = new Pen(ColorTranslator.FromHtml("#C4B5FD"), 1))
+                {
                     e.Graphics.FillPath(brush, path);
                     e.Graphics.DrawPath(pen, path);
                 }
             };
             topPanel.Controls.Add(logoBadge);
 
-            var lblTitle = new Label {
+            var lblTitle = new Label
+            {
                 Text = "LK CORP",
                 Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
                 ForeColor = ColorTranslator.FromHtml("#1E1B4B"),
@@ -85,9 +94,10 @@ namespace RestaurantCRM.AdminApp.Controls {
             };
             topPanel.Controls.Add(lblTitle);
 
-            var lblRoleBadge = new Label {
-                Text = "RESTAURANT CRM",
-                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
+            var lblRoleBadge = new Label
+            {
+                Text = "Restaurant CRM",
+                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
                 ForeColor = _accent,
                 AutoSize = true,
                 Location = new Point(60, 40),
@@ -98,7 +108,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             Controls.Add(topPanel);
 
             // 2. Bottom Footer: Thông tin người dùng tối giản & nút Đăng xuất (không màu mè)
-            var footPanel = new Panel {
+            var footPanel = new Panel
+            {
                 Dock = DockStyle.Bottom,
                 Height = 72,
                 BackColor = ColorTranslator.FromHtml("#F8FAFC"),
@@ -110,7 +121,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             };
 
             // Avatar tròn chữ cái đầu tối giản
-            var avatar = new Label {
+            var avatar = new Label
+            {
                 Text = ThemeManager.Initials(_displayName),
                 Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 ForeColor = Color.White,
@@ -121,7 +133,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             };
             avatar.Paint += (s, e) => {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var path = new GraphicsPath()) {
+                using (var path = new GraphicsPath())
+                {
                     path.AddEllipse(0, 0, 35, 35);
                     using (var brush = new SolidBrush(ThemeManager.Primary))
                         e.Graphics.FillPath(brush, path);
@@ -132,7 +145,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             };
             footPanel.Controls.Add(avatar);
 
-            var lblUser = new Label {
+            var lblUser = new Label
+            {
                 Text = _displayName,
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
@@ -142,7 +156,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             };
             footPanel.Controls.Add(lblUser);
 
-            var lblSub = new Label {
+            var lblSub = new Label
+            {
                 Text = _role,
                 Font = new Font("Segoe UI", 7.5F),
                 ForeColor = ThemeManager.Muted,
@@ -153,7 +168,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             footPanel.Controls.Add(lblSub);
 
             // Nút Đăng xuất gọn gàng
-            var btnLogout = new Button {
+            var btnLogout = new Button
+            {
                 Text = "🚪",
                 Font = new Font("Segoe UI Emoji", 11F),
                 ForeColor = ColorTranslator.FromHtml("#EF4444"),
@@ -172,7 +188,8 @@ namespace RestaurantCRM.AdminApp.Controls {
             Controls.Add(footPanel);
 
             // 3. Scrollable Center Menu Panel
-            var menuPanel = new Panel {
+            var menuPanel = new Panel
+            {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 BackColor = Color.Transparent,
@@ -184,11 +201,14 @@ namespace RestaurantCRM.AdminApp.Controls {
             int y = 6;
 
             // Workspace Switcher (nếu tài khoản có nhiều quyền)
-            if (_roles != null && _roles.Count > 1) {
-                AddSectionHeader(menuPanel, "CHUYỂN PHÂN HỆ", ref y);
-                foreach (string r in _roles) {
+            if (_roles != null && _roles.Count > 1)
+            {
+                AddSectionHeader(menuPanel, "Chuyển phân hệ", ref y);
+                foreach (string r in _roles)
+                {
                     bool isActive = (r == _role);
-                    var btnSwitch = new Button {
+                    var btnSwitch = new Button
+                    {
                         Text = "  🔄  " + r,
                         Location = new Point(8, y),
                         Size = new Size(200, 32),
@@ -210,63 +230,72 @@ namespace RestaurantCRM.AdminApp.Controls {
             }
 
             // Menu Items by Role
-            AddSectionHeader(menuPanel, "TỔNG QUAN", ref y);
-            AddMenuItem(menuPanel, "Dashboard", "📊  DASHBOARD", ref y);
+            AddSectionHeader(menuPanel, "Tổng quan", ref y);
+            AddMenuItem(menuPanel, "Dashboard", "📊  Dashboard", ref y);
             y += 8;
 
-            if (_role == "Admin") {
-                AddSectionHeader(menuPanel, "CRM & KHÁCH HÀNG", ref y);
-                AddMenuItem(menuPanel, "Khách hàng", "👥  TEAM / KHÁCH HÀNG", ref y);
-                AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
-                AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
-                AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
+            if (_role == "Admin")
+            {
+                AddSectionHeader(menuPanel, "CRM & Khách hàng", ref y);
+                AddMenuItem(menuPanel, "Khách hàng", "👥  Khách hàng", ref y);
+                AddMenuItem(menuPanel, "Đánh giá", "⭐  Đánh giá dịch vụ", ref y);
+                AddMenuItem(menuPanel, "Phản hồi", "💬  Góp ý & Phản hồi", ref y);
+                AddMenuItem(menuPanel, "Khảo sát", "📋  Khảo sát ý kiến", ref y);
                 y += 8;
 
-                AddSectionHeader(menuPanel, "BÁN HÀNG & KHO", ref y);
-                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Đơn hàng", "🧾  QUẢN LÝ ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Món ăn", "🍲  THỰC ĐƠN & MÓN ĂN", ref y);
-                AddMenuItem(menuPanel, "Kho hàng", "📦  QUẢN LÝ TỒN KHO", ref y);
-                AddMenuItem(menuPanel, "Nhà cung cấp", "🏢  NHÀ CUNG CẤP", ref y);
-                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
+                AddSectionHeader(menuPanel, "Bán hàng & Kho", ref y);
+                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  Tạo đơn hàng", ref y);
+                AddMenuItem(menuPanel, "Đơn hàng", "🧾  Quản lý đơn hàng", ref y);
+                AddMenuItem(menuPanel, "Món ăn", "🍲  Thực đơn & Món ăn", ref y);
+                AddMenuItem(menuPanel, "Kho hàng", "📦  Quản lý tồn kho", ref y);
+                AddMenuItem(menuPanel, "Nhà cung cấp", "🏢  Nhà cung cấp", ref y);
+                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  Khuyến mãi", ref y);
                 y += 8;
 
-                AddSectionHeader(menuPanel, "HỆ THỐNG", ref y);
-                AddMenuItem(menuPanel, "Tài khoản", "👤  TÀI KHOẢN", ref y);
-                AddMenuItem(menuPanel, "Vai trò & phân quyền", "🛡️  PHÂN QUYỀN", ref y);
-            } else if (_role == "Bán hàng") {
-                AddSectionHeader(menuPanel, "VẬN HÀNH BÁN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Đơn hàng", "🧾  DANH SÁCH ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Thực đơn", "🍲  THỰC ĐƠN MÓN ĂN", ref y);
-                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
-                AddMenuItem(menuPanel, "Kho hàng", "📦  KIỂM TRA KHO", ref y);
-                AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  BÁO CÁO DOANH THU", ref y);
-            } else {
-                AddSectionHeader(menuPanel, "CHĂM SÓC KHÁCH HÀNG", ref y);
-                AddMenuItem(menuPanel, "Khách hàng", "👥  TEAM / KHÁCH HÀNG", ref y);
-                AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
-                AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
-                AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
-                AddMenuItem(menuPanel, "Phân tích khách hàng", "📊  PHÂN TÍCH KHÁCH", ref y);
+                AddSectionHeader(menuPanel, "Hệ thống", ref y);
+                AddMenuItem(menuPanel, "Tài khoản", "👤  Tài khoản", ref y);
+                AddMenuItem(menuPanel, "Vai trò & phân quyền", "🛡️  Vai trò & Phân quyền", ref y);
+            }
+            else if (_role == "Bán hàng")
+            {
+                AddSectionHeader(menuPanel, "Vận hành bán hàng", ref y);
+                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  Tạo đơn hàng", ref y);
+                AddMenuItem(menuPanel, "Đơn hàng", "🧾  Danh sách đơn hàng", ref y);
+                AddMenuItem(menuPanel, "Thực đơn", "🍲  Thực đơn món ăn", ref y);
+                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  Khuyến mãi", ref y);
+                AddMenuItem(menuPanel, "Kho hàng", "📦  Kiểm tra kho", ref y);
+                AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  Báo cáo doanh thu", ref y);
+            }
+            else
+            {
+                AddSectionHeader(menuPanel, "Chăm sóc khách hàng", ref y);
+                AddMenuItem(menuPanel, "Khách hàng", "👥  Khách hàng", ref y);
+                AddMenuItem(menuPanel, "Đánh giá", "⭐  Đánh giá dịch vụ", ref y);
+                AddMenuItem(menuPanel, "Phản hồi", "💬  Góp ý & Phản hồi", ref y);
+                AddMenuItem(menuPanel, "Khảo sát", "📋  Khảo sát ý kiến", ref y);
+                AddMenuItem(menuPanel, "Phân tích khách hàng", "📊  Phân tích khách hàng", ref y);
             }
         }
 
-        private void AddSectionHeader(Panel parent, string title, ref int y) {
-            var lbl = new Label {
-                Text = title,
+        private void AddSectionHeader(Panel parent, string title, ref int y)
+        {
+            var lbl = new Label
+            {
+                Text = title.ToUpper(),
                 ForeColor = _textHeader,
-                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(14, y)
             };
             parent.Controls.Add(lbl);
-            y += 20;
+            y += 22;
         }
 
-        private void AddMenuItem(Panel parent, string commandKey, string displayTitle, ref int y) {
+        private void AddMenuItem(Panel parent, string commandKey, string displayTitle, ref int y)
+        {
             bool isDefault = commandKey == "Dashboard";
-            var btn = new Button {
+            var btn = new Button
+            {
                 Text = "  " + displayTitle,
                 Tag = commandKey,
                 Location = new Point(6, y),
@@ -285,7 +314,8 @@ namespace RestaurantCRM.AdminApp.Controls {
 
             // Bo góc nhẹ và vạch nhấn bên trái khi active
             btn.Paint += (s, e) => {
-                if (btn == _activeBtn) {
+                if (btn == _activeBtn)
+                {
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, btn.Width - 1, btn.Height - 1), 8))
                     using (var brush = new SolidBrush(ColorTranslator.FromHtml("#F5F3FF")))
@@ -303,7 +333,8 @@ namespace RestaurantCRM.AdminApp.Controls {
 
             btn.Click += (s, e) => {
                 var clicked = (Button)s;
-                if (_activeBtn != null && _activeBtn != clicked) {
+                if (_activeBtn != null && _activeBtn != clicked)
+                {
                     _activeBtn.ForeColor = _textNormal;
                     _activeBtn.BackColor = Color.Transparent;
                     _activeBtn.Font = new Font("Segoe UI", 8.5F);
