@@ -27,13 +27,38 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             _nccService = new NhaCungCapService(httpClient);
             _nguyenLieuService = new NguyenLieuService(httpClient);
 
+            dgvChiTiet.AutoGenerateColumns = false;
             cboMonAn.SelectedIndexChanged += CboMonAn_SelectedIndexChanged;
+
+            numSoLuong.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter) {
+                    numDonGiaNhap.Focus();
+                    e.SuppressKeyPress = true;
+                }
+            };
+            numDonGiaNhap.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter) {
+                    btnThemChiTiet_Click(s, e);
+                    e.SuppressKeyPress = true;
+                }
+            };
+            dgvChiTiet.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Delete) {
+                    btnXoaChiTiet_Click(s, e);
+                    e.Handled = true;
+                }
+            };
         }
 
         private void CboMonAn_SelectedIndexChanged(object sender, EventArgs e) {
             var selected = cboMonAn.SelectedItem as NguyenLieuDto;
-            if (selected != null && selected.GiaNhapGanNhat > 0) {
-                numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, selected.GiaNhapGanNhat);
+            if (selected != null) {
+                lblSoLuong.Text = !string.IsNullOrEmpty(selected.DonViTinh) ? $"Số lượng ({selected.DonViTinh}) (*):" : "Số lượng (*):";
+                if (selected.GiaNhapGanNhat > 0) {
+                    numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, selected.GiaNhapGanNhat);
+                }
+            } else {
+                lblSoLuong.Text = "Số lượng (*):";
             }
         }
 
@@ -120,6 +145,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             }
 
             UpdateGrid();
+            numSoLuong.Value = 1;
+            cboMonAn.Focus();
         }
 
         private void btnXoaChiTiet_Click(object sender, EventArgs e) {
@@ -135,6 +162,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         }
 
         private void UpdateGrid() {
+            dgvChiTiet.AutoGenerateColumns = false;
             dgvChiTiet.DataSource = null;
             dgvChiTiet.DataSource = _items.ToList();
 

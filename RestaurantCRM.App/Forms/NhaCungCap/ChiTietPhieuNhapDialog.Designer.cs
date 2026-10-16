@@ -99,12 +99,16 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.dgvChiTiet.AllowUserToAddRows = false;
             this.dgvChiTiet.AllowUserToDeleteRows = false;
+            this.dgvChiTiet.AllowUserToResizeColumns = true;
             this.dgvChiTiet.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.dgvChiTiet.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dgvChiTiet.AutoGenerateColumns = false;
+            this.dgvChiTiet.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.None;
             this.dgvChiTiet.BackgroundColor = System.Drawing.Color.White;
-            this.dgvChiTiet.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvChiTiet.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.dgvChiTiet.ColumnHeadersHeight = 32;
+            this.dgvChiTiet.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             this.dgvChiTiet.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.colMaMon,
             this.colTenMon,
@@ -117,36 +121,39 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.dgvChiTiet.Name = "dgvChiTiet";
             this.dgvChiTiet.ReadOnly = true;
             this.dgvChiTiet.RowHeadersVisible = false;
+            this.dgvChiTiet.RowTemplate.Height = 28;
+            this.dgvChiTiet.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.dgvChiTiet.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvChiTiet.Size = new System.Drawing.Size(642, 260);
+            this.dgvChiTiet.Size = new System.Drawing.Size(818, 305);
             this.dgvChiTiet.TabIndex = 5;
             // 
             // colMaMon
             // 
             this.colMaMon.DataPropertyName = "MaNguyenLieu";
-            this.colMaMon.FillWeight = 55F;
             this.colMaMon.HeaderText = "Mã NL";
-            this.colMaMon.MinimumWidth = 65;
+            this.colMaMon.MinimumWidth = 80;
             this.colMaMon.Name = "colMaMon";
             this.colMaMon.ReadOnly = true;
+            this.colMaMon.Width = 95;
+            this.colMaMon.DefaultCellStyle = new System.Windows.Forms.DataGridViewCellStyle { Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter };
             // 
             // colTenMon
             // 
             this.colTenMon.DataPropertyName = "TenNguyenLieu";
-            this.colTenMon.FillWeight = 130F;
             this.colTenMon.HeaderText = "Tên Nguyên Vật Liệu";
-            this.colTenMon.MinimumWidth = 140;
+            this.colTenMon.MinimumWidth = 180;
             this.colTenMon.Name = "colTenMon";
             this.colTenMon.ReadOnly = true;
+            this.colTenMon.Width = 260;
             // 
             // colDonViTinh
             // 
             this.colDonViTinh.DataPropertyName = "DonViTinh";
-            this.colDonViTinh.FillWeight = 45F;
-            this.colDonViTinh.HeaderText = "ĐVT";
-            this.colDonViTinh.MinimumWidth = 50;
+            this.colDonViTinh.HeaderText = "Đơn Vị Tính";
+            this.colDonViTinh.MinimumWidth = 80;
             this.colDonViTinh.Name = "colDonViTinh";
             this.colDonViTinh.ReadOnly = true;
+            this.colDonViTinh.Width = 95;
             this.colDonViTinh.DefaultCellStyle = new System.Windows.Forms.DataGridViewCellStyle { Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter };
             // 
             // colSoLuong
@@ -155,11 +162,11 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             dataGridViewCellStyle1.Format = "N2";
             this.colSoLuong.DefaultCellStyle = dataGridViewCellStyle1;
-            this.colSoLuong.FillWeight = 55F;
             this.colSoLuong.HeaderText = "Số Lượng";
-            this.colSoLuong.MinimumWidth = 70;
+            this.colSoLuong.MinimumWidth = 85;
             this.colSoLuong.Name = "colSoLuong";
             this.colSoLuong.ReadOnly = true;
+            this.colSoLuong.Width = 110;
             // 
             // colDonGia
             // 
@@ -167,11 +174,11 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             dataGridViewCellStyle2.Format = "N0";
             this.colDonGia.DefaultCellStyle = dataGridViewCellStyle2;
-            this.colDonGia.FillWeight = 70F;
             this.colDonGia.HeaderText = "Đơn Giá Nhập (đ)";
-            this.colDonGia.MinimumWidth = 90;
+            this.colDonGia.MinimumWidth = 110;
             this.colDonGia.Name = "colDonGia";
             this.colDonGia.ReadOnly = true;
+            this.colDonGia.Width = 140;
             // 
             // colThanhTien
             // 
@@ -180,21 +187,21 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             dataGridViewCellStyle3.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             dataGridViewCellStyle3.Format = "N0";
             this.colThanhTien.DefaultCellStyle = dataGridViewCellStyle3;
-            this.colThanhTien.FillWeight = 80F;
             this.colThanhTien.HeaderText = "Thành Tiền (đ)";
-            this.colThanhTien.MinimumWidth = 100;
+            this.colThanhTien.MinimumWidth = 130;
             this.colThanhTien.Name = "colThanhTien";
             this.colThanhTien.ReadOnly = true;
+            this.colThanhTien.Width = 160;
             // 
             // lblTongTien
             // 
             this.lblTongTien.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lblTongTien.AutoSize = true;
-            this.lblTongTien.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.lblTongTien.Font = new System.Drawing.Font("Segoe UI", 11.5F, System.Drawing.FontStyle.Bold);
             this.lblTongTien.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(225)))), ((int)(((byte)(29)))), ((int)(((byte)(72)))));
-            this.lblTongTien.Location = new System.Drawing.Point(17, 382);
+            this.lblTongTien.Location = new System.Drawing.Point(17, 430);
             this.lblTongTien.Name = "lblTongTien";
-            this.lblTongTien.Size = new System.Drawing.Size(178, 20);
+            this.lblTongTien.Size = new System.Drawing.Size(188, 21);
             this.lblTongTien.TabIndex = 6;
             this.lblTongTien.Text = "TỔNG GIÁ TRỊ: 0 VNĐ";
             // 
@@ -202,10 +209,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.btnDong.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnDong.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.btnDong.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.btnDong.Location = new System.Drawing.Point(578, 378);
+            this.btnDong.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.btnDong.Location = new System.Drawing.Point(744, 424);
             this.btnDong.Name = "btnDong";
-            this.btnDong.Size = new System.Drawing.Size(85, 30);
+            this.btnDong.Size = new System.Drawing.Size(95, 34);
             this.btnDong.TabIndex = 7;
             this.btnDong.Text = "Đóng";
             this.btnDong.UseVisualStyleBackColor = true;
@@ -217,7 +224,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(248)))), ((int)(((byte)(250)))), ((int)(((byte)(252)))));
-            this.ClientSize = new System.Drawing.Size(684, 422);
+            this.ClientSize = new System.Drawing.Size(860, 476);
             this.Controls.Add(this.btnDong);
             this.Controls.Add(this.lblTongTien);
             this.Controls.Add(this.dgvChiTiet);
@@ -227,9 +234,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.Controls.Add(this.lblNhaCungCap);
             this.Controls.Add(this.lblTieuDe);
             this.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
+            this.MaximizeBox = true;
             this.MinimizeBox = false;
+            this.MinimumSize = new System.Drawing.Size(760, 420);
             this.Name = "ChiTietPhieuNhapDialog";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Chi Tiết Phiếu Nhập Hàng";
