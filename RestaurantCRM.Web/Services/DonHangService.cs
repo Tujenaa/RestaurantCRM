@@ -183,6 +183,10 @@ public class DonHangService
 
                     return FilterOrders(orders, filter);
                 }
+                if (list != null && list.Count == 0)
+                {
+                    return new List<DonHangViewModel>();
+                }
             }
         }
         catch (Exception ex)

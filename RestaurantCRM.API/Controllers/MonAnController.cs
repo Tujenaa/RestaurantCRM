@@ -23,7 +23,7 @@ namespace RestaurantCRM.API.Controllers
             var query = _context.MonAn
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
-                .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock"))
+                .Where(m => m.TrangThai != "Discontinued" && m.TrangThai != "Inactive")
                 .AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "Tất cả")
@@ -42,8 +42,15 @@ namespace RestaurantCRM.API.Controllers
                 if (activeKm != null) {
                     giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
                 }
+
+                int soLuong = m.SoLuong ?? 0;
+                bool conHang = soLuong > 0 && m.TrangThai != "OutOfStock";
+
                 return new {
-                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
+                    SoLuong = soLuong,
+                    ConHang = conHang,
+                    TrangThai = conHang ? "InStock" : "OutOfStock",
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
             }).ToList();
@@ -56,44 +63,56 @@ namespace RestaurantCRM.API.Controllers
                 ).ToList();
             }
 
+            // Sắp xếp món còn hàng lên đầu, món hết hàng đẩy xuống dưới cùng
             if (sort == "asc")
-                result = result.OrderBy(m => m.DonGiaSauGiam).ToList();
+                result = result.OrderByDescending(m => m.ConHang).ThenBy(m => m.DonGiaSauGiam).ToList();
             else if (sort == "desc")
-                result = result.OrderByDescending(m => m.DonGiaSauGiam).ToList();
+                result = result.OrderByDescending(m => m.ConHang).ThenByDescending(m => m.DonGiaSauGiam).ToList();
+            else
+                result = result.OrderByDescending(m => m.ConHang).ToList();
 
             return Ok(result);
         }
 
         // GET: api/MonAn/TheoLoai/{maLoai} - Lấy danh sách món ăn theo loại
         [HttpGet("TheoLoai/{maLoai}")]
-        public async Task<ActionResult<IEnumerable<MonAn>>> GetMonAnsByLoai(string maLoai)
+        public async Task<ActionResult<IEnumerable<object>>> GetMonAnsByLoai(string maLoai)
         {
             var now = DateTime.Now;
             var today = DateOnly.FromDateTime(now);
             var list = await _context.MonAn
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
-                .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock")))
+                .Where(m => m.MaLoaiMon == maLoai && m.TrangThai != "Discontinued" && m.TrangThai != "Inactive")
                 .AsNoTracking()
                 .ToListAsync();
 
-            return Ok(list.Select(m => {
+            var result = list.Select(m => {
                 var activeKm = m.KmTheoSp.FirstOrDefault(k => k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
                 double donGia = m.DonGia ?? 0;
                 double giaSauGiam = donGia;
                 if (activeKm != null) {
                     giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
                 }
+
+                int soLuong = m.SoLuong ?? 0;
+                bool conHang = soLuong > 0 && m.TrangThai != "OutOfStock";
+
                 return new {
-                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
+                    SoLuong = soLuong,
+                    ConHang = conHang,
+                    TrangThai = conHang ? "InStock" : "OutOfStock",
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
-            }));
+            }).OrderByDescending(m => m.ConHang).ToList();
+
+            return Ok(result);
         }
 
         // GET: api/MonAn/{id} - Lấy thông tin chi tiết một món ăn.
         [HttpGet("{id}")]
-        public async Task<ActionResult<MonAn>> GetMonAn(string id)
+        public async Task<ActionResult<object>> GetMonAn(string id)
         {
             var now = DateTime.Now;
             var today = DateOnly.FromDateTime(now);
@@ -114,13 +133,17 @@ namespace RestaurantCRM.API.Controllers
                 giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
             }
 
+            int soLuong = monAn.SoLuong ?? 0;
+            bool conHang = soLuong > 0 && monAn.TrangThai != "OutOfStock";
+
             return Ok(new {
-                monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia, monAn.SoLuong, monAn.TrangThai,
+                monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia,
+                SoLuong = soLuong,
+                ConHang = conHang,
+                TrangThai = conHang ? "InStock" : "OutOfStock",
                 DonGiaSauGiam = Math.Max(0, giaSauGiam)
             });
         }
-
-
 
         private bool MonAnExists(string id)
         {

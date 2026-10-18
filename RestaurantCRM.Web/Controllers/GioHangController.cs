@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
+using System.Net.Http.Json;
 
 namespace RestaurantCRM.Web.Controllers;
 
@@ -17,8 +18,30 @@ public class GioHangController : Controller
         _httpClientFactory = httpClientFactory;
     }
 
+    private async Task SyncUsedVouchersAsync()
+    {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(customerId)) return;
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var codes = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
+                HttpContext.Session.SetString("UsedVouchers", string.Join(",", codes));
+            }
+        }
+        catch { }
+    }
+
     [HttpGet]
-    public IActionResult Index() => View(BuildPage());
+    public async Task<IActionResult> Index()
+    {
+        await SyncUsedVouchersAsync();
+        return View(BuildPage());
+    }
 
     [HttpGet]
     public async Task<IActionResult> Checkout()
@@ -29,6 +52,8 @@ public class GioHangController : Controller
             TempData["ThongBao"] = "Vui lòng đăng nhập tài khoản trước khi tiến hành đặt hàng và thanh toán.";
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
+
+        await SyncUsedVouchersAsync();
 
         var cart = _gioHangService.Get(HttpContext.Session);
         if (cart.Items.Count == 0) return RedirectToAction(nameof(Index));
@@ -117,8 +142,9 @@ public class GioHangController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Voucher(ApDungVoucherViewModel model)
+    public async Task<IActionResult> Voucher(ApDungVoucherViewModel model)
     {
+        await SyncUsedVouchersAsync();
         if (string.IsNullOrWhiteSpace(model.MaVoucher))
         {
             _gioHangService.ApplyVoucher(HttpContext.Session, null);
@@ -150,6 +176,8 @@ public class GioHangController : Controller
             TempData["ThongBao"] = "Vui lòng đăng nhập tài khoản trước khi tiến hành đặt hàng và thanh toán.";
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
+
+        await SyncUsedVouchersAsync();
 
         var model = page.DatHang;
         var cart = _gioHangService.Get(HttpContext.Session);

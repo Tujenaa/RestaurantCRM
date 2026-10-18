@@ -24,6 +24,13 @@ public class GioHangService
             }
         }
         var voucher = session.GetString(VoucherKey);
+        var usedStr = session.GetString("UsedVouchers");
+        if (!string.IsNullOrWhiteSpace(voucher) && IsVoucherUsed(voucher, usedStr))
+        {
+            session.Remove(VoucherKey);
+            voucher = null;
+        }
+
         var subtotal = cart.Sum(x => x.ThanhTien);
         var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscount(voucher, subtotal);
         return new GioHangViewModel { Items = cart, MaVoucher = voucher, GiamGia = discount };
@@ -32,14 +39,27 @@ public class GioHangService
     public void Add(ISession session, string maMon, int quantity)
     {
         var dish = _monAnService.Find(maMon);
-        if (dish is null) return;
+        if (dish is null || !dish.ConHang || dish.SoLuong <= 0) return;
         var cart = Get(session).Items;
         var item = cart.FirstOrDefault(x => x.MaMon == maMon);
-        if (item is null) cart.Add(new GioHangItemViewModel { MaMon = dish.MaMon, TenMon = dish.TenMon, DuongDanAnh = dish.DuongDanAnh, BieuTuong = dish.BieuTuong, DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia, SoLuong = Math.Clamp(quantity, 1, 99) });
+        int maxQty = dish.SoLuong > 0 ? Math.Min(99, dish.SoLuong) : 99;
+
+        if (item is null)
+        {
+            cart.Add(new GioHangItemViewModel
+            {
+                MaMon = dish.MaMon,
+                TenMon = dish.TenMon,
+                DuongDanAnh = dish.DuongDanAnh,
+                BieuTuong = dish.BieuTuong,
+                DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia,
+                SoLuong = Math.Clamp(quantity, 1, maxQty)
+            });
+        }
         else
         {
             if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg") item.DuongDanAnh = dish.DuongDanAnh;
-            item.SoLuong = Math.Min(99, item.SoLuong + Math.Clamp(quantity, 1, 99));
+            item.SoLuong = Math.Min(maxQty, item.SoLuong + Math.Clamp(quantity, 1, maxQty));
         }
         Save(session, cart);
         AutoApplyBestVoucher(session, cart);
@@ -51,8 +71,10 @@ public class GioHangService
         var item = cart.FirstOrDefault(x => x.MaMon == maMon);
         if (item is not null)
         {
+            var dish = _monAnService.Find(maMon);
+            int maxQty = (dish != null && dish.SoLuong > 0) ? Math.Min(99, dish.SoLuong) : 99;
             if (quantity <= 0) cart.Remove(item);
-            else item.SoLuong = Math.Min(quantity, 99);
+            else item.SoLuong = Math.Min(quantity, maxQty);
         }
         Save(session, cart);
         AutoApplyBestVoucher(session, cart);
@@ -67,6 +89,13 @@ public class GioHangService
         }
 
         var clean = code.Trim().ToUpperInvariant();
+        var usedStr = session.GetString("UsedVouchers");
+        if (IsVoucherUsed(clean, usedStr))
+        {
+            session.Remove(VoucherKey);
+            return (false, "Bạn đã sử dụng mã ưu đãi này cho đơn hàng trước đó.", 0m);
+        }
+
         var cart = Get(session);
         var subtotal = cart.TamTinh;
 
@@ -98,6 +127,22 @@ public class GioHangService
         return (false, "Mã ưu đãi không hợp lệ. Các mã khả dụng: LAUPHO20 (-20k), VOUCHER40K (-40k), VOUCHER10 (-10%), NHOM15 (-15%).", 0m);
     }
 
+    public static bool IsVoucherUsed(string? code, string? usedVouchersString)
+    {
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(usedVouchersString)) return false;
+        var clean = code.Trim().ToUpperInvariant();
+        var usedList = usedVouchersString.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return usedList.Any(u => string.Equals(u.Trim(), clean, StringComparison.OrdinalIgnoreCase)
+            || (clean == "VOUCHER10" && (u == "KM01" || u == "KMV01"))
+            || ((clean == "KM01" || clean == "KMV01") && u == "VOUCHER10")
+            || (clean == "VOUCHER40K" && (u == "KM02" || u == "KMV02"))
+            || ((clean == "KM02" || clean == "KMV02") && u == "VOUCHER40K")
+            || (clean == "NHOM15" && (u == "KM05" || u == "KMV03"))
+            || ((clean == "KM05" || clean == "KMV03") && u == "NHOM15")
+            || (clean == "LAUPHO20" && u == "KMV04")
+            || (clean == "KMV04" && u == "LAUPHO20"));
+    }
+
     public static decimal CalculateDiscount(string code, decimal subtotal)
     {
         var clean = code.Trim().ToUpperInvariant();
@@ -124,7 +169,14 @@ public class GioHangService
         var subtotal = cart.Sum(x => x.ThanhTien);
         if (subtotal == 0) return;
         
+        var usedStr = session.GetString("UsedVouchers");
         var currentVoucher = session.GetString(VoucherKey);
+        if (!string.IsNullOrWhiteSpace(currentVoucher) && IsVoucherUsed(currentVoucher, usedStr))
+        {
+            session.Remove(VoucherKey);
+            currentVoucher = null;
+        }
+
         var currentDiscount = string.IsNullOrWhiteSpace(currentVoucher) ? 0m : CalculateDiscount(currentVoucher, subtotal);
 
         var allVouchers = new[] { "LAUPHO20", "VOUCHER40K", "VOUCHER10", "NHOM15" };
@@ -133,6 +185,7 @@ public class GioHangService
 
         foreach (var v in allVouchers)
         {
+            if (IsVoucherUsed(v, usedStr)) continue;
             var d = CalculateDiscount(v, subtotal);
             if (d > maxDiscount)
             {

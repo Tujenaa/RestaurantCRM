@@ -252,7 +252,11 @@
                         new { Code = "NHOM15", Label = "-15%" }
                     };
                     var usedStr = Context.Session.GetString("UsedVouchers") ?? "";
-                    var available = allVouchers.Where(v => !usedStr.Contains(v.Code));
+                    var available = allVouchers.Where(v => !RestaurantCRM.Web.Services.GioHangService.IsVoucherUsed(v.Code, usedStr)).ToList();
+                }
+                @if (available.Count == 0)
+                {
+                    <div style="font-size: 11px; color: var(--muted); font-style: italic;">Bạn đã sử dụng hết các mã ưu đãi khả dụng.</div>
                 }
                 @foreach (var v in available)
                 {

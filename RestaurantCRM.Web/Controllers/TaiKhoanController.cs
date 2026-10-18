@@ -132,8 +132,9 @@ public class TaiKhoanController : Controller
                     return RedirectToAction(nameof(DangNhap));
                 }
 
+                var customerId = idProperty.GetString() ?? "";
                 HttpContext.Session.SetString("Token", tokenProperty.GetString() ?? "");
-                HttpContext.Session.SetString("MaKhachHang", idProperty.GetString() ?? "");
+                HttpContext.Session.SetString("MaKhachHang", customerId);
                 HttpContext.Session.SetString("HoTen", nameProperty.GetString() ?? "");
 
                 if (khachHang.TryGetProperty("email", out var emailProp) && emailProp.ValueKind == JsonValueKind.String)
@@ -144,14 +145,45 @@ public class TaiKhoanController : Controller
                 {
                     HttpContext.Session.SetString("SoDienThoai", phoneProp.GetString() ?? "");
                 }
+                if (khachHang.TryGetProperty("diaChi", out var addrProp) && addrProp.ValueKind == JsonValueKind.String)
+                {
+                    var addr = addrProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(addr))
+                    {
+                        HttpContext.Session.SetString("DiaChiGiaoHang", addr);
+                    }
+                }
+
+                // Đồng bộ danh sách voucher khách hàng đã sử dụng vào Session
+                try
+                {
+                    var usedRes = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
+                    if (usedRes.IsSuccessStatusCode)
+                    {
+                        var usedCodes = await usedRes.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
+                        HttpContext.Session.SetString("UsedVouchers", string.Join(",", usedCodes));
+                    }
+                }
+                catch { }
 
                 return RedirectToAction("Index", "TrangChu");
             }
 
             var error = await response.Content.ReadAsStringAsync();
-            TempData["ThongBao"] = String.IsNullOrWhiteSpace(error)
-                ? "Email/số điện thoại hoặc mật khẩu không đúng."
-                : error.Trim('"');
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                TempData["ThongBao"] = "Tài khoản không tồn tại.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                TempData["ThongBao"] = "Email/Số điện thoại hoặc mật khẩu không đúng.";
+            }
+            else
+            {
+                TempData["ThongBao"] = String.IsNullOrWhiteSpace(error)
+                    ? "Email/Số điện thoại hoặc mật khẩu không đúng."
+                    : error.Trim('"');
+            }
             return RedirectToAction(nameof(DangNhap));
         }
         catch (HttpRequestException)

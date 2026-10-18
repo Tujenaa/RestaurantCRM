@@ -120,9 +120,13 @@ else
                             new { Code = "NHOM15", Label = "-15%" }
                         };
                         var usedStr = Context.Session.GetString("UsedVouchers") ?? "";
-                        var available = allVouchers.Where(v => !usedStr.Contains(v.Code)).ToList();
+                        var available = allVouchers.Where(v => !RestaurantCRM.Web.Services.GioHangService.IsVoucherUsed(v.Code, usedStr)).ToList();
                         var validVouchers = available.Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) > 0).ToList();
                         var invalidVouchers = available.Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) == 0).ToList();
+                    }
+                    @if (available.Count == 0)
+                    {
+                        <div style="font-size: 11.5px; color: var(--muted); font-style: italic;">Bạn đã sử dụng hết các mã ưu đãi khả dụng.</div>
                     }
                     @foreach (var v in validVouchers)
                     {

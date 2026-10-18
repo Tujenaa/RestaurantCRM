@@ -16,22 +16,24 @@ namespace RestaurantCRM.API.Controllers
             _context = context;
         }
 
-        // GET: api/KhuyenMai/Vouchers - Lấy danh sách Voucher hợp lệ
+        // GET: api/KhuyenMai/Vouchers?maKhachHang=... - Lấy danh sách Voucher hợp lệ (ẩn voucher đã dùng của khách)
         [HttpGet("Vouchers")]
-        public async Task<IActionResult> GetVouchers()
+        public async Task<IActionResult> GetVouchers([FromQuery] string? maKhachHang = null)
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var vouchers = await _context.KmTheoVoucher
+            var query = _context.KmTheoVoucher
                 .Include(v => v.MaChuongTrinhNavigation)
                 .Where(v => v.MaChuongTrinhNavigation != null 
                          && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
-                         && (v.MaChuongTrinhNavigation.NgayKetThuc == null || v.MaChuongTrinhNavigation.NgayKetThuc >= today))
+                         && (v.MaChuongTrinhNavigation.NgayKetThuc == null || v.MaChuongTrinhNavigation.NgayKetThuc >= today));
+
+            var vouchers = await query
                 .Select(v => new
                 {
                     v.MaKmvoucher,
                     v.MaVoucher,
-                    TenChuongTrinh = v.MaChuongTrinhNavigation.TenChuongTrinh,
+                    TenChuongTrinh = v.MaChuongTrinhNavigation!.TenChuongTrinh,
                     v.PhanTramGiam,
                     v.TienGiam,
                     v.GiaTriDonToiThieu,
@@ -41,12 +43,54 @@ namespace RestaurantCRM.API.Controllers
                 })
                 .ToListAsync();
 
+            if (!string.IsNullOrWhiteSpace(maKhachHang))
+            {
+                var usedKeys = await _context.HoaDon
+                    .Where(h => h.MaKhachHang == maKhachHang && h.TrangThai != "Cancelled" && h.MaKmvoucher != null)
+                    .Select(h => h.MaKmvoucher!)
+                    .Distinct()
+                    .ToListAsync();
+
+                vouchers = vouchers
+                    .Where(v => !usedKeys.Contains(v.MaKmvoucher) && (v.MaVoucher == null || !usedKeys.Contains(v.MaVoucher)))
+                    .ToList();
+            }
+
             return Ok(vouchers);
         }
 
-        // GET: api/KhuyenMai/KiemTraVoucher?code=...&subtotal=...
+        // GET: api/KhuyenMai/UsedVouchers/{maKhachHang} - Danh sách voucher khách hàng đã dùng
+        [HttpGet("UsedVouchers/{maKhachHang}")]
+        public async Task<IActionResult> GetUsedVouchers(string maKhachHang)
+        {
+            if (string.IsNullOrWhiteSpace(maKhachHang))
+                return Ok(new List<string>());
+
+            var usedKeys = await _context.HoaDon
+                .Where(h => h.MaKhachHang == maKhachHang && h.TrangThai != "Cancelled" && h.MaKmvoucher != null)
+                .Select(h => h.MaKmvoucher!)
+                .Distinct()
+                .ToListAsync();
+
+            var voucherDetails = await _context.KmTheoVoucher
+                .Where(v => usedKeys.Contains(v.MaKmvoucher) || (v.MaVoucher != null && usedKeys.Contains(v.MaVoucher)))
+                .Select(v => new { v.MaKmvoucher, v.MaVoucher })
+                .ToListAsync();
+
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var k in usedKeys) result.Add(k);
+            foreach (var v in voucherDetails)
+            {
+                if (!string.IsNullOrEmpty(v.MaKmvoucher)) result.Add(v.MaKmvoucher);
+                if (!string.IsNullOrEmpty(v.MaVoucher)) result.Add(v.MaVoucher);
+            }
+
+            return Ok(result.ToList());
+        }
+
+        // GET: api/KhuyenMai/KiemTraVoucher?code=...&subtotal=...&maKhachHang=...
         [HttpGet("KiemTraVoucher")]
-        public async Task<IActionResult> KiemTraVoucher([FromQuery] string code, [FromQuery] double subtotal)
+        public async Task<IActionResult> KiemTraVoucher([FromQuery] string code, [FromQuery] double subtotal, [FromQuery] string? maKhachHang = null)
         {
             if (string.IsNullOrWhiteSpace(code))
                 return BadRequest(new { valid = false, message = "Vui lòng nhập mã giảm giá." });
@@ -58,6 +102,20 @@ namespace RestaurantCRM.API.Controllers
 
             if (voucher == null || voucher.MaChuongTrinhNavigation == null)
                 return Ok(new { valid = false, message = "Mã voucher không tồn tại." });
+
+            // Kiểm tra xem khách hàng này đã dùng voucher này chưa (cho đơn hàng không bị hủy)
+            if (!string.IsNullOrWhiteSpace(maKhachHang))
+            {
+                var hasUsed = await _context.HoaDon.AnyAsync(h =>
+                    h.MaKhachHang == maKhachHang
+                    && h.TrangThai != "Cancelled"
+                    && (h.MaKmvoucher == voucher.MaKmvoucher || h.MaKmvoucher == voucher.MaVoucher));
+
+                if (hasUsed)
+                {
+                    return Ok(new { valid = false, message = "Bạn đã sử dụng mã ưu đãi này cho đơn hàng trước đó." });
+                }
+            }
 
             var ct = voucher.MaChuongTrinhNavigation;
             if (ct.NgayBatDau.HasValue && today < ct.NgayBatDau.Value)
