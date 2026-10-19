@@ -1,4 +1,4 @@
--- ============================================
+﻿-- ============================================
 -- CSDL: Hệ thống quản lý đặt món & CRM khách hàng
 -- SQL Server | Các cột trạng thái/loại đã được cố định bằng CHECK constraint
 -- Phiên bản đã chỉnh: gộp admin vào nhân viên, khuyến mãi tách 2 loại (theo SP / voucher),
@@ -46,7 +46,7 @@ CREATE TABLE KHACH_HANG (
     matKhau NVARCHAR(100),
     ngaySinh DATE,
     gioiTinh NVARCHAR(10),
-    soThich NVARCHAR(255),
+    diaChi NVARCHAR(255),
     trangThai NVARCHAR(20) CONSTRAINT CK_KHACH_HANG_trangThai CHECK (trangThai IN ('Active', 'Locked'))
 );
 
@@ -63,11 +63,27 @@ CREATE TABLE MON_AN (
     moTa NVARCHAR(MAX),
     duongDanAnh NVARCHAR(255),
     donGia FLOAT,
-    soLuong INT,
     trangThai NVARCHAR(20) CONSTRAINT CK_MON_AN_trangThai CHECK (trangThai IN ('InStock', 'OutOfStock', 'Discontinued'))
 );
 
--- 3. Nhà cung cấp & nhập hàng
+-- 3. Nguyên liệu & Định lượng (BOM cho quán lẩu)
+CREATE TABLE NGUYEN_LIEU (
+    maNguyenLieu VARCHAR(20) PRIMARY KEY,
+    tenNguyenLieu NVARCHAR(150) NOT NULL,
+    donViTinh NVARCHAR(30) NOT NULL,
+    soLuongTon DECIMAL(10, 2) DEFAULT 0,
+    giaNhapGanNhat FLOAT DEFAULT 0,
+    trangThai NVARCHAR(30) CONSTRAINT CK_NGUYEN_LIEU_trangThai CHECK (trangThai IN ('Active', 'Inactive'))
+);
+
+CREATE TABLE DINH_LUONG (
+    maDinhLuong VARCHAR(20) PRIMARY KEY,
+    maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon) ON DELETE CASCADE,
+    maNguyenLieu VARCHAR(20) FOREIGN KEY REFERENCES NGUYEN_LIEU(maNguyenLieu),
+    soLuongCan DECIMAL(10, 2) NOT NULL
+);
+
+-- 4. Nhà cung cấp & nhập hàng
 CREATE TABLE NHA_CUNG_CAP (
     maNhaCungCap VARCHAR(20) PRIMARY KEY,
     tenNhaCungCap NVARCHAR(150),
@@ -88,13 +104,13 @@ CREATE TABLE PHIEU_NHAP_HANG (
 CREATE TABLE CHI_TIET_PHIEU_NHAP (
     maChiTiet VARCHAR(20) PRIMARY KEY,
     maPhieuNhap VARCHAR(20) FOREIGN KEY REFERENCES PHIEU_NHAP_HANG(maPhieuNhap),
-    maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
-    soLuong INT,
+    maNguyenLieu VARCHAR(20) FOREIGN KEY REFERENCES NGUYEN_LIEU(maNguyenLieu),
+    soLuong DECIMAL(10, 2) NOT NULL,
     donGiaNhap FLOAT,
     thanhTien FLOAT
 );
 
--- 4. Khuyến mãi
+-- 5. Khuyến mãi
 -- Mỗi dòng ở KM_THEO_SP / KM_THEO_VOUCHER chỉ dùng MỘT trong hai: phanTramGiam hoặc tienGiam
 CREATE TABLE CHUONG_TRINH_KHUYEN_MAI (
     maChuongTrinh VARCHAR(20) PRIMARY KEY,
@@ -130,7 +146,7 @@ CREATE TABLE KM_THEO_VOUCHER (
     )
 );
 
--- 5. Hóa đơn (gộp đơn hàng + hóa đơn)
+-- 6. Hóa đơn (gộp đơn hàng + hóa đơn)
 -- Các cột tenKhachHang, soDienThoai, diaChiGiao, tenMon là dữ liệu sao chép cứng tại thời điểm đặt.
 -- Thống kê doanh thu: lọc trangThai = 'Completed' (ngayHoanTat IS NOT NULL).
 -- Ứng dụng nên khóa không cho sửa hóa đơn đã Completed.
@@ -190,7 +206,7 @@ CREATE TABLE LICH_SU_TRANG_THAI (
     ghiChu NVARCHAR(255)
 );
 
--- 6. Tương tác & khảo sát (CRM)
+-- 7. Tương tác & khảo sát (CRM)
 CREATE TABLE PHAN_HOI (
     maPhanHoi VARCHAR(20) PRIMARY KEY,
     maKhachHang VARCHAR(20) FOREIGN KEY REFERENCES KHACH_HANG(maKhachHang),
@@ -244,7 +260,7 @@ CREATE TABLE CAU_TRA_LOI (
     noiDungTuDien NVARCHAR(MAX)
 );
 
--- 7. Hội thoại trả lời qua lại (khách <-> nhân viên CRM)
+-- 8. Hội thoại trả lời qua lại (khách <-> nhân viên CRM)
 -- nguoiGui = 'KhachHang' thì chỉ điền maKhachHang; nguoiGui = 'NhanVien' thì chỉ điền maNhanVien
 CREATE TABLE TRA_LOI_DANH_GIA (
     maTraLoi VARCHAR(20) PRIMARY KEY,

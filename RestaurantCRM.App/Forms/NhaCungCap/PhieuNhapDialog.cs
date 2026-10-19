@@ -5,6 +5,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Config;
+using RestaurantCRM.AdminApp.Forms.Kho;
+using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
@@ -12,58 +14,107 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
     public partial class PhieuNhapDialog : Form {
         private readonly PhieuNhapService _pnService;
         private readonly NhaCungCapService _nccService;
-        private readonly MonAnService _monAnService;
+        private readonly NguyenLieuService _nguyenLieuService;
 
-        private List<MonAnDto> _allMonAn = new List<MonAnDto>();
+        private List<NguyenLieuDto> _allNguyenLieu = new List<NguyenLieuDto>();
         private List<ChiTietPhieuNhapDto> _items = new List<ChiTietPhieuNhapDto>();
+        private readonly string _initialMaNL;
 
-        public PhieuNhapDialog() {
+        public PhieuNhapDialog(string defaultMaNguyenLieu = null) {
             InitializeComponent();
+            _initialMaNL = defaultMaNguyenLieu;
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _pnService = new PhieuNhapService(httpClient);
             _nccService = new NhaCungCapService(httpClient);
-            _monAnService = new MonAnService(httpClient);
+            _nguyenLieuService = new NguyenLieuService(httpClient);
+
+            dgvChiTiet.AutoGenerateColumns = false;
+            cboMonAn.SelectedIndexChanged += CboMonAn_SelectedIndexChanged;
+
+            numSoLuong.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter) {
+                    numDonGiaNhap.Focus();
+                    e.SuppressKeyPress = true;
+                }
+            };
+            numDonGiaNhap.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter) {
+                    btnThemChiTiet_Click(s, e);
+                    e.SuppressKeyPress = true;
+                }
+            };
+            dgvChiTiet.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Delete) {
+                    btnXoaChiTiet_Click(s, e);
+                    e.Handled = true;
+                }
+            };
+        }
+
+        private void CboMonAn_SelectedIndexChanged(object sender, EventArgs e) {
+            var selected = cboMonAn.SelectedItem as NguyenLieuDto;
+            if (selected != null) {
+                lblSoLuong.Text = !string.IsNullOrEmpty(selected.DonViTinh) ? $"Số lượng ({selected.DonViTinh}) (*):" : "Số lượng (*):";
+                if (selected.GiaNhapGanNhat > 0) {
+                    numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, selected.GiaNhapGanNhat);
+                }
+            } else {
+                lblSoLuong.Text = "Số lượng (*):";
+            }
         }
 
         private async void PhieuNhapDialog_Load(object sender, EventArgs e) {
+            string staffName = UserSession.CurrentDisplayName ?? UserSession.CurrentUsername ?? "Nhân viên";
+            string staffId = UserSession.CurrentUserId ?? UserSession.CurrentUsername ?? "";
+            lblNhanVienLap.Text = !string.IsNullOrEmpty(staffId) ? $"👤 Nhân viên: {staffName} ({staffId})" : $"👤 Nhân viên: {staffName}";
+
             await LoadDropdowns();
             UpdateGrid();
         }
 
         private async Task LoadDropdowns() {
             try {
-                // Tải nhà cung cấp
+                // 1. Tải nhà cung cấp
                 var dsNCC = await _nccService.GetAllAsync();
                 cboNhaCungCap.DataSource = dsNCC;
                 cboNhaCungCap.DisplayMember = "TenNhaCungCap";
                 cboNhaCungCap.ValueMember = "MaNhaCungCap";
 
-                // Tải món ăn (chỉ lấy các món đang kinh doanh / chưa bị ngừng kinh doanh)
-                var rawDishes = await _monAnService.GetAllAsync();
-                _allMonAn = rawDishes
-                    .Where(m => m.TrangThaiRaw != "Discontinued" && m.TrangThaiRaw != "Inactive")
-                    .OrderBy(m => m.TenMonAn)
-                    .ToList();
-
-                cboMonAn.DisplayMember = "TenMonAn";
-                cboMonAn.ValueMember = "MaMonAn";
-                cboMonAn.DataSource = _allMonAn;
+                // 2. Tải danh mục nguyên vật liệu
+                await ReloadNguyenLieuDropdown(_initialMaNL);
             } catch (Exception ex) {
                 MessageBox.Show("Lỗi khi tải dữ liệu ban đầu: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
+        private async Task ReloadNguyenLieuDropdown(string selectedMaNL = null) {
+            _allNguyenLieu = await _nguyenLieuService.GetAllAsync("Active") ?? new List<NguyenLieuDto>();
+            cboMonAn.DataSource = null;
+            cboMonAn.DisplayMember = "DisplayText";
+            cboMonAn.ValueMember = "MaNguyenLieu";
+            cboMonAn.DataSource = _allNguyenLieu;
+
+            if (!string.IsNullOrEmpty(selectedMaNL)) {
+                var found = _allNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == selectedMaNL);
+                if (found != null) {
+                    cboMonAn.SelectedItem = found;
+                }
+            }
+
+            if (cboMonAn.SelectedItem is NguyenLieuDto current && current.GiaNhapGanNhat > 0) {
+                numDonGiaNhap.Value = Math.Min(numDonGiaNhap.Maximum, current.GiaNhapGanNhat);
+            }
+        }
+
         private void btnThemChiTiet_Click(object sender, EventArgs e) {
-            if (cboMonAn.SelectedItem == null) {
-                MessageBox.Show("Vui lòng chọn món ăn cần nhập.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            var nl = cboMonAn.SelectedItem as NguyenLieuDto;
+            if (nl == null) {
+                MessageBox.Show("Vui lòng chọn nguyên vật liệu cần nhập.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var monAn = cboMonAn.SelectedItem as MonAnDto;
-            if (monAn == null) return;
-
-            int soLuong = (int)numSoLuong.Value;
+            decimal soLuong = numSoLuong.Value;
             decimal donGia = numDonGiaNhap.Value;
 
             if (soLuong <= 0) {
@@ -71,20 +122,23 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 return;
             }
 
-            var existing = _items.FirstOrDefault(x => x.MaMon == monAn.MaMonAn);
+            var existing = _items.FirstOrDefault(x => x.MaNguyenLieu == nl.MaNguyenLieu);
             if (existing != null) {
                 existing.SoLuong += soLuong;
                 existing.DonGiaNhap = donGia;
             } else {
                 _items.Add(new ChiTietPhieuNhapDto {
-                    MaMon = monAn.MaMonAn,
-                    TenMon = monAn.TenMonAn,
+                    MaNguyenLieu = nl.MaNguyenLieu,
+                    TenNguyenLieu = nl.TenNguyenLieu,
+                    DonViTinh = nl.DonViTinh,
                     SoLuong = soLuong,
                     DonGiaNhap = donGia
                 });
             }
 
             UpdateGrid();
+            numSoLuong.Value = 1;
+            cboMonAn.Focus();
         }
 
         private void btnXoaChiTiet_Click(object sender, EventArgs e) {
@@ -100,6 +154,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         }
 
         private void UpdateGrid() {
+            dgvChiTiet.AutoGenerateColumns = false;
             dgvChiTiet.DataSource = null;
             dgvChiTiet.DataSource = _items.ToList();
 
@@ -115,22 +170,25 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             }
 
             if (_items.Count == 0) {
-                MessageBox.Show("Phiếu nhập phải có ít nhất một mặt hàng. Vui lòng thêm mặt hàng vào phiếu.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Phiếu nhập phải có ít nhất một nguyên vật liệu. Vui lòng thêm mặt hàng vào phiếu.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            string staffId = UserSession.CurrentUserId ?? UserSession.CurrentUsername;
+
             var dto = new PhieuNhapCreateDto {
                 MaNhaCungCap = cboNhaCungCap.SelectedValue.ToString(),
+                MaNhanVien = staffId,
                 GhiChu = txtGhiChu.Text.Trim(),
                 ChiTiet = _items.Select(x => new ChiTietPhieuNhapCreateDto {
-                    MaMon = x.MaMon,
+                    MaNguyenLieu = x.MaNguyenLieu,
                     SoLuong = x.SoLuong,
                     DonGiaNhap = (double)x.DonGiaNhap
                 }).ToList()
             };
 
             btnLuuPhieu.Enabled = false;
-            btnLuuPhieu.Text = "Đang lưu...";
+            btnLuuPhieu.Text = "⏳ Đang lưu & nhập kho...";
 
             try {
                 var result = await _pnService.CreateAsync(dto);

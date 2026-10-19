@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace RestaurantCRM.API.Models;
@@ -9,15 +9,15 @@ public partial class ChiTietPhieuNhap
 
     public string? MaPhieuNhap { get; set; }
 
-    public string? MaMon { get; set; }
+    public string? MaNguyenLieu { get; set; }
 
-    public int? SoLuong { get; set; }
+    public decimal? SoLuong { get; set; }
 
     public double? DonGiaNhap { get; set; }
 
     public double? ThanhTien { get; set; }
 
-    public virtual MonAn? MaMonNavigation { get; set; }
+    public virtual NguyenLieu? MaNguyenLieuNavigation { get; set; }
 
     public virtual PhieuNhapHang? MaPhieuNhapNavigation { get; set; }
 }

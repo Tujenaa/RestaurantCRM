@@ -71,31 +71,68 @@ namespace RestaurantCRM.API.Controllers
                              && (c.MaChuongTrinhNavigation.NgayKetThuc == null || c.MaChuongTrinhNavigation.NgayKetThuc >= today))
                     .ToListAsync();
 
+                // Bước 1: Tính toán tổng nguyên vật liệu cần tiêu thụ theo công thức BOM
+                var tongNguyenLieuCan = new Dictionary<string, decimal>();
+                var monAnCache = new Dictionary<string, MonAn>();
+
                 foreach (var item in request.Items)
                 {
-                    var monAn = await _context.MonAn.FindAsync(item.MaMon);
+                    var monAn = await _context.MonAn
+                        .Include(m => m.DinhLuong)
+                            .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                        .FirstOrDefaultAsync(m => m.MaMon == item.MaMon);
+
                     if (monAn == null)
                     {
                         return BadRequest($"Không tìm thấy món ăn với mã '{item.MaMon}'.");
                     }
 
-                    if (monAn.TrangThai == "Discontinued" || monAn.TrangThai == "Inactive")
+                    if (!monAn.DinhLuong.Any())
                     {
-                        return BadRequest($"Món ăn '{monAn.TenMon}' hiện đã ngừng kinh doanh.");
+                        return BadRequest($"Món ăn '{monAn.TenMon}' chưa được thiết lập công thức định lượng, không thể đặt món.");
                     }
 
-                    if (monAn.SoLuong == null || monAn.SoLuong < item.SoLuong || monAn.TrangThai == "OutOfStock")
-                    {
-                        return BadRequest($"Món ăn '{monAn.TenMon}' không đủ số lượng phục vụ (Chỉ còn: {monAn.SoLuong ?? 0}).");
-                    }
+                    monAnCache[item.MaMon] = monAn;
 
-                    // Trừ số lượng tồn kho món ăn
-                    monAn.SoLuong -= item.SoLuong;
-                    if (monAn.SoLuong <= 0)
+                    foreach (var dl in monAn.DinhLuong)
                     {
-                        monAn.TrangThai = "OutOfStock";
+                        var can = (decimal)item.SoLuong * dl.SoLuongCan;
+                        if (tongNguyenLieuCan.ContainsKey(dl.MaNguyenLieu))
+                            tongNguyenLieuCan[dl.MaNguyenLieu] += can;
+                        else
+                            tongNguyenLieuCan[dl.MaNguyenLieu] = can;
                     }
+                }
 
+                // Bước 2: Kiểm tra tồn kho nguyên liệu (sắp xếp key tăng dần để chống Deadlock)
+                var dsMaNl = tongNguyenLieuCan.Keys.OrderBy(k => k).ToList();
+                var dbNguyenLieu = await _context.NguyenLieu
+                    .Where(nl => dsMaNl.Contains(nl.MaNguyenLieu))
+                    .ToListAsync();
+
+                foreach (var maNl in dsMaNl)
+                {
+                    var nl = dbNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == maNl);
+                    var canDung = tongNguyenLieuCan[maNl];
+                    if (nl == null || (nl.SoLuongTon ?? 0) < canDung)
+                    {
+                        string tenNl = nl?.TenNguyenLieu ?? maNl;
+                        string dvt = nl?.DonViTinh ?? "";
+                        decimal tonHienTai = nl?.SoLuongTon ?? 0;
+                        return BadRequest($"Không đủ nguyên liệu '{tenNl}' để thực hiện đơn hàng (Kho chỉ còn: {tonHienTai:N2} {dvt}, cần: {canDung:N2} {dvt}).");
+                    }
+                }
+
+                // Bước 3: Trừ tồn kho nguyên liệu
+                foreach (var maNl in dsMaNl)
+                {
+                    var nl = dbNguyenLieu.First(x => x.MaNguyenLieu == maNl);
+                    nl.SoLuongTon -= tongNguyenLieuCan[maNl];
+                }
+
+                foreach (var item in request.Items)
+                {
+                    var monAn = monAnCache[item.MaMon];
                     if (monAn.DonGia.HasValue)
                     {
                         double donGiaGoc = monAn.DonGia.Value;
@@ -267,16 +304,16 @@ namespace RestaurantCRM.API.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Hoàn lại kho món ăn
+                // Hoàn lại kho nguyên vật liệu theo định lượng BOM
                 foreach (var chiTiet in hoaDon.ChiTietHoaDon)
                 {
-                    var monAn = await _context.MonAn.FindAsync(chiTiet.MaMon);
-                    if (monAn != null && monAn.SoLuong.HasValue)
+                    var dinhLuongs = await _context.DinhLuong.Where(dl => dl.MaMon == chiTiet.MaMon).ToListAsync();
+                    foreach (var dl in dinhLuongs)
                     {
-                        monAn.SoLuong += chiTiet.SoLuong;
-                        if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
+                        var nl = await _context.NguyenLieu.FindAsync(dl.MaNguyenLieu);
+                        if (nl != null)
                         {
-                            monAn.TrangThai = "InStock";
+                            nl.SoLuongTon = (nl.SoLuongTon ?? 0) + (decimal)(chiTiet.SoLuong ?? 0) * dl.SoLuongCan;
                         }
                     }
                 }

@@ -58,8 +58,38 @@ namespace RestaurantCRM.API.Helpers
         public static async Task<string> GenerateMaMonAnAsync(RestaurantCrmContext context)
         {
             var codes = await context.MonAn
-                .Where(x => x.MaMon != null && x.MaMon.StartsWith("MA"))
+                .Where(x => x.MaMon != null)
                 .Select(x => x.MaMon!)
+                .ToListAsync();
+
+            int maxNum = 0;
+            foreach (var code in codes)
+            {
+                string numStr = code;
+                if (code.StartsWith("MA", StringComparison.OrdinalIgnoreCase))
+                    numStr = code.Substring(2);
+                else if (code.StartsWith("M", StringComparison.OrdinalIgnoreCase))
+                    numStr = code.Substring(1);
+
+                if (int.TryParse(numStr, out int val) && val > maxNum)
+                {
+                    maxNum = val;
+                }
+            }
+
+            int nextNum = maxNum + 1;
+            while (await context.MonAn.AnyAsync(x => x.MaMon == $"M{nextNum:D2}"))
+            {
+                nextNum++;
+            }
+            return $"M{nextNum:D2}";
+        }
+
+        public static async Task<string> GenerateMaNguyenLieuAsync(RestaurantCrmContext context)
+        {
+            var codes = await context.NguyenLieu
+                .Where(x => x.MaNguyenLieu != null && x.MaNguyenLieu.StartsWith("NL"))
+                .Select(x => x.MaNguyenLieu!)
                 .ToListAsync();
 
             int maxNum = 0;
@@ -73,11 +103,36 @@ namespace RestaurantCRM.API.Helpers
             }
 
             int nextNum = maxNum + 1;
-            while (await context.MonAn.AnyAsync(x => x.MaMon == $"MA{nextNum:D3}"))
+            while (await context.NguyenLieu.AnyAsync(x => x.MaNguyenLieu == $"NL{nextNum:D2}"))
             {
                 nextNum++;
             }
-            return $"MA{nextNum:D3}";
+            return $"NL{nextNum:D2}";
+        }
+
+        public static async Task<string> GenerateMaDinhLuongAsync(RestaurantCrmContext context)
+        {
+            var codes = await context.DinhLuong
+                .Where(x => x.MaDinhLuong != null && x.MaDinhLuong.StartsWith("DL"))
+                .Select(x => x.MaDinhLuong!)
+                .ToListAsync();
+
+            int maxNum = 0;
+            foreach (var code in codes)
+            {
+                var numStr = code.Substring(2);
+                if (int.TryParse(numStr, out int val) && val > maxNum)
+                {
+                    maxNum = val;
+                }
+            }
+
+            int nextNum = maxNum + 1;
+            while (await context.DinhLuong.AnyAsync(x => x.MaDinhLuong == $"DL{nextNum:D2}"))
+            {
+                nextNum++;
+            }
+            return $"DL{nextNum:D2}";
         }
 
         public static async Task<string> GenerateMaPhieuNhapAsync(RestaurantCrmContext context)

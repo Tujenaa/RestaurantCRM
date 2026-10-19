@@ -15,6 +15,11 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
 
         public NhaCungCapForm() {
             InitializeComponent();
+            dgvNhaCungCap.AutoGenerateColumns = false;
+            dgvNhaCungCap.AllowUserToResizeColumns = true;
+            dgvNhaCungCap.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            dgvNhaCungCap.ScrollBars = ScrollBars.Both;
+
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _nccService = new NhaCungCapService(httpClient);

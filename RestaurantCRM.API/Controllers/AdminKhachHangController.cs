@@ -17,11 +17,24 @@ namespace RestaurantCRM.API.Controllers
             _context = context;
         }
 
-        // GET: api/AdminKhachHang - Lấy danh sách khách hàng.
+        // GET: api/AdminKhachHang - Lấy danh sách khách hàng (hỗ trợ tìm kiếm theo từ khóa).
         [HttpGet]
-        public async Task<IActionResult> GetKhachHangs()
+        public async Task<IActionResult> GetKhachHangs([FromQuery] string? search)
         {
-            var khachHangs = await _context.KhachHang
+            var query = _context.KhachHang.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(k =>
+                    (k.MaKhachHang != null && k.MaKhachHang.Contains(s)) ||
+                    (k.HoTen != null && k.HoTen.Contains(s)) ||
+                    (k.SoDienThoai != null && k.SoDienThoai.Contains(s)) ||
+                    (k.Email != null && k.Email.Contains(s)));
+            }
+
+            var khachHangs = await query
+                .OrderBy(k => k.MaKhachHang)
                 .Select(k => new
                 {
                     k.MaKhachHang,
@@ -30,7 +43,7 @@ namespace RestaurantCRM.API.Controllers
                     k.Email,
                     k.NgaySinh,
                     k.GioiTinh,
-                    k.SoThich,
+                    k.DiaChi,
                     k.TrangThai
                 })
                 .ToListAsync();
@@ -53,7 +66,7 @@ namespace RestaurantCRM.API.Controllers
                     k.Email,
                     k.NgaySinh,
                     k.GioiTinh,
-                    k.SoThich,
+                    k.DiaChi,
                     k.TrangThai,
                     LichSuHoaDon = k.HoaDon.Select(d => new
                     {
@@ -96,14 +109,51 @@ namespace RestaurantCRM.API.Controllers
                 Email = request.Email,
                 NgaySinh = request.NgaySinh,
                 GioiTinh = request.GioiTinh,
+                DiaChi = request.DiaChi,
                 MatKhau = BCrypt.Net.BCrypt.HashPassword("123456"), // Mật khẩu mặc định
-                TrangThai = "Active"
+                TrangThai = !string.IsNullOrEmpty(request.TrangThai) ? request.TrangThai : "Active"
             };
 
             _context.KhachHang.Add(khachHang);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Thêm khách hàng thành công.", maKhachHang = khachHang.MaKhachHang });
+        }
+
+        // PUT: api/AdminKhachHang/{id} - Cập nhật thông tin khách hàng.
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateKhachHang(string id, AdminUpdateKhachHangRequest request)
+        {
+            var khachHang = await _context.KhachHang.FindAsync(id);
+            if (khachHang == null)
+            {
+                return NotFound("Không tìm thấy khách hàng.");
+            }
+
+            if (!string.IsNullOrEmpty(request.Email) &&
+                await _context.KhachHang.AnyAsync(k => k.Email == request.Email && k.MaKhachHang != id))
+            {
+                return BadRequest("Email đã được sử dụng bởi khách hàng khác.");
+            }
+            if (!string.IsNullOrEmpty(request.SoDienThoai) &&
+                await _context.KhachHang.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && k.MaKhachHang != id))
+            {
+                return BadRequest("Số điện thoại đã được sử dụng bởi khách hàng khác.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.HoTen))
+                khachHang.HoTen = request.HoTen.Trim();
+            khachHang.SoDienThoai = request.SoDienThoai?.Trim();
+            khachHang.Email = request.Email?.Trim();
+            khachHang.NgaySinh = request.NgaySinh;
+            khachHang.GioiTinh = request.GioiTinh;
+            khachHang.DiaChi = request.DiaChi;
+            if (!string.IsNullOrEmpty(request.TrangThai))
+                khachHang.TrangThai = request.TrangThai;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Cập nhật thông tin khách hàng thành công." });
         }
 
         // PUT: api/AdminKhachHang/{id}/Status - Cập nhật trạng thái khóa/mở khóa tài khoản khách hàng.

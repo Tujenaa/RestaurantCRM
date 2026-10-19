@@ -101,8 +101,7 @@ namespace RestaurantCRM.API.Controllers
                     khachHang.HoTen,
                     khachHang.Email,
                     khachHang.SoDienThoai,
-                    soThich = khachHang.SoThich,
-                    diaChi = khachHang.SoThich
+                    khachHang.DiaChi
                 }
             });
         }
@@ -129,7 +128,7 @@ namespace RestaurantCRM.API.Controllers
                 khachHang.SoDienThoai,
                 khachHang.NgaySinh,
                 khachHang.GioiTinh,
-                khachHang.SoThich
+                khachHang.DiaChi
             });
         }
 
@@ -157,7 +156,7 @@ namespace RestaurantCRM.API.Controllers
             khachHang.SoDienThoai = request.SoDienThoai;
             khachHang.NgaySinh = request.NgaySinh;
             khachHang.GioiTinh = string.IsNullOrWhiteSpace(request.GioiTinh) ? null : (request.GioiTinh.Length > 10 ? request.GioiTinh.Substring(0, 10) : request.GioiTinh);
-            khachHang.SoThich = request.SoThich;
+            khachHang.DiaChi = request.DiaChi;
 
             await _context.SaveChangesAsync();
 

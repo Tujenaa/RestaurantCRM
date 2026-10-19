@@ -68,7 +68,7 @@ public class TaiKhoanController : Controller
                 }
                 if (root.TryGetProperty("gioiTinh", out var pGender) && pGender.ValueKind == JsonValueKind.String) model.GioiTinh = pGender.GetString() ?? "Không muốn tiết lộ";
                 if (root.TryGetProperty("ngaySinh", out var pDob) && pDob.ValueKind == JsonValueKind.String && DateTime.TryParse(pDob.GetString(), out var dob)) model.NgaySinh = dob;
-                if (root.TryGetProperty("soThich", out var pAddr) && pAddr.ValueKind == JsonValueKind.String)
+                if (root.TryGetProperty("diaChi", out var pAddr) && pAddr.ValueKind == JsonValueKind.String)
                 {
                     var addr = pAddr.GetString();
                     if (!string.IsNullOrWhiteSpace(addr))
@@ -261,7 +261,7 @@ public class TaiKhoanController : Controller
                 Email = cleanEmail,
                 NgaySinh = ngaySinh,
                 GioiTinh = cleanGioiTinh,
-                SoThich = ""
+                DiaChi = HttpContext.Session.GetString("DiaChiGiaoHang") ?? ""
             };
 
             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
@@ -370,7 +370,7 @@ public class TaiKhoanController : Controller
                 HoTen = HttpContext.Session.GetString("HoTen"),
                 SoDienThoai = HttpContext.Session.GetString("SoDienThoai"),
                 Email = HttpContext.Session.GetString("Email"),
-                SoThich = cleanAddress
+                DiaChi = cleanAddress
             };
             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             await client.PutAsync($"/api/KhachHang/ThongTin/{Uri.EscapeDataString(maKhachHang)}", content);

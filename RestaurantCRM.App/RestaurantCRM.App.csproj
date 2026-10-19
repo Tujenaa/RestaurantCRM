@@ -38,7 +38,9 @@
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.12, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.12\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
+    <Reference Include="System">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2\System.dll</HintPath>
+    </Reference>
     <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
     </Reference>
@@ -97,6 +99,18 @@
     <Compile Include="Controls\RoundedPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\UcHighlightCard.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\UcGrowthChart.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\UcRightPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\UcCurrentMembersTable.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DTOs\Auth\LoginRequest.cs" />
     <Compile Include="DTOs\Auth\LoginResponse.cs" />
     <Compile Include="DTOs\DonHang\DonHangDto.cs" />
@@ -135,6 +149,21 @@
     <Compile Include="Forms\KhachHang\KhachHangForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\KhachHang\KhachHangForm.Designer.cs">
+      <DependentUpon>KhachHangForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\KhaoSat\KhaoSatForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\KhaoSat\KhaoSatForm.Designer.cs">
+      <DependentUpon>KhaoSatForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\KhaoSat\ThongKeKhaoSatForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\KhaoSat\ThongKeKhaoSatForm.Designer.cs">
+      <DependentUpon>ThongKeKhaoSatForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\KhuyenMai\KhuyenMaiForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -144,11 +173,17 @@
     <Compile Include="Forms\KhuyenMai\TaoVoucherDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Models\KhuyenMaiDto.cs" />
-    <Compile Include="Services\KhuyenMaiService.cs" />
-    <Compile Include="Forms\KhaoSat\KhaoSatForm.cs">
+    <Compile Include="Forms\PhanHoi\PhanHoiChiTietDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\PhanHoi\PhanHoiForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\PhanHoi\PhanHoiForm.Designer.cs">
+      <DependentUpon>PhanHoiForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Models\KhuyenMaiDto.cs" />
+    <Compile Include="Services\KhuyenMaiService.cs" />
     <Compile Include="Forms\MonAn\MonAnForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -156,9 +191,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\PhanTich\PhanTichForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\PhanHoi\PhanHoiForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\TaiKhoan\TaiKhoanForm.cs">
@@ -207,8 +239,10 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Models\MonAnDto.cs" />
+    <Compile Include="Models\NguyenLieuDto.cs" />
     <Compile Include="Models\DashboardMetricsDto.cs" />
     <Compile Include="Services\LoaiMonService.cs" />
+    <Compile Include="Services\NguyenLieuService.cs" />
     <Compile Include="Services\PhieuNhapService.cs" />
     <Compile Include="Services\HoaDonService.cs" />
     <Compile Include="Forms\MonAn\MonAnForm.Designer.cs">
@@ -237,6 +271,18 @@
     </Compile>
     <Compile Include="Forms\Kho\DieuChinhTonKhoDialog.Designer.cs">
       <DependentUpon>DieuChinhTonKhoDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuDialog.Designer.cs">
+      <DependentUpon>NguyenLieuDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Kho\NguyenLieuForm.Designer.cs">
+      <DependentUpon>NguyenLieuForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Models\NhaCungCapDto.cs" />
     <Compile Include="Models\TonKhoDto.cs" />
@@ -283,6 +329,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="bin\Debug\" />
     <Folder Include="Resources\Icons\" />
     <Folder Include="Resources\Images\" />
   </ItemGroup>
