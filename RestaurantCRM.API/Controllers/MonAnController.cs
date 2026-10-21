@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,18 +9,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class MonAnController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public MonAnController(RestaurantCrmContext context)
+        public MonAnController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/MonAn - Lấy danh sách món ăn (hỗ trợ tìm kiếm theo tên và lọc theo loại món)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetMonAns([FromQuery] string? search = null, [FromQuery] string? maLoai = null, [FromQuery] string? sort = null)
         {
-            var query = _context.MonAn
+            var query = _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
                 .Include(m => m.DinhLuong)
@@ -87,7 +87,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var now = DateTime.Now;
             var today = DateOnly.FromDateTime(now);
-            var list = await _context.MonAn
+            var list = await _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
                 .Include(m => m.DinhLuong)
@@ -131,7 +131,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var now = DateTime.Now;
             var today = DateOnly.FromDateTime(now);
-            var monAn = await _context.MonAn
+            var monAn = await _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
                 .Include(m => m.DinhLuong)
@@ -174,7 +174,7 @@ namespace RestaurantCRM.API.Controllers
 
         private bool MonAnExists(string id)
         {
-            return _context.MonAn.Any(e => e.MaMon == id);
+            return _service.Query<MonAn>().Any(e => e.MaMon == id);
         }
 
         private static string RemoveDiacritics(string text)

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,18 +9,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhoController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminKhoController(RestaurantCrmContext context)
+        public AdminKhoController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminKho - Danh sách tồn kho nguyên vật liệu
         [HttpGet]
         public async Task<IActionResult> GetTonKho()
         {
-            var ds = await _context.NguyenLieu
+            var ds = await _service.Query<NguyenLieu>()
                 .OrderBy(nl => nl.SoLuongTon)
                 .Select(nl => new
                 {
@@ -44,7 +44,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("canh-bao")]
         public async Task<IActionResult> GetCanhBao([FromQuery] decimal nguong = 10)
         {
-            var ds = await _context.NguyenLieu
+            var ds = await _service.Query<NguyenLieu>()
                 .Where(nl => (nl.SoLuongTon ?? 0) <= nguong)
                 .OrderBy(nl => nl.SoLuongTon)
                 .Select(nl => new
@@ -69,14 +69,14 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("dieu-chinh/{id}")]
         public async Task<IActionResult> DieuChinhTonKho(string id, [FromBody] DieuChinhTonKhoRequest request)
         {
-            var nl = await _context.NguyenLieu.FindAsync(id);
+            var nl = await _service.FindAsync<NguyenLieu>(id);
             if (nl == null)
             {
                 return NotFound("Không tìm thấy nguyên vật liệu.");
             }
 
             nl.SoLuongTon = request.SoLuongMoi;
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
             return Ok(new { message = "Điều chỉnh tồn kho thành công", soLuongMoi = nl.SoLuongTon });
         }
     }

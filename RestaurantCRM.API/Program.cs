@@ -1,21 +1,15 @@
-using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RestaurantCRM.BusinessLogic.Services;
+using RestaurantCRM.DataAccess;
 using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString(
-            "DefaultConnection")));
-
-builder.Services.AddDbContext<RestaurantCrmContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddControllers(options =>
 {
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;

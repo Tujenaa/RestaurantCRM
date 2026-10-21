@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,18 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminDanhGiaController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminDanhGiaController(RestaurantCrmContext context)
+        public AdminDanhGiaController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminDanhGia - Lấy toàn bộ danh sách đánh giá
         [HttpGet]
         public async Task<IActionResult> GetAllDanhGia()
         {
-            var danhGias = await _context.DanhGia
+            var danhGias = await _service.Query<DanhGia>()
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaMonNavigation)
                 .Include(d => d.TraLoiDanhGia)
@@ -55,7 +55,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/Reply")]
         public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
         {
-            var danhGia = await _context.DanhGia.FindAsync(id);
+            var danhGia = await _service.FindAsync<DanhGia>(id);
             if (danhGia == null)
             {
                 return NotFound("Không tìm thấy đánh giá.");
@@ -72,8 +72,8 @@ namespace RestaurantCRM.API.Controllers
                 NgayGui = DateTime.Now
             };
 
-            _context.TraLoiDanhGia.Add(traLoi);
-            await _context.SaveChangesAsync();
+            _service.Add(traLoi);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công", maTraLoi = traLoi.MaTraLoi });
         }
@@ -82,7 +82,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDanhGia(string id)
         {
-            var danhGia = await _context.DanhGia
+            var danhGia = await _service.Query<DanhGia>()
                 .Include(d => d.TraLoiDanhGia)
                 .FirstOrDefaultAsync(d => d.MaDanhGia == id);
 
@@ -93,11 +93,11 @@ namespace RestaurantCRM.API.Controllers
 
             if (danhGia.TraLoiDanhGia.Any())
             {
-                _context.TraLoiDanhGia.RemoveRange(danhGia.TraLoiDanhGia);
+                _service.RemoveRange(danhGia.TraLoiDanhGia);
             }
 
-            _context.DanhGia.Remove(danhGia);
-            await _context.SaveChangesAsync();
+            _service.Remove(danhGia);
+            await _service.SaveChangesAsync();
 
             return NoContent();
         }

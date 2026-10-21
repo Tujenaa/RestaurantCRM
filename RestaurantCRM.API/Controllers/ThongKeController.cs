@@ -1,6 +1,7 @@
+using RestaurantCRM.BusinessLogic.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
+
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,11 +12,11 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class ThongKeController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public ThongKeController(RestaurantCrmContext context)
+        public ThongKeController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/ThongKe/TongQuan - Lấy thống kê tổng quan trong ngày (Đơn, Doanh thu, Khách hàng)
@@ -25,7 +26,7 @@ namespace RestaurantCRM.API.Controllers
             var startOfDay = DateTime.Today;
             var endOfDay = startOfDay.AddDays(1);
 
-            var hoaDonsHomNay = await _context.HoaDon
+            var hoaDonsHomNay = await _service.Query<HoaDon>()
                 .Where(d => d.NgayDat >= startOfDay && d.NgayDat < endOfDay)
                 .ToListAsync();
 
@@ -35,7 +36,7 @@ namespace RestaurantCRM.API.Controllers
                 .Where(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành")
                 .Sum(d => d.TongThanhToan ?? 0);
 
-            var tongKhachHang = await _context.KhachHang.CountAsync();
+            var tongKhachHang = await _service.Query<KhachHang>().CountAsync();
 
             return Ok(new
             {
@@ -54,7 +55,7 @@ namespace RestaurantCRM.API.Controllers
             var startDate = new DateTime(nam, 1, 1);
             var endDate = new DateTime(nam + 1, 1, 1);
 
-            var hoaDonsTrongNam = await _context.HoaDon
+            var hoaDonsTrongNam = await _service.Query<HoaDon>()
                 .Where(d => d.NgayDat >= startDate && d.NgayDat < endDate 
                             && (d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành"))
                 .Select(d => new { d.NgayDat, d.TongThanhToan })
@@ -75,7 +76,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("MonBanChay")]
         public async Task<IActionResult> GetMonBanChay([FromQuery] int top = 5)
         {
-            var query = await _context.ChiTietHoaDon
+            var query = await _service.Query<ChiTietHoaDon>()
                 .Where(c => c.MaHoaDonNavigation != null 
                             && (c.MaHoaDonNavigation.TrangThai == "Completed" || c.MaHoaDonNavigation.TrangThai == "Hoàn thành"))
                 .Select(c => new { c.MaMon, TenMon = c.MaMonNavigation != null ? c.MaMonNavigation.TenMon : "Không xác định", c.SoLuong })
@@ -106,14 +107,14 @@ namespace RestaurantCRM.API.Controllers
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
 
             // 1. Phân hệ Admin
-            var soMonAn = await _context.MonAn.CountAsync();
-            var soNhaCungCap = await _context.NhaCungCap.CountAsync();
-            var soPhieuNhapThangNay = await _context.PhieuNhapHang
+            var soMonAn = await _service.Query<MonAn>().CountAsync();
+            var soNhaCungCap = await _service.Query<NhaCungCap>().CountAsync();
+            var soPhieuNhapThangNay = await _service.Query<PhieuNhapHang>()
                 .CountAsync(p => p.NgayNhap >= startOfMonth);
-            var soTaiKhoan = await _context.NhanVien.CountAsync();
+            var soTaiKhoan = await _service.Query<NhanVien>().CountAsync();
 
             // 2. Phân hệ Bán hàng
-            var hoaDonsHomNay = await _context.HoaDon
+            var hoaDonsHomNay = await _service.Query<HoaDon>()
                 .Where(d => d.NgayDat >= startOfDay && d.NgayDat < endOfDay)
                 .ToListAsync();
 
@@ -121,10 +122,10 @@ namespace RestaurantCRM.API.Controllers
                 .Where(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành")
                 .Sum(d => d.TongThanhToan ?? 0);
 
-            var donChoXuLy = await _context.HoaDon
+            var donChoXuLy = await _service.Query<HoaDon>()
                 .CountAsync(d => d.TrangThai == "Pending" || d.TrangThai == "Chờ xử lý");
 
-            var donDangGiao = await _context.HoaDon
+            var donDangGiao = await _service.Query<HoaDon>()
                 .CountAsync(d => d.TrangThai == "Delivering" || d.TrangThai == "Đang giao" 
                               || d.TrangThai == "Preparing" || d.TrangThai == "Đang chuẩn bị");
 
@@ -132,13 +133,13 @@ namespace RestaurantCRM.API.Controllers
                 .Count(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành");
 
             // 3. Phân hệ CRM
-            var tongKhachHang = await _context.KhachHang.CountAsync();
-            var diemDanhGiaTb = await _context.DanhGia.AnyAsync()
-                ? await _context.DanhGia.AverageAsync(d => (double?)d.SoSao) ?? 5.0
+            var tongKhachHang = await _service.Query<KhachHang>().CountAsync();
+            var diemDanhGiaTb = await _service.Query<DanhGia>().AnyAsync()
+                ? await _service.Query<DanhGia>().AverageAsync(d => (double?)d.SoSao) ?? 5.0
                 : 5.0;
-            var phanHoiChuaXuLy = await _context.PhanHoi
+            var phanHoiChuaXuLy = await _service.Query<PhanHoi>()
                 .CountAsync(p => p.TrangThai == "Chờ xử lý" || p.TrangThai == "Pending");
-            var khaoSatDangMo = await _context.KhaoSat
+            var khaoSatDangMo = await _service.Query<KhaoSat>()
                 .CountAsync(k => k.TrangThai == "Đang diễn ra" || k.TrangThai == "Hoạt động" || k.TrangThai == "Active");
 
             return Ok(new

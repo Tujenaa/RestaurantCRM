@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,18 +9,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminNguyenLieuController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminNguyenLieuController(RestaurantCrmContext context)
+        public AdminNguyenLieuController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminNguyenLieu - Lấy danh sách tất cả nguyên vật liệu (có lọc theo trạng thái nếu có)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<NguyenLieu>>> GetNguyenLieus([FromQuery] string? trangThai = null)
         {
-            var query = _context.NguyenLieu.AsNoTracking();
+            var query = _service.Query<NguyenLieu>().AsNoTracking();
             if (!string.IsNullOrWhiteSpace(trangThai))
             {
                 query = query.Where(nl => nl.TrangThai == trangThai);
@@ -34,7 +34,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<NguyenLieu>> GetNguyenLieu(string id)
         {
-            var nl = await _context.NguyenLieu.FindAsync(id);
+            var nl = await _service.FindAsync<NguyenLieu>(id);
             if (nl == null)
             {
                 return NotFound("Không tìm thấy nguyên vật liệu.");
@@ -57,7 +57,7 @@ namespace RestaurantCRM.API.Controllers
 
             if (string.IsNullOrWhiteSpace(nl.MaNguyenLieu))
             {
-                nl.MaNguyenLieu = await Helpers.CodeGenerator.GenerateMaNguyenLieuAsync(_context);
+                nl.MaNguyenLieu = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaNguyenLieuAsync(_service);
             }
 
             if (string.IsNullOrWhiteSpace(nl.TrangThai))
@@ -75,14 +75,14 @@ namespace RestaurantCRM.API.Controllers
                 nl.GiaNhapGanNhat = 0;
             }
 
-            _context.NguyenLieu.Add(nl);
+            _service.Add(nl);
             try
             {
-                await _context.SaveChangesAsync();
+                await _service.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (_context.NguyenLieu.Any(e => e.MaNguyenLieu == nl.MaNguyenLieu))
+                if (_service.Query<NguyenLieu>().Any(e => e.MaNguyenLieu == nl.MaNguyenLieu))
                 {
                     return Conflict("Mã nguyên liệu đã tồn tại.");
                 }
@@ -101,7 +101,7 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Mã nguyên liệu không khớp.");
             }
 
-            var existing = await _context.NguyenLieu.FindAsync(id);
+            var existing = await _service.FindAsync<NguyenLieu>(id);
             if (existing == null)
             {
                 return NotFound("Không tìm thấy nguyên vật liệu.");
@@ -124,7 +124,7 @@ namespace RestaurantCRM.API.Controllers
                 existing.GiaNhapGanNhat = nl.GiaNhapGanNhat.Value;
             }
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
             return Ok(existing);
         }
 
@@ -132,7 +132,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteNguyenLieu(string id)
         {
-            var nl = await _context.NguyenLieu
+            var nl = await _service.Query<NguyenLieu>()
                 .Include(n => n.DinhLuong)
                 .Include(n => n.ChiTietPhieuNhap)
                 .FirstOrDefaultAsync(n => n.MaNguyenLieu == id);
@@ -152,8 +152,8 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Không thể xóa nguyên liệu này vì đã có lịch sử nhập kho.");
             }
 
-            _context.NguyenLieu.Remove(nl);
-            await _context.SaveChangesAsync();
+            _service.Remove(nl);
+            await _service.SaveChangesAsync();
             return Ok(new { Message = "Đã xóa nguyên liệu thành công." });
         }
     }

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,11 +10,11 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminPhieuNhapController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminPhieuNhapController(RestaurantCrmContext context)
+        public AdminPhieuNhapController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminPhieuNhap - Lấy danh sách phiếu nhập
@@ -22,21 +22,21 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> GetAll()
         {
             // Tự động gán mã nhân viên cho các phiếu nhập cũ bị thiếu MaNhanVien
-            var missingStaffPns = await _context.PhieuNhapHang.Where(p => string.IsNullOrEmpty(p.MaNhanVien)).ToListAsync();
+            var missingStaffPns = await _service.Query<PhieuNhapHang>().Where(p => string.IsNullOrEmpty(p.MaNhanVien)).ToListAsync();
             if (missingStaffPns.Any())
             {
-                var defaultStaff = await _context.NhanVien.OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
+                var defaultStaff = await _service.Query<NhanVien>().OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
                 if (defaultStaff != null)
                 {
                     foreach (var pn in missingStaffPns)
                     {
                         pn.MaNhanVien = defaultStaff.MaNhanVien;
                     }
-                    await _context.SaveChangesAsync();
+                    await _service.SaveChangesAsync();
                 }
             }
 
-            var phieuNhaps = await _context.PhieuNhapHang
+            var phieuNhaps = await _service.Query<PhieuNhapHang>()
                 .Include(p => p.MaNhaCungCapNavigation)
                 .Include(p => p.MaNhanVienNavigation)
                 .OrderByDescending(p => p.NgayNhap)
@@ -60,7 +60,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var phieuNhap = await _context.PhieuNhapHang
+            var phieuNhap = await _service.Query<PhieuNhapHang>()
                 .Include(p => p.MaNhaCungCapNavigation)
                 .Include(p => p.MaNhanVienNavigation)
                 .Include(p => p.ChiTietPhieuNhap)
@@ -109,29 +109,29 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Phiếu nhập phải có ít nhất một mặt hàng nguyên liệu.");
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _service.BeginTransactionAsync();
             try
             {
-                var maPN = await Helpers.CodeGenerator.GenerateMaPhieuNhapAsync(_context);
+                var maPN = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaPhieuNhapAsync(_service);
 
                 // Xác định mã nhân viên hợp lệ
                 string? maNhanVien = request.MaNhanVien;
                 if (!string.IsNullOrWhiteSpace(maNhanVien))
                 {
-                    var nv = await _context.NhanVien.FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien || n.TenDangNhap == maNhanVien);
+                    var nv = await _service.Query<NhanVien>().FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien || n.TenDangNhap == maNhanVien);
                     if (nv != null)
                     {
                         maNhanVien = nv.MaNhanVien;
                     }
                     else
                     {
-                        var defaultNv = await _context.NhanVien.OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
+                        var defaultNv = await _service.Query<NhanVien>().OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
                         maNhanVien = defaultNv?.MaNhanVien;
                     }
                 }
                 else
                 {
-                    var defaultNv = await _context.NhanVien.OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
+                    var defaultNv = await _service.Query<NhanVien>().OrderBy(n => n.MaNhanVien).FirstOrDefaultAsync();
                     maNhanVien = defaultNv?.MaNhanVien;
                 }
 
@@ -145,7 +145,7 @@ namespace RestaurantCRM.API.Controllers
                     TongTien = 0
                 };
 
-                _context.PhieuNhapHang.Add(phieuNhap);
+                _service.Add(phieuNhap);
 
                 double tongTien = 0;
 
@@ -164,21 +164,21 @@ namespace RestaurantCRM.API.Controllers
                         DonGiaNhap = item.DonGiaNhap,
                         ThanhTien = thanhTien
                     };
-                    _context.ChiTietPhieuNhap.Add(chiTiet);
+                    _service.Add(chiTiet);
 
                     // Cập nhật tồn kho và giá nhập gần nhất trong bảng NGUYEN_LIEU
-                    var nguyenLieu = await _context.NguyenLieu.FindAsync(maNl);
+                    var nguyenLieu = await _service.FindAsync<NguyenLieu>(maNl);
                     if (nguyenLieu != null)
                     {
                         nguyenLieu.SoLuongTon = (nguyenLieu.SoLuongTon ?? 0) + item.SoLuong;
                         nguyenLieu.GiaNhapGanNhat = item.DonGiaNhap;
-                        _context.NguyenLieu.Update(nguyenLieu);
+                        _service.Update(nguyenLieu);
                     }
                 }
 
                 phieuNhap.TongTien = tongTien;
                 
-                await _context.SaveChangesAsync();
+                await _service.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return CreatedAtAction(nameof(GetById), new { id = phieuNhap.MaPhieuNhap }, new { message = "Lập phiếu nhập thành công", MaPhieuNhap = phieuNhap.MaPhieuNhap });

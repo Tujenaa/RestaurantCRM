@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
+
 using RestaurantCRM.API.DTOs;
-using RestaurantCRM.API.Models;
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -10,18 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminMonAnController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminMonAnController(RestaurantCrmContext context)
+        public AdminMonAnController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminMonAn - Lấy danh sách món ăn kèm định lượng, giá vốn ước tính và số suất khả dụng
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetMonAns()
         {
-            var dsMonAn = await _context.MonAn
+            var dsMonAn = await _service.Query<MonAn>()
                 .Include(m => m.MaLoaiMonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
@@ -81,7 +81,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<object>> GetMonAn(string id)
         {
-            var monAn = await _context.MonAn
+            var monAn = await _service.Query<MonAn>()
                 .Include(m => m.MaLoaiMonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
@@ -160,7 +160,7 @@ namespace RestaurantCRM.API.Controllers
 
             // Kiểm tra tính hợp lệ của từng nguyên liệu
             var dsMaNl = request.DinhLuong.Select(d => d.MaNguyenLieu).Distinct().ToList();
-            var countExistingNl = await _context.NguyenLieu.CountAsync(nl => dsMaNl.Contains(nl.MaNguyenLieu));
+            var countExistingNl = await _service.Query<NguyenLieu>().CountAsync(nl => dsMaNl.Contains(nl.MaNguyenLieu));
             if (countExistingNl != dsMaNl.Count)
             {
                 return BadRequest("Danh sách định lượng chứa mã nguyên liệu không tồn tại trong hệ thống.");
@@ -175,11 +175,11 @@ namespace RestaurantCRM.API.Controllers
             }
 
             // Mở Database Transaction để đảm bảo tính toàn vẹn
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _service.BeginTransactionAsync();
             try
             {
                 // 1. Tạo Món ăn mới
-                var maMon = await Helpers.CodeGenerator.GenerateMaMonAnAsync(_context);
+                var maMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaMonAnAsync(_service);
 
                 string trangThai = "InStock";
                 if (!string.IsNullOrWhiteSpace(request.TrangThai))
@@ -200,14 +200,14 @@ namespace RestaurantCRM.API.Controllers
                     TrangThai = trangThai
                 };
 
-                _context.MonAn.Add(monAn);
-                await _context.SaveChangesAsync();
+                _service.Add(monAn);
+                await _service.SaveChangesAsync();
 
                 // 2. Thêm các bản ghi Định lượng
                 int stt = 1;
                 foreach (var item in request.DinhLuong)
                 {
-                    var maDl = await Helpers.CodeGenerator.GenerateMaDinhLuongAsync(_context);
+                    var maDl = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaDinhLuongAsync(_service);
                     var dinhLuong = new DinhLuong
                     {
                         MaDinhLuong = maDl,
@@ -215,8 +215,8 @@ namespace RestaurantCRM.API.Controllers
                         MaNguyenLieu = item.MaNguyenLieu,
                         SoLuongCan = item.SoLuongCan
                     };
-                    _context.DinhLuong.Add(dinhLuong);
-                    await _context.SaveChangesAsync(); // Lưu từng dòng để đảm bảo sinh mã duy nhất
+                    _service.Add(dinhLuong);
+                    await _service.SaveChangesAsync(); // Lưu từng dòng để đảm bảo sinh mã duy nhất
                     stt++;
                 }
 
@@ -240,7 +240,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutMonAn(string id, [FromBody] CapNhatMonAnRequest request)
         {
-            var monAn = await _context.MonAn
+            var monAn = await _service.Query<MonAn>()
                 .Include(m => m.DinhLuong)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
@@ -265,7 +265,7 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Món ăn bắt buộc phải có ít nhất 1 nguyên vật liệu định lượng.");
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _service.BeginTransactionAsync();
             try
             {
                 // 1. Cập nhật thông tin cơ bản món ăn
@@ -296,7 +296,7 @@ namespace RestaurantCRM.API.Controllers
                 {
                     // Validate các mã nguyên liệu
                     var dsMaNl = request.DinhLuong.Select(d => d.MaNguyenLieu).Distinct().ToList();
-                    var countExisting = await _context.NguyenLieu.CountAsync(nl => dsMaNl.Contains(nl.MaNguyenLieu));
+                    var countExisting = await _service.Query<NguyenLieu>().CountAsync(nl => dsMaNl.Contains(nl.MaNguyenLieu));
                     if (countExisting != dsMaNl.Count)
                     {
                         await transaction.RollbackAsync();
@@ -304,25 +304,25 @@ namespace RestaurantCRM.API.Controllers
                     }
 
                     // Xóa các dòng định lượng cũ
-                    _context.DinhLuong.RemoveRange(monAn.DinhLuong);
-                    await _context.SaveChangesAsync();
+                    _service.RemoveRange(monAn.DinhLuong);
+                    await _service.SaveChangesAsync();
 
                     // Thêm lại các dòng định lượng mới
                     foreach (var item in request.DinhLuong)
                     {
-                        var maDl = await Helpers.CodeGenerator.GenerateMaDinhLuongAsync(_context);
-                        _context.DinhLuong.Add(new DinhLuong
+                        var maDl = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaDinhLuongAsync(_service);
+                        _service.Add(new DinhLuong
                         {
                             MaDinhLuong = maDl,
                             MaMon = id,
                             MaNguyenLieu = item.MaNguyenLieu,
                             SoLuongCan = item.SoLuongCan
                         });
-                        await _context.SaveChangesAsync();
+                        await _service.SaveChangesAsync();
                     }
                 }
 
-                await _context.SaveChangesAsync();
+                await _service.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return Ok(new { Message = "Cập nhật món ăn và định lượng thành công." });
@@ -338,7 +338,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMonAn(string id)
         {
-            var monAn = await _context.MonAn
+            var monAn = await _service.Query<MonAn>()
                 .Include(m => m.ChiTietHoaDon)
                 .Include(m => m.DinhLuong)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
@@ -355,8 +355,8 @@ namespace RestaurantCRM.API.Controllers
             }
 
             // Khóa ngoại ON DELETE CASCADE sẽ tự động xóa các dòng DINH_LUONG liên quan
-            _context.MonAn.Remove(monAn);
-            await _context.SaveChangesAsync();
+            _service.Remove(monAn);
+            await _service.SaveChangesAsync();
 
             return Ok(new { Message = "Đã xóa món ăn thành công." });
         }

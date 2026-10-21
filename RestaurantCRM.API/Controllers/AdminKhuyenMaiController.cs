@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 using System;
 using System.Linq;
@@ -13,11 +13,11 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhuyenMaiController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminKhuyenMaiController(RestaurantCrmContext context)
+        public AdminKhuyenMaiController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // ==============================================================
@@ -30,7 +30,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var list = await _context.ChuongTrinhKhuyenMai
+            var list = await _service.Query<ChuongTrinhKhuyenMai>()
                 .Include(k => k.KmTheoVoucher)
                 .Include(k => k.KmTheoSp)
                 .OrderByDescending(k => k.NgayBatDau)
@@ -54,7 +54,7 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> GetChuongTrinhById(string id)
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var k = await _context.ChuongTrinhKhuyenMai
+            var k = await _service.Query<ChuongTrinhKhuyenMai>()
                 .Include(x => x.KmTheoVoucher)
                 .Include(x => x.KmTheoSp)
                     .ThenInclude(sp => sp.MaMonNavigation)
@@ -112,8 +112,8 @@ namespace RestaurantCRM.API.Controllers
                 NgayKetThuc = request.NgayKetThuc
             };
 
-            _context.ChuongTrinhKhuyenMai.Add(ct);
-            await _context.SaveChangesAsync();
+            _service.Add(ct);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Tạo chương trình thành công.", maChuongTrinh = ct.MaChuongTrinh, data = ct });
         }
@@ -121,7 +121,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("ChuongTrinh/{id}")]
         public async Task<IActionResult> UpdateChuongTrinh(string id, [FromBody] ChuongTrinhUpdateRequest request)
         {
-            var ct = await _context.ChuongTrinhKhuyenMai.FindAsync(id);
+            var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(id);
             if (ct == null) return NotFound("Không tìm thấy chương trình khuyến mãi.");
 
             if (string.IsNullOrWhiteSpace(request.TenChuongTrinh))
@@ -138,14 +138,14 @@ namespace RestaurantCRM.API.Controllers
             ct.NgayBatDau = request.NgayBatDau;
             ct.NgayKetThuc = request.NgayKetThuc;
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
             return Ok(new { message = "Cập nhật chương trình thành công.", data = ct });
         }
 
         [HttpDelete("ChuongTrinh/{id}")]
         public async Task<IActionResult> DeleteChuongTrinh(string id)
         {
-            var ct = await _context.ChuongTrinhKhuyenMai
+            var ct = await _service.Query<ChuongTrinhKhuyenMai>()
                 .Include(k => k.KmTheoVoucher).ThenInclude(v => v.HoaDon)
                 .Include(k => k.KmTheoSp)
                 .FirstOrDefaultAsync(k => k.MaChuongTrinh == id);
@@ -157,11 +157,11 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Chương trình này đã có voucher được áp dụng cho hóa đơn. Không thể xóa để bảo đảm lịch sử thanh toán.");
             }
 
-            if (ct.KmTheoSp.Any()) _context.KmTheoSp.RemoveRange(ct.KmTheoSp);
-            if (ct.KmTheoVoucher.Any()) _context.KmTheoVoucher.RemoveRange(ct.KmTheoVoucher);
+            if (ct.KmTheoSp.Any()) _service.RemoveRange(ct.KmTheoSp);
+            if (ct.KmTheoVoucher.Any()) _service.RemoveRange(ct.KmTheoVoucher);
 
-            _context.ChuongTrinhKhuyenMai.Remove(ct);
-            await _context.SaveChangesAsync();
+            _service.Remove(ct);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Đã xóa chương trình thành công." });
         }
@@ -175,7 +175,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var vouchers = await _context.KmTheoVoucher
+            var vouchers = await _service.Query<KmTheoVoucher>()
                 .Include(v => v.MaChuongTrinhNavigation)
                 .OrderByDescending(v => v.MaKmvoucher)
                 .Select(v => new
@@ -208,11 +208,11 @@ namespace RestaurantCRM.API.Controllers
             if (string.IsNullOrWhiteSpace(req.MaVoucher))
                 return BadRequest("Vui lòng nhập mã Voucher.");
 
-            var ct = await _context.ChuongTrinhKhuyenMai.FindAsync(req.MaChuongTrinh);
+            var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(req.MaChuongTrinh);
             if (ct == null) return NotFound("Chương trình khuyến mãi không tồn tại.");
 
             var maVoucherUpper = req.MaVoucher.Trim().ToUpper();
-            var exists = await _context.KmTheoVoucher.AnyAsync(v => v.MaVoucher == maVoucherUpper);
+            var exists = await _service.Query<KmTheoVoucher>().AnyAsync(v => v.MaVoucher == maVoucherUpper);
             if (exists)
                 return BadRequest($"Mã voucher '{maVoucherUpper}' đã tồn tại trong hệ thống. Vui lòng đặt mã khác.");
 
@@ -230,8 +230,8 @@ namespace RestaurantCRM.API.Controllers
                 GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : null
             };
 
-            _context.KmTheoVoucher.Add(voucher);
-            await _context.SaveChangesAsync();
+            _service.Add(voucher);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Tạo voucher thành công.", data = voucher });
         }
@@ -239,7 +239,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("Voucher/{id}")]
         public async Task<IActionResult> DeleteVoucher(string id)
         {
-            var voucher = await _context.KmTheoVoucher
+            var voucher = await _service.Query<KmTheoVoucher>()
                 .Include(v => v.HoaDon)
                 .FirstOrDefaultAsync(v => v.MaKmvoucher == id || v.MaVoucher == id);
 
@@ -250,8 +250,8 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Voucher này đã được sử dụng trong hóa đơn. Không thể xóa để bảo toàn lịch sử.");
             }
 
-            _context.KmTheoVoucher.Remove(voucher);
-            await _context.SaveChangesAsync();
+            _service.Remove(voucher);
+            await _service.SaveChangesAsync();
             return Ok(new { message = "Đã xóa voucher thành công." });
         }
 
@@ -264,7 +264,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var list = await _context.KmTheoSp
+            var list = await _service.Query<KmTheoSp>()
                 .Include(k => k.MaChuongTrinhNavigation)
                 .Include(k => k.MaMonNavigation)
                 .OrderByDescending(k => k.MaKmsp)
@@ -301,14 +301,14 @@ namespace RestaurantCRM.API.Controllers
             if (string.IsNullOrWhiteSpace(req.MaMon))
                 return BadRequest("Vui lòng chọn món ăn cần áp dụng khuyến mãi.");
 
-            var ct = await _context.ChuongTrinhKhuyenMai.FindAsync(req.MaChuongTrinh);
+            var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(req.MaChuongTrinh);
             if (ct == null) return NotFound("Chương trình khuyến mãi không tồn tại.");
 
-            var mon = await _context.MonAn.FindAsync(req.MaMon);
+            var mon = await _service.FindAsync<MonAn>(req.MaMon);
             if (mon == null) return NotFound("Món ăn không tồn tại.");
 
             // Kiểm tra món đã được thêm vào chương trình này chưa
-            var exists = await _context.KmTheoSp.AnyAsync(s => s.MaChuongTrinh == req.MaChuongTrinh && s.MaMon == req.MaMon);
+            var exists = await _service.Query<KmTheoSp>().AnyAsync(s => s.MaChuongTrinh == req.MaChuongTrinh && s.MaMon == req.MaMon);
             if (exists)
                 return BadRequest($"Món '{mon.TenMon}' đã có trong chương trình này.");
 
@@ -324,8 +324,8 @@ namespace RestaurantCRM.API.Controllers
                 TienGiam = req.LoaiGiam == "VND" ? req.GiaTriGiam : null
             };
 
-            _context.KmTheoSp.Add(kmsp);
-            await _context.SaveChangesAsync();
+            _service.Add(kmsp);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = $"Đã áp dụng ưu đãi cho món '{mon.TenMon}'.", data = kmsp });
         }
@@ -333,11 +333,11 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("MonAn/{id}")]
         public async Task<IActionResult> DeleteKmMonAn(string id)
         {
-            var kmsp = await _context.KmTheoSp.FindAsync(id);
+            var kmsp = await _service.FindAsync<KmTheoSp>(id);
             if (kmsp == null) return NotFound("Không tìm thấy chi tiết khuyến mãi món.");
 
-            _context.KmTheoSp.Remove(kmsp);
-            await _context.SaveChangesAsync();
+            _service.Remove(kmsp);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Đã xóa khuyến mãi món thành công." });
         }
@@ -349,7 +349,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("AvailableDishes")]
         public async Task<IActionResult> GetAvailableDishes()
         {
-            var dishes = await _context.MonAn
+            var dishes = await _service.Query<MonAn>()
                 .Where(m => m.TrangThai != "Discontinued" && m.TrangThai != "Inactive")
                 .OrderBy(m => m.TenMon)
                 .Select(m => new

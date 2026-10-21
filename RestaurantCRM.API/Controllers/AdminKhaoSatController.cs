@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,18 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhaoSatController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminKhaoSatController(RestaurantCrmContext context)
+        public AdminKhaoSatController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminKhaoSat - Lấy danh sách khảo sát
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var khaoSats = await _context.KhaoSat
+            var khaoSats = await _service.Query<KhaoSat>()
                 .Where(k => k.TrangThai != "Deleted")
                 .OrderBy(k => k.MaKhaoSat)
                 .Select(k => new
@@ -31,7 +31,7 @@ namespace RestaurantCRM.API.Controllers
                     k.TrangThai,
                     k.NgayTao,
                     k.MaNhanVien,
-                    SoNguoiTraLoi = _context.PhieuTraLoi.Count(p => p.MaKhaoSat == k.MaKhaoSat)
+                    SoNguoiTraLoi = _service.Query<PhieuTraLoi>().Count(p => p.MaKhaoSat == k.MaKhaoSat)
                 })
                 .ToListAsync();
 
@@ -42,7 +42,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var khaoSat = await _context.KhaoSat
+            var khaoSat = await _service.Query<KhaoSat>()
                 .Include(k => k.CauHoiKhaoSat)
                     .ThenInclude(c => c.TuyChonCauHoi)
                 .FirstOrDefaultAsync(k => k.MaKhaoSat == id && k.TrangThai != "Deleted");
@@ -88,7 +88,7 @@ namespace RestaurantCRM.API.Controllers
                 NgayTao = DateTime.Now
             };
 
-            _context.KhaoSat.Add(khaoSat);
+            _service.Add(khaoSat);
 
             foreach (var reqCauHoi in request.CauHois)
             {
@@ -99,7 +99,7 @@ namespace RestaurantCRM.API.Controllers
                     NoiDungCauHoi = reqCauHoi.NoiDungCauHoi,
                     LoaiCauHoi = reqCauHoi.LoaiCauHoi
                 };
-                _context.CauHoiKhaoSat.Add(cauHoi);
+                _service.Add(cauHoi);
 
                 if (reqCauHoi.TuyChons != null && reqCauHoi.TuyChons.Any())
                 {
@@ -111,12 +111,12 @@ namespace RestaurantCRM.API.Controllers
                             MaCauHoi = cauHoi.MaCauHoi,
                             NoiDungTuyChon = tc
                         };
-                        _context.TuyChonCauHoi.Add(tuyChon);
+                        _service.Add(tuyChon);
                     }
                 }
             }
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetById), new { id = khaoSat.MaKhaoSat }, new { message = "Tạo khảo sát thành công", MaKhaoSat = khaoSat.MaKhaoSat });
         }
@@ -125,7 +125,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}/status")]
         public async Task<IActionResult> ChangeStatus(string id, [FromBody] string status)
         {
-            var khaoSat = await _context.KhaoSat.FindAsync(id);
+            var khaoSat = await _service.FindAsync<KhaoSat>(id);
             if (khaoSat == null || khaoSat.TrangThai == "Deleted")
             {
                 return NotFound("Không tìm thấy khảo sát.");
@@ -138,7 +138,7 @@ namespace RestaurantCRM.API.Controllers
             }
 
             khaoSat.TrangThai = status;
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật trạng thái thành công" });
         }
@@ -147,13 +147,13 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var khaoSat = await _context.KhaoSat.FindAsync(id);
+            var khaoSat = await _service.FindAsync<KhaoSat>(id);
             if (khaoSat == null || khaoSat.TrangThai == "Deleted")
             {
                 return NotFound("Không tìm thấy khảo sát.");
             }
 
-            var hasAnswers = await _context.PhieuTraLoi.AnyAsync(p => p.MaKhaoSat == id);
+            var hasAnswers = await _service.Query<PhieuTraLoi>().AnyAsync(p => p.MaKhaoSat == id);
             
             if (hasAnswers)
             {
@@ -163,17 +163,17 @@ namespace RestaurantCRM.API.Controllers
             else
             {
                 // Hard delete
-                var cauHois = await _context.CauHoiKhaoSat.Where(c => c.MaKhaoSat == id).ToListAsync();
+                var cauHois = await _service.Query<CauHoiKhaoSat>().Where(c => c.MaKhaoSat == id).ToListAsync();
                 foreach (var ch in cauHois)
                 {
-                    var tuyChons = await _context.TuyChonCauHoi.Where(t => t.MaCauHoi == ch.MaCauHoi).ToListAsync();
-                    _context.TuyChonCauHoi.RemoveRange(tuyChons);
+                    var tuyChons = await _service.Query<TuyChonCauHoi>().Where(t => t.MaCauHoi == ch.MaCauHoi).ToListAsync();
+                    _service.RemoveRange(tuyChons);
                 }
-                _context.CauHoiKhaoSat.RemoveRange(cauHois);
-                _context.KhaoSat.Remove(khaoSat);
+                _service.RemoveRange(cauHois);
+                _service.Remove(khaoSat);
             }
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Xóa khảo sát thành công" });
         }
@@ -182,7 +182,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] KhaoSatUpdateRequest request)
         {
-            var khaoSat = await _context.KhaoSat.FindAsync(id);
+            var khaoSat = await _service.FindAsync<KhaoSat>(id);
             if (khaoSat == null || khaoSat.TrangThai == "Deleted")
                 return NotFound("Không tìm thấy khảo sát.");
 
@@ -190,7 +190,7 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Tiêu đề không được để trống.");
 
             khaoSat.TieuDe = request.TieuDe.Trim();
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật khảo sát thành công." });
         }
@@ -201,7 +201,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/CauHoi")]
         public async Task<IActionResult> AddCauHoi(string id, [FromBody] CauHoiUpsertRequest request)
         {
-            var khaoSat = await _context.KhaoSat.FindAsync(id);
+            var khaoSat = await _service.FindAsync<KhaoSat>(id);
             if (khaoSat == null || khaoSat.TrangThai == "Deleted")
                 return NotFound("Không tìm thấy khảo sát.");
 
@@ -223,13 +223,13 @@ namespace RestaurantCRM.API.Controllers
                 NoiDungCauHoi = request.NoiDung.Trim(),
                 LoaiCauHoi = request.LoaiCauHoi
             };
-            _context.CauHoiKhaoSat.Add(cauHoi);
+            _service.Add(cauHoi);
 
             if (request.LoaiCauHoi == "TracNghiem" && request.TuyChons != null)
             {
                 foreach (var nd in request.TuyChons.Where(t => !string.IsNullOrWhiteSpace(t)))
                 {
-                    _context.TuyChonCauHoi.Add(new TuyChonCauHoi
+                    _service.Add(new TuyChonCauHoi
                     {
                         MaTuyChon = "TC" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                         MaCauHoi = maCauHoi,
@@ -238,7 +238,7 @@ namespace RestaurantCRM.API.Controllers
                 }
             }
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
             return Ok(new { message = "Thêm câu hỏi thành công.", MaCauHoi = maCauHoi });
         }
 
@@ -246,7 +246,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}/CauHoi/{cauHoiId}")]
         public async Task<IActionResult> UpdateCauHoi(string id, string cauHoiId, [FromBody] CauHoiUpsertRequest request)
         {
-            var cauHoi = await _context.CauHoiKhaoSat
+            var cauHoi = await _service.Query<CauHoiKhaoSat>()
                 .Include(c => c.TuyChonCauHoi)
                 .FirstOrDefaultAsync(c => c.MaCauHoi == cauHoiId && c.MaKhaoSat == id);
 
@@ -267,13 +267,13 @@ namespace RestaurantCRM.API.Controllers
             cauHoi.LoaiCauHoi = request.LoaiCauHoi;
 
             // Xóa toàn bộ tùy chọn cũ rồi thêm lại (replace strategy)
-            _context.TuyChonCauHoi.RemoveRange(cauHoi.TuyChonCauHoi);
+            _service.RemoveRange(cauHoi.TuyChonCauHoi);
 
             if (request.LoaiCauHoi == "TracNghiem" && request.TuyChons != null)
             {
                 foreach (var nd in request.TuyChons.Where(t => !string.IsNullOrWhiteSpace(t)))
                 {
-                    _context.TuyChonCauHoi.Add(new TuyChonCauHoi
+                    _service.Add(new TuyChonCauHoi
                     {
                         MaTuyChon = "TC" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                         MaCauHoi = cauHoiId,
@@ -282,7 +282,7 @@ namespace RestaurantCRM.API.Controllers
                 }
             }
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
             return Ok(new { message = "Cập nhật câu hỏi thành công." });
         }
 
@@ -290,7 +290,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}/CauHoi/{cauHoiId}")]
         public async Task<IActionResult> DeleteCauHoi(string id, string cauHoiId)
         {
-            var cauHoi = await _context.CauHoiKhaoSat
+            var cauHoi = await _service.Query<CauHoiKhaoSat>()
                 .Include(c => c.TuyChonCauHoi)
                 .FirstOrDefaultAsync(c => c.MaCauHoi == cauHoiId && c.MaKhaoSat == id);
 
@@ -298,13 +298,13 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy câu hỏi.");
 
             // Kiểm tra đã có câu trả lời chưa
-            bool daCoCauTraLoi = await _context.CauTraLoi.AnyAsync(ct => ct.MaCauHoi == cauHoiId);
+            bool daCoCauTraLoi = await _service.Query<CauTraLoi>().AnyAsync(ct => ct.MaCauHoi == cauHoiId);
             if (daCoCauTraLoi)
                 return BadRequest("Câu hỏi này đã có câu trả lời, không thể xóa.");
 
-            _context.TuyChonCauHoi.RemoveRange(cauHoi.TuyChonCauHoi);
-            _context.CauHoiKhaoSat.Remove(cauHoi);
-            await _context.SaveChangesAsync();
+            _service.RemoveRange(cauHoi.TuyChonCauHoi);
+            _service.Remove(cauHoi);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Xóa câu hỏi thành công." });
         }
@@ -315,7 +315,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/CauHoi/{cauHoiId}/TuyChon")]
         public async Task<IActionResult> AddTuyChon(string id, string cauHoiId, [FromBody] TuyChonUpsertRequest request)
         {
-            var cauHoi = await _context.CauHoiKhaoSat
+            var cauHoi = await _service.Query<CauHoiKhaoSat>()
                 .FirstOrDefaultAsync(c => c.MaCauHoi == cauHoiId && c.MaKhaoSat == id);
 
             if (cauHoi == null)
@@ -333,8 +333,8 @@ namespace RestaurantCRM.API.Controllers
                 MaCauHoi = cauHoiId,
                 NoiDungTuyChon = request.NoiDungTuyChon.Trim()
             };
-            _context.TuyChonCauHoi.Add(tuyChon);
-            await _context.SaveChangesAsync();
+            _service.Add(tuyChon);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Thêm tùy chọn thành công.", MaTuyChon = tuyChon.MaTuyChon });
         }
@@ -344,12 +344,12 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> UpdateTuyChon(string id, string cauHoiId, string tuyChonId, [FromBody] TuyChonUpsertRequest request)
         {
             // Kiểm tra câu hỏi thuộc đúng khảo sát
-            bool cauHoiTonTai = await _context.CauHoiKhaoSat
+            bool cauHoiTonTai = await _service.Query<CauHoiKhaoSat>()
                 .AnyAsync(c => c.MaCauHoi == cauHoiId && c.MaKhaoSat == id);
             if (!cauHoiTonTai)
                 return NotFound("Không tìm thấy câu hỏi.");
 
-            var tuyChon = await _context.TuyChonCauHoi
+            var tuyChon = await _service.Query<TuyChonCauHoi>()
                 .FirstOrDefaultAsync(t => t.MaTuyChon == tuyChonId && t.MaCauHoi == cauHoiId);
             if (tuyChon == null)
                 return NotFound("Không tìm thấy tùy chọn.");
@@ -358,7 +358,7 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Nội dung tùy chọn không được để trống.");
 
             tuyChon.NoiDungTuyChon = request.NoiDungTuyChon.Trim();
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật tùy chọn thành công." });
         }
@@ -367,24 +367,24 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}/CauHoi/{cauHoiId}/TuyChon/{tuyChonId}")]
         public async Task<IActionResult> DeleteTuyChon(string id, string cauHoiId, string tuyChonId)
         {
-            bool cauHoiTonTai = await _context.CauHoiKhaoSat
+            bool cauHoiTonTai = await _service.Query<CauHoiKhaoSat>()
                 .AnyAsync(c => c.MaCauHoi == cauHoiId && c.MaKhaoSat == id);
             if (!cauHoiTonTai)
                 return NotFound("Không tìm thấy câu hỏi.");
 
-            var tuyChon = await _context.TuyChonCauHoi
+            var tuyChon = await _service.Query<TuyChonCauHoi>()
                 .FirstOrDefaultAsync(t => t.MaTuyChon == tuyChonId && t.MaCauHoi == cauHoiId);
             if (tuyChon == null)
                 return NotFound("Không tìm thấy tùy chọn.");
 
             // Không cho xóa nếu đã có ai chọn
-            bool daCoLuaChon = await _context.CauTraLoi
+            bool daCoLuaChon = await _service.Query<CauTraLoi>()
                 .AnyAsync(ct => ct.MaTuyChon == tuyChonId);
             if (daCoLuaChon)
                 return BadRequest("Tùy chọn này đã có người chọn, không thể xóa.");
 
-            _context.TuyChonCauHoi.Remove(tuyChon);
-            await _context.SaveChangesAsync();
+            _service.Remove(tuyChon);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Xóa tùy chọn thành công." });
         }
@@ -393,7 +393,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}/results")]
         public async Task<IActionResult> GetResults(string id)
         {
-            var khaoSat = await _context.KhaoSat
+            var khaoSat = await _service.Query<KhaoSat>()
                 .Include(k => k.CauHoiKhaoSat)
                     .ThenInclude(c => c.TuyChonCauHoi)
                 .FirstOrDefaultAsync(k => k.MaKhaoSat == id);
@@ -403,7 +403,7 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khảo sát.");
             }
 
-            var tongSoPhieu = await _context.PhieuTraLoi.CountAsync(p => p.MaKhaoSat == id);
+            var tongSoPhieu = await _service.Query<PhieuTraLoi>().CountAsync(p => p.MaKhaoSat == id);
 
             var cauHoiResults = new List<object>();
 
@@ -418,7 +418,7 @@ namespace RestaurantCRM.API.Controllers
                     var thongKeTuyChon = new List<object>();
                     foreach (var tc in ch.TuyChonCauHoi)
                     {
-                        var soNguoiChon = await _context.CauTraLoi
+                        var soNguoiChon = await _service.Query<CauTraLoi>()
                             .CountAsync(ctl => ctl.MaCauHoi == ch.MaCauHoi && ctl.MaTuyChon == tc.MaTuyChon);
 
                         thongKeTuyChon.Add(new
@@ -442,7 +442,7 @@ namespace RestaurantCRM.API.Controllers
                 }
                 else
                 {
-                    var cauTraLois = await _context.CauTraLoi
+                    var cauTraLois = await _service.Query<CauTraLoi>()
                         .Where(ctl => ctl.MaCauHoi == ch.MaCauHoi && ctl.NoiDungTuDien != null)
                         .Select(ctl => ctl.NoiDungTuDien)
                         .ToListAsync();

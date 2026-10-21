@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,18 +9,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class LoaiMonController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public LoaiMonController(RestaurantCrmContext context)
+        public LoaiMonController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/LoaiMon - Lấy danh sách tất cả loại món ăn
         [HttpGet]
         public async Task<ActionResult<IEnumerable<LoaiMon>>> GetLoaiMons()
         {
-            return await _context.LoaiMon
+            return await _service.Query<LoaiMon>()
                 .AsNoTracking()
                 .ToListAsync();
         }

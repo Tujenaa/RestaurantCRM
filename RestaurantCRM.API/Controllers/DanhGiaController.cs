@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,18 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class DanhGiaController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public DanhGiaController(RestaurantCrmContext context)
+        public DanhGiaController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/DanhGia/MonAn/{maMon} - Lấy danh sách đánh giá của một món ăn
         [HttpGet("MonAn/{maMon}")]
         public async Task<IActionResult> GetDanhGiaByMonAn(string maMon)
         {
-            var danhGias = await _context.DanhGia
+            var danhGias = await _service.Query<DanhGia>()
                 .Where(d => d.MaMon == maMon)
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.TraLoiDanhGia)
@@ -68,8 +68,8 @@ namespace RestaurantCRM.API.Controllers
                 NgayDanhGia = DateTime.Now
             };
 
-            _context.DanhGia.Add(danhGia);
-            await _context.SaveChangesAsync();
+            _service.Add(danhGia);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Đánh giá thành công", maDanhGia = danhGia.MaDanhGia });
         }
@@ -78,7 +78,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/Reply")]
         public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
         {
-            var danhGia = await _context.DanhGia.FindAsync(id);
+            var danhGia = await _service.FindAsync<DanhGia>(id);
             if (danhGia == null)
             {
                 return NotFound("Không tìm thấy đánh giá.");
@@ -95,8 +95,8 @@ namespace RestaurantCRM.API.Controllers
                 NgayGui = DateTime.Now
             };
 
-            _context.TraLoiDanhGia.Add(traLoi);
-            await _context.SaveChangesAsync();
+            _service.Add(traLoi);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công", maTraLoi = traLoi.MaTraLoi });
         }

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,18 +9,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminNhaCungCapController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminNhaCungCapController(RestaurantCrmContext context)
+        public AdminNhaCungCapController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminNhaCungCap - Lấy danh sách nhà cung cấp
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var nhaCungCaps = await _context.NhaCungCap.ToListAsync();
+            var nhaCungCaps = await _service.Query<NhaCungCap>().ToListAsync();
             return Ok(nhaCungCaps);
         }
 
@@ -28,7 +28,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var nhaCungCap = await _context.NhaCungCap.FindAsync(id);
+            var nhaCungCap = await _service.FindAsync<NhaCungCap>(id);
             if (nhaCungCap == null)
             {
                 return NotFound("Không tìm thấy nhà cung cấp.");
@@ -42,10 +42,10 @@ namespace RestaurantCRM.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(nhaCungCap.MaNhaCungCap))
             {
-                nhaCungCap.MaNhaCungCap = await Helpers.CodeGenerator.GenerateMaNhaCungCapAsync(_context);
+                nhaCungCap.MaNhaCungCap = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaNhaCungCapAsync(_service);
             }
-            _context.NhaCungCap.Add(nhaCungCap);
-            await _context.SaveChangesAsync();
+            _service.Add(nhaCungCap);
+            await _service.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetById), new { id = nhaCungCap.MaNhaCungCap }, nhaCungCap);
         }
@@ -59,11 +59,11 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("ID không khớp.");
             }
 
-            _context.Entry(nhaCungCap).State = EntityState.Modified;
+            _service.Update(nhaCungCap);
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _service.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -84,27 +84,27 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var nhaCungCap = await _context.NhaCungCap.FindAsync(id);
+            var nhaCungCap = await _service.FindAsync<NhaCungCap>(id);
             if (nhaCungCap == null)
             {
                 return NotFound();
             }
 
-            var hasPhieuNhap = await _context.PhieuNhapHang.AnyAsync(p => p.MaNhaCungCap == id);
+            var hasPhieuNhap = await _service.Query<PhieuNhapHang>().AnyAsync(p => p.MaNhaCungCap == id);
             if (hasPhieuNhap)
             {
                 return BadRequest("Không thể xóa nhà cung cấp này vì đã có lịch sử nhập hàng.");
             }
 
-            _context.NhaCungCap.Remove(nhaCungCap);
-            await _context.SaveChangesAsync();
+            _service.Remove(nhaCungCap);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Xóa thành công" });
         }
 
         private bool NhaCungCapExists(string id)
         {
-            return _context.NhaCungCap.Any(e => e.MaNhaCungCap == id);
+            return _service.Query<NhaCungCap>().Any(e => e.MaNhaCungCap == id);
         }
     }
 }

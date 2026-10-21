@@ -1,6 +1,7 @@
+using RestaurantCRM.BusinessLogic.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
+
 using RestaurantCRM.API.DTOs;
 using RestaurantCRM.API.Helpers;
 
@@ -10,18 +11,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminAuthController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminAuthController(RestaurantCrmContext context)
+        public AdminAuthController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // POST: api/AdminAuth/Login - Đăng nhập cho hệ thống (Admin & Nhân viên)
         [HttpPost("Login")]
         public async Task<IActionResult> Login(AdminLoginRequest request)
         {
-            var nhanVien = await _context.NhanVien
+            var nhanVien = await _service.Query<NhanVien>()
                 .Include(n => n.MaVaiTroNavigation)
                 .FirstOrDefaultAsync(n => n.TenDangNhap == request.TenDangNhap);
 

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,11 +10,11 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class PhanHoiController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public PhanHoiController(RestaurantCrmContext context)
+        public PhanHoiController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // POST: api/PhanHoi - Khách tạo phản hồi mới (Ticket)
@@ -31,8 +31,8 @@ namespace RestaurantCRM.API.Controllers
                 TrangThai = "Pending"
             };
 
-            _context.PhanHoi.Add(phanHoi);
-            await _context.SaveChangesAsync();
+            _service.Add(phanHoi);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công", maPhanHoi = phanHoi.MaPhanHoi });
         }
@@ -41,7 +41,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("KhachHang/{maKhachHang}")]
         public async Task<IActionResult> GetPhanHoiByKhachHang(string maKhachHang)
         {
-            var phanHois = await _context.PhanHoi
+            var phanHois = await _service.Query<PhanHoi>()
                 .Where(p => p.MaKhachHang == maKhachHang)
                 .OrderByDescending(p => p.NgayPhanHoi)
                 .Select(p => new
@@ -61,7 +61,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetChiTietPhanHoi(string id)
         {
-            var phanHoi = await _context.PhanHoi
+            var phanHoi = await _service.Query<PhanHoi>()
                 .Include(p => p.MaNhanVienNavigation)
                 .Include(p => p.TraLoiPhanHoi)
                 .FirstOrDefaultAsync(p => p.MaPhanHoi == id);
@@ -95,7 +95,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/Reply")]
         public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
         {
-            var phanHoi = await _context.PhanHoi.FindAsync(id);
+            var phanHoi = await _service.FindAsync<PhanHoi>(id);
             if (phanHoi == null)
             {
                 return NotFound("Không tìm thấy phản hồi.");
@@ -112,8 +112,8 @@ namespace RestaurantCRM.API.Controllers
                 NgayGui = DateTime.Now
             };
 
-            _context.TraLoiPhanHoi.Add(traLoi);
-            await _context.SaveChangesAsync();
+            _service.Add(traLoi);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi trả lời thành công", maTraLoi = traLoi.MaTraLoi });
         }

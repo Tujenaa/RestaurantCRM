@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,18 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminPhanHoiController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminPhanHoiController(RestaurantCrmContext context)
+        public AdminPhanHoiController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminPhanHoi - Lấy toàn bộ danh sách phản hồi (có thể lọc theo trạng thái)
         [HttpGet]
         public async Task<IActionResult> GetAllPhanHoi([FromQuery] string? trangThai)
         {
-            var query = _context.PhanHoi
+            var query = _service.Query<PhanHoi>()
                 .Include(p => p.MaKhachHangNavigation)
                 .Include(p => p.MaNhanVienNavigation)
                 .AsQueryable();
@@ -52,7 +52,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetChiTietPhanHoi(string id)
         {
-            var phanHoi = await _context.PhanHoi
+            var phanHoi = await _service.Query<PhanHoi>()
                 .Include(p => p.MaKhachHangNavigation)
                 .Include(p => p.MaNhanVienNavigation)
                 .Include(p => p.TraLoiPhanHoi)
@@ -94,7 +94,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}/TrangThai")]
         public async Task<IActionResult> UpdateTrangThai(string id, PhanHoiStatusUpdateRequest request)
         {
-            var phanHoi = await _context.PhanHoi.FindAsync(id);
+            var phanHoi = await _service.FindAsync<PhanHoi>(id);
             if (phanHoi == null)
             {
                 return NotFound("Không tìm thấy phản hồi.");
@@ -114,7 +114,7 @@ namespace RestaurantCRM.API.Controllers
                 phanHoi.MaNhanVien = request.MaNhanVien;
             }
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = $"Đã cập nhật trạng thái phản hồi thành {request.TrangThai}." });
         }
@@ -123,7 +123,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("{id}/Reply")]
         public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
         {
-            var phanHoi = await _context.PhanHoi.FindAsync(id);
+            var phanHoi = await _service.FindAsync<PhanHoi>(id);
             if (phanHoi == null)
             {
                 return NotFound("Không tìm thấy phản hồi.");
@@ -146,8 +146,8 @@ namespace RestaurantCRM.API.Controllers
                 phanHoi.TrangThai = "InProgress";
             }
 
-            _context.TraLoiPhanHoi.Add(traLoi);
-            await _context.SaveChangesAsync();
+            _service.Add(traLoi);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công", maTraLoi = traLoi.MaTraLoi });
         }
