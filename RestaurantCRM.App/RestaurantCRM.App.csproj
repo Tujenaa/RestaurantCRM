@@ -214,8 +214,14 @@
     <Compile Include="Services\KhaoSatService.cs" />
     <Compile Include="Services\MonAnService.cs" />
     <Compile Include="Services\NhaCungCapService.cs" />
-    <Compile Include="Services\PhanHoiService.cs" />
+    <Compile Include="Forms\Backup\BackupRestoreForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Models\BackupItemModel.cs" />
+    <Compile Include="Models\NhanVienVaiTroModels.cs" />
+    <Compile Include="Services\BackupService.cs" />
     <Compile Include="Services\TaiKhoanService.cs" />
+    <Compile Include="Services\VaiTroService.cs" />
     <EmbeddedResource Include="Forms\MonAn\LoaiMonForm.resx">
       <DependentUpon>LoaiMonForm.cs</DependentUpon>
     </EmbeddedResource>

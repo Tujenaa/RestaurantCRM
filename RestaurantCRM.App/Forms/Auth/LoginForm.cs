@@ -358,25 +358,32 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             }
 
             List<string> roles = new List<string>();
-            if (String.Equals(result.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(result.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(result.Role, "Quản lý", StringComparison.OrdinalIgnoreCase))
+            var perms = result.Permissions ?? new List<string>();
+
+            bool isAdmin = String.Equals(result.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                           String.Equals(result.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
+                           String.Equals(result.Role, "Quản lý", StringComparison.OrdinalIgnoreCase) ||
+                           perms.Contains("ADMIN_ACCOUNT") || perms.Contains("ADMIN_ROLE") ||
+                           perms.Contains("*") || perms.Contains("ALL");
+
+            bool hasSale = isAdmin ||
+                           String.Equals(result.Role, "sale", StringComparison.OrdinalIgnoreCase) ||
+                           String.Equals(result.Role, "Bán hàng", StringComparison.OrdinalIgnoreCase) ||
+                           perms.Exists(p => p.StartsWith("ORDER_") || p.StartsWith("MENU_") || p.StartsWith("PROMO_") || p.StartsWith("INVENTORY_") || p.StartsWith("IMPORT_") || p.StartsWith("INGREDIENT_") || p.StartsWith("REPORT_"));
+
+            bool hasCrm = isAdmin ||
+                          String.Equals(result.Role, "crm", StringComparison.OrdinalIgnoreCase) ||
+                          String.Equals(result.Role, "CRM", StringComparison.OrdinalIgnoreCase) ||
+                          String.Equals(result.Role, "Nhân viên CSKH", StringComparison.OrdinalIgnoreCase) ||
+                          perms.Exists(p => p.StartsWith("CRM_"));
+
+            if (isAdmin) roles.Add("Admin");
+            if (hasSale) roles.Add("Bán hàng");
+            if (hasCrm) roles.Add("CRM");
+
+            if (roles.Count == 0)
             {
-                roles = new List<string> { "Admin", "Bán hàng", "CRM" };
-            }
-            else if (String.Equals(result.Role, "sale", StringComparison.OrdinalIgnoreCase) ||
-                       String.Equals(result.Role, "Nhân viên Bán hàng", StringComparison.OrdinalIgnoreCase))
-            {
-                roles = new List<string> { "Bán hàng" };
-            }
-            else if (String.Equals(result.Role, "crm", StringComparison.OrdinalIgnoreCase) ||
-                       String.Equals(result.Role, "Nhân viên CSKH", StringComparison.OrdinalIgnoreCase))
-            {
-                roles = new List<string> { "CRM" };
-            }
-            else
-            {
-                roles = new List<string> { result.Role };
+                roles.Add(!string.IsNullOrWhiteSpace(result.Role) ? result.Role : "Bán hàng");
             }
 
             Username = result.UserInfo.Username;
@@ -387,6 +394,7 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             UserSession.CurrentUsername = result.UserInfo.Username;
             UserSession.CurrentDisplayName = result.UserInfo.HoTen;
             UserSession.CurrentRoles = roles;
+            UserSession.Permissions = new HashSet<string>(result.Permissions ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
 
             DialogResult = DialogResult.OK;
             Close();

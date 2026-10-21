@@ -236,51 +236,47 @@ namespace RestaurantCRM.AdminApp.Controls
 
             if (_role == "Admin")
             {
-                AddSectionHeader(menuPanel, "CRM & Khách hàng", ref y);
-                AddMenuItem(menuPanel, "Khách hàng", "👥  Khách hàng", ref y);
-                AddMenuItem(menuPanel, "Đánh giá", "⭐  Đánh giá dịch vụ", ref y);
-                AddMenuItem(menuPanel, "Phản hồi", "💬  Góp ý & Phản hồi", ref y);
-                AddMenuItem(menuPanel, "Khảo sát", "📋  Khảo sát ý kiến", ref y);
-                y += 8;
-
-                AddSectionHeader(menuPanel, "BÁN HÀNG & KHO", ref y);
-                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Đơn hàng", "🧾  QUẢN LÝ ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Món ăn", "🍲  THỰC ĐƠN & MÓN ĂN", ref y);
-                AddMenuItem(menuPanel, "Kho hàng", "📦  QUẢN LÝ TỒN KHO", ref y);
-                AddMenuItem(menuPanel, "Phiếu nhập hàng", "📥  QUẢN LÝ PHIẾU NHẬP", ref y);
-                AddMenuItem(menuPanel, "Nguyên vật liệu", "🥕  NGUYÊN VẬT LIỆU", ref y);
-                AddMenuItem(menuPanel, "Nhà cung cấp", "🏢  NHÀ CUNG CẤP", ref y);
-                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
-                AddSectionHeader(menuPanel, "Bán hàng & Kho", ref y);
-                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  Tạo đơn hàng", ref y);
-                AddMenuItem(menuPanel, "Đơn hàng", "🧾  Quản lý đơn hàng", ref y);
-                AddMenuItem(menuPanel, "Món ăn", "🍲  Thực đơn & Món ăn", ref y);
-                AddMenuItem(menuPanel, "Kho hàng", "📦  Quản lý tồn kho", ref y);
-                AddMenuItem(menuPanel, "Nhà cung cấp", "🏢  Nhà cung cấp", ref y);
-                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  Khuyến mãi", ref y);
-                y += 8;
-
-                AddSectionHeader(menuPanel, "HỆ THỐNG", ref y);
-                AddMenuItem(menuPanel, "Tài khoản", "👤  TÀI KHOẢN", ref y);
-                AddMenuItem(menuPanel, "Vai trò & phân quyền", "🛡️  PHÂN QUYỀN", ref y);
-            } else if (_role == "Bán hàng") {
+                AddSectionHeader(menuPanel, "QUẢN TRỊ HỆ THỐNG", ref y);
+                if (UserSession.HasPermission("ADMIN_ACCOUNT"))
+                    AddMenuItem(menuPanel, "Tài khoản", "👤  TÀI KHOẢN", ref y);
+                if (UserSession.HasPermission("ADMIN_ROLE"))
+                    AddMenuItem(menuPanel, "Vai trò & phân quyền", "🛡️  VAI TRÒ & PHÂN QUYỀN", ref y);
+                if (UserSession.HasPermission("ADMIN_BACKUP"))
+                    AddMenuItem(menuPanel, "Sao lưu dữ liệu", "💾  SAO LƯU DỮ LIỆU", ref y);
+            }
+            else if (_role == "Bán hàng")
+            {
                 AddSectionHeader(menuPanel, "VẬN HÀNH BÁN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Đơn hàng", "🧾  DANH SÁCH ĐƠN HÀNG", ref y);
-                AddMenuItem(menuPanel, "Thực đơn", "🍲  THỰC ĐƠN MÓN ĂN", ref y);
-                AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
-                AddMenuItem(menuPanel, "Kho hàng", "📦  KIỂM TRA KHO", ref y);
-                AddMenuItem(menuPanel, "Phiếu nhập hàng", "📥  QUẢN LÝ PHIẾU NHẬP", ref y);
-                AddMenuItem(menuPanel, "Nguyên vật liệu", "🥕  NGUYÊN VẬT LIỆU", ref y);
-                AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  BÁO CÁO DOANH THU", ref y);
-            } else {
+                if (UserSession.HasPermission("ORDER_CREATE"))
+                    AddMenuItem(menuPanel, "Tạo đơn hàng", "📝  TẠO ĐƠN HÀNG", ref y);
+                if (UserSession.HasPermission("ORDER_VIEW"))
+                    AddMenuItem(menuPanel, "Đơn hàng", "🧾  DANH SÁCH ĐƠN HÀNG", ref y);
+                if (UserSession.HasPermission("MENU_VIEW"))
+                    AddMenuItem(menuPanel, "Thực đơn", "🍲  THỰC ĐƠN MÓN ĂN", ref y);
+                if (UserSession.HasPermission("PROMO_VIEW"))
+                    AddMenuItem(menuPanel, "Khuyến mãi", "🎟️  KHUYẾN MÃI", ref y);
+                if (UserSession.HasPermission("INVENTORY_VIEW"))
+                    AddMenuItem(menuPanel, "Kho hàng", "📦  KIỂM TRA KHO", ref y);
+                if (UserSession.HasPermission("IMPORT_VIEW"))
+                    AddMenuItem(menuPanel, "Phiếu nhập hàng", "📥  QUẢN LÝ PHIẾU NHẬP", ref y);
+                if (UserSession.HasPermission("INGREDIENT_VIEW"))
+                    AddMenuItem(menuPanel, "Nguyên vật liệu", "🥕  NGUYÊN VẬT LIỆU", ref y);
+                if (UserSession.HasPermission("REPORT_VIEW"))
+                    AddMenuItem(menuPanel, "Báo cáo bán hàng", "📈  BÁO CÁO DOANH THU", ref y);
+            }
+            else
+            {
                 AddSectionHeader(menuPanel, "CHĂM SÓC KHÁCH HÀNG", ref y);
-                AddMenuItem(menuPanel, "Khách hàng", "👥  TEAM / KHÁCH HÀNG", ref y);
-                AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
-                AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
-                AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
-                AddMenuItem(menuPanel, "Phân tích khách hàng", "📊  PHÂN TÍCH KHÁCH", ref y);
+                if (UserSession.HasPermission("CRM_CUSTOMER"))
+                    AddMenuItem(menuPanel, "Khách hàng", "👥  KHÁCH HÀNG", ref y);
+                if (UserSession.HasPermission("CRM_REVIEW"))
+                    AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
+                if (UserSession.HasPermission("CRM_FEEDBACK"))
+                    AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
+                if (UserSession.HasPermission("CRM_SURVEY"))
+                    AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
+                if (UserSession.HasPermission("CRM_ANALYTICS"))
+                    AddMenuItem(menuPanel, "Phân tích khách hàng", "📊  PHÂN TÍCH KHÁCH", ref y);
             }
         }
 

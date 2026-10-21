@@ -2,8 +2,8 @@ using System.Collections.Generic;
 
 namespace RestaurantCRM.AdminApp.Forms.Dashboard {
     public sealed class BanHangKhoShellForm : DashboardForm {
-        public BanHangKhoShellForm(string username, string displayName)
-            : base(username, displayName, new List<string> { "Bán hàng" }) { }
+        public BanHangKhoShellForm(string username, string displayName, List<string> roles = null)
+            : base(username, displayName, roles != null && roles.Count > 0 ? roles : new List<string> { "Bán hàng" }, "Bán hàng") { }
     }
 }
 

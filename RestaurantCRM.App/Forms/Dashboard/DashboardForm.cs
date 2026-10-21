@@ -41,12 +41,15 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
         public bool IsLoggedOut { get; private set; } = false;
 
         public DashboardForm(string username, string displayName, List<string> roles)
+            : this(username, displayName, roles, roles != null && roles.Count > 0 ? roles[0] : "Admin") { }
+
+        public DashboardForm(string username, string displayName, List<string> roles, string activeRole)
         {
             _username = username;
             _displayName = displayName;
             _roles = roles;
             if (_roles == null || _roles.Count == 0) throw new ArgumentException("Tài khoản chưa được gán vai trò.", "roles");
-            _role = _roles[0];
+            _role = !string.IsNullOrEmpty(activeRole) && _roles.Contains(activeRole) ? activeRole : _roles[0];
             _accent = ThemeManager.AccentFor(_role);
 
             Text = _role + " Workspace | RestaurantCRM";
@@ -88,11 +91,36 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
 
         private void OpenWorkspace(string role)
         {
-            if (_role != "Admin" || !_roles.Contains(role)) return;
-            Form workspace = role == "Bán hàng"
-                ? (Form)new BanHangKhoShellForm(_username, _displayName)
-                : role == "CRM" ? new CrmShellForm(_username, _displayName) : null;
-            if (workspace != null) workspace.ShowDialog(this);
+            if (role == _role || !_roles.Contains(role)) return;
+
+            Form workspace = null;
+            if (role == "Admin")
+            {
+                workspace = new AdminShellForm(_username, _displayName, _roles);
+            }
+            else if (role == "Bán hàng")
+            {
+                workspace = new BanHangKhoShellForm(_username, _displayName, _roles);
+            }
+            else if (role == "CRM")
+            {
+                workspace = new CrmShellForm(_username, _displayName, _roles);
+            }
+
+            if (workspace != null)
+            {
+                this.Hide();
+                workspace.ShowDialog();
+                if ((workspace as DashboardForm)?.IsLoggedOut == true)
+                {
+                    this.IsLoggedOut = true;
+                    this.Close();
+                }
+                else
+                {
+                    this.Show();
+                }
+            }
         }
 
         private void OnMenuSelected(string item)
@@ -127,6 +155,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 case "Khuyến mãi": return new KhuyenMaiForm();
                 case "Tài khoản": return new TaiKhoanForm();
                 case "Vai trò & phân quyền": return new VaiTroForm();
+                case "Sao lưu dữ liệu": return new RestaurantCRM.AdminApp.Forms.Backup.BackupRestoreForm();
                 case "Tạo đơn hàng": return new TaoDonHangForm();
                 case "Đơn hàng": case "Hóa đơn": return new HoaDonForm();
                 case "Khách hàng": return new KhachHangForm();

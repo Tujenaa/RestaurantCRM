@@ -44,7 +44,8 @@ namespace RestaurantCRM.API.Controllers
                         Id = nhanVien.MaNhanVien,
                         HoTen = nhanVien.HoTen,
                         Username = nhanVien.TenDangNhap
-                    }
+                    },
+                    permissions = PermissionCatalog.ParsePermissions(nhanVien.MaVaiTroNavigation?.MoTa, nhanVien.MaVaiTroNavigation?.TenVaiTro)
                 });
             }
 
