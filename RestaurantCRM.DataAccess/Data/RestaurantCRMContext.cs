@@ -54,8 +54,6 @@ public partial class RestaurantCrmContext : DbContext
 
     public virtual DbSet<NhanVien> NhanVien { get; set; }
 
-    public virtual DbSet<PhanHoi> PhanHoi { get; set; }
-
     public virtual DbSet<PhieuNhapHang> PhieuNhapHang { get; set; }
 
     public virtual DbSet<PhieuTraLoi> PhieuTraLoi { get; set; }
@@ -64,7 +62,6 @@ public partial class RestaurantCrmContext : DbContext
 
     public virtual DbSet<TraLoiDanhGia> TraLoiDanhGia { get; set; }
 
-    public virtual DbSet<TraLoiPhanHoi> TraLoiPhanHoi { get; set; }
 
     public virtual DbSet<TuyChonCauHoi> TuyChonCauHoi { get; set; }
 
@@ -292,6 +289,7 @@ public partial class RestaurantCrmContext : DbContext
                 .HasColumnName("ngayDanhGia");
             entity.Property(e => e.NoiDung).HasColumnName("noiDung");
             entity.Property(e => e.SoSao).HasColumnName("soSao");
+            entity.Property(e => e.TrangThai).HasColumnName("trangThai");
 
             entity.HasOne(d => d.MaHoaDonNavigation).WithMany(p => p.DanhGia)
                 .HasForeignKey(d => d.MaHoaDon)
@@ -674,42 +672,6 @@ public partial class RestaurantCrmContext : DbContext
                 .HasConstraintName("FK__NHAN_VIEN__maVai__398D8EEE");
         });
 
-        modelBuilder.Entity<PhanHoi>(entity =>
-        {
-            entity.HasKey(e => e.MaPhanHoi).HasName("PK__PHAN_HOI__4E079CEC6B52822A");
-
-            entity.ToTable("PHAN_HOI");
-
-            entity.Property(e => e.MaPhanHoi)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maPhanHoi");
-            entity.Property(e => e.DanhGia).HasColumnName("danhGia");
-            entity.Property(e => e.MaKhachHang)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maKhachHang");
-            entity.Property(e => e.MaNhanVien)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maNhanVien");
-            entity.Property(e => e.NgayPhanHoi)
-                .HasColumnType("datetime")
-                .HasColumnName("ngayPhanHoi");
-            entity.Property(e => e.NoiDung).HasColumnName("noiDung");
-            entity.Property(e => e.TrangThai)
-                .HasMaxLength(20)
-                .HasColumnName("trangThai");
-
-            entity.HasOne(d => d.MaKhachHangNavigation).WithMany(p => p.PhanHoi)
-                .HasForeignKey(d => d.MaKhachHang)
-                .HasConstraintName("FK__PHAN_HOI__maKhac__72C60C4A");
-
-            entity.HasOne(d => d.MaNhanVienNavigation).WithMany(p => p.PhanHoi)
-                .HasForeignKey(d => d.MaNhanVien)
-                .HasConstraintName("FK__PHAN_HOI__maNhan__73BA3083");
-        });
-
         modelBuilder.Entity<PhieuNhapHang>(entity =>
         {
             entity.HasKey(e => e.MaPhieuNhap).HasName("PK__PHIEU_NH__E276393475E92193");
@@ -820,10 +782,6 @@ public partial class RestaurantCrmContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("maDanhGia");
-            entity.Property(e => e.MaKhachHang)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maKhachHang");
             entity.Property(e => e.MaNhanVien)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -831,67 +789,15 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.NgayGui)
                 .HasColumnType("datetime")
                 .HasColumnName("ngayGui");
-            entity.Property(e => e.NguoiGui)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("nguoiGui");
             entity.Property(e => e.NoiDung).HasColumnName("noiDung");
 
             entity.HasOne(d => d.MaDanhGiaNavigation).WithMany(p => p.TraLoiDanhGia)
                 .HasForeignKey(d => d.MaDanhGia)
                 .HasConstraintName("FK__TRA_LOI_D__maDan__0E6E26BF");
 
-            entity.HasOne(d => d.MaKhachHangNavigation).WithMany(p => p.TraLoiDanhGia)
-                .HasForeignKey(d => d.MaKhachHang)
-                .HasConstraintName("FK__TRA_LOI_D__maKha__10566F31");
-
             entity.HasOne(d => d.MaNhanVienNavigation).WithMany(p => p.TraLoiDanhGia)
                 .HasForeignKey(d => d.MaNhanVien)
                 .HasConstraintName("FK__TRA_LOI_D__maNha__114A936A");
-        });
-
-        modelBuilder.Entity<TraLoiPhanHoi>(entity =>
-        {
-            entity.HasKey(e => e.MaTraLoi).HasName("PK__TRA_LOI___F2C812BCAE50D14B");
-
-            entity.ToTable("TRA_LOI_PHAN_HOI");
-
-            entity.Property(e => e.MaTraLoi)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maTraLoi");
-            entity.Property(e => e.MaKhachHang)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maKhachHang");
-            entity.Property(e => e.MaNhanVien)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maNhanVien");
-            entity.Property(e => e.MaPhanHoi)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maPhanHoi");
-            entity.Property(e => e.NgayGui)
-                .HasColumnType("datetime")
-                .HasColumnName("ngayGui");
-            entity.Property(e => e.NguoiGui)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("nguoiGui");
-            entity.Property(e => e.NoiDung).HasColumnName("noiDung");
-
-            entity.HasOne(d => d.MaKhachHangNavigation).WithMany(p => p.TraLoiPhanHoi)
-                .HasForeignKey(d => d.MaKhachHang)
-                .HasConstraintName("FK__TRA_LOI_P__maKha__17036CC0");
-
-            entity.HasOne(d => d.MaNhanVienNavigation).WithMany(p => p.TraLoiPhanHoi)
-                .HasForeignKey(d => d.MaNhanVien)
-                .HasConstraintName("FK__TRA_LOI_P__maNha__17F790F9");
-
-            entity.HasOne(d => d.MaPhanHoiNavigation).WithMany(p => p.TraLoiPhanHoi)
-                .HasForeignKey(d => d.MaPhanHoi)
-                .HasConstraintName("FK__TRA_LOI_P__maPha__151B244E");
         });
 
         modelBuilder.Entity<TuyChonCauHoi>(entity =>

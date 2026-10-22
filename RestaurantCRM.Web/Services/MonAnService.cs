@@ -238,7 +238,9 @@ public class MonAnService
             TrangThai = dto.TrangThai ?? "InStock",
             BieuTuong = icon,
             Tag = tag,
-            Tone = tone
+            Tone = tone,
+            DiemDanhGiaTrungBinh = fallbackMatch?.DiemDanhGiaTrungBinh ?? 4.9,
+            SoLuongDanhGia = fallbackMatch?.SoLuongDanhGia ?? 12
         };
     }
 

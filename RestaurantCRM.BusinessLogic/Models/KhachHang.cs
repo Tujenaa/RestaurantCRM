@@ -29,11 +29,6 @@ public partial class KhachHang
 
     public virtual ICollection<HoaDon> HoaDon { get; set; } = new List<HoaDon>();
 
-    public virtual ICollection<PhanHoi> PhanHoi { get; set; } = new List<PhanHoi>();
-
     public virtual ICollection<PhieuTraLoi> PhieuTraLoi { get; set; } = new List<PhieuTraLoi>();
 
-    public virtual ICollection<TraLoiDanhGia> TraLoiDanhGia { get; set; } = new List<TraLoiDanhGia>();
-
-    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHoi { get; set; } = new List<TraLoiPhanHoi>();
 }

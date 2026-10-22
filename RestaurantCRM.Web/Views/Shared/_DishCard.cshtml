@@ -40,6 +40,9 @@
     <div class="dish-card__body">
         <div class="dish-card__meta">
             <span class="dish-card__category">@Model.LoaiMon</span>
+            <span class="dish-card__rating" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:700; color:#b45309; background:#fef3c7; padding:2px 7px; border-radius:6px;" title="Điểm đánh giá trung bình từ khách hàng">
+                ⭐ @Model.DiemDanhGiaTrungBinh.ToString("0.0")
+            </span>
             <span class="dish-card__stock @(Model.ConHang ? "text-success" : "text-muted")">
                 @(Model.ConHang ? $"Còn {Model.SoLuong} suất" : "Hết món")
             </span>

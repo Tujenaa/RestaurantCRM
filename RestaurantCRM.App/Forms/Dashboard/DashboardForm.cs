@@ -14,7 +14,6 @@ using RestaurantCRM.AdminApp.Forms.KhuyenMai;
 using RestaurantCRM.AdminApp.Forms.KhaoSat;
 using RestaurantCRM.AdminApp.Forms.MonAn;
 using RestaurantCRM.AdminApp.Forms.NhaCungCap;
-using RestaurantCRM.AdminApp.Forms.PhanHoi;
 using RestaurantCRM.AdminApp.Forms.PhanTich;
 using RestaurantCRM.AdminApp.Forms.TaiKhoan;
 using RestaurantCRM.AdminApp.Forms.VaiTro;
@@ -160,7 +159,6 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 case "Đơn hàng": case "Hóa đơn": return new HoaDonForm();
                 case "Khách hàng": return new KhachHangForm();
                 case "Đánh giá": return new DanhGiaForm();
-                case "Phản hồi": return new PhanHoiForm();
                 case "Khảo sát": return new KhaoSatForm();
                 case "Phân tích khách hàng": return new PhanTichForm();
                 case "Báo cáo bán hàng": return new BaoCaoBanHangForm();
@@ -264,7 +262,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             {
                 kpi1 = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ khách", "👥", ThemeManager.Primary);
                 kpi2 = new UcThongKe("Đánh giá TB", "...", "Trung bình đánh giá", "⭐", ThemeManager.Amber);
-                kpi3 = new UcThongKe("Phản hồi mới", "...", "Chưa xử lý", "💬", ThemeManager.Violet);
+                kpi3 = new UcThongKe("Đánh giá hiển thị", "...", "Tổng đánh giá", "⭐", ThemeManager.Violet);
                 kpi4 = new UcThongKe("Khảo sát mở", "...", "Đang diễn ra", "📋", ThemeManager.Teal);
             }
 
@@ -348,7 +346,6 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 actions = new[] {
                     ("Khách hàng", "Khách hàng", "👥"),
                     ("Đánh giá", "Đánh giá", "⭐"),
-                    ("Phản hồi", "Phản hồi", "💬"),
                     ("Khảo sát", "Khảo sát", "📋"),
                     ("Phân tích", "Phân tích khách hàng", "📊")
                 };
@@ -455,7 +452,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                         {
                             c1?.SetValue(metrics.TongKhachHang.ToString("N0"), "Tổng hồ sơ khách");
                             c2?.SetValue(metrics.DiemDanhGiaTb.ToString("0.0") + " / 5", "Trung bình đánh giá");
-                            c3?.SetValue(metrics.PhanHoiChuaXuLy.ToString("N0"), "Chưa xử lý");
+                            c3?.SetValue(metrics.TongDanhGia.ToString("N0"), "Tổng đánh giá");
                             c4?.SetValue(metrics.KhaoSatDangMo.ToString("N0"), "Đang diễn ra");
                         }
                     }

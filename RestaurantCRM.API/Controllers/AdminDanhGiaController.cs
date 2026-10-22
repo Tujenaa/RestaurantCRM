@@ -25,6 +25,7 @@ namespace RestaurantCRM.API.Controllers
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaMonNavigation)
                 .Include(d => d.TraLoiDanhGia)
+                .Where(d => d.TrangThai)
                 .OrderByDescending(d => d.NgayDanhGia)
                 .Select(d => new
                 {
@@ -39,11 +40,9 @@ namespace RestaurantCRM.API.Controllers
                     HoiThoai = d.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
                         t.MaTraLoi,
-                        t.NguoiGui,
                         t.NoiDung,
                         t.NgayGui,
-                        NguoiTraLoi = t.NguoiGui == "KhachHang" && t.MaKhachHangNavigation != null ? t.MaKhachHangNavigation.HoTen : 
-                                      (t.NguoiGui == "NhanVien" && t.MaNhanVienNavigation != null ? t.MaNhanVienNavigation.HoTen : "Ẩn danh")
+                        NguoiTraLoi = t.MaNhanVienNavigation.HoTen
                     })
                 })
                 .ToListAsync();
@@ -65,8 +64,6 @@ namespace RestaurantCRM.API.Controllers
             {
                 MaTraLoi = "TL" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                 MaDanhGia = id,
-                NguoiGui = "NhanVien",
-                MaKhachHang = null,
                 MaNhanVien = request.NguoiGuiId,
                 NoiDung = request.NoiDung,
                 NgayGui = DateTime.Now

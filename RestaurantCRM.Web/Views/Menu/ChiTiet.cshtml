@@ -79,7 +79,7 @@
                 <div class="dish-meta-header">
                     <span class="category-badge">@dish.LoaiMon</span>
                     <span class="sku-badge">Mã món: <strong>@dish.MaMon</strong></span>
-                    <span class="rating-badge">⭐ 4.9 (48 đánh giá)</span>
+                    <span class="rating-badge" title="Điểm đánh giá trung bình từ thực khách">⭐ @dish.DiemDanhGiaTrungBinh.ToString("0.0") (@(dish.SoLuongDanhGia > 0 ? $"{dish.SoLuongDanhGia} đánh giá" : "Chưa có đánh giá"))</span>
                 </div>
 
                 <h1 class="dish-title">@dish.TenMon</h1>
@@ -203,6 +203,111 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Review & Feedback Section for this dish (Yêu cầu 4) -->
+    <section class="dish-reviews-section" style="margin-top: 40px; background: white; border-radius: 20px; border: 1px solid var(--line); padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:28px;">
+            <div>
+                <h2 style="font-size:24px; margin:0 0 6px;">💬 Đánh giá & Phản hồi về "@dish.TenMon"</h2>
+                <p style="margin:0; color:var(--muted); font-size:14px;">Trải nghiệm ẩm thực thực tế từ những khách hàng đã thưởng thức món ăn này tại Lẩu Phố.</p>
+            </div>
+            <a href="/PhanHoi?maMon=@dish.MaMon" class="btn" style="padding:10px 20px; font-weight:700; border-radius:10px;">
+                ⭐ Viết đánh giá món này
+            </a>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 280px 1fr; gap:36px; align-items:start;">
+            <!-- Cột trái: Tóm tắt điểm số sao trung bình -->
+            <div style="background:#fdfaf6; border:1px solid #fed7aa; border-radius:16px; padding:24px; text-align:center;">
+                <div style="font-size:48px; font-weight:900; color:#c2410c; line-height:1;">
+                    @dish.DiemDanhGiaTrungBinh.ToString("0.0")
+                </div>
+                <div style="color:#f59e0b; font-size:24px; margin:8px 0; letter-spacing:2px;">
+                    @String.Concat(Enumerable.Repeat("★", (int)Math.Round(dish.DiemDanhGiaTrungBinh)))@String.Concat(Enumerable.Repeat("☆", 5 - (int)Math.Round(dish.DiemDanhGiaTrungBinh)))
+                </div>
+                <div style="font-size:14px; font-weight:600; color:#4b5563;">
+                    Dựa trên @(Model.DanhGias.Count > 0 ? Model.DanhGias.Count : dish.SoLuongDanhGia) lượt đánh giá
+                </div>
+                <hr style="border:none; border-top:1px dashed #fdba74; margin:16px 0;" />
+                <div style="font-size:12.5px; color:#6b7280; line-height:1.5;">
+                    100% đánh giá từ khách hàng đã đặt món và thưởng thức thực tế.
+                </div>
+            </div>
+
+            <!-- Cột phải: Danh sách đánh giá & Phản hồi (mới đến cũ) -->
+            <div class="dish-reviews-list">
+                @if (Model.DanhGias == null || Model.DanhGias.Count == 0)
+                {
+                    <div style="text-align:center; padding:32px 20px; background:#f9fafb; border-radius:12px; color:var(--muted);">
+                        <div style="font-size:36px; margin-bottom:8px;">🍲</div>
+                        <h4 style="margin:0 0 4px; color:#374151;">Chưa có đánh giá nào cho món này</h4>
+                        <p style="margin:0; font-size:13.5px;">Hãy là người đầu tiên đặt món và chia sẻ cảm nhận tuyệt vời của bạn nhé!</p>
+                    </div>
+                }
+                else
+                {
+                    <div style="display:flex; flex-direction:column; gap:20px;">
+                        @foreach (var review in Model.DanhGias)
+                        {
+                            <div style="border:1px solid var(--line); border-radius:14px; padding:18px 20px; background:#ffffff;">
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div style="width:38px; height:38px; border-radius:50%; background:#fef3c7; color:#b45309; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:15px;">
+                                            @(string.IsNullOrEmpty(review.TenKhachHang) ? "K" : review.TenKhachHang[0].ToString().ToUpper())
+                                        </div>
+                                        <div>
+                                            <strong style="font-size:14.5px; display:block;">@review.TenKhachHang</strong>
+                                            <small class="muted" style="font-size:12px;">Đã dùng bữa · @review.NgayGui.ToString("dd/MM/yyyy · HH:mm")</small>
+                                        </div>
+                                    </div>
+                                    <div class="stars" style="color:#f59e0b; font-size:16px; letter-spacing:2px;">
+                                        @String.Concat(Enumerable.Repeat("★", review.DanhGia))@String.Concat(Enumerable.Repeat("☆", 5 - review.DanhGia))
+                                    </div>
+                                </div>
+
+                                <p style="margin:10px 0; color:#334155; line-height:1.6; font-size:14px;">@review.NoiDung</p>
+
+                                <!-- Hội thoại phản hồi của nhà hàng / khách hàng (xếp mới -> cũ) -->
+                                @if (review.TraLois != null && review.TraLois.Count > 0)
+                                {
+                                    <div style="margin-top:12px; background:#f8fafc; border-radius:10px; padding:12px 16px; border-left:3px solid #3b82f6;">
+                                        <small style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:11.5px; display:block; margin-bottom:8px;">
+                                            💬 Phản hồi trao đổi (@review.TraLois.Count câu trả lời)
+                                        </small>
+                                        <div style="display:flex; flex-direction:column; gap:8px;">
+                                            @foreach (var reply in review.TraLois)
+                                            {
+                                                <div style="padding:8px 12px; border-radius:8px; background:@(reply.NguoiGui == "NhanVien" ? "#eff6ff" : "#ffffff"); border:1px solid @(reply.NguoiGui == "NhanVien" ? "#bfdbfe" : "#e2e8f0"); font-size:13px;">
+                                                    <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                                        <strong style="color:@(reply.NguoiGui == "NhanVien" ? "#1d4ed8" : "#334155");">
+                                                            @(reply.NguoiGui == "NhanVien" ? "🏢 " + reply.NguoiTraLoi + " (Nhà hàng)" : "👤 " + reply.NguoiTraLoi)
+                                                        </strong>
+                                                        <span class="muted" style="font-size:11px;">@reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")</span>
+                                                    </div>
+                                                    <div style="color:#1e293b; line-height:1.45;">@reply.NoiDung</div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- Phản hồi nhanh tại món ăn -->
+                                <div style="margin-top:10px; border-top:1px dashed var(--line); padding-top:8px;">
+                                    <form asp-controller="PhanHoi" asp-action="PhanHoiLai" method="post" style="display:flex; gap:8px;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="maDanhGia" value="@review.MaDanhGia" />
+                                        <input type="hidden" name="returnUrl" value="/Menu/ChiTiet/@dish.MaMon" />
+                                        <input type="text" name="noiDung" placeholder="Nhập câu trả lời hoặc trao đổi thêm..." required style="flex:1; padding:6px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px;" />
+                                        <button type="submit" class="btn small" style="padding:6px 14px; font-size:12.5px;">Gửi</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
     </section>

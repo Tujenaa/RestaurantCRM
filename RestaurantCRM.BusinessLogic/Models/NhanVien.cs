@@ -23,11 +23,8 @@ public partial class NhanVien
 
     public virtual VaiTro? MaVaiTroNavigation { get; set; }
 
-    public virtual ICollection<PhanHoi> PhanHoi { get; set; } = new List<PhanHoi>();
-
     public virtual ICollection<PhieuNhapHang> PhieuNhapHang { get; set; } = new List<PhieuNhapHang>();
 
     public virtual ICollection<TraLoiDanhGia> TraLoiDanhGia { get; set; } = new List<TraLoiDanhGia>();
 
-    public virtual ICollection<TraLoiPhanHoi> TraLoiPhanHoi { get; set; } = new List<TraLoiPhanHoi>();
 }

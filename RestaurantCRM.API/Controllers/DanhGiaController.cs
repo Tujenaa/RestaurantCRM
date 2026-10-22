@@ -23,6 +23,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var danhGias = await _service.Query<DanhGia>()
                 .Where(d => d.MaMon == maMon)
+                .Where(d => d.TrangThai)
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.TraLoiDanhGia)
                 .OrderByDescending(d => d.NgayDanhGia)
@@ -36,11 +37,9 @@ namespace RestaurantCRM.API.Controllers
                     HoiThoai = d.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
                         t.MaTraLoi,
-                        t.NguoiGui,
                         t.NoiDung,
                         t.NgayGui,
-                        NguoiTraLoi = t.NguoiGui == "KhachHang" && t.MaKhachHangNavigation != null ? t.MaKhachHangNavigation.HoTen : 
-                                      (t.NguoiGui == "NhanVien" && t.MaNhanVienNavigation != null ? t.MaNhanVienNavigation.HoTen : "Ẩn danh")
+                        NguoiTraLoi = t.MaNhanVienNavigation.HoTen
                     })
                 })
                 .ToListAsync();
@@ -74,31 +73,5 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new { message = "Đánh giá thành công", maDanhGia = danhGia.MaDanhGia });
         }
 
-        // POST: api/DanhGia/{id}/Reply - Khách hàng phản hồi lại một đánh giá
-        [HttpPost("{id}/Reply")]
-        public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
-        {
-            var danhGia = await _service.FindAsync<DanhGia>(id);
-            if (danhGia == null)
-            {
-                return NotFound("Không tìm thấy đánh giá.");
-            }
-
-            var traLoi = new TraLoiDanhGia
-            {
-                MaTraLoi = "TL" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
-                MaDanhGia = id,
-                NguoiGui = "KhachHang",
-                MaKhachHang = request.NguoiGuiId,
-                MaNhanVien = null,
-                NoiDung = request.NoiDung,
-                NgayGui = DateTime.Now
-            };
-
-            _service.Add(traLoi);
-            await _service.SaveChangesAsync();
-
-            return Ok(new { message = "Gửi phản hồi thành công", maTraLoi = traLoi.MaTraLoi });
-        }
     }
 }

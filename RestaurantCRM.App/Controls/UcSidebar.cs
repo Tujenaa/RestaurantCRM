@@ -271,8 +271,6 @@ namespace RestaurantCRM.AdminApp.Controls
                     AddMenuItem(menuPanel, "Khách hàng", "👥  KHÁCH HÀNG", ref y);
                 if (UserSession.HasPermission("CRM_REVIEW"))
                     AddMenuItem(menuPanel, "Đánh giá", "⭐  ĐÁNH GIÁ DỊCH VỤ", ref y);
-                if (UserSession.HasPermission("CRM_FEEDBACK"))
-                    AddMenuItem(menuPanel, "Phản hồi", "💬  GÓP Ý & PHẢN HỒI", ref y);
                 if (UserSession.HasPermission("CRM_SURVEY"))
                     AddMenuItem(menuPanel, "Khảo sát", "📋  KHẢO SÁT Ý KIẾN", ref y);
                 if (UserSession.HasPermission("CRM_ANALYTICS"))

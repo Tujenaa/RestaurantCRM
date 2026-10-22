@@ -253,18 +253,18 @@ INSERT INTO THANH_TOAN (maThanhToan, maHoaDon, phuongThuc, trangThai, ngayThanhT
 ('TT12', 'DH12', N'Chuyển khoản', 'Pending', NULL, 414000);
 GO
 
--- 17. DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia)
-INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia) VALUES
-('DG01', 'KH01', 'DH01', 'M01', 5, N'Nước lẩu Thái chua cay đúng vị, thơm sả và lá chanh.', '2026-09-01T13:00:00'),
-('DG02', 'KH01', 'DH01', 'M13', 4, N'Trà đào thơm, hơi ngọt so với khẩu vị của mình.', '2026-09-01T13:02:00'),
-('DG03', 'KH02', 'DH02', 'M02', 5, N'Lẩu bò nhúng dấm chua dịu, nước dùng thơm tỏi, rất hợp ăn tối.', '2026-09-03T20:00:00'),
-('DG04', 'KH03', 'DH03', 'M05', 5, N'Bò Mỹ thái mỏng, nhúng vừa tới là mềm ngọt, sẽ quay lại.', '2026-09-05T21:00:00'),
-('DG05', 'KH03', 'DH03', 'M14', 5, N'Chè khúc bạch mát lạnh, ăn xong bữa lẩu rất đã.', '2026-09-05T21:05:00'),
-('DG06', 'KH04', 'DH04', 'M06', 5, N'Tôm sú tươi, thịt chắc ngọt, nước lẩu Thái chua cay vừa miệng.', '2026-09-08T14:00:00'),
-('DG07', 'KH05', 'DH05', 'M03', 4, N'Nước lẩu nấm ngọt thanh, nấm tươi, ăn không bị ngán.', '2026-09-10T19:30:00'),
-('DG08', 'KH07', 'DH07', 'M01', 3, N'Nguyên liệu tươi nhưng nước lẩu hơi nhạt, mong quán cải thiện.', '2026-09-15T21:30:00'),
-('DG09', 'KH09', 'DH09', 'M08', 5, N'Ba chỉ heo thái mỏng, nhúng giòn ngọt, cả nhóm đều thích.', '2026-09-20T21:00:00'),
-('DG10', 'KH10', 'DH10', 'M04', 4, N'Lẩu gà lá é thơm, thịt gà mềm, nước dùng đậm đà.', '2026-09-22T14:00:00');
+-- 17. DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia, trangThai)
+INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia, trangThai) VALUES
+('DG01', 'KH01', 'DH01', 'M01', 5, N'Nước lẩu Thái chua cay đúng vị, thơm sả và lá chanh.', '2026-09-01T13:00:00', 1),
+('DG02', 'KH01', 'DH01', 'M13', 4, N'Trà đào thơm, hơi ngọt so với khẩu vị của mình.', '2026-09-01T13:02:00', 1),
+('DG03', 'KH02', 'DH02', 'M02', 5, N'Lẩu bò nhúng dấm chua dịu, nước dùng thơm tỏi, rất hợp ăn tối.', '2026-09-03T20:00:00', 1),
+('DG04', 'KH03', 'DH03', 'M05', 5, N'Bò Mỹ thái mỏng, nhúng vừa tới là mềm ngọt, sẽ quay lại.', '2026-09-05T21:00:00', 1),
+('DG05', 'KH03', 'DH03', 'M14', 5, N'Chè khúc bạch mát lạnh, ăn xong bữa lẩu rất đã.', '2026-09-05T21:05:00', 1),
+('DG06', 'KH04', 'DH04', 'M06', 5, N'Tôm sú tươi, thịt chắc ngọt, nước lẩu Thái chua cay vừa miệng.', '2026-09-08T14:00:00', 1),
+('DG07', 'KH05', 'DH05', 'M03', 4, N'Nước lẩu nấm ngọt thanh, nấm tươi, ăn không bị ngán.', '2026-09-10T19:30:00', 1),
+('DG08', 'KH07', 'DH07', 'M01', 3, N'Nguyên liệu tươi nhưng nước lẩu hơi nhạt, mong quán cải thiện.', '2026-09-15T21:30:00', 1),
+('DG09', 'KH09', 'DH09', 'M08', 5, N'Ba chỉ heo thái mỏng, nhúng giòn ngọt, cả nhóm đều thích.', '2026-09-20T21:00:00', 1),
+('DG10', 'KH10', 'DH10', 'M04', 4, N'Lẩu gà lá é thơm, thịt gà mềm, nước dùng đậm đà.', '2026-09-22T14:00:00', 1);
 GO
 
 -- 18. LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu)
@@ -313,49 +313,21 @@ INSERT INTO LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu)
 ('LS42', 'DH12', 'Pending', '2026-09-30T11:20:00', N'Đơn mới, chờ nhân viên xác nhận');
 GO
 
--- 19. PHAN_HOI (maPhanHoi, maKhachHang, maNhanVien, noiDung, danhGia, ngayPhanHoi, trangThai)
-INSERT INTO PHAN_HOI (maPhanHoi, maKhachHang, maNhanVien, noiDung, danhGia, ngayPhanHoi, trangThai) VALUES
-('PH01', 'KH01', 'NV04', N'Nước lẩu đậm đà, đồ nhúng đầy đủ, giao hàng nhanh. Cảm ơn quán!', 5, '2026-09-01T14:00:00', 'Resolved'),
-('PH02', 'KH02', 'NV04', N'Lẩu bò ngon nhưng đợi món hơi lâu vào giờ cao điểm.', 3, '2026-09-03T20:30:00', 'Resolved'),
-('PH03', 'KH03', 'NV04', N'Nhân viên phục vụ nhiệt tình, bàn sạch sẽ, châm nước lẩu kịp thời.', 5, '2026-09-05T21:30:00', 'Resolved'),
-('PH04', 'KH07', 'NV04', N'Nước lẩu Thái hơi nhạt so với lần trước, mong quán kiểm tra lại.', 2, '2026-09-15T21:45:00', 'Resolved'),
-('PH05', 'KH08', 'NV04', N'Mình đặt nhầm nồi lẩu nên đã hủy đơn, mong quán hỗ trợ hoàn tiền nhanh.', 3, '2026-09-18T10:30:00', 'Resolved'),
-('PH06', 'KH09', 'NV04', N'Bò Mỹ và ba chỉ rất ngon, đề nghị quán có thêm combo lẩu cho nhóm đông.', 5, '2026-09-20T21:15:00', 'Resolved'),
-('PH07', 'KH06', NULL, N'Đơn giao hơi trễ so với dự kiến, nồi lẩu bị nguội.', 3, '2026-09-29T20:30:00', 'Unresolved'),
-('PH08', 'KH12', NULL, N'Tài khoản của tôi bị khóa, nhờ quán kiểm tra giúp.', 2, '2026-09-30T09:00:00', 'Unresolved');
+-- 19. TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, maNhanVien, noiDung, ngayGui)
+INSERT INTO TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, maNhanVien, noiDung, ngayGui) VALUES
+('TLDG01', 'DG01', 'NV04', N'Cảm ơn chị đã ủng hộ quán! Hẹn gặp lại chị vào lần sau.', '2026-09-02T08:00:00'),
+('TLDG02', 'DG02', 'NV04', N'Quán ghi nhận góp ý về độ ngọt. Lần sau chị có thể dặn bên mình giảm đường nhé.', '2026-09-02T08:05:00'),
+('TLDG03', 'DG08', 'NV04', N'Cảm ơn anh đã góp ý. Quán sẽ kiểm tra lại công thức nước lẩu.', '2026-09-16T09:15:00'),
+('TLDG04', 'DG10', 'NV04', N'Cảm ơn chị đã đánh giá. Quán rất vui vì chị thích món lẩu gà lá é.', '2026-09-22T15:00:00');
 GO
 
--- 20. TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui)
-INSERT INTO TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui) VALUES
-('TLDG01', 'DG01', 'NhanVien', NULL, 'NV04', N'Cảm ơn chị đã ủng hộ quán! Hẹn gặp lại chị vào lần sau.', '2026-09-02T08:00:00'),
-('TLDG02', 'DG02', 'NhanVien', NULL, 'NV04', N'Quán ghi nhận góp ý về độ ngọt. Lần sau chị có thể dặn bên mình giảm đường nhé.', '2026-09-02T08:05:00'),
-('TLDG03', 'DG02', 'KhachHang', 'KH01', NULL, N'Ok quán, cảm ơn nhé!', '2026-09-02T09:10:00'),
-('TLDG04', 'DG08', 'NhanVien', NULL, 'NV04', N'Cảm ơn anh đã góp ý. Quán sẽ kiểm tra lại công thức nước lẩu.', '2026-09-16T09:15:00'),
-('TLDG05', 'DG08', 'KhachHang', 'KH07', NULL, N'Mong quán cải thiện để lần sau mình có trải nghiệm tốt hơn.', '2026-09-16T10:00:00'),
-('TLDG06', 'DG08', 'NhanVien', NULL, 'NV04', N'Quán đã ghi nhận và sẽ điều chỉnh ngay.', '2026-09-16T10:30:00'),
-('TLDG07', 'DG10', 'NhanVien', NULL, 'NV04', N'Cảm ơn chị đã đánh giá. Quán rất vui vì chị thích món lẩu gà lá é.', '2026-09-22T15:00:00'),
-('TLDG08', 'DG10', 'KhachHang', 'KH10', NULL, N'Cảm ơn quán nhé!', '2026-09-22T15:30:00');
-GO
-
--- 21. TRA_LOI_PHAN_HOI (maTraLoi, maPhanHoi, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui)
-INSERT INTO TRA_LOI_PHAN_HOI (maTraLoi, maPhanHoi, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui) VALUES
-('TLPH01', 'PH02', 'NhanVien', NULL, 'NV04', N'Quán xin lỗi vì thời gian phục vụ lâu. Quán sẽ tăng cường nhân viên vào giờ cao điểm.', '2026-09-04T08:30:00'),
-('TLPH02', 'PH02', 'KhachHang', 'KH02', NULL, N'Không sao, mong lần sau quán phục vụ nhanh hơn.', '2026-09-04T09:10:00'),
-('TLPH03', 'PH04', 'NhanVien', NULL, 'NV04', N'Quán đã kiểm tra lại công thức và sẽ điều chỉnh độ đậm đà của nước lẩu.', '2026-09-16T09:00:00'),
-('TLPH04', 'PH04', 'KhachHang', 'KH07', NULL, N'Cảm ơn quán đã phản hồi nhanh.', '2026-09-16T10:30:00'),
-('TLPH05', 'PH04', 'NhanVien', NULL, 'NV04', N'Cảm ơn anh đã góp ý để quán cải thiện chất lượng.', '2026-09-16T11:00:00'),
-('TLPH06', 'PH05', 'NhanVien', NULL, 'NV04', N'Quán đã tiếp nhận yêu cầu và hoàn tiền cho đơn hàng.', '2026-09-18T11:00:00'),
-('TLPH07', 'PH05', 'KhachHang', 'KH08', NULL, N'Cảm ơn quán đã hỗ trợ.', '2026-09-18T11:40:00'),
-('TLPH08', 'PH07', 'KhachHang', 'KH06', NULL, N'Mình mong quán hỗ trợ kiểm tra tình trạng giao hàng.', '2026-09-29T21:00:00');
-GO
-
--- 22. KHAO_SAT (maKhaoSat, maNhanVien, tieuDe, trangThai, ngayTao)
+-- 20. KHAO_SAT (maKhaoSat, maNhanVien, tieuDe, trangThai, ngayTao)
 INSERT INTO KHAO_SAT (maKhaoSat, maNhanVien, tieuDe, trangThai, ngayTao) VALUES
 ('KS01', 'NV01', N'Khảo sát mức độ hài lòng về dịch vụ', 'Open', '2026-09-01T09:00:00'),
 ('KS02', 'NV01', N'Khảo sát sở thích nước lẩu & món nhúng mới', 'Open', '2026-09-10T09:00:00');
 GO
 
--- 23. CAU_HOI_KHAO_SAT (maCauHoi, maKhaoSat, noiDungCauHoi, loaiCauHoi)
+-- 21. CAU_HOI_KHAO_SAT (maCauHoi, maKhaoSat, noiDungCauHoi, loaiCauHoi)
 INSERT INTO CAU_HOI_KHAO_SAT (maCauHoi, maKhaoSat, noiDungCauHoi, loaiCauHoi) VALUES
 ('CH01', 'KS01', N'Bạn đánh giá thế nào về trải nghiệm tổng thể tại quán?', 'Option'),
 ('CH02', 'KS01', N'Bạn hài lòng nhất về điều gì?', 'Option'),
@@ -364,7 +336,7 @@ INSERT INTO CAU_HOI_KHAO_SAT (maCauHoi, maKhaoSat, noiDungCauHoi, loaiCauHoi) VA
 ('CH05', 'KS02', N'Bạn muốn thử món nhúng nào nhất?', 'Text');
 GO
 
--- 24. TUY_CHON_CAU_HOI (maTuyChon, maCauHoi, noiDungTuyChon)
+-- 22. TUY_CHON_CAU_HOI (maTuyChon, maCauHoi, noiDungTuyChon)
 INSERT INTO TUY_CHON_CAU_HOI (maTuyChon, maCauHoi, noiDungTuyChon) VALUES
 ('TC01', 'CH01', N'Rất hài lòng'),
 ('TC02', 'CH01', N'Hài lòng'),
@@ -380,7 +352,7 @@ INSERT INTO TUY_CHON_CAU_HOI (maTuyChon, maCauHoi, noiDungTuyChon) VALUES
 ('TC12', 'CH04', N'Lẩu cá');
 GO
 
--- 25. DOI_TUONG_KHAO_SAT (maDoiTuong, maKhaoSat, maKhachHang, daHoanThanh)
+-- 23. DOI_TUONG_KHAO_SAT (maDoiTuong, maKhaoSat, maKhachHang, daHoanThanh)
 INSERT INTO DOI_TUONG_KHAO_SAT (maDoiTuong, maKhaoSat, maKhachHang, daHoanThanh) VALUES
 ('DT01', 'KS01', 'KH01', 1),
 ('DT02', 'KS01', 'KH02', 1),
@@ -397,7 +369,7 @@ INSERT INTO DOI_TUONG_KHAO_SAT (maDoiTuong, maKhaoSat, maKhachHang, daHoanThanh)
 ('DT13', 'KS02', 'KH03', 0);
 GO
 
--- 26. PHIEU_TRA_LOI (maPhieuTraLoi, maKhaoSat, maKhachHang, ngayTraLoi)
+-- 24. PHIEU_TRA_LOI (maPhieuTraLoi, maKhaoSat, maKhachHang, ngayTraLoi)
 INSERT INTO PHIEU_TRA_LOI (maPhieuTraLoi, maKhaoSat, maKhachHang, ngayTraLoi) VALUES
 ('PT01', 'KS01', 'KH01', '2026-09-02T10:00:00'),
 ('PT02', 'KS01', 'KH02', '2026-09-04T09:30:00'),
@@ -408,7 +380,7 @@ INSERT INTO PHIEU_TRA_LOI (maPhieuTraLoi, maKhaoSat, maKhachHang, ngayTraLoi) VA
 ('PT07', 'KS02', 'KH02', '2026-09-13T16:00:00');
 GO
 
--- 27. CAU_TRA_LOI (maCauTraLoi, maPhieuTraLoi, maCauHoi, maTuyChon, noiDungTuDien)
+-- 25. CAU_TRA_LOI (maCauTraLoi, maPhieuTraLoi, maCauHoi, maTuyChon, noiDungTuDien)
 INSERT INTO CAU_TRA_LOI (maCauTraLoi, maPhieuTraLoi, maCauHoi, maTuyChon, noiDungTuDien) VALUES
 ('CTL01', 'PT01', 'CH01', 'TC01', NULL),
 ('CTL02', 'PT01', 'CH02', 'TC05', NULL),

@@ -17,6 +17,8 @@ public class MonAnViewModel
     public string BieuTuong { get; set; } = "🍲";
     public string Tag { get; set; } = "";
     public string Tone { get; set; } = "";
+    public double DiemDanhGiaTrungBinh { get; set; } = 5.0;
+    public int SoLuongDanhGia { get; set; } = 0;
 
     // Computed properties for UI display
     public bool ConHang => (TrangThai == "Active" || TrangThai == "InStock") && SoLuong > 0;
@@ -66,6 +68,7 @@ public class MonAnChiTietViewModel
 {
     public MonAnViewModel MonAn { get; set; } = new();
     public IReadOnlyList<MonAnViewModel> MonLienQuan { get; set; } = Array.Empty<MonAnViewModel>();
+    public IReadOnlyList<PhanHoiItemViewModel> DanhGias { get; set; } = Array.Empty<PhanHoiItemViewModel>();
 }
 
 public class ThemGioHangViewModel

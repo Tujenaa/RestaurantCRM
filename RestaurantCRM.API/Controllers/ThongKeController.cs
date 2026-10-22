@@ -134,11 +134,11 @@ namespace RestaurantCRM.API.Controllers
 
             // 3. Phân hệ CRM
             var tongKhachHang = await _service.Query<KhachHang>().CountAsync();
-            var diemDanhGiaTb = await _service.Query<DanhGia>().AnyAsync()
-                ? await _service.Query<DanhGia>().AverageAsync(d => (double?)d.SoSao) ?? 5.0
+            var danhGiaHienThi = _service.Query<DanhGia>().Where(d => d.TrangThai);
+            var diemDanhGiaTb = await danhGiaHienThi.AnyAsync()
+                ? await danhGiaHienThi.AverageAsync(d => (double?)d.SoSao) ?? 5.0
                 : 5.0;
-            var phanHoiChuaXuLy = await _service.Query<PhanHoi>()
-                .CountAsync(p => p.TrangThai == "Chờ xử lý" || p.TrangThai == "Pending");
+            var tongDanhGia = await danhGiaHienThi.CountAsync();
             var khaoSatDangMo = await _service.Query<KhaoSat>()
                 .CountAsync(k => k.TrangThai == "Đang diễn ra" || k.TrangThai == "Hoạt động" || k.TrangThai == "Active");
 
@@ -159,7 +159,7 @@ namespace RestaurantCRM.API.Controllers
                 // CRM
                 TongKhachHang = tongKhachHang,
                 DiemDanhGiaTb = Math.Round(diemDanhGiaTb, 1),
-                PhanHoiChuaXuLy = phanHoiChuaXuLy,
+                TongDanhGia = tongDanhGia,
                 KhaoSatDangMo = khaoSatDangMo
             });
         }

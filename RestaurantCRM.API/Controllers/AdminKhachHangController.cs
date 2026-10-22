@@ -184,7 +184,6 @@ namespace RestaurantCRM.API.Controllers
             var khachHang = await _service.Query<KhachHang>()
                 .Include(k => k.HoaDon)
                 .Include(k => k.DanhGia)
-                .Include(k => k.PhanHoi)
                 .FirstOrDefaultAsync(k => k.MaKhachHang == id);
 
             if (khachHang == null)
@@ -192,7 +191,7 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khách hàng.");
             }
 
-            if (khachHang.HoaDon.Any() || khachHang.DanhGia.Any() || khachHang.PhanHoi.Any())
+            if (khachHang.HoaDon.Any() || khachHang.DanhGia.Any())
             {
                 return BadRequest("Khách hàng này đã phát sinh giao dịch (Đơn hàng, Đánh giá hoặc Phản hồi). Không thể xóa dữ liệu để bảo toàn lịch sử hệ thống. Vui lòng sử dụng tính năng 'Khóa tài khoản' thay thế.");
             }

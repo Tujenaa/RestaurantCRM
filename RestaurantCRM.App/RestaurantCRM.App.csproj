@@ -118,7 +118,6 @@
     <Compile Include="DTOs\KhaoSat\KhaoSatDto.cs" />
     <Compile Include="DTOs\MonAn\MonAnDto.cs" />
     <Compile Include="DTOs\MonAn\MonAnRequest.cs" />
-    <Compile Include="DTOs\PhanHoi\PhanHoiDto.cs" />
     <Compile Include="Forms\Auth\LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -172,15 +171,6 @@
     </Compile>
     <Compile Include="Forms\KhuyenMai\TaoVoucherDialog.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\PhanHoi\PhanHoiChiTietDialog.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\PhanHoi\PhanHoiForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\PhanHoi\PhanHoiForm.Designer.cs">
-      <DependentUpon>PhanHoiForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Models\KhuyenMaiDto.cs" />
     <Compile Include="Services\KhuyenMaiService.cs" />

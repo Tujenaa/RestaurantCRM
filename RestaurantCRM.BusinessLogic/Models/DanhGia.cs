@@ -19,6 +19,8 @@ public partial class DanhGia
 
     public DateTime? NgayDanhGia { get; set; }
 
+    public bool TrangThai { get; set; } = true;
+
     public virtual HoaDon? MaHoaDonNavigation { get; set; }
 
     public virtual KhachHang? MaKhachHangNavigation { get; set; }

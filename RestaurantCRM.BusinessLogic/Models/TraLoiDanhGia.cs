@@ -9,11 +9,7 @@ public partial class TraLoiDanhGia
 
     public string? MaDanhGia { get; set; }
 
-    public string? NguoiGui { get; set; }
-
-    public string? MaKhachHang { get; set; }
-
-    public string? MaNhanVien { get; set; }
+    public string MaNhanVien { get; set; } = null!;
 
     public string? NoiDung { get; set; }
 
@@ -21,7 +17,5 @@ public partial class TraLoiDanhGia
 
     public virtual DanhGia? MaDanhGiaNavigation { get; set; }
 
-    public virtual KhachHang? MaKhachHangNavigation { get; set; }
-
-    public virtual NhanVien? MaNhanVienNavigation { get; set; }
+    public virtual NhanVien MaNhanVienNavigation { get; set; } = null!;
 }
