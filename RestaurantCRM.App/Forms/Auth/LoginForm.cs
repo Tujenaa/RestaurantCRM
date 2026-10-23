@@ -119,7 +119,8 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             var demoAccounts = new[] {
                 ("admin",     "Admin"),
                 ("quanly01",  "Quản lý"),
-                ("thungan01", "Thu ngân")
+                ("thungan01", "Thu ngân"),
+                ("thungan02", "CSKH")
             };
             int cx = x;
             foreach (var acc in demoAccounts)
