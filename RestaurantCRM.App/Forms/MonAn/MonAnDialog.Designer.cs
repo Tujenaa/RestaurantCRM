@@ -24,7 +24,6 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         private System.Windows.Forms.TextBox txtMoTa;
         private System.Windows.Forms.Label lblHinhAnh;
         private System.Windows.Forms.TextBox txtHinhAnhUrl;
-        private System.Windows.Forms.Button btnChonHinh;
         private System.Windows.Forms.PictureBox picHinhAnh;
 
         // Cột phải: Định lượng công thức (BOM)
@@ -32,7 +31,6 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
         private System.Windows.Forms.Panel pnlThemDinhLuong;
         private System.Windows.Forms.Label lblChonNL;
         private System.Windows.Forms.ComboBox cboNguyenLieu;
-        private System.Windows.Forms.Button btnThemNguyenLieuMoi;
         private System.Windows.Forms.Label lblSoLuongCan;
         private System.Windows.Forms.NumericUpDown numSoLuongCan;
         private System.Windows.Forms.Label lblDvtInfo;
@@ -79,14 +77,12 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.txtMoTa = new System.Windows.Forms.TextBox();
             this.lblHinhAnh = new System.Windows.Forms.Label();
             this.txtHinhAnhUrl = new System.Windows.Forms.TextBox();
-            this.btnChonHinh = new System.Windows.Forms.Button();
             this.picHinhAnh = new System.Windows.Forms.PictureBox();
 
             this.grpDinhLuong = new System.Windows.Forms.GroupBox();
             this.pnlThemDinhLuong = new System.Windows.Forms.Panel();
             this.lblChonNL = new System.Windows.Forms.Label();
             this.cboNguyenLieu = new System.Windows.Forms.ComboBox();
-            this.btnThemNguyenLieuMoi = new System.Windows.Forms.Button();
             this.lblSoLuongCan = new System.Windows.Forms.Label();
             this.numSoLuongCan = new System.Windows.Forms.NumericUpDown();
             this.lblDvtInfo = new System.Windows.Forms.Label();
@@ -178,7 +174,6 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // 
             this.grpThongTinCoBan.BackColor = System.Drawing.Color.White;
             this.grpThongTinCoBan.Controls.Add(this.picHinhAnh);
-            this.grpThongTinCoBan.Controls.Add(this.btnChonHinh);
             this.grpThongTinCoBan.Controls.Add(this.txtHinhAnhUrl);
             this.grpThongTinCoBan.Controls.Add(this.lblHinhAnh);
             this.grpThongTinCoBan.Controls.Add(this.txtMoTa);
@@ -336,34 +331,19 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblHinhAnh.Name = "lblHinhAnh";
             this.lblHinhAnh.Size = new System.Drawing.Size(107, 15);
             this.lblHinhAnh.TabIndex = 10;
-            this.lblHinhAnh.Text = "Hình ảnh đại diện:";
+            this.lblHinhAnh.Text = "Dán link hình ảnh (URL):";
 
             // 
             // txtHinhAnhUrl
             // 
-            this.txtHinhAnhUrl.BackColor = System.Drawing.Color.FromArgb(248, 250, 252);
-            this.txtHinhAnhUrl.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.txtHinhAnhUrl.BackColor = System.Drawing.Color.White;
+            this.txtHinhAnhUrl.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.txtHinhAnhUrl.Location = new System.Drawing.Point(16, 252);
             this.txtHinhAnhUrl.Name = "txtHinhAnhUrl";
-            this.txtHinhAnhUrl.ReadOnly = true;
-            this.txtHinhAnhUrl.Size = new System.Drawing.Size(334, 23);
+            this.txtHinhAnhUrl.ReadOnly = false;
+            this.txtHinhAnhUrl.Size = new System.Drawing.Size(436, 23);
             this.txtHinhAnhUrl.TabIndex = 11;
-
-            // 
-            // btnChonHinh
-            // 
-            this.btnChonHinh.BackColor = System.Drawing.Color.FromArgb(241, 245, 249);
-            this.btnChonHinh.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(203, 213, 225);
-            this.btnChonHinh.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnChonHinh.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.btnChonHinh.ForeColor = System.Drawing.Color.FromArgb(30, 41, 59);
-            this.btnChonHinh.Location = new System.Drawing.Point(356, 251);
-            this.btnChonHinh.Name = "btnChonHinh";
-            this.btnChonHinh.Size = new System.Drawing.Size(96, 26);
-            this.btnChonHinh.TabIndex = 12;
-            this.btnChonHinh.Text = "📁 Chọn ảnh";
-            this.btnChonHinh.UseVisualStyleBackColor = false;
-            this.btnChonHinh.Click += new System.EventHandler(this.btnChonHinh_Click);
+            this.txtHinhAnhUrl.TextChanged += new System.EventHandler(this.txtHinhAnhUrl_TextChanged);
 
             // 
             // picHinhAnh
@@ -402,7 +382,6 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.pnlThemDinhLuong.Controls.Add(this.lblDvtInfo);
             this.pnlThemDinhLuong.Controls.Add(this.numSoLuongCan);
             this.pnlThemDinhLuong.Controls.Add(this.lblSoLuongCan);
-            this.pnlThemDinhLuong.Controls.Add(this.btnThemNguyenLieuMoi);
             this.pnlThemDinhLuong.Controls.Add(this.cboNguyenLieu);
             this.pnlThemDinhLuong.Controls.Add(this.lblChonNL);
             this.pnlThemDinhLuong.Location = new System.Drawing.Point(14, 24);
@@ -430,24 +409,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.cboNguyenLieu.FormattingEnabled = true;
             this.cboNguyenLieu.Location = new System.Drawing.Point(138, 9);
             this.cboNguyenLieu.Name = "cboNguyenLieu";
-            this.cboNguyenLieu.Size = new System.Drawing.Size(185, 23);
+            this.cboNguyenLieu.Size = new System.Drawing.Size(222, 23);
             this.cboNguyenLieu.TabIndex = 1;
-
-            // 
-            // btnThemNguyenLieuMoi
-            // 
-            this.btnThemNguyenLieuMoi.BackColor = System.Drawing.Color.FromArgb(238, 242, 255);
-            this.btnThemNguyenLieuMoi.FlatAppearance.BorderSize = 0;
-            this.btnThemNguyenLieuMoi.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnThemNguyenLieuMoi.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnThemNguyenLieuMoi.ForeColor = System.Drawing.Color.FromArgb(79, 70, 229);
-            this.btnThemNguyenLieuMoi.Location = new System.Drawing.Point(328, 8);
-            this.btnThemNguyenLieuMoi.Name = "btnThemNguyenLieuMoi";
-            this.btnThemNguyenLieuMoi.Size = new System.Drawing.Size(32, 25);
-            this.btnThemNguyenLieuMoi.TabIndex = 2;
-            this.btnThemNguyenLieuMoi.Text = "＋";
-            this.btnThemNguyenLieuMoi.UseVisualStyleBackColor = false;
-            this.btnThemNguyenLieuMoi.Click += new System.EventHandler(this.btnThemNguyenLieuMoi_Click);
 
             // 
             // lblSoLuongCan

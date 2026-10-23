@@ -294,47 +294,49 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
 
             if (dgvMonAn.Columns["MaMonAn"] != null) {
                 dgvMonAn.Columns["MaMonAn"].HeaderText = "Mã Món";
-                dgvMonAn.Columns["MaMonAn"].Width = 100;
-                dgvMonAn.Columns["MaMonAn"].MinimumWidth = 80;
+                dgvMonAn.Columns["MaMonAn"].Width = 85;
+                dgvMonAn.Columns["MaMonAn"].MinimumWidth = 70;
                 dgvMonAn.Columns["MaMonAn"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                dgvMonAn.Columns["MaMonAn"].DisplayIndex = 0;
 
                 dgvMonAn.Columns["TenMonAn"].HeaderText = "Tên Món Ăn";
-                dgvMonAn.Columns["TenMonAn"].Width = 260;
-                dgvMonAn.Columns["TenMonAn"].MinimumWidth = 200;
+                dgvMonAn.Columns["TenMonAn"].Width = 220;
+                dgvMonAn.Columns["TenMonAn"].MinimumWidth = 180;
+                dgvMonAn.Columns["TenMonAn"].DisplayIndex = 1;
+
+                dgvMonAn.Columns["Gia"].HeaderText = "Giá Bán";
+                dgvMonAn.Columns["Gia"].Width = 120;
+                dgvMonAn.Columns["Gia"].MinimumWidth = 100;
+                dgvMonAn.Columns["Gia"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                dgvMonAn.Columns["Gia"].DisplayIndex = 2;
+
+                dgvMonAn.Columns["SoLuongTon"].HeaderText = "Số Suất Còn";
+                dgvMonAn.Columns["SoLuongTon"].Width = 130;
+                dgvMonAn.Columns["SoLuongTon"].MinimumWidth = 110;
+                dgvMonAn.Columns["SoLuongTon"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                dgvMonAn.Columns["SoLuongTon"].Visible = true;
+                dgvMonAn.Columns["SoLuongTon"].DisplayIndex = 3;
 
                 dgvMonAn.Columns["MaLoaiMon"].HeaderText = "Loại Món";
                 dgvMonAn.Columns["MaLoaiMon"].Width = 130;
                 dgvMonAn.Columns["MaLoaiMon"].MinimumWidth = 100;
-
-                dgvMonAn.Columns["Gia"].HeaderText = "Giá Bán";
-                dgvMonAn.Columns["Gia"].Width = 130;
-                dgvMonAn.Columns["Gia"].MinimumWidth = 110;
-                dgvMonAn.Columns["Gia"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-
-                if (dgvMonAn.Columns["GiaVonUocTinh"] != null) {
-                    dgvMonAn.Columns["GiaVonUocTinh"].HeaderText = "Giá Vốn (COGS)";
-                    dgvMonAn.Columns["GiaVonUocTinh"].Width = 140;
-                    dgvMonAn.Columns["GiaVonUocTinh"].MinimumWidth = 120;
-                    dgvMonAn.Columns["GiaVonUocTinh"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                }
-
-                dgvMonAn.Columns["SoLuongTon"].HeaderText = "Khả Dụng";
-                dgvMonAn.Columns["SoLuongTon"].Width = 120;
-                dgvMonAn.Columns["SoLuongTon"].MinimumWidth = 100;
-                dgvMonAn.Columns["SoLuongTon"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                dgvMonAn.Columns["MaLoaiMon"].DisplayIndex = 4;
 
                 dgvMonAn.Columns["TrangThaiRaw"].HeaderText = "Trạng Thái";
-                dgvMonAn.Columns["TrangThaiRaw"].Width = 180;
-                dgvMonAn.Columns["TrangThaiRaw"].MinimumWidth = 150;
+                dgvMonAn.Columns["TrangThaiRaw"].Width = 160;
+                dgvMonAn.Columns["TrangThaiRaw"].MinimumWidth = 140;
                 dgvMonAn.Columns["TrangThaiRaw"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                dgvMonAn.Columns["TrangThaiRaw"].DisplayIndex = 5;
 
                 if (dgvMonAn.Columns["MoTa"] != null) {
                     dgvMonAn.Columns["MoTa"].HeaderText = "Mô Tả / Ghi Chú";
-                    dgvMonAn.Columns["MoTa"].Width = 260;
-                    dgvMonAn.Columns["MoTa"].MinimumWidth = 160;
+                    dgvMonAn.Columns["MoTa"].Width = 220;
+                    dgvMonAn.Columns["MoTa"].MinimumWidth = 140;
                     dgvMonAn.Columns["MoTa"].Visible = true;
+                    dgvMonAn.Columns["MoTa"].DisplayIndex = 6;
                 }
 
+                if (dgvMonAn.Columns["GiaVonUocTinh"] != null) dgvMonAn.Columns["GiaVonUocTinh"].Visible = false;
                 if (dgvMonAn.Columns["TrangThai"] != null) dgvMonAn.Columns["TrangThai"].Visible = false;
                 if (dgvMonAn.Columns["HinhAnhUrl"] != null) dgvMonAn.Columns["HinhAnhUrl"].Visible = false;
                 if (dgvMonAn.Columns["TenLoaiMon"] != null) dgvMonAn.Columns["TenLoaiMon"].Visible = false;

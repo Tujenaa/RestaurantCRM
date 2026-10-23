@@ -160,7 +160,8 @@ namespace RestaurantCRM.AdminApp.Services {
                             MaMon = d.MaMonAn,
                             TenMon = d.TenMonAn,
                             DonGia = (double)d.Gia,
-                            MaLoaiMon = d.MaLoaiMon
+                            MaLoaiMon = d.MaLoaiMon,
+                            GiaVonUocTinh = (double)d.GiaVonUocTinh
                         });
                     }
                     if (result.Count > 0) return result;

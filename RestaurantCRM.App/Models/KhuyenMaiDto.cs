@@ -117,6 +117,9 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("maLoaiMon")]
         public string MaLoaiMon { get; set; }
 
+        [JsonPropertyName("giaVonUocTinh")]
+        public double? GiaVonUocTinh { get; set; }
+
         public string DisplayText => $"[{MaMon}] {TenMon} - ({DonGia:N0} đ)";
     }
 }

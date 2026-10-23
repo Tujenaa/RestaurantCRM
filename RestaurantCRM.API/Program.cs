@@ -9,6 +9,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+builder.Services.AddHttpClient();
 builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddControllers(options =>
 {

@@ -320,6 +320,11 @@
     <Compile Include="Forms\NhaCungCap\ChiTietPhieuNhapDialog.Designer.cs">
       <DependentUpon>ChiTietPhieuNhapDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\BaoCaoDoanhThuDto.cs" />
+    <Compile Include="Services\BaoCaoService.cs" />
+    <Compile Include="Forms\BaoCao\BaoCaoBanHangForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
