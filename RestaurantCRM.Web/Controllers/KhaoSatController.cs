@@ -8,25 +8,24 @@ public class KhaoSatController(KhaoSatService api) : Controller
 {
     private string? MaKhachHang => HttpContext.Session.GetString("MaKhachHang");
 
-    private bool DaTraLoi(string maKhaoSat) =>
-        HttpContext.Session.GetString("KS_DONE_" + maKhaoSat) == "1";
+
 
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        var vm = new KhaoSatIndexViewModel();
         try
         {
-            var ks = await api.GetHienTaiAsync();
-            ViewBag.DaTraLoi = ks is not null && DaTraLoi(ks.MaKhaoSat);
-            return View(ks);
+            vm.DanhSach = await api.GetDanhSachAsync(MaKhachHang);
+            if (!string.IsNullOrEmpty(MaKhachHang))
+                vm.LichSu = await api.GetLichSuAsync(MaKhachHang);
         }
         catch (HttpRequestException)
         {
             TempData["ThongBao"] = "Không kết nối được API. Hãy chạy RestaurantCRM.API rồi thử lại.";
-            return View((KhaoSatViewModel?)null);
         }
+        return View(vm);
     }
-
     [HttpGet]
     public async Task<IActionResult> Details(string id)
     {
@@ -35,16 +34,16 @@ public class KhaoSatController(KhaoSatService api) : Controller
             TempData["ThongBao"] = "Vui lòng đăng nhập để tham gia khảo sát.";
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
-
         try
         {
-            var ks = await api.GetHienTaiAsync();
-            if (ks is null || ks.MaKhaoSat != id)
+            var ks = await api.GetByIdAsync(id);
+            if (ks is null)
             {
                 TempData["ThongBao"] = "Khảo sát đã đóng hoặc không còn tồn tại.";
                 return RedirectToAction(nameof(Index));
             }
-            if (DaTraLoi(ks.MaKhaoSat))
+            var ds = await api.GetDanhSachAsync(MaKhachHang);
+            if (ds.Any(x => x.MaKhaoSat == id && x.DaTraLoi))
             {
                 TempData["ThongBao"] = "Bạn đã hoàn thành khảo sát này rồi.";
                 return RedirectToAction(nameof(Index));
@@ -57,7 +56,6 @@ public class KhaoSatController(KhaoSatService api) : Controller
             return RedirectToAction(nameof(Index));
         }
     }
-
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Gui(GuiPhieuTraLoiViewModel model)
@@ -72,7 +70,7 @@ public class KhaoSatController(KhaoSatService api) : Controller
         KhaoSatViewModel? ks;
         try
         {
-            ks = await api.GetHienTaiAsync();
+            ks = await api.GetByIdAsync(model.MaKhaoSat);
         }
         catch (HttpRequestException)
         {
@@ -85,11 +83,7 @@ public class KhaoSatController(KhaoSatService api) : Controller
             TempData["ThongBao"] = "Khảo sát đã đóng, không thể gửi câu trả lời.";
             return RedirectToAction(nameof(Index));
         }
-        if (DaTraLoi(ks.MaKhaoSat))
-        {
-            TempData["ThongBao"] = "Bạn đã hoàn thành khảo sát này rồi.";
-            return RedirectToAction(nameof(Index));
-        }
+        
 
         var sach = new GuiPhieuTraLoiViewModel { MaKhaoSat = ks.MaKhaoSat };
         foreach (var q in ks.CauHoi)
@@ -129,7 +123,7 @@ public class KhaoSatController(KhaoSatService api) : Controller
             var (ok, message) = await api.GuiAsync(maKh, sach);
             if (ok)
             {
-                HttpContext.Session.SetString("KS_DONE_" + ks.MaKhaoSat, "1");
+               
                 return RedirectToAction(nameof(Submit));
             }
             ModelState.AddModelError("", message);
