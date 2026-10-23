@@ -450,3 +450,40 @@ a{text-decoration:none;color:inherit}.nav a{border:0;background:transparent;colo
         padding: 0 14px
     }
 }
+/* Tương thích markup cũ */
+.survey-card .survey-right {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 140px;
+    flex-shrink: 0;
+    text-align: center
+}
+
+    .survey-card .survey-right .status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        padding: 0 14px;
+        font-size: 12px;
+        font-weight: 750
+    }
+
+    .survey-card .survey-right .survey-action {
+        margin: 0
+    }
+
+    .survey-card .survey-right .btn {
+        width: 100%;
+        min-width: 140px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 18px;
+        font-size: 13px;
+        white-space: nowrap
+    }

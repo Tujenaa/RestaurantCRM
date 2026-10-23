@@ -6,6 +6,7 @@ public class KhaoSatViewModel
 {
     public string MaKhaoSat { get; set; } = "";
     public string TieuDe { get; set; } = "";
+    
     public List<CauHoiViewModel> CauHoi { get; set; } = new();
 }
 
@@ -38,4 +39,23 @@ public class CauTraLoiInput
     public string MaCauHoi { get; set; } = "";
     public List<string> MaTuyChons { get; set; } = new();
     public string? NoiDungTuDien { get; set; }
+}
+public class KhaoSatItemViewModel
+{
+    public string MaKhaoSat { get; set; } = "";
+    public string TieuDe { get; set; } = "";
+    public int SoCauHoi { get; set; }
+    public bool DaTraLoi { get; set; }
+}
+public class LichSuKhaoSatItem
+{
+    public string MaKhaoSat { get; set; } = "";
+    public string TieuDe { get; set; } = "";
+    public DateTime NgayGui { get; set; }
+}
+
+public class KhaoSatIndexViewModel
+{
+    public List<KhaoSatItemViewModel> DanhSach { get; set; } = new();
+    public List<LichSuKhaoSatItem> LichSu { get; set; } = new();
 }

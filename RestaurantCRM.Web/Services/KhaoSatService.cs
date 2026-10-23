@@ -50,4 +50,29 @@ public class KhaoSatService(IHttpClientFactory factory)
             err = "Gửi khảo sát thất bại, vui lòng thử lại.";
         return (false, err);
     }
+    public async Task<List<KhaoSatItemViewModel>> GetDanhSachAsync(string? maKhachHang)
+    {
+        var client = factory.CreateClient("ApiClient");
+        var url = "/api/KhaoSat/DanhSach" + (string.IsNullOrEmpty(maKhachHang) ? "" : $"?maKhachHang={Uri.EscapeDataString(maKhachHang)}");
+        var res = await client.GetAsync(url);
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<List<KhaoSatItemViewModel>>(Json) ?? new();
+    }
+
+    public async Task<List<LichSuKhaoSatItem>> GetLichSuAsync(string maKhachHang)
+    {
+        var client = factory.CreateClient("ApiClient");
+        var res = await client.GetAsync($"/api/KhaoSat/LichSu?maKhachHang={Uri.EscapeDataString(maKhachHang)}");
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<List<LichSuKhaoSatItem>>(Json) ?? new();
+    }
+
+    public async Task<KhaoSatViewModel?> GetByIdAsync(string id)
+    {
+        var client = factory.CreateClient("ApiClient");
+        var res = await client.GetAsync($"/api/KhaoSat/{Uri.EscapeDataString(id)}");
+        if (res.StatusCode == HttpStatusCode.NotFound) return null;
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<KhaoSatViewModel>(Json);
+    }
 }
