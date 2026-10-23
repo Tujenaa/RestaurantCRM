@@ -17,7 +17,11 @@ public class TaiKhoanController : Controller
     }
 
     [HttpGet]
-    public IActionResult DangNhap() => View("Login");
+    public IActionResult DangNhap([FromQuery] string? returnUrl = null)
+    {
+        ViewBag.ReturnUrl = returnUrl;
+        return View("Login");
+    }
 
     [HttpGet]
     public IActionResult DangKy() => View("Register");
@@ -101,12 +105,12 @@ public class TaiKhoanController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DangNhap(string lienHe, string matKhau)
+    public async Task<IActionResult> DangNhap(string lienHe, string matKhau, [FromQuery] string? returnUrl = null)
     {
         if (String.IsNullOrWhiteSpace(lienHe) || String.IsNullOrEmpty(matKhau))
         {
             TempData["ThongBao"] = "Vui lòng nhập email/số điện thoại và mật khẩu.";
-            return RedirectToAction(nameof(DangNhap));
+            return RedirectToAction(nameof(DangNhap), new { returnUrl });
         }
 
         try
@@ -129,7 +133,7 @@ public class TaiKhoanController : Controller
                     !khachHang.TryGetProperty("hoTen", out var nameProperty))
                 {
                     TempData["ThongBao"] = "API trả về thông tin đăng nhập không hợp lệ.";
-                    return RedirectToAction(nameof(DangNhap));
+                    return RedirectToAction(nameof(DangNhap), new { returnUrl });
                 }
 
                 HttpContext.Session.SetString("Token", tokenProperty.GetString() ?? "");
@@ -145,6 +149,11 @@ public class TaiKhoanController : Controller
                     HttpContext.Session.SetString("SoDienThoai", phoneProp.GetString() ?? "");
                 }
 
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    return Redirect(returnUrl);
+                }
+
                 return RedirectToAction("Index", "TrangChu");
             }
 
@@ -152,17 +161,17 @@ public class TaiKhoanController : Controller
             TempData["ThongBao"] = String.IsNullOrWhiteSpace(error)
                 ? "Email/số điện thoại hoặc mật khẩu không đúng."
                 : error.Trim('"');
-            return RedirectToAction(nameof(DangNhap));
+            return RedirectToAction(nameof(DangNhap), new { returnUrl });
         }
         catch (HttpRequestException)
         {
             TempData["ThongBao"] = "Không kết nối được API. Hãy chạy RestaurantCRM.API rồi thử lại.";
-            return RedirectToAction(nameof(DangNhap));
+            return RedirectToAction(nameof(DangNhap), new { returnUrl });
         }
         catch (JsonException)
         {
             TempData["ThongBao"] = "API trả về dữ liệu không hợp lệ.";
-            return RedirectToAction(nameof(DangNhap));
+            return RedirectToAction(nameof(DangNhap), new { returnUrl });
         }
     }
 

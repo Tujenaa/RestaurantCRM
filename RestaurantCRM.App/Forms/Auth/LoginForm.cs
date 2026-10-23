@@ -201,10 +201,10 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             };
 
             var demoAccounts = new[] {
-                ("admin",    "🛡 Admin"),
-                ("quanly01", "👔 Quản lý"),
-                ("thungan01","💰 Thu ngân"),
-                ("cskh01",   "🎧 CSKH")
+                ("admin",     "🛡 Admin"),
+                ("quanly01",  "👔 Quản lý"),
+                ("thungan01", "💰 Thu ngân"),
+                ("thungan02", "💰 CSKH")
             };
             foreach (var acc in demoAccounts)
             {

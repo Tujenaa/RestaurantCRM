@@ -18,6 +18,7 @@ public class PhanHoiItemViewModel
     public string TenMon { get; set; } = "";
     public string? DuongDanAnh { get; set; }
     public string? MaDonHang { get; set; }
+    public string? MaKhachHang { get; set; }
     public string TenKhachHang { get; set; } = "Khách hàng";
     public int DanhGia { get; set; }
     public string NoiDung { get; set; } = "";

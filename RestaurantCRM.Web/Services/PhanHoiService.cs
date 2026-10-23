@@ -8,95 +8,58 @@ public class PhanHoiService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PhanHoiService> _logger;
 
-    // Bộ nhớ in-memory fallback khởi tạo sẵn dữ liệu phong phú (gồm cả phản hồi xếp mới -> cũ)
-    private readonly List<PhanHoiItemViewModel> _items = new()
-    {
-        new()
-        {
-            MaDanhGia = "DG001",
-            MaMon = "M01",
-            TenMon = "Lẩu Thái chua cay",
-            DuongDanAnh = "/images/default.jpg",
-            MaDonHang = "DH00198",
-            TenKhachHang = "Nguyễn Văn Hùng",
-            DanhGia = 5,
-            NoiDung = "Nước lẩu Thái rất đậm đà, vị chua cay hài hòa, hải sản kèm theo tươi giòn. Giao hàng đúng giờ!",
-            NgayGui = DateTime.Now.AddDays(-1).AddHours(-3),
-            TraLois = new List<TraLoiDanhGiaViewModel>
-            {
-                new()
-                {
-                    MaTraLoi = "TL002",
-                    NguoiGui = "KhachHang",
-                    NguoiTraLoi = "Nguyễn Văn Hùng",
-                    NoiDung = "Dạ lần sau mình sẽ gọi thêm phần thịt bò Mỹ nữa nhé quán!",
-                    NgayGui = DateTime.Now.AddHours(-12)
-                },
-                new()
-                {
-                    MaTraLoi = "TL001",
-                    NguoiGui = "NhanVien",
-                    NguoiTraLoi = "Quản lý Lẩu Phố",
-                    NoiDung = "Lẩu Phố cảm ơn anh Hùng rất nhiều ạ! Chúc anh có những bữa ăn ngon miệng cùng gia đình.",
-                    NgayGui = DateTime.Now.AddDays(-1).AddHours(-1)
-                }
-            }
-        },
-        new()
-        {
-            MaDanhGia = "DG002",
-            MaMon = "M05",
-            TenMon = "Bò Mỹ thái lát",
-            DuongDanAnh = "/images/default.jpg",
-            MaDonHang = "DH00231",
-            TenKhachHang = "Trần Thị Mai",
-            DanhGia = 4,
-            NoiDung = "Thịt bò mềm tan, vân mỡ đều đẹp. Đóng khay giữ lạnh cẩn thận.",
-            NgayGui = DateTime.Now.AddDays(-2).AddHours(-5),
-            TraLois = new List<TraLoiDanhGiaViewModel>
-            {
-                new()
-                {
-                    MaTraLoi = "TL003",
-                    NguoiGui = "NhanVien",
-                    NguoiTraLoi = "Chăm sóc khách hàng Lẩu Phố",
-                    NoiDung = "Lẩu Phố chân thành cảm ơn chị Mai. Nhà hàng luôn cam kết nhập thịt bò chuẩn chứng nhận mỗi ngày ạ.",
-                    NgayGui = DateTime.Now.AddDays(-2).AddHours(-3)
-                }
-            }
-        },
-        new()
-        {
-            MaDanhGia = "DG003",
-            MaMon = "M03",
-            TenMon = "Lẩu nấm thanh đạm",
-            DuongDanAnh = "/images/default.jpg",
-            MaDonHang = "DH00198",
-            TenKhachHang = "Lê Hoàng Long",
-            DanhGia = 5,
-            NoiDung = "Nước dùng thanh ngọt tự nhiên không gắt bột ngọt, các loại nấm tươi sạch ăn rất nhẹ bụng.",
-            NgayGui = DateTime.Now.AddDays(-4),
-            TraLois = new List<TraLoiDanhGiaViewModel>()
-        },
-        new()
-        {
-            MaDanhGia = "DG004",
-            MaMon = "M06",
-            TenMon = "Tôm sú tươi",
-            DuongDanAnh = "/images/default.jpg",
-            MaDonHang = "DH00198",
-            TenKhachHang = "Phạm Quỳnh Chi",
-            DanhGia = 4,
-            NoiDung = "Tôm sú tươi giòn, nhúng lẩu vị ngọt lịm. Shipper giao rất thân thiện.",
-            NgayGui = DateTime.Now.AddDays(-6),
-            TraLois = new List<TraLoiDanhGiaViewModel>()
-        }
-    };
+    // Bộ nhớ in-memory fallback chỉ lưu tạm các đánh giá mới thêm trong phiên nếu mất kết nối API
+    private readonly List<PhanHoiItemViewModel> _items = new();
 
     public PhanHoiService(IHttpClientFactory httpClientFactory, ILogger<PhanHoiService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Lấy danh sách đánh giá của riêng khách hàng (lịch sử cá nhân), xếp mới -> cũ
+    /// </summary>
+    public async Task<IReadOnlyList<PhanHoiItemViewModel>> GetByKhachHangAsync(string? maKhachHang)
+    {
+        if (string.IsNullOrWhiteSpace(maKhachHang))
+        {
+            return Array.Empty<PhanHoiItemViewModel>();
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/DanhGia/KhachHang/{Uri.EscapeDataString(maKhachHang)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var apiReviews = await response.Content.ReadFromJsonAsync<List<ApiDanhGiaDto>>();
+                if (apiReviews != null && apiReviews.Count > 0)
+                {
+                    return apiReviews
+                        .OrderByDescending(x => x.NgayDanhGia ?? DateTime.MinValue)
+                        .Select(MapFromApi)
+                        .ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Không thể tải đánh giá của khách hàng {MaKhachHang} từ API ({Message}), chuyển sang fallback.", maKhachHang, ex.Message);
+        }
+
+        lock (_items)
+        {
+            return _items
+                .Where(x => string.Equals(x.MaKhachHang, maKhachHang, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.NgayGui)
+                .Select(x =>
+                {
+                    x.TraLois = x.TraLois.OrderByDescending(t => t.NgayGui).ToList();
+                    return x;
+                })
+                .ToList();
+        }
     }
 
     /// <summary>
@@ -206,6 +169,7 @@ public class PhanHoiService
             MaMon = maMon,
             TenMon = tenMon,
             MaDonHang = maDonHang,
+            MaKhachHang = customerId ?? "KH01",
             TenKhachHang = string.IsNullOrWhiteSpace(customerName) ? "Khách hàng thân thiết" : customerName,
             DanhGia = Math.Clamp(rating, 1, 5),
             NoiDung = noiDung,

@@ -1,16 +1,17 @@
 @model PhanHoiViewModel
 @{
-    ViewData["Title"] = "Đánh giá & Phản hồi — Lẩu Phố";
+    ViewData["Title"] = "Lịch sử đánh giá của tôi — Lẩu Phố";
     Layout = "/Shared/_Layout.cshtml";
-
-    var availableDishes = Model.DonHangHienTai?.ChiTiet != null && Model.DonHangHienTai.ChiTiet.Count > 0
-        ? Model.DonHangHienTai.ChiTiet.Select(c => new { c.MaMon, c.TenMon, c.DuongDanAnh }).DistinctBy(x => x.MaMon).ToList()
-        : Model.MonAns.Select(m => new { m.MaMon, m.TenMon, DuongDanAnh = m.DuongDanAnh }).Take(10).ToList();
 }
 
-<div class="page-intro">
-    <h1 class="page-title">⭐ Đánh giá & Phản hồi dịch vụ</h1>
-    <p>Ý kiến đóng góp quý báu của bạn giúp Lẩu Phố ngày càng nâng cao chất lượng món ăn và phục vụ tốt hơn.</p>
+<div class="page-intro" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:28px;">
+    <div>
+        <h1 class="page-title" style="margin:0 0 6px;">📜 Lịch sử đánh giá của tôi</h1>
+        <p style="margin:0; color:var(--muted); font-size:15px;">Xem lại những phản hồi bạn đã gửi và các câu trả lời giải đáp từ nhà hàng Lẩu Phố.</p>
+    </div>
+    <a asp-controller="DonHang" asp-action="Index" class="btn" style="padding:12px 24px; font-weight:700; border-radius:12px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(225,29,72,0.25);">
+        ✍️ Đánh giá từ đơn hàng của bạn
+    </a>
 </div>
 
 @if (TempData["ThongBao"] != null)
@@ -26,137 +27,55 @@
     </div>
 }
 
-<div class="layout" style="display:grid; grid-template-columns: 1fr 1.35fr; gap:28px; align-items:start;">
-    <!-- FORM GỬI ĐÁNH GIÁ (Yêu cầu 2: Đánh giá đơn hàng, chọn món cụ thể hoặc tất cả món) -->
-    <form class="panel review-form-card" asp-action="Gui" method="post" style="position:sticky; top:90px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="All" class="validation" style="color:#d32f2f; margin-bottom:12px;"></div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px;">
-            <h3 style="margin:0; font-size:18px;">✍️ Gửi đánh giá món ăn</h3>
-            <span class="badge" style="background:#fff3e0; color:#e65100; font-weight:600;">Trải nghiệm khách hàng</span>
-        </div>
-
-        <!-- 1. Chọn đơn hàng -->
-        <div class="field" style="margin-bottom:16px;">
-            <label for="MaDonHang" style="font-weight:600; display:block; margin-bottom:6px;">📦 Đơn hàng của bạn</label>
-            @if (Model.DonHangs.Count > 0)
-            {
-                <select id="MaDonHang" name="MaDonHang" class="form-select" onchange="location.href='?maDonHang=' + this.value" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:#fafafa; font-size:14px;">
-                    @foreach (var order in Model.DonHangs)
-                    {
-                        <option value="@order.MaDonHang" selected="@(Model.MaDonHang == order.MaDonHang)">
-                            #@order.MaDonHang · Đặt ngày @order.NgayDat.ToString("dd/MM/yyyy") (@order.TongThanhToan.ToString("N0")đ)
-                        </option>
-                    }
-                </select>
-            }
-            else
-            {
-                <div style="padding:10px; background:#f5f5f5; border-radius:8px; font-size:13px; color:var(--muted);">
-                    (Bạn chưa có đơn hàng nào đã hoàn tất, đánh giá mẫu sẽ được áp dụng cho thực đơn nhà hàng)
-                </div>
-            }
-        </div>
-
-        <!-- 2. Chế độ đánh giá (Tất cả món hoặc Món cụ thể) -->
-        <div class="field" style="margin-bottom:18px;">
-            <label style="font-weight:600; display:block; margin-bottom:8px;">🎯 Hình thức đánh giá</label>
-            <div style="display:flex; gap:12px;">
-                <label style="flex:1; display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; cursor:pointer; background:@(Model.CheDoDanhGia == "DonHang" ? "#fdf3eb" : "#fff"); border-color:@(Model.CheDoDanhGia == "DonHang" ? "var(--red)" : "var(--line)");">
-                    <input type="radio" name="CheDoDanhGia" value="DonHang" @(Model.CheDoDanhGia == "DonHang" ? "checked" : "") onchange="toggleDishSelect(false)" />
-                    <div>
-                        <strong style="font-size:13.5px; display:block;">Toàn bộ đơn hàng</strong>
-                        <small style="color:var(--muted); font-size:11.5px;">Đánh giá chung tất cả món</small>
-                    </div>
-                </label>
-                <label style="flex:1; display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; cursor:pointer; background:@(Model.CheDoDanhGia == "TungMon" ? "#fdf3eb" : "#fff"); border-color:@(Model.CheDoDanhGia == "TungMon" ? "var(--red)" : "var(--line)");">
-                    <input type="radio" name="CheDoDanhGia" value="TungMon" @(Model.CheDoDanhGia == "TungMon" ? "checked" : "") onchange="toggleDishSelect(true)" />
-                    <div>
-                        <strong style="font-size:13.5px; display:block;">Món cụ thể</strong>
-                        <small style="color:var(--muted); font-size:11.5px;">Chọn món trong đơn</small>
-                    </div>
-                </label>
-            </div>
-        </div>
-
-        <!-- 3. Danh sách chọn món ăn khi chọn 'Món cụ thể' -->
-        <div id="dishSelectGroup" class="field" style="margin-bottom:18px; display:@(Model.CheDoDanhGia == "TungMon" ? "block" : "none");">
-            <label for="MaMon" style="font-weight:600; display:block; margin-bottom:6px;">🍲 Chọn món ăn muốn đánh giá</label>
-            <select asp-for="MaMon" id="MaMon" class="form-select" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:#fafafa; font-size:14px;">
-                <option value="">-- Vui lòng chọn món ăn --</option>
-                @foreach (var dish in availableDishes)
-                {
-                    <option value="@dish.MaMon" selected="@(Model.MaMon == dish.MaMon)">@dish.TenMon</option>
-                }
-            </select>
-            <span asp-validation-for="MaMon" class="validation" style="color:#d32f2f; font-size:12px;"></span>
-        </div>
-
-        <!-- 4. Chọn số sao (Mức độ hài lòng) -->
-        <div class="field" style="margin-bottom:18px;">
-            <label style="font-weight:600; display:block; margin-bottom:6px;">⭐ Mức độ hài lòng</label>
-            <div style="display:flex; align-items:center; gap:14px;">
-                <div class="rating" id="ratingStars" role="group" aria-label="Chọn số sao" style="display:inline-flex; gap:6px; font-size:26px; cursor:pointer;">
-                    @for (var i = 1; i <= 5; i++)
-                    {
-                        <button type="button" class="@(i <= Model.DanhGia ? "on" : "")" data-rating="@i" aria-label="@i sao" style="background:none; border:none; cursor:pointer; font-size:28px; line-height:1; padding:2px; color:@(i <= Model.DanhGia ? "#f59e0b" : "#d1d5db"); transition:transform 0.15s ease;">★</button>
-                    }
-                </div>
-                <input type="hidden" asp-for="DanhGia" id="DanhGia" value="@Model.DanhGia" />
-                <span id="ratingLabel" style="font-weight:600; color:#b45309; font-size:14px;">@Model.DanhGia/5 — Rất hài lòng</span>
-            </div>
-            <span asp-validation-for="DanhGia" class="validation" style="color:#d32f2f; font-size:12px;"></span>
-        </div>
-
-        <!-- 5. Nội dung phản hồi -->
-        <div class="field" style="margin-bottom:18px;">
-            <label asp-for="NoiDung" style="font-weight:600; display:block; margin-bottom:6px;">💬 Cảm nhận của bạn</label>
-            <textarea asp-for="NoiDung" rows="4" placeholder="Chia sẻ cảm nhận về hương vị món ăn, độ nóng giòn, cách đóng gói hoặc sự nhiệt tình của nhân viên..." style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line); font-family:inherit; font-size:14px; line-height:1.5; resize:vertical;"></textarea>
-            <span asp-validation-for="NoiDung" class="validation" style="color:#d32f2f; font-size:12px;"></span>
-        </div>
-
-        <button class="btn" type="submit" style="width:100%; padding:12px; font-size:15px; font-weight:700; border-radius:10px;">
-            🚀 Gửi đánh giá ngay
-        </button>
-    </form>
-
-    <!-- DANH SÁCH LỊCH SỬ ĐÁNH GIÁ (Yêu cầu 1: Mới nhất đến cũ nhất, kèm trả lời từ mới đến cũ) -->
-    <section class="panel review-history-card" style="box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:20px;">
+<section class="panel review-history-card" style="box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-radius:16px; padding:24px 28px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">👤</span>
             <div>
-                <h3 style="margin:0; font-size:19px;">📜 Lịch sử đánh giá & phản hồi</h3>
-                <small class="muted">Hiển thị đánh giá từ mới nhất đến cũ nhất kèm trao đổi của nhà hàng</small>
+                <strong style="font-size:16px; color:#1e293b;">Danh sách các đánh giá đã gửi</strong>
+                <small class="muted" style="display:block; font-size:12.5px;">Sắp xếp từ mới nhất đến cũ nhất kèm trao đổi phản hồi</small>
             </div>
-            <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">@Model.PhanHois.Count đánh giá</span>
         </div>
+        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700; font-size:13px; padding:6px 12px; border-radius:20px;">
+            @Model.PhanHois.Count đánh giá
+        </span>
+    </div>
 
-        @if (Model.PhanHois.Count == 0)
-        {
-            <div style="text-align:center; padding:40px 20px; color:var(--muted);">
-                <div style="font-size:42px; margin-bottom:10px;">💬</div>
-                <h4>Chưa có đánh giá nào</h4>
-                <p>Hãy là người đầu tiên gửi cảm nhận về các món ăn thơm ngon của Lẩu Phố nhé!</p>
-            </div>
-        }
-
+    @if (Model.PhanHois.Count == 0)
+    {
+        <div style="text-align:center; padding:60px 20px; color:var(--muted);">
+            <div style="font-size:56px; margin-bottom:14px;">💬</div>
+            <h3 style="color:#334155; margin-bottom:8px;">Bạn chưa có đánh giá nào</h3>
+            <p style="max-width:480px; margin:0 auto 20px; line-height:1.6; font-size:14.5px;">
+                Mỗi đánh giá của bạn là nguồn động lực to lớn giúp Lẩu Phố hoàn thiện hương vị món ăn và chất lượng phục vụ.
+            </p>
+            <a asp-controller="DonHang" asp-action="Index" class="btn" style="padding:10px 20px; font-weight:600; border-radius:10px;">
+                📦 Đến danh sách đơn hàng để đánh giá
+            </a>
+        </div>
+    }
+    else
+    {
         <div class="reviews-stream" style="display:flex; flex-direction:column; gap:20px;">
             @foreach (var review in Model.PhanHois)
             {
-                <article class="review-item" style="border:1px solid var(--line); border-radius:14px; padding:18px 20px; background:#ffffff; transition:box-shadow 0.2s ease;">
+                <article class="review-item" style="border:1px solid var(--line); border-radius:14px; padding:20px 22px; background:#ffffff; transition:box-shadow 0.2s ease;">
                     <!-- Header Đánh giá -->
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="width:42px; height:42px; border-radius:50%; background:#fef3c7; color:#b45309; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:17px;">
+                            <div style="width:44px; height:44px; border-radius:50%; background:#fef3c7; color:#b45309; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">
                                 @(string.IsNullOrEmpty(review.TenKhachHang) ? "K" : review.TenKhachHang[0].ToString().ToUpper())
                             </div>
                             <div>
-                                <strong style="font-size:15px; display:block;">@review.TenKhachHang</strong>
-                                <small class="muted">Món: <strong style="color:var(--text);">@review.TenMon</strong> @(!string.IsNullOrEmpty(review.MaDonHang) ? $"· Đơn #{review.MaDonHang}" : "")</small>
+                                <strong style="font-size:15px; color:#1e293b; display:block;">@review.TenKhachHang (Bạn)</strong>
+                                <small class="muted" style="font-size:13px;">
+                                    Món ăn: <strong style="color:var(--text);">@review.TenMon</strong> 
+                                    @(!string.IsNullOrEmpty(review.MaDonHang) ? $" · Đơn hàng #{review.MaDonHang}" : "")
+                                </small>
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <div class="stars" style="color:#f59e0b; font-size:17px; letter-spacing:2px;">
+                            <div class="stars" style="color:#f59e0b; font-size:18px; letter-spacing:2px;">
                                 @String.Concat(Enumerable.Repeat("★", review.DanhGia))@String.Concat(Enumerable.Repeat("☆", 5 - review.DanhGia))
                             </div>
                             <small class="muted" style="font-size:12px;">@review.NgayGui.ToString("dd/MM/yyyy · HH:mm")</small>
@@ -164,14 +83,16 @@
                     </div>
 
                     <!-- Nội dung nhận xét -->
-                    <p style="margin:8px 0 14px; line-height:1.6; color:#2d3748; font-size:14.5px;">@review.NoiDung</p>
+                    <div style="margin:10px 0 16px; line-height:1.65; color:#334155; font-size:15px; background:#f8fafc; padding:12px 16px; border-radius:10px; border-left:4px solid #f59e0b;">
+                        @review.NoiDung
+                    </div>
 
-                    <!-- Khung Phản hồi / Hội thoại (Yêu cầu 1: Sắp xếp câu trả lời từ mới đến cũ) -->
+                    <!-- Khung Phản hồi / Hội thoại từ mới đến cũ -->
                     @if (review.TraLois != null && review.TraLois.Count > 0)
                     {
-                        <div class="reply-thread" style="margin-top:14px; background:#f8fafc; border-radius:12px; padding:14px 16px; border-left: 3px solid #3b82f6;">
-                            <div style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; margin-bottom:10px; display:flex; justify-content:space-between;">
-                                <span>💬 Phản hồi trao đổi (@review.TraLois.Count câu trả lời · Mới $\to$ Cũ)</span>
+                        <div class="reply-thread" style="margin-top:14px; background:#f1f5f9; border-radius:12px; padding:14px 16px; border-left: 3px solid #3b82f6;">
+                            <div style="font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:10px; display:flex; justify-content:space-between;">
+                                <span>💬 Phản hồi trao đổi (@review.TraLois.Count câu trả lời · Mới nhất trước)</span>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:10px;">
                                 @foreach (var reply in review.TraLois)
@@ -179,7 +100,7 @@
                                     <div class="reply-box" style="padding:10px 14px; border-radius:10px; background:@(reply.NguoiGui == "NhanVien" ? "#eff6ff" : "#ffffff"); border:1px solid @(reply.NguoiGui == "NhanVien" ? "#bfdbfe" : "#e2e8f0"); font-size:13.5px;">
                                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                             <span style="font-weight:700; color:@(reply.NguoiGui == "NhanVien" ? "#1d4ed8" : "#334155");">
-                                                @(reply.NguoiGui == "NhanVien" ? "🏢 " + reply.NguoiTraLoi + " (Nhà hàng)" : "👤 " + reply.NguoiTraLoi)
+                                                @(reply.NguoiGui == "NhanVien" ? "🏢 " + reply.NguoiTraLoi + " (Nhà hàng)" : "👤 " + reply.NguoiTraLoi + " (Bạn)")
                                             </span>
                                             <small class="muted" style="font-size:11.5px;">@reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")</small>
                                         </div>
@@ -190,39 +111,8 @@
                         </div>
                     }
 
-                    <!-- Form Phản hồi nhanh ngay tại đánh giá -->
-                    <div style="margin-top:12px; border-top:1px dashed var(--line); padding-top:10px;">
-                        <button type="button" class="text-btn" onclick="toggleReplyBox('@review.MaDanhGia')" style="font-size:13px; font-weight:600; color:var(--red);">
-                            ↩ Trả lời trao đổi thêm...
-                        </button>
-                        <form id="replyForm-@review.MaDanhGia" asp-action="PhanHoiLai" method="post" style="display:none; margin-top:10px;">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="maDanhGia" value="@review.MaDanhGia" />
-                            <div style="display:flex; gap:8px;">
-                                <input type="text" name="noiDung" placeholder="Nhập câu trả lời hoặc câu hỏi trao đổi của bạn..." required style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--line); font-size:13.5px;" />
-                                <button type="submit" class="btn small" style="padding:6px 14px; font-size:13px;">Gửi</button>
-                            </div>
-                        </form>
-                    </div>
                 </article>
             }
         </div>
-    </section>
-</div>
-
-@section Scripts {
-    <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
-    <script>
-        function toggleDishSelect(show) {
-            const group = document.getElementById('dishSelectGroup');
-            if (group) group.style.display = show ? 'block' : 'none';
-        }
-
-        function toggleReplyBox(id) {
-            const f = document.getElementById('replyForm-' + id);
-            if (f) {
-                f.style.display = f.style.display === 'none' ? 'block' : 'none';
-            }
-        }
-    </script>
-}
+    }
+</section>
