@@ -1,28 +1,119 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Config;
 using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Helpers;
+using RestaurantCRM.AdminApp.Models;
 
-namespace RestaurantCRM.AdminApp.Forms.BaoCao {
-    public class BaoCaoBanHangForm : Form {
-        public BaoCaoBanHangForm() {
-            Text = "Báo cáo bán hàng | RestaurantCRM"; StartPosition = FormStartPosition.CenterParent; Size = new Size(960, 640); BackColor = ThemeManager.Bg; Font = new Font("Segoe UI", 9.5F);
-            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), BackColor = ThemeManager.Bg }; Controls.Add(content);
-            content.Controls.Add(new Label { Text = "Báo cáo bán hàng", Location = new Point(24, 18), AutoSize = true, Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = ThemeManager.Ink });
-            content.Controls.Add(new Label { Text = "Theo dõi doanh thu và trạng thái đơn hàng.", Location = new Point(26, 56), AutoSize = true, ForeColor = ThemeManager.Muted });
-            var cards = new FlowLayoutPanel { Location = new Point(24, 96), Size = new Size(980, 125), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, WrapContents = false, BackColor = ThemeManager.Bg };
-            cards.Controls.Add(new UcThongKe("Doanh thu", "8.420.000 đ", "Hôm nay")); cards.Controls.Add(new UcThongKe("Đơn hàng", "36", "Hôm nay")); cards.Controls.Add(new UcThongKe("Đơn TB", "234.000 đ", "Giá trị trung bình")); cards.Controls.Add(new UcThongKe("Đã hoàn tất", "28", "78% tổng đơn")); content.Controls.Add(cards);
-            var panel = new Panel { Location = new Point(24, 242), Size = new Size(980, 300), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right, BackColor = ThemeManager.Paper, Padding = new Padding(20) };
-            panel.Paint += (s, e) => { using (var pen = new Pen(ThemeManager.Line)) e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1); };
-            panel.Controls.Add(new Label { Text = "Doanh thu theo ngày", Location = new Point(20, 16), AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = ThemeManager.Ink });
-            string[] days = { "T2", "T3", "T4", "T5", "T6", "T7", "CN" }; int[] amounts = { 45, 62, 38, 78, 54, 92, 70 };
-            for (int i = 0; i < days.Length; i++) {
-                int x = 60 + i * 115, height = amounts[i] * 2;
-                var bar = new Panel { Location = new Point(x, 232 - height), Size = new Size(52, height), BackColor = Color.FromArgb(14, 124, 134), Anchor = AnchorStyles.Bottom };
-                panel.Controls.Add(bar); panel.Controls.Add(new Label { Text = days[i], Location = new Point(x + 14, 240), AutoSize = true, ForeColor = ThemeManager.Muted });
+namespace RestaurantCRM.AdminApp.Forms.BaoCao
+{
+    /// <summary>Báo cáo doanh thu: 4 thẻ số liệu, biểu đồ doanh thu theo tháng, món bán chạy (lấy từ API ThongKe).</summary>
+    public class BaoCaoBanHangForm : Form
+    {
+        private readonly UcThongKe _kDoanhThu, _kHoanTat, _kChoXuLy, _kDangGiao;
+        private readonly UcLineChart _chart;
+        private readonly UcTopList _top;
+
+        public BaoCaoBanHangForm()
+        {
+            Text = "Báo cáo bán hàng | RestaurantCRM";
+            StartPosition = FormStartPosition.CenterParent;
+            Size = new Size(1100, 720);
+            BackColor = ThemeManager.Bg;
+            Font = new Font("Segoe UI", 9.5F);
+            Padding = new Padding(14, 6, 14, 10);
+
+            // Hàng đầu
+            var header = new Panel { Dock = DockStyle.Top, Height = 76, BackColor = ThemeManager.Bg };
+            var lblTitle = new Label { Text = "Báo cáo bán hàng", Location = new Point(10, 8), AutoSize = true, Font = new Font("Segoe UI", 17F, FontStyle.Bold), ForeColor = ThemeManager.Ink };
+            var lblSub = new Label { Text = "Theo dõi doanh thu, tình trạng đơn hàng và món bán chạy.", Location = new Point(12, 44), AutoSize = true, Font = new Font("Segoe UI", 9F), ForeColor = ThemeManager.Muted };
+            var btnRefresh = new Button { Text = "Làm mới" };
+            ButtonSkin.SetKind(btnRefresh, ButtonSkin.Kind.Secondary);
+            PageKit.FitButton(btnRefresh);
+            btnRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnRefresh.Click += (s, e) => LoadData();
+            header.Controls.Add(lblTitle); header.Controls.Add(lblSub); header.Controls.Add(btnRefresh);
+            Action place = () => {
+                bool embedded = !TopLevel;
+                lblTitle.Visible = !embedded;
+                lblSub.Location = new Point(12, embedded ? 16 : 44);
+                header.Height = embedded ? 54 : 76;
+                btnRefresh.Location = new Point(header.Width - btnRefresh.Width - 8, embedded ? 4 : 16);
+            };
+            header.Resize += (s, e) => place();
+            btnRefresh.SizeChanged += (s, e) => place();
+            ParentChanged += (s, e) => place();
+
+            // Thẻ số liệu
+            var kpis = new TableLayoutPanel { Dock = DockStyle.Top, Height = 140, ColumnCount = 4, RowCount = 1, BackColor = ThemeManager.Bg };
+            kpis.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            for (int i = 0; i < 4; i++) kpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            _kDoanhThu = new UcThongKe("Doanh thu hôm nay", "...", "Đơn đã hoàn thành", "💰", ThemeManager.Green);
+            _kHoanTat = new UcThongKe("Đơn hoàn tất", "...", "Trong hôm nay", "✅", ThemeManager.Primary);
+            _kChoXuLy = new UcThongKe("Chờ xử lý", "...", "Cần xác nhận", "⏳", ThemeManager.Amber);
+            _kDangGiao = new UcThongKe("Đang thực hiện", "...", "Chuẩn bị / giao", "🛵", ThemeManager.Sky);
+            var all = new[] { _kDoanhThu, _kHoanTat, _kChoXuLy, _kDangGiao };
+            for (int i = 0; i < 4; i++) { all[i].Dock = DockStyle.Fill; kpis.Controls.Add(all[i], i, 0); }
+
+            // Biểu đồ + món bán chạy
+            var bottom = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Bg };
+            _top = new UcTopList { Dock = DockStyle.Right, Width = 340, Title = "Món bán chạy", Subtitle = "TOP 5 THEO SỐ LƯỢNG ĐÃ BÁN", Unit = "phần" };
+            _chart = new UcLineChart { Dock = DockStyle.Fill, Title = "Doanh thu theo tháng", Caption = "Năm " + DateTime.Now.Year, Unit = "đ" };
+            bottom.Controls.Add(_chart);
+            bottom.Controls.Add(_top);
+
+            Controls.Add(bottom);
+            Controls.Add(kpis);
+            Controls.Add(header);
+            bottom.BringToFront();
+            place();
+
+            Load += (s, e) => LoadData();
+        }
+
+        private class DoanhThuThangDto { public int Thang { get; set; } public double DoanhThu { get; set; } }
+        private class MonBanChayDto { public string TenMon { get; set; } public double TongSoLuongBan { get; set; } }
+
+        private async void LoadData()
+        {
+            var http = new System.Net.Http.HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/"), Timeout = TimeSpan.FromSeconds(15) };
+            try
+            {
+                var m = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<DashboardMetricsDto>(http, "api/ThongKe/DashboardMetrics");
+                if (m != null && !IsDisposed)
+                {
+                    _kDoanhThu.SetValue(m.DoanhThuHomNay.ToString("N0") + " đ");
+                    _kHoanTat.SetValue(m.DonHoanThanhHomNay.ToString("N0"));
+                    _kChoXuLy.SetValue(m.DonChoXuLy.ToString("N0"));
+                    _kDangGiao.SetValue(m.DonDangGiao.ToString("N0"));
+                }
             }
-            content.Controls.Add(panel); content.Controls.Add(new Label { Text = "Số liệu minh họa — chưa lấy từ API hoặc cơ sở dữ liệu.", Location = new Point(26, 558), AutoSize = true, ForeColor = ThemeManager.Muted, Anchor = AnchorStyles.Bottom | AnchorStyles.Left });
+            catch
+            {
+                foreach (var k in new[] { _kDoanhThu, _kHoanTat, _kChoXuLy, _kDangGiao }) if (!k.IsDisposed) k.SetValue("—", "Chưa kết nối API");
+            }
+
+            var labels = new string[12]; var values = new double[12];
+            for (int i = 0; i < 12; i++) labels[i] = "T" + (i + 1);
+            try
+            {
+                var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<DoanhThuThangDto>>(http, "api/ThongKe/DoanhThuTheoThang?nam=" + DateTime.Now.Year);
+                if (data != null) foreach (var d in data) if (d.Thang >= 1 && d.Thang <= 12) values[d.Thang - 1] = d.DoanhThu;
+            }
+            catch { }
+            if (!_chart.IsDisposed) _chart.SetData(labels, values);
+
+            var items = new List<KeyValuePair<string, double>>();
+            try
+            {
+                var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<MonBanChayDto>>(http, "api/ThongKe/MonBanChay?top=5");
+                if (data != null) foreach (var d in data) items.Add(new KeyValuePair<string, double>(d.TenMon, d.TongSoLuongBan));
+            }
+            catch { }
+            if (!_top.IsDisposed) _top.SetItems(items);
+            http.Dispose();
         }
     }
 }
-

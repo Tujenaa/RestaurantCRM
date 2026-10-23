@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Forms;
+using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
@@ -45,35 +46,41 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
         private void BuildLayout()
         {
             // 1. Header Banner
-            var pnlTop = new Panel { Dock = DockStyle.Top, Height = 74, BackColor = Color.White, Padding = new Padding(24, 12, 24, 12) };
-            pnlTop.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(ThemeManager.Line))
-                    e.Graphics.DrawLine(pen, 0, pnlTop.Height - 1, pnlTop.Width, pnlTop.Height - 1);
-            };
+            Padding = new Padding(14, 6, 14, 10);
+            var pnlTop = new Panel { Dock = DockStyle.Top, Height = 76, BackColor = ThemeManager.Bg };
 
             var lblTitle = new Label
             {
-                Text = "💾 SAO LƯU & PHỤC HỒI CƠ SỞ DỮ LIỆU",
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                Text = "Sao lưu & phục hồi dữ liệu",
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 AutoSize = true,
-                Location = new Point(20, 12)
+                UseMnemonic = false,
+                Location = new Point(10, 8)
             };
             var lblSub = new Label
             {
                 Text = "Tạo các bản sao lưu an toàn cho hệ thống và phục hồi dữ liệu khi có sự cố.",
-                Font = new Font("Segoe UI", 8.5F),
+                Font = new Font("Segoe UI", 9F),
                 ForeColor = ThemeManager.Muted,
                 AutoSize = true,
-                Location = new Point(22, 42)
+                Location = new Point(12, 44)
             };
             pnlTop.Controls.Add(lblTitle);
             pnlTop.Controls.Add(lblSub);
             Controls.Add(pnlTop);
+            Action placeTitle = () =>
+            {
+                bool embedded = !TopLevel;   // mở trong cửa sổ chính: tiêu đề nằm trên header chung
+                lblTitle.Visible = !embedded;
+                lblSub.Location = new Point(12, embedded ? 12 : 44);
+                pnlTop.Height = embedded ? 40 : 76;
+            };
+            placeTitle();
+            ParentChanged += (s, e) => placeTitle();
 
             // 2. Main Content
-            var pnlContent = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24, 16, 24, 20), BackColor = ThemeManager.Bg };
+            var pnlContent = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0), BackColor = ThemeManager.Bg };
             Controls.Add(pnlContent);
             pnlContent.BringToFront();
 
@@ -81,7 +88,7 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
             var pnlKpis = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 84,
+                Height = 104,
                 ColumnCount = 3,
                 RowCount = 1,
                 BackColor = Color.Transparent,
@@ -97,27 +104,14 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
             pnlContent.Controls.Add(pnlKpis);
 
             // 2.2 Table Card
-            var pnlGridCard = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(0)
-            };
-            pnlGridCard.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(ThemeManager.Line))
-                    e.Graphics.DrawRectangle(pen, 0, 0, pnlGridCard.Width - 1, pnlGridCard.Height - 1);
-            };
+            var pnlGridCard = PageKit.NewCard();
+            pnlGridCard.Dock = DockStyle.Fill;
+            pnlGridCard.Padding = new Padding(8 + 20, 4 + 6, 8 + 20, 4 + 8 + 14);
             pnlContent.Controls.Add(pnlGridCard);
             pnlGridCard.BringToFront();
 
             // Toolbar
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = Color.White, Padding = new Padding(14, 10, 14, 10) };
-            toolbar.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(ThemeManager.Line))
-                    e.Graphics.DrawLine(pen, 0, toolbar.Height - 1, toolbar.Width, toolbar.Height - 1);
-            };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 62, BackColor = Color.White };
 
             _btnCreateBackup = new Button
             {
@@ -203,6 +197,36 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
             _btnRestore.Click += async (s, e) => await OnRestoreBackup();
             toolbar.Controls.Add(_btnRestore);
 
+            // Kiểu nút thống nhất: nút chính xanh, nút phụ trắng viền, nút nguy hiểm đỏ nhạt
+            ButtonSkin.SetKind(_btnCreateBackup, ButtonSkin.Kind.Primary);
+            ButtonSkin.SetKind(_btnRefresh, ButtonSkin.Kind.Secondary);
+            ButtonSkin.SetKind(_btnOpenFolder, ButtonSkin.Kind.Secondary);
+            ButtonSkin.SetKind(_btnDownload, ButtonSkin.Kind.Secondary);
+            ButtonSkin.SetKind(_btnRestore, ButtonSkin.Kind.Danger);
+            ButtonSkin.SetKind(_btnDelete, ButtonSkin.Kind.Danger);
+            int bx = 0;
+            foreach (var b in new[] { _btnCreateBackup, _btnRefresh, _btnOpenFolder })
+            {
+                PageKit.FitButton(b);
+                b.Location = new Point(bx, 10);
+                bx = b.Right + 8;
+            }
+            foreach (var b in new[] { _btnDelete, _btnDownload, _btnRestore }) PageKit.FitButton(b);
+            Action placeRight = () =>
+            {
+                _btnDelete.Location = new Point(toolbar.Width - _btnDelete.Width, 10);
+                _btnDownload.Location = new Point(_btnDelete.Left - 8 - _btnDownload.Width, 10);
+                _btnRestore.Location = new Point(_btnDownload.Left - 8 - _btnRestore.Width, 10);
+            };
+            toolbar.Resize += (s, e) => placeRight();
+            foreach (var b in new[] { _btnDelete, _btnDownload, _btnRestore }) b.SizeChanged += (s, e) => placeRight();
+            Action placeLeft = () =>
+            {
+                int lx = 0;
+                foreach (var b in new[] { _btnCreateBackup, _btnRefresh, _btnOpenFolder }) { b.Location = new Point(lx, 10); lx = b.Right + 8; }
+            };
+            foreach (var b in new[] { _btnCreateBackup, _btnRefresh, _btnOpenFolder }) b.SizeChanged += (s, e) => placeLeft();
+            placeRight();
             pnlGridCard.Controls.Add(toolbar);
 
             // DataGridView
@@ -223,11 +247,12 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
                 RowTemplate = { Height = 42 },
                 Font = new Font("Segoe UI", 9.5F)
             };
-            _dgvBackups.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
-            _dgvBackups.ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Ink;
-            _dgvBackups.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _dgvBackups.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
+            _dgvBackups.ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Muted;
+            _dgvBackups.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
             _dgvBackups.ColumnHeadersHeight = 44;
             _dgvBackups.EnableHeadersVisualStyles = false;
+            UiStyler.StyleGrid(_dgvBackups);
 
             _dgvBackups.Columns.Add("FileName", "Tên File Bản Sao Lưu");
             _dgvBackups.Columns["FileName"].FillWeight = 40;
@@ -266,28 +291,10 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
 
         private Panel CreateKpiCard(string icon, string title, string val, out Label lblVal, Color valColor)
         {
-            var pnl = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(16, 12, 16, 12),
-                Margin = new Padding(4, 0, 4, 0)
-            };
-            pnl.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(ThemeManager.Line))
-                    e.Graphics.DrawRectangle(pen, 0, 0, pnl.Width - 1, pnl.Height - 1);
-            };
-
-            var lblIco = new Label { Text = icon, Font = new Font("Segoe UI Emoji", 14F), Location = new Point(14, 14), AutoSize = true };
-            var lblT = new Label { Text = title, Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), ForeColor = ThemeManager.Muted, Location = new Point(50, 14), AutoSize = true };
-            var lblV = new Label { Text = val, Font = new Font("Segoe UI", 12.5F, FontStyle.Bold), ForeColor = valColor, Location = new Point(50, 32), AutoSize = true };
-
-            pnl.Controls.Add(lblIco);
-            pnl.Controls.Add(lblT);
-            pnl.Controls.Add(lblV);
-            lblVal = lblV;
-            return pnl;
+            // Nhãn giá trị ẩn: code cũ vẫn gán .Text, thẻ KPI tự cập nhật
+            lblVal = new Label { Text = val };
+            Color accent = valColor == ThemeManager.Ink ? ThemeManager.Primary : UiStyler.Remap(valColor);
+            return new KpiTile(lblVal, title, accent) { Dock = DockStyle.Fill };
         }
 
         public async Task LoadData()
