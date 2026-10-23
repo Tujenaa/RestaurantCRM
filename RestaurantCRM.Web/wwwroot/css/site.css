@@ -269,3 +269,221 @@ a{text-decoration:none;color:inherit}.nav a{border:0;background:transparent;colo
     color: #c62828;
     box-shadow: 0 4px 12px rgba(198, 40, 40, 0.08);
 }
+/* ===== Survey: status badge + action buttons ===== */
+.survey-card .survey-right-column {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 140px;
+    flex-shrink: 0;
+    text-align: center
+}
+
+    .survey-card .survey-right-column .status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        min-width: 0;
+        padding: 0 14px;
+        font-size: 12px;
+        font-weight: 750
+    }
+
+.survey-card .btn-survey {
+    width: 100%;
+    min-width: 140px;
+    height: 40px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 750;
+    box-shadow: none
+}
+
+    .survey-card .btn-survey.btn:not(.secondary) {
+        background: var(--red);
+        color: #fff;
+        box-shadow: 0 5px 14px #c6402b30
+    }
+
+        .survey-card .btn-survey.btn:not(.secondary):hover {
+            background: var(--red2)
+        }
+
+    .survey-card .btn-survey.secondary {
+        background: #fff;
+        color: var(--ink);
+        border: 1px solid var(--line)
+    }
+
+        .survey-card .btn-survey.secondary:hover {
+            border-color: var(--dark);
+            background: var(--cream);
+            transform: none
+        }
+
+@media(max-width:650px) {
+    .survey-card .survey-right-column {
+        margin-left: 0;
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between
+    }
+
+    .survey-card .btn-survey {
+        width: auto
+    }
+}
+
+/* ===== Header: cart + login buttons ===== */
+.top-actions {
+    gap: 10px
+}
+
+    .top-actions .cart-btn, .top-actions .user-btn, .top-actions .logout-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 42px;
+        border-radius: 999px;
+        color: #f4ecde;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+        transition: background .18s,border-color .18s,transform .18s
+    }
+
+    .top-actions .cart-btn {
+        position: relative;
+        width: 42px;
+        border: 1px solid #ffffff2b;
+        background: #ffffff0f
+    }
+
+        .top-actions .cart-btn:hover {
+            background: #ffffff1f;
+            border-color: #ffffff55;
+            transform: translateY(-1px)
+        }
+
+    .top-actions .cart-count {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        min-width: 19px;
+        height: 19px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #ef6a4e;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        border: 2px solid var(--dark);
+        box-sizing: content-box;
+        margin: 0
+    }
+
+        .top-actions .cart-count.is-empty {
+            background: #6b5a4e
+        }
+
+    .top-actions .user-btn {
+        padding: 0 18px 0 14px;
+        border: 1px solid #ffffff2b;
+        background: #ffffff0f
+    }
+
+        .top-actions .user-btn:hover {
+            background: #ffffff1f;
+            border-color: #ffffff55;
+            transform: translateY(-1px)
+        }
+
+        .top-actions .user-btn.login {
+            background: var(--red);
+            border-color: var(--red);
+            color: #fff;
+            box-shadow: 0 5px 14px #c6402b40
+        }
+
+            .top-actions .user-btn.login:hover {
+                background: #d84a33;
+                border-color: #d84a33
+            }
+
+    .top-actions .user-name {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis
+    }
+
+    .top-actions .logout-btn {
+        padding: 0 14px;
+        border: 1px solid #c6402b66;
+        background: #c6402b26;
+        color: #ffb4a4
+    }
+
+        .top-actions .logout-btn:hover {
+            background: #c6402b55;
+            color: #fff
+        }
+
+@media(max-width:650px) {
+    .top-actions .user-name {
+        display: none
+    }
+
+    .top-actions .user-btn:not(.login) {
+        padding: 0;
+        width: 42px
+    }
+
+    .top-actions .user-btn.login {
+        padding: 0 14px
+    }
+}
+/* Tương thích markup cũ */
+.survey-card .survey-right {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 140px;
+    flex-shrink: 0;
+    text-align: center
+}
+
+    .survey-card .survey-right .status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        padding: 0 14px;
+        font-size: 12px;
+        font-weight: 750
+    }
+
+    .survey-card .survey-right .survey-action {
+        margin: 0
+    }
+
+    .survey-card .survey-right .btn {
+        width: 100%;
+        min-width: 140px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 18px;
+        font-size: 13px;
+        white-space: nowrap
+    }

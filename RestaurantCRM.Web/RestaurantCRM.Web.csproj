@@ -23,7 +23,6 @@
     <Folder Include="Services\" />
     <Folder Include="Views\DonHang\" />
     <Folder Include="Views\GioHang\" />
-    <Folder Include="Views\KhaoSat\" />
     <Folder Include="Views\PhanHoi\" />
     <Folder Include="Views\TaiKhoan\" />
     <Folder Include="Views\TrangChu\" />
