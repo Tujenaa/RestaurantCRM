@@ -18,7 +18,7 @@ namespace RestaurantCRM.API.DTOs
     public class CauHoiCreateRequest
     {
         public string NoiDungCauHoi { get; set; } = null!;
-        public string LoaiCauHoi { get; set; } = null!;   // "TracNghiem" | "TuLuan"
+        public string LoaiCauHoi { get; set; } = null!;   // "Option" (trắc nghiệm) | "Text" (tự luận); vẫn nhận "TracNghiem" | "TuLuan"
         public List<string> TuyChons { get; set; } = new List<string>();
     }
 
@@ -26,7 +26,7 @@ namespace RestaurantCRM.API.DTOs
     public class CauHoiUpsertRequest
     {
         public string NoiDung { get; set; } = null!;
-        public string LoaiCauHoi { get; set; } = null!;   // "TracNghiem" | "TuLuan"
+        public string LoaiCauHoi { get; set; } = null!;   // "Option" (trắc nghiệm) | "Text" (tự luận); vẫn nhận "TracNghiem" | "TuLuan"
         /// <summary>Danh sách nội dung tùy chọn (chỉ áp dụng với TracNghiem).</summary>
         public List<string> TuyChons { get; set; } = new List<string>();
     }
@@ -37,4 +37,3 @@ namespace RestaurantCRM.API.DTOs
         public string NoiDungTuyChon { get; set; } = null!;
     }
 }
-

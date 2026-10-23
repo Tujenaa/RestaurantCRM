@@ -183,9 +183,11 @@ namespace RestaurantCRM.AdminApp.Controls
                 }
             }
 
-            // Vùng tô mờ dưới đường
+            // Vùng tô mờ dưới đường (cắt ở trục 0: đường cong trơn có thể "võng" xuống dưới 0 giữa hai tháng)
             if (pts.Length > 1)
             {
+                var oldClip = g.Clip;
+                g.SetClip(new RectangleF(p.X - 12, p.Y - 40, p.Width + 24, p.Height + 40 + 1.5f));
                 using (var area = new GraphicsPath())
                 {
                     area.AddCurve(pts, 0.45f);
@@ -198,6 +200,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 }
                 using (var pen = new Pen(ThemeManager.Primary, 2.4f) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round })
                     g.DrawCurve(pen, pts, 0.45f);
+                g.Clip = oldClip;
             }
 
             // Điểm nổi bật + tooltip

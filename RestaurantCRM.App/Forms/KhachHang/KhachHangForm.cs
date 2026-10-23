@@ -1,362 +1,297 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
+using System.Linq;
 using System.Windows.Forms;
-using RestaurantCRM.AdminApp.Forms;
+using RestaurantCRM.AdminApp.Controls;
+using RestaurantCRM.AdminApp.DTOs.KhachHang;
 using RestaurantCRM.AdminApp.Helpers;
+using RestaurantCRM.AdminApp.Services;
 
 namespace RestaurantCRM.AdminApp.Forms.KhachHang
 {
-    public partial class KhachHangForm : ModuleFormBase
+    /// <summary>
+    /// Quản lý khách hàng: danh sách, tìm theo mã / tên / số điện thoại / email, lọc trạng thái & giới tính,
+    /// xem chi tiết (kèm lịch sử đơn hàng), thêm, sửa, khóa / mở khóa và xóa.
+    /// </summary>
+    public partial class KhachHangForm : Form
     {
-        private static readonly HttpClient _http = new HttpClient
+        private readonly KhachHangService _service = new KhachHangService();
+        private List<KhachHangDto> _all = new List<KhachHangDto>();
+
+        private readonly DataGridView _grid = new DataGridView();
+        private readonly TextBox _txtSearch = new TextBox();
+        private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboGioiTinh = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label _lblCount = new Label { Text = "" };
+        private readonly Label _lblFooter = new Label { Text = "" };
+        private readonly Label _kTong = new Label { Text = "Tổng khách hàng: —" };
+        private readonly Label _kActive = new Label { Text = "Đang hoạt động: —" };
+        private readonly Label _kLocked = new Label { Text = "Tài khoản bị khóa: —" };
+        private readonly Label _kChiTieu = new Label { Text = "Tổng chi tiêu: —" };
+        private readonly Button _btnThem = new Button { Text = "Thêm khách hàng" };
+        private readonly Button _btnLamMoi = new Button { Text = "Làm mới" };
+        private readonly Button _btnChiTiet = new Button { Text = "Xem chi tiết" };
+        private readonly Button _btnSua = new Button { Text = "Sửa" };
+        private readonly Button _btnKhoa = new Button { Text = "Khóa tài khoản" };
+        private readonly Button _btnXoa = new Button { Text = "Xóa" };
+        private bool _loading;
+
+        public KhachHangForm()
         {
-            BaseAddress = new Uri("http://localhost:5275")
-        };
+            InitializeComponent();
+            Text = "Khách hàng";
+            Size = new Size(1180, 720);
+            Font = new Font(ThemeManager.FontFamily, 9.5F);
+            StartPosition = FormStartPosition.CenterParent;
 
-        private List<KhachHangDTO> _danhSach = new List<KhachHangDTO>();
+            BuildGrid();
 
-        public KhachHangForm() : base(
-            title: "Quản lý Khách Hàng",
-            description: "Danh sách khách hàng của nhà hàng",
-            columns: new[] { "Mã KH", "Họ Tên", "Số Điện Thoại", "Email", "Giới Tính", "Địa Chỉ", "Trạng Thái" },
-            fields: new ModuleField[]
+            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Hoạt động", "Đã khóa" });
+            _cboTrangThai.SelectedIndex = 0;
+            _cboGioiTinh.Items.AddRange(new object[] { "Tất cả", "Nam", "Nữ", "Khác" });
+            _cboGioiTinh.SelectedIndex = 0;
+
+            PageKit.BuildListPage(this, new ListPageSpec
             {
-                new ModuleField("MaKhachHang", "Mã Khách Hàng", false),
-                new ModuleField("HoTen",       "Họ Tên",        true),
-                new ModuleField("SoDienThoai", "Số Điện Thoại", true),
-                new ModuleField("Email",       "Email",         false),
-                new ModuleField("GioiTinh",    "Giới Tính",     false, options: new[] { "Nam", "Nữ", "Khác" }),
-                new ModuleField("DiaChi",      "Địa Chỉ",       false),
-                new ModuleField("TrangThai",   "Trạng Thái",    false, options: new[] { "Active", "Locked" }),
-            },
-            rows: new string[][] { },
-            accent: Color.FromArgb(37, 99, 235)
-        )
-        {
-            this.Load += async (s, e) => await LoadData();
+                Title = new Label { Text = "Khách hàng" },
+                Subtitle = new Label { Text = "Hồ sơ khách hàng, lịch sử mua hàng và trạng thái tài khoản." },
+                PrimaryActions = new[] { _btnThem },
+                HeaderActions = new Control[] { _btnLamMoi },
+                KpiLabels = new[] { _kTong, _kActive, _kLocked, _kChiTieu },
+                Search = _txtSearch,
+                SearchPlaceholder = "Tìm theo mã, tên, số điện thoại, email...",
+                Filters = new[]
+                {
+                    new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
+                    new FilterSpec(_cboGioiTinh, new Label { Text = "Giới tính" })
+                },
+                CountLabel = _lblCount,
+                Grid = _grid,
+                SecondaryActions = new[] { _btnChiTiet, _btnSua, _btnKhoa },
+                DangerActions = new[] { _btnXoa },
+                FooterInfo = _lblFooter
+            });
+
+            _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboGioiTinh.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _grid.SelectionChanged += (s, e) => UpdateSelectionUi();
+            _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) MoChiTiet(); };
+            _grid.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter) { e.Handled = true; MoChiTiet(); }
+                else if (e.KeyCode == Keys.Delete) { e.Handled = true; Xoa(); }
+            };
+
+            _btnThem.Click += (s, e) => ThemMoi();
+            _btnLamMoi.Click += async (s, e) => await LoadDataAsync();
+            _btnChiTiet.Click += (s, e) => MoChiTiet();
+            _btnSua.Click += (s, e) => Sua();
+            _btnKhoa.Click += (s, e) => DoiTrangThaiKhoa();
+            _btnXoa.Click += (s, e) => Xoa();
+
+            UpdateSelectionUi();
+            Load += async (s, e) => await LoadDataAsync();
         }
 
-        // ==================== LOAD DATA TỪ API ====================
-        public async Task LoadData()
+        private void BuildGrid()
         {
+            var g = _grid;
+            g.AllowUserToAddRows = false;
+            g.AllowUserToDeleteRows = false;
+            g.AllowUserToResizeRows = false;
+            g.ReadOnly = true;
+            g.MultiSelect = false;
+            g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            g.RowHeadersVisible = false;
+            g.AutoGenerateColumns = false;
+
+            AddCol("Ma", "Mã KH", 80);
+            AddCol("HoTen", "Họ tên", 190);
+            AddCol("SoDienThoai", "Số điện thoại", 120);
+            AddCol("Email", "Email", 200);
+            AddCol("GioiTinh", "Giới tính", 80);
+            AddCol("NgaySinh", "Ngày sinh", 100).DefaultCellStyle.Format = "dd/MM/yyyy";
+            AddCol("SoDon", "Số đơn", 70, DataGridViewContentAlignment.MiddleRight).DefaultCellStyle.Format = "N0";
+            AddCol("ChiTieu", "Tổng chi tiêu", 120, DataGridViewContentAlignment.MiddleRight).DefaultCellStyle.Format = "#,##0 đ";
+            AddCol("TrangThai", "Trạng thái", 110);
+        }
+
+        private DataGridViewColumn AddCol(string name, string header, int width, DataGridViewContentAlignment align = DataGridViewContentAlignment.MiddleLeft)
+        {
+            var c = new DataGridViewTextBoxColumn { Name = name, HeaderText = header, Width = width, SortMode = DataGridViewColumnSortMode.Automatic };
+            c.DefaultCellStyle.Alignment = align;
+            _grid.Columns.Add(c);
+            return c;
+        }
+
+        // ── Tải & lọc dữ liệu ────────────────────────────────────────────────
+
+        public async System.Threading.Tasks.Task LoadDataAsync(string chonMa = null)
+        {
+            if (_loading) return;
+            _loading = true;
+            _btnLamMoi.Enabled = false;
+            _lblCount.Text = "Đang tải...";
+            if (chonMa == null) chonMa = SelectedDto()?.MaKhachHang;
             try
             {
-                _danhSach = await _http.GetFromJsonAsync<List<KhachHangDTO>>("/api/AdminKhachHang")
-                    ?? new List<KhachHangDTO>();
-
-                var rows = new List<object[]>();
-                foreach (var kh in _danhSach)
-                {
-                    rows.Add(new object[]
-                    {
-                        kh.MaKhachHang ?? "",
-                        kh.HoTen ?? "",
-                        kh.SoDienThoai ?? "",
-                        kh.Email ?? "",
-                        kh.GioiTinh ?? "",
-                        kh.DiaChi ?? "",
-                        kh.TrangThai ?? "Active"
-                    });
-                }
-
-                SetTableData(rows);
+                _all = await _service.GetAllAsync();
+                UpdateKpis();
+                ApplyFilter(chonMa);
             }
-            catch (Exception ex)
+            catch (ApiException ex)
             {
-                MessageBox.Show($"Lỗi kết nối API: {ex.Message}",
-                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _lblCount.Text = "Không tải được dữ liệu";
+                if (!IsDisposed) Notify.Error(this, ex.Message, "Lỗi tải danh sách khách hàng");
+            }
+            finally
+            {
+                _loading = false;
+                if (!IsDisposed) _btnLamMoi.Enabled = true;
             }
         }
 
-        // ==================== HOOKS CHO TOOLBAR BUTTONS ====================
-        protected override async void OnAdd()
+        private void UpdateKpis()
         {
-            await MoFormChiTiet(null, true);
+            int locked = _all.Count(k => k.BiKhoa);
+            _kTong.Text = "Tổng khách hàng: " + _all.Count.ToString("N0");
+            _kActive.Text = "Đang hoạt động: " + (_all.Count - locked).ToString("N0");
+            _kLocked.Text = "Tài khoản bị khóa: " + locked.ToString("N0");
+            _kChiTieu.Text = "Tổng chi tiêu: " + FormatTien(_all.Sum(k => k.TongChiTieu));
         }
 
-        protected override async void OnEdit()
+        private void ApplyFilter(string chonMa = null)
         {
-            string maKH = GetSelectedId();
-            if (string.IsNullOrEmpty(maKH))
+            if (chonMa == null) chonMa = SelectedDto()?.MaKhachHang;
+            string q = (_txtSearch.Text ?? "").Trim().ToLowerInvariant();
+            string tt = _cboTrangThai.SelectedItem as string;
+            string gt = _cboGioiTinh.SelectedItem as string;
+
+            var list = _all.Where(k =>
             {
-                MessageBox.Show("Vui lòng chọn khách hàng cần sửa!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (tt == "Hoạt động" && k.BiKhoa) return false;
+                if (tt == "Đã khóa" && !k.BiKhoa) return false;
+                if (gt != null && gt != "Tất cả" && !string.Equals(k.GioiTinh, gt, StringComparison.OrdinalIgnoreCase)) return false;
+                if (q.Length == 0) return true;
+                return Contains(k.MaKhachHang, q) || Contains(k.HoTen, q) || Contains(k.SoDienThoai, q) || Contains(k.Email, q);
+            }).ToList();
+
+            _grid.SuspendLayout();
+            _grid.Rows.Clear();
+            int chonIndex = -1;
+            foreach (var k in list)
+            {
+                int i = _grid.Rows.Add(k.MaKhachHang, k.HoTen, k.SoDienThoai, k.Email, k.GioiTinh,
+                    (object)k.NgaySinhDate, k.SoDonHang, k.TongChiTieu, k.TrangThaiHienThi);
+                _grid.Rows[i].Tag = k;
+                if (chonMa != null && k.MaKhachHang == chonMa) chonIndex = i;
+            }
+            _grid.ResumeLayout();
+            _grid.ClearSelection();
+            if (chonIndex >= 0)
+            {
+                _grid.Rows[chonIndex].Selected = true;
+                _grid.CurrentCell = _grid.Rows[chonIndex].Cells[0];
+            }
+
+            _lblCount.Text = list.Count == _all.Count
+                ? "Hiển thị " + list.Count + " khách hàng"
+                : "Hiển thị " + list.Count + " / " + _all.Count + " khách hàng";
+            UpdateSelectionUi();
+        }
+
+        private static bool Contains(string s, string q) { return s != null && s.ToLowerInvariant().Contains(q); }
+
+        private KhachHangDto SelectedDto()
+        {
+            if (_grid.SelectedRows.Count == 0) return null;
+            return _grid.SelectedRows[0].Tag as KhachHangDto;
+        }
+
+        private void UpdateSelectionUi()
+        {
+            var k = SelectedDto();
+            bool has = k != null;
+            _btnChiTiet.Enabled = has;
+            _btnSua.Enabled = has;
+            _btnKhoa.Enabled = has;
+            _btnXoa.Enabled = has;
+            _btnKhoa.Text = has && k.BiKhoa ? "Mở khóa" : "Khóa tài khoản";
+            _lblFooter.Text = has
+                ? k.HoTen + " · " + (string.IsNullOrEmpty(k.SoDienThoai) ? "chưa có SĐT" : k.SoDienThoai) + " · " + k.SoDonHang + " đơn"
+                : "Chọn một khách hàng để xem thao tác";
+        }
+
+        internal static string FormatTien(double v) { return v.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + " đ"; }
+
+        // ── Thao tác ─────────────────────────────────────────────────────────
+
+        private async void ThemMoi()
+        {
+            using (var dlg = new KhachHangDialog(null))
+            {
+                if (Notify.ShowDialog(dlg, this) == DialogResult.OK)
+                    await LoadDataAsync(dlg.SavedId);
+            }
+        }
+
+        private async void Sua()
+        {
+            var k = SelectedDto();
+            if (k == null) { Notify.Info(this, "Vui lòng chọn khách hàng cần sửa."); return; }
+            using (var dlg = new KhachHangDialog(k))
+            {
+                if (Notify.ShowDialog(dlg, this) == DialogResult.OK)
+                    await LoadDataAsync(k.MaKhachHang);
+            }
+        }
+
+        private async void MoChiTiet()
+        {
+            var k = SelectedDto();
+            if (k == null) return;
+            using (var dlg = new KhachHangChiTietDialog(k.MaKhachHang))
+            {
+                Notify.ShowDialog(dlg, this);
+                if (dlg.DataChanged) await LoadDataAsync(k.MaKhachHang);
+            }
+        }
+
+        private async void DoiTrangThaiKhoa()
+        {
+            var k = SelectedDto();
+            if (k == null) return;
+            bool khoa = !k.BiKhoa;
+            string hoi = khoa
+                ? "Khóa tài khoản của khách hàng \"" + k.HoTen + "\"?\nKhách sẽ không đăng nhập và đặt hàng trên website được cho tới khi được mở khóa."
+                : "Mở khóa tài khoản của khách hàng \"" + k.HoTen + "\"?";
+            if (!Notify.Confirm(this, hoi, khoa ? "Khóa tài khoản" : "Mở khóa tài khoản", khoa)) return;
+
+            _btnKhoa.Enabled = false;
+            var r = await _service.SetLockedAsync(k.MaKhachHang, khoa);
+            if (IsDisposed) return;
+            if (r.Success) await LoadDataAsync(k.MaKhachHang);
+            else { _btnKhoa.Enabled = true; Notify.Error(this, r.Message); }
+        }
+
+        private async void Xoa()
+        {
+            var k = SelectedDto();
+            if (k == null) return;
+            if (k.SoDonHang > 0)
+            {
+                Notify.Warn(this, "Khách hàng \"" + k.HoTen + "\" đã có " + k.SoDonHang + " đơn hàng nên không thể xóa để giữ lịch sử.\nBạn có thể khóa tài khoản thay thế.", "Không thể xóa");
                 return;
             }
-            await MoFormChiTiet(maKH, false);
+            if (!Notify.Confirm(this, "Xóa vĩnh viễn khách hàng \"" + k.HoTen + "\" (" + k.MaKhachHang + ")?\nThao tác này không hoàn tác được.", "Xóa khách hàng", true)) return;
+
+            _btnXoa.Enabled = false;
+            var r = await _service.DeleteAsync(k.MaKhachHang);
+            if (IsDisposed) return;
+            if (r.Success) await LoadDataAsync();
+            else { _btnXoa.Enabled = true; Notify.Error(this, r.Message); }
         }
-
-        protected override async void OnDelete()
-        {
-            string maKH = GetSelectedId();
-            if (string.IsNullOrEmpty(maKH))
-            {
-                MessageBox.Show("Vui lòng chọn khách hàng cần xóa!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            await XoaKhachHang(maKH);
-        }
-
-        protected override async void OnRowDoubleClick(string id, System.Data.DataRow row)
-        {
-            if (!string.IsNullOrEmpty(id))
-            {
-                await MoFormChiTiet(id, false);
-            }
-        }
-
-        // ==================== FORM THÊM / SỬA KHÁCH HÀNG (NGAY HÀNG THẲNG LỐI) ====================
-        private async Task MoFormChiTiet(string maKH, bool isNew = false)
-        {
-            KhachHangDTO kh = null;
-
-            if (!isNew && !string.IsNullOrEmpty(maKH))
-            {
-                try
-                {
-                    kh = await _http.GetFromJsonAsync<KhachHangDTO>($"/api/AdminKhachHang/{maKH}");
-                }
-                catch
-                {
-                    MessageBox.Show("Không lấy được thông tin chi tiết khách hàng!",
-                        "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-            }
-
-            using (var form = new Form())
-            {
-                form.Text = isNew ? "Thêm Khách Hàng Mới" : $"Chỉnh Sửa Khách Hàng #{maKH}";
-                form.ClientSize = new Size(520, 440);
-                form.StartPosition = FormStartPosition.CenterParent;
-                form.FormBorderStyle = FormBorderStyle.FixedDialog;
-                form.MaximizeBox = false;
-                form.MinimizeBox = false;
-                form.BackColor = Color.White;
-                form.Font = new Font("Segoe UI", 9.5F);
-
-                // --- Header ---
-                var lblHeader = new Label
-                {
-                    Text = isNew ? "＋ Thêm Khách Hàng Mới" : "✏️ Cập Nhật Thông Tin Khách Hàng",
-                    Font = new Font("Segoe UI", 13.5F, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(17, 24, 39),
-                    Location = new Point(24, 16),
-                    AutoSize = true
-                };
-                var lblSubHeader = new Label
-                {
-                    Text = isNew ? "Vui lòng nhập các thông tin bắt buộc có dấu (*)" : $"Mã khách hàng: {maKH}",
-                    Font = new Font("Segoe UI", 8.5F),
-                    ForeColor = Color.FromArgb(107, 114, 128),
-                    Location = new Point(25, 43),
-                    AutoSize = true
-                };
-
-                // --- CỘT 1 (X = 24, Width = 226) & CỘT 2 (X = 270, Width = 226) ---
-                // Hàng 1 (Y = 76)
-                var lblHoTen = new Label { Text = "Họ Tên *", Location = new Point(24, 76), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var txtHoTen = new TextBox { Location = new Point(24, 97), Width = 226, Text = kh?.HoTen ?? "" };
-
-                var lblSDT = new Label { Text = "Số Điện Thoại *", Location = new Point(270, 76), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var txtSDT = new TextBox { Location = new Point(270, 97), Width = 226, Text = kh?.SoDienThoai ?? "" };
-
-                // Hàng 2 (Y = 138)
-                var lblEmail = new Label { Text = "Email", Location = new Point(24, 138), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var txtEmail = new TextBox { Location = new Point(24, 159), Width = 226, Text = kh?.Email ?? "" };
-
-                var lblGioiTinh = new Label { Text = "Giới Tính", Location = new Point(270, 138), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var cboGioiTinh = new ComboBox
-                {
-                    Location = new Point(270, 159),
-                    Width = 226,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                cboGioiTinh.Items.AddRange(new object[] { "Nam", "Nữ", "Khác" });
-                cboGioiTinh.SelectedItem = !string.IsNullOrEmpty(kh?.GioiTinh) ? kh.GioiTinh : "Nam";
-
-                // Hàng 3 (Y = 200)
-                var lblNgaySinh = new Label { Text = "Ngày Sinh (yyyy-MM-dd)", Location = new Point(24, 200), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var txtNgaySinh = new TextBox { Location = new Point(24, 221), Width = 226, Text = kh?.NgaySinh ?? "" };
-
-                var lblTrangThai = new Label { Text = "Trạng Thái", Location = new Point(270, 200), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var cboTrangThai = new ComboBox
-                {
-                    Location = new Point(270, 221),
-                    Width = 226,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                cboTrangThai.Items.AddRange(new object[] { "Active", "Locked" });
-                cboTrangThai.SelectedItem = !string.IsNullOrEmpty(kh?.TrangThai) ? kh.TrangThai : "Active";
-
-                // Hàng 4 (Full Width: X = 24, Width = 472)
-                var lblDiaChi = new Label { Text = "Địa Chỉ", Location = new Point(24, 262), AutoSize = true, ForeColor = Color.FromArgb(55, 65, 81) };
-                var txtDiaChi = new TextBox { Location = new Point(24, 283), Width = 472, Text = kh?.DiaChi ?? "" };
-
-                // Divider line
-                var pnlDivider = new Panel
-                {
-                    Location = new Point(24, 345),
-                    Size = new Size(472, 1),
-                    BackColor = Color.FromArgb(229, 231, 235)
-                };
-
-                // Buttons
-                var btnHuy = new Button
-                {
-                    Text = "Hủy",
-                    Location = new Point(286, 368),
-                    Size = new Size(95, 36),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.White,
-                    ForeColor = Color.FromArgb(75, 85, 99),
-                    Cursor = Cursors.Hand
-                };
-                btnHuy.FlatAppearance.BorderColor = Color.FromArgb(209, 213, 219);
-                btnHuy.Click += (s, e) => form.Close();
-
-                var btnLuu = new Button
-                {
-                    Text = isNew ? "＋ Lưu Mới" : "💾 Cập Nhật",
-                    Location = new Point(391, 368),
-                    Size = new Size(105, 36),
-                    BackColor = Color.FromArgb(37, 99, 235),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                    Cursor = Cursors.Hand
-                };
-                btnLuu.FlatAppearance.BorderColor = Color.FromArgb(37, 99, 235);
-
-                btnLuu.Click += async (s, e) =>
-                {
-                    if (string.IsNullOrWhiteSpace(txtHoTen.Text))
-                    {
-                        MessageBox.Show("Vui lòng nhập họ tên khách hàng!", "Thiếu thông tin",
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        txtHoTen.Focus();
-                        return;
-                    }
-                    if (string.IsNullOrWhiteSpace(txtSDT.Text))
-                    {
-                        MessageBox.Show("Vui lòng nhập số điện thoại!", "Thiếu thông tin",
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        txtSDT.Focus();
-                        return;
-                    }
-
-                    btnLuu.Enabled = false;
-                    btnLuu.Text = "Đang lưu...";
-
-                    try
-                    {
-                        var req = new
-                        {
-                            HoTen = txtHoTen.Text.Trim(),
-                            SoDienThoai = string.IsNullOrWhiteSpace(txtSDT.Text) ? null : txtSDT.Text.Trim(),
-                            Email = string.IsNullOrWhiteSpace(txtEmail.Text) ? null : txtEmail.Text.Trim(),
-                            GioiTinh = cboGioiTinh.SelectedItem?.ToString(),
-                            NgaySinh = string.IsNullOrWhiteSpace(txtNgaySinh.Text) ? null : txtNgaySinh.Text.Trim(),
-                            DiaChi = string.IsNullOrWhiteSpace(txtDiaChi.Text) ? null : txtDiaChi.Text.Trim(),
-                            TrangThai = cboTrangThai.SelectedItem?.ToString() ?? "Active"
-                        };
-
-                        HttpResponseMessage res;
-                        if (isNew)
-                            res = await _http.PostAsJsonAsync("/api/AdminKhachHang", req);
-                        else
-                            res = await _http.PutAsJsonAsync($"/api/AdminKhachHang/{maKH}", req);
-
-                        if (res.IsSuccessStatusCode)
-                        {
-                            MessageBox.Show(isNew ? "Thêm khách hàng thành công!" : "Cập nhật khách hàng thành công!",
-                                "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            form.Close();
-                            await LoadData();
-                        }
-                        else
-                        {
-                            string err = await res.Content.ReadAsStringAsync();
-                            MessageBox.Show($"Thao tác thất bại: {err}", "Lỗi",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Lỗi gọi API: {ex.Message}", "Lỗi",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    finally
-                    {
-                        btnLuu.Enabled = true;
-                        btnLuu.Text = isNew ? "＋ Lưu Mới" : "💾 Cập Nhật";
-                    }
-                };
-
-                form.Controls.AddRange(new Control[]
-                {
-                    lblHeader, lblSubHeader,
-                    lblHoTen, txtHoTen,
-                    lblSDT, txtSDT,
-                    lblEmail, txtEmail,
-                    lblGioiTinh, cboGioiTinh,
-                    lblNgaySinh, txtNgaySinh,
-                    lblTrangThai, cboTrangThai,
-                    lblDiaChi, txtDiaChi,
-                    pnlDivider,
-                    btnHuy, btnLuu
-                });
-
-                form.ShowDialog(this);
-            }
-        }
-
-        // ==================== XÓA KHÁCH HÀNG QUA API ====================
-        public async Task XoaKhachHang(string maKH)
-        {
-            var confirm = MessageBox.Show(
-                $"Bạn có chắc chắn muốn xóa khách hàng #{maKH}?",
-                "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (confirm != DialogResult.Yes) return;
-
-            try
-            {
-                var res = await _http.DeleteAsync($"/api/AdminKhachHang/{maKH}");
-
-                if (res.IsSuccessStatusCode)
-                {
-                    MessageBox.Show("Xóa khách hàng thành công!",
-                        "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadData();
-                }
-                else
-                {
-                    string err = await res.Content.ReadAsStringAsync();
-                    MessageBox.Show(string.IsNullOrEmpty(err) ? "Xóa thất bại!" : err,
-                        "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Lỗi kết nối API: {ex.Message}",
-                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-    }
-
-    public class KhachHangDTO
-    {
-        public string MaKhachHang { get; set; }
-        public string HoTen { get; set; }
-        public string SoDienThoai { get; set; }
-        public string Email { get; set; }
-        public string NgaySinh { get; set; }
-        public string GioiTinh { get; set; }
-        public string DiaChi { get; set; }
-        public string TrangThai { get; set; }
     }
 }

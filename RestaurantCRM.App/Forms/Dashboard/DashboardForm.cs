@@ -12,6 +12,7 @@ using RestaurantCRM.AdminApp.Forms.KhachHang;
 using RestaurantCRM.AdminApp.Forms.Kho;
 using RestaurantCRM.AdminApp.Forms.KhuyenMai;
 using RestaurantCRM.AdminApp.Forms.KhaoSat;
+using RestaurantCRM.AdminApp.Forms.PhanHoi;
 using RestaurantCRM.AdminApp.Forms.MonAn;
 using RestaurantCRM.AdminApp.Forms.NhaCungCap;
 using RestaurantCRM.AdminApp.Forms.PhanTich;
@@ -234,7 +235,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 case "Tạo đơn hàng": return new TaoDonHangForm();
                 case "Đơn hàng": case "Hóa đơn": return new HoaDonForm();
                 case "Khách hàng": return new KhachHangForm();
-                case "Đánh giá": return new DanhGiaForm();
+                case "Đánh giá": return new PhanHoiForm();   // phản hồi / góp ý của khách (DANH_GIA + TRA_LOI_DANH_GIA)
                 case "Khảo sát": return new KhaoSatForm();
                 case "Phân tích khách hàng": return new PhanTichForm();
                 case "Báo cáo bán hàng": return new BaoCaoBanHangForm();

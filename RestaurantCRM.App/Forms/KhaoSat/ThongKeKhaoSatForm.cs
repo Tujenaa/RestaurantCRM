@@ -1,368 +1,360 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Net.Http;
-using System.Net.Http.Json;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Controls;
+using RestaurantCRM.AdminApp.DTOs.KhaoSat;
+using RestaurantCRM.AdminApp.Helpers;
+using RestaurantCRM.AdminApp.Services;
 
 namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 {
     /// <summary>
-    /// Form thống kê kết quả khảo sát:
-    ///   - Hiển thị tổng số phiếu trả lời
-    ///   - Câu trắc nghiệm: số lượt chọn + tỉ lệ % mỗi tùy chọn + thanh tiến trình
-    ///   - Câu tự luận: danh sách câu trả lời
+    /// Thống kê kết quả khảo sát: số phiếu trả lời, tỉ lệ phản hồi; với từng câu trắc nghiệm là số lượt chọn
+    /// và tỉ lệ của mỗi tùy chọn; với câu tự luận là danh sách câu trả lời. Xuất được ra file CSV (mở bằng Excel).
     /// </summary>
-    public partial class ThongKeKhaoSatForm : Form
+    public partial class ThongKeKhaoSatForm : CrmDialog
     {
-        // ── Màu sắc chủ đề ────────────────────────────────────────────────────
-        private static readonly Color _accent   = Color.FromArgb(139, 92, 246);
-        private static readonly Color _bg       = Color.FromArgb(15, 15, 25);
-        private static readonly Color _surface  = Color.FromArgb(30, 30, 45);
-        private static readonly Color _surface2 = Color.FromArgb(45, 45, 65);
-        private static readonly Color _textMain = Color.FromArgb(240, 240, 255);
-        private static readonly Color _textSub  = Color.FromArgb(160, 160, 190);
-        private static readonly Color _bar      = Color.FromArgb(99, 58, 210);
-        private static readonly Color _barBg    = Color.FromArgb(55, 55, 75);
-
-        private static readonly HttpClient _http = new HttpClient
-        {
-            BaseAddress = new Uri("http://localhost:5275")
-        };
-
+        private const int DlgWidth = 880;
+        private readonly KhaoSatService _service = new KhaoSatService();
         private readonly string _maKhaoSat;
-        private const int ContentWidth = 740;
+        private KhaoSatKetQuaDto _data;
 
-        // Panel cuộn chứa các card câu hỏi
-        private Panel _pnlScroll;
+        private readonly Panel _kpi = new Panel();
+        private readonly Panel _scroll = new Panel { AutoScroll = true, BackColor = Color.White };
+        private readonly Label _status = new Label();
+        private readonly Button _btnCsv;
+        private readonly Button _btnLamMoi;
 
         public ThongKeKhaoSatForm(string maKhaoSat, string tieuDe)
+            : base("Thống kê khảo sát", (tieuDe ?? "") + "  ·  " + maKhaoSat, DlgWidth, 530, null, "Đóng")
         {
-            _maKhaoSat = maKhaoSat;
             InitializeComponent();
-            BuildLayout(tieuDe);
-            this.Load += async (s, e) => await LoadThongKe();
+            _maKhaoSat = maKhaoSat;
+            const int L = Gutter, W = DlgWidth - Gutter * 2;
+
+            _kpi.SetBounds(L, 4, W, 84);
+            _kpi.BackColor = Color.White;
+            SkinUtil.EnableDoubleBuffer(_kpi);
+            _kpi.Paint += PaintKpi;
+            Body.Controls.Add(_kpi);
+
+            _scroll.SetBounds(L - 4, 100, W + 8, 426);
+            Body.Controls.Add(_scroll);
+            _scroll.Resize += (s, e) => LayoutCards();
+
+            _status.SetBounds(L, 100, W, 120);
+            _status.TextAlign = ContentAlignment.MiddleCenter;
+            _status.ForeColor = ThemeManager.Muted;
+            _status.UseMnemonic = false;
+            _status.Text = "Đang tải kết quả...";
+            Body.Controls.Add(_status);
+            _status.BringToFront();
+
+            _btnCsv = AddLeftButton("Xuất CSV", ButtonSkin.Kind.Secondary);
+            _btnLamMoi = AddLeftButton("Làm mới", ButtonSkin.Kind.Ghost);
+            _btnCsv.Enabled = false;
+            _btnCsv.Click += (s, e) => XuatCsv();
+            _btnLamMoi.Click += async (s, e) => await LoadAsync();
+
+            Shown += async (s, e) => await LoadAsync();
         }
 
-        // ── Xây dựng layout ──────────────────────────────────────────────────
-        private void BuildLayout(string tieuDe)
+        private async Task LoadAsync()
         {
-            this.BackColor = _bg;
-            this.ForeColor = _textMain;
-            this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
-
-            // Header
-            var pnlHeader = new Panel
-            {
-                Dock      = DockStyle.Top,
-                Height    = 64,
-                BackColor = Color.FromArgb(25, 25, 40)
-            };
-
-            var lblTitle = new Label
-            {
-                Text      = $"📊  Thống kê khảo sát",
-                AutoSize  = false,
-                Location  = new Point(20, 8),
-                Size      = new Size(500, 26),
-                ForeColor = _accent,
-                Font      = new Font("Segoe UI", 13f, FontStyle.Bold)
-            };
-            var lblSub = new Label
-            {
-                Text      = tieuDe,
-                AutoSize  = false,
-                Location  = new Point(20, 36),
-                Size      = new Size(680, 20),
-                ForeColor = _textSub,
-                Font      = new Font("Segoe UI", 9f)
-            };
-
-            var btnClose = new Button
-            {
-                Text      = "✕  Đóng",
-                Size      = new Size(100, 32),
-                Location  = new Point(this.ClientSize.Width - 120, 16),
-                Anchor    = AnchorStyles.Top | AnchorStyles.Right,
-                FlatStyle = FlatStyle.Flat,
-                ForeColor = _textMain,
-                BackColor = Color.FromArgb(60, 60, 80)
-            };
-            btnClose.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 100);
-            btnClose.Click += (s, e) => this.Close();
-
-            pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnClose });
-            this.Controls.Add(pnlHeader);
-
-            // Panel cuộn
-            _pnlScroll = new Panel
-            {
-                Dock        = DockStyle.Fill,
-                AutoScroll  = true,
-                BackColor   = _bg,
-                Padding     = new Padding(0)
-            };
-            this.Controls.Add(_pnlScroll);
-        }
-
-        // ── Load & render thống kê ────────────────────────────────────────────
-        private async Task LoadThongKe()
-        {
-            _pnlScroll.Controls.Clear();
-            _pnlScroll.Controls.Add(new Label
-            {
-                Text      = "⏳  Đang tải dữ liệu...",
-                ForeColor = _textSub,
-                AutoSize  = false,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock      = DockStyle.Fill,
-                Font      = new Font("Segoe UI", 10f)
-            });
-
+            _btnLamMoi.Enabled = false;
+            _status.Visible = true;
+            _status.ForeColor = ThemeManager.Muted;
+            _status.Text = "Đang tải kết quả...";
             try
             {
-                var result = await _http.GetFromJsonAsync<ThongKeKhaoSatDTO>(
-                    $"/api/AdminKhaoSat/{_maKhaoSat}/results");
+                _data = await _service.GetResultsAsync(_maKhaoSat);
+                if (IsDisposed) return;
+                Render();
+            }
+            catch (ApiException ex)
+            {
+                if (IsDisposed) return;
+                _status.ForeColor = ThemeManager.Red;
+                _status.Text = ex.Message;
+            }
+            finally
+            {
+                if (!IsDisposed) _btnLamMoi.Enabled = true;
+            }
+        }
 
-                _pnlScroll.Controls.Clear();
+        private void Render()
+        {
+            _scroll.SuspendLayout();
+            var old = _scroll.Controls.Cast<Control>().ToArray();
+            _scroll.Controls.Clear();
+            foreach (var c in old) c.Dispose();
 
-                if (result == null)
+            var list = _data?.ChiTiet ?? new List<CauHoiKetQuaDto>();
+            int stt = 1;
+            foreach (var ch in list) _scroll.Controls.Add(new KetQuaCard(ch, stt++));
+
+            _status.Visible = list.Count == 0;
+            if (list.Count == 0) { _status.ForeColor = ThemeManager.Muted; _status.Text = "Khảo sát chưa có câu hỏi nào."; }
+            _btnCsv.Enabled = list.Count > 0;
+            LayoutCards();
+            _scroll.ResumeLayout();
+            _kpi.Invalidate();
+        }
+
+        private void LayoutCards()
+        {
+            // Luôn chừa chỗ thanh cuộn dọc để không phát sinh thanh cuộn ngang
+            int w = _scroll.Width - SystemInformation.VerticalScrollBarWidth - 10;
+            int y = 4 + _scroll.AutoScrollPosition.Y;
+            foreach (Control c in _scroll.Controls)
+            {
+                var k = c as KetQuaCard;
+                if (k != null) k.LayoutFor(w);
+                c.Location = new Point(4, y);
+                y += c.Height + 12;
+            }
+        }
+
+        private void PaintKpi(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var d = _data;
+            int phieu = d?.TongSoNguoiTraLoi ?? 0;
+            int soCau = d?.ChiTiet?.Count ?? 0;
+            int moi = d?.SoDoiTuong ?? 0;
+            string tiLe = moi > 0 ? Math.Min(100.0, phieu * 100.0 / moi).ToString("0.#") + "%" : "—";
+            var tiles = new[]
+            {
+                Tuple.Create("Phiếu trả lời", d == null ? "—" : phieu.ToString("N0"), ThemeManager.Primary),
+                Tuple.Create("Số câu hỏi", d == null ? "—" : soCau.ToString("N0"), ThemeManager.Violet),
+                Tuple.Create("Khách được mời", d == null ? "—" : (moi > 0 ? moi.ToString("N0") : "Tất cả khách"), ThemeManager.Teal),
+                Tuple.Create("Tỉ lệ phản hồi", d == null ? "—" : tiLe, ThemeManager.Amber),
+            };
+            int gap = 12, tw = (_kpi.Width - gap * 3) / 4;
+            for (int i = 0; i < 4; i++)
+            {
+                var r = new Rectangle(i * (tw + gap), 0, tw - 1, _kpi.Height - 1);
+                using (var path = SkinUtil.Round(r, 12))
                 {
-                    ShowError("Không lấy được dữ liệu thống kê.");
-                    return;
+                    using (var br = new SolidBrush(ThemeManager.Surface2)) g.FillPath(br, path);
                 }
-
-                RenderThongKe(result);
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Lỗi kết nối API: {ex.Message}");
+                using (var br = new SolidBrush(tiles[i].Item3)) g.FillEllipse(br, r.X + 16, r.Y + 20, 8, 8);
+                using (var f = new Font(ThemeManager.FontFamily, 8.5F))
+                    TextRenderer.DrawText(g, tiles[i].Item1, f, new Point(r.X + 30, r.Y + 15), ThemeManager.Muted, TextFormatFlags.NoPrefix);
+                using (var f = new Font(ThemeManager.FontFamily, 17F, FontStyle.Bold))
+                    TextRenderer.DrawText(g, tiles[i].Item2, f, new Rectangle(r.X + 14, r.Y + 36, r.Width - 20, 38), ThemeManager.Ink,
+                        TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
             }
         }
 
-        private void ShowError(string msg)
+        // ── Xuất CSV ─────────────────────────────────────────────────────────
+
+        private void XuatCsv()
         {
-            _pnlScroll.Controls.Clear();
-            _pnlScroll.Controls.Add(new Label
+            if (_data == null) return;
+            using (var dlg = new SaveFileDialog
             {
-                Text      = "⚠  " + msg,
-                ForeColor = Color.FromArgb(248, 113, 113),
-                AutoSize  = false,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock      = DockStyle.Fill,
-                Font      = new Font("Segoe UI", 10f)
-            });
-        }
-
-        // ── Render từng câu hỏi ──────────────────────────────────────────────
-        private void RenderThongKe(ThongKeKhaoSatDTO data)
-        {
-            int y = 16;
-
-            // Tổng phiếu
-            var lblTong = MakeLabel(
-                $"📋  Tổng số phiếu trả lời: {data.TongSoNguoiTraLoi}",
-                new Point(16, y), ContentWidth - 32, 28,
-                new Font("Segoe UI", 11f, FontStyle.Bold), _accent);
-            _pnlScroll.Controls.Add(lblTong);
-            y += 38;
-
-            if (data.ChiTiet == null || data.ChiTiet.Count == 0)
+                Filter = "CSV (mở bằng Excel)|*.csv",
+                FileName = "ThongKe_" + _maKhaoSat + "_" + DateTime.Now.ToString("yyyyMMdd_HHmm") + ".csv"
+            })
             {
-                _pnlScroll.Controls.Add(MakeLabel(
-                    "Khảo sát chưa có câu hỏi hoặc chưa có phiếu trả lời.",
-                    new Point(16, y), ContentWidth - 32, 24,
-                    new Font("Segoe UI", 9.5f, FontStyle.Italic), _textSub));
-                return;
-            }
-
-            int soTT = 1;
-            foreach (var ch in data.ChiTiet)
-            {
-                int cardH = CalcCardHeight(ch);
-
-                var card = new Panel
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
                 {
-                    Location  = new Point(16, y),
-                    Size      = new Size(ContentWidth - 32, cardH),
-                    BackColor = _surface
-                };
-                card.Paint += (s, e) => DrawRoundedCard(e.Graphics, card.ClientRectangle);
-                _pnlScroll.Controls.Add(card);
-
-                FillCard(card, soTT, ch, data.TongSoNguoiTraLoi);
-
-                y += cardH + 16;
-                soTT++;
-            }
-
-            _pnlScroll.AutoScrollMinSize = new Size(0, y + 16);
-        }
-
-        // Tính chiều cao card
-        private int CalcCardHeight(ChiTietCauHoiDTO ch)
-        {
-            int h = 56; // header câu hỏi
-            if (ch.LoaiCauHoi == "TracNghiem" && ch.KetQuaTN != null)
-                h += ch.KetQuaTN.Count * 62 + 14;
-            else if (ch.KetQuaTuLuan != null)
-                h += Math.Max(ch.KetQuaTuLuan.Count, 1) * 36 + 14;
-            return h;
-        }
-
-        // Điền nội dung vào card
-        private void FillCard(Panel card, int soTT, ChiTietCauHoiDTO ch, int tongPhieu)
-        {
-            int cy = 12;
-
-            string loaiLabel = ch.LoaiCauHoi == "TracNghiem" ? "Trắc nghiệm" : "Tự luận";
-            card.Controls.Add(MakeLabel(
-                $"Câu {soTT}:  {ch.NoiDungCauHoi}",
-                new Point(14, cy), card.Width - 28, 22,
-                new Font("Segoe UI", 10f, FontStyle.Bold), _textMain));
-            cy += 24;
-
-            card.Controls.Add(MakeLabel(
-                $"[{loaiLabel}]",
-                new Point(14, cy), 130, 18,
-                new Font("Segoe UI", 8.5f, FontStyle.Italic), _accent));
-            cy += 22;
-
-            // ── Trắc nghiệm ───────────────────────────────────────────────
-            if (ch.LoaiCauHoi == "TracNghiem" && ch.KetQuaTN != null)
-            {
-                foreach (var tc in ch.KetQuaTN)
-                {
-                    double pct = Math.Min(Math.Max(tc.TyLe, 0), 100);
-                    int    barW = (int)((card.Width - 28) * pct / 100.0);
-
-                    card.Controls.Add(MakeLabel(
-                        $"▸  {tc.NoiDungTuyChon}",
-                        new Point(14, cy), card.Width - 28, 18,
-                        new Font("Segoe UI", 9f), _textMain));
-                    cy += 20;
-
-                    // Thanh tiến trình
-                    var barBg = new Panel
+                    var sb = new StringBuilder();
+                    sb.AppendLine(Csv("Khảo sát") + "," + Csv(_data.TieuDe) + "," + Csv(_data.MaKhaoSat));
+                    sb.AppendLine(Csv("Tổng phiếu trả lời") + "," + _data.TongSoNguoiTraLoi);
+                    sb.AppendLine();
+                    sb.AppendLine("STT,Câu hỏi,Loại,Lượt trả lời câu,Tùy chọn / Câu trả lời,Số lượt chọn,Tỉ lệ (%),Khách hàng,Ngày trả lời");
+                    int stt = 1;
+                    foreach (var ch in _data.ChiTiet)
                     {
-                        Location  = new Point(14, cy),
-                        Size      = new Size(card.Width - 28, 14),
-                        BackColor = _barBg
-                    };
-                    if (barW > 0)
-                    {
-                        barBg.Controls.Add(new Panel
+                        string head = stt + "," + Csv(ch.NoiDungCauHoi) + "," + Csv(ch.LaTracNghiem ? "Trắc nghiệm" : "Tự luận") + "," + ch.SoLuotTraLoi;
+                        if (ch.LaTracNghiem)
                         {
-                            Location  = new Point(0, 0),
-                            Size      = new Size(barW, 14),
-                            BackColor = _bar
-                        });
+                            var opts = ch.KetQuaTN ?? new List<TuyChonKetQuaDto>();
+                            if (opts.Count == 0) sb.AppendLine(head + ",,,,,");
+                            foreach (var t in opts)
+                                sb.AppendLine(head + "," + Csv(t.NoiDungTuyChon) + "," + t.SoNguoiChon + "," + t.TyLe.ToString("0.##", CultureInfo.InvariantCulture) + ",,");
+                        }
+                        else
+                        {
+                            var ans = ch.TraLoiTuLuan ?? new List<TraLoiTuLuanDto>();
+                            if (ans.Count == 0) sb.AppendLine(head + ",,,,,");
+                            foreach (var a in ans)
+                                sb.AppendLine(head + "," + Csv(a.NoiDung) + ",,," + Csv(a.TenKhachHang) + "," + (a.NgayTraLoi.HasValue ? a.NgayTraLoi.Value.ToString("dd/MM/yyyy HH:mm") : ""));
+                        }
+                        stt++;
                     }
-                    card.Controls.Add(barBg);
-                    cy += 17;
-
-                    card.Controls.Add(MakeLabel(
-                        $"   {tc.SoNguoiChon} lượt  —  {tc.TyLe:0.#}%",
-                        new Point(14, cy), 260, 16,
-                        new Font("Segoe UI", 8.5f), _textSub));
-                    cy += 20;
+                    File.WriteAllText(dlg.FileName, sb.ToString(), new UTF8Encoding(true));   // có BOM để Excel đọc đúng tiếng Việt
+                    Notify.Success(this, "Đã xuất thống kê ra:\n" + dlg.FileName);
+                }
+                catch (Exception ex)
+                {
+                    Notify.Error(this, "Không ghi được file: " + ex.Message);
                 }
             }
-            // ── Tự luận ───────────────────────────────────────────────────
-            else if (ch.KetQuaTuLuan != null)
+        }
+
+        private static string Csv(string s)
+        {
+            if (s == null) return "";
+            s = s.Replace("\r", " ").Replace("\n", " ");
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
+        }
+    }
+
+    /// <summary>Thẻ kết quả một câu hỏi (tự vẽ): thanh tỉ lệ cho trắc nghiệm, danh sách trích dẫn cho tự luận.</summary>
+    internal class KetQuaCard : Control
+    {
+        private const int Pad = 18, RowH = 34, MaxAnswers = 30;
+        private static readonly TextFormatFlags Wrap = TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding;
+        private readonly CauHoiKetQuaDto _q;
+        private readonly int _stt;
+        private int _titleH;
+        private readonly List<int> _answerH = new List<int>();
+
+        public KetQuaCard(CauHoiKetQuaDto q, int stt)
+        {
+            _q = q; _stt = stt;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            BackColor = Color.White;
+            Font = new Font(ThemeManager.FontFamily, 9.5F);
+        }
+
+        private Font TitleFont { get { return new Font(ThemeManager.FontFamily, 10.5F, FontStyle.Bold); } }
+
+        private List<TraLoiTuLuanDto> Answers { get { return (_q.TraLoiTuLuan ?? new List<TraLoiTuLuanDto>()).Take(MaxAnswers).ToList(); } }
+
+        public void LayoutFor(int width)
+        {
+            int inner = width - Pad * 2;
+            int h = Pad + 20;   // dòng "Câu n · loại · x lượt"
+            using (var g = CreateGraphics())
+            using (var tf = TitleFont)
             {
-                if (ch.KetQuaTuLuan.Count == 0)
+                _titleH = TextRenderer.MeasureText(g, _q.NoiDungCauHoi ?? "", tf, new Size(inner, int.MaxValue), Wrap).Height;
+                h += _titleH + 14;
+                _answerH.Clear();
+                if (_q.LaTracNghiem)
                 {
-                    card.Controls.Add(MakeLabel(
-                        "  (Chưa có câu trả lời)",
-                        new Point(14, cy), card.Width - 28, 18,
-                        new Font("Segoe UI", 9f, FontStyle.Italic), _textSub));
+                    int n = (_q.KetQuaTN ?? new List<TuyChonKetQuaDto>()).Count;
+                    h += Math.Max(1, n) * RowH;
                 }
                 else
                 {
-                    int idx = 1;
-                    foreach (var ans in ch.KetQuaTuLuan)
+                    var ans = Answers;
+                    if (ans.Count == 0) h += 30;
+                    foreach (var a in ans)
                     {
-                        card.Controls.Add(MakeLabel(
-                            $"  {idx}. \"{ans}\"",
-                            new Point(14, cy), card.Width - 28, 30,
-                            new Font("Segoe UI", 9f, FontStyle.Italic), _textMain));
-                        cy += 34;
-                        idx++;
+                        int ah = TextRenderer.MeasureText(g, "“" + (a.NoiDung ?? "") + "”", Font, new Size(inner - 28, int.MaxValue), Wrap).Height + 22 + 16;
+                        _answerH.Add(ah);
+                        h += ah + 8;
                     }
+                    if ((_q.TraLoiTuLuan?.Count ?? 0) > MaxAnswers) h += 26;
+                }
+            }
+            Size = new Size(width, h + Pad - 4);
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var card = new Rectangle(0, 0, Width - 1, Height - 1);
+            using (var path = SkinUtil.Round(card, 12))
+            using (var pen = new Pen(ThemeManager.Line)) g.DrawPath(pen, path);
+
+            int x = Pad, inner = Width - Pad * 2, y = Pad;
+            const TextFormatFlags One = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding;
+            using (var fSmall = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold))
+            {
+                string head = "CÂU " + _stt + " · " + (_q.LaTracNghiem ? "TRẮC NGHIỆM" : "TỰ LUẬN");
+                TextRenderer.DrawText(g, head, fSmall, new Point(x, y), ThemeManager.Primary, One);
+                string luot = _q.SoLuotTraLoi.ToString("N0") + " lượt trả lời";
+                var sz = TextRenderer.MeasureText(g, luot, fSmall, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, luot, fSmall, new Point(x + inner - sz.Width, y), ThemeManager.Muted, One);
+            }
+            y += 20;
+            using (var tf = TitleFont)
+                TextRenderer.DrawText(g, _q.NoiDungCauHoi ?? "", tf, new Rectangle(x, y, inner, _titleH), ThemeManager.Ink, Wrap);
+            y += _titleH + 14;
+
+            if (_q.LaTracNghiem) PaintOptions(g, x, y, inner);
+            else PaintAnswers(g, x, y, inner);
+        }
+
+        private void PaintOptions(Graphics g, int x, int y, int inner)
+        {
+            var opts = _q.KetQuaTN ?? new List<TuyChonKetQuaDto>();
+            if (opts.Count == 0)
+            {
+                TextRenderer.DrawText(g, "Câu hỏi chưa có tùy chọn.", Font, new Point(x, y + 8), ThemeManager.Muted, TextFormatFlags.NoPrefix);
+                return;
+            }
+            int max = opts.Max(o => o.SoNguoiChon);
+            int labelW = Math.Min(260, inner * 36 / 100), valueW = 110;
+            int barX = x + labelW + 12, barW = inner - labelW - 12 - valueW - 8;
+            using (var fVal = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold))
+            using (var fPct = new Font(ThemeManager.FontFamily, 9F))
+            {
+                foreach (var o in opts)
+                {
+                    bool top = max > 0 && o.SoNguoiChon == max;
+                    TextRenderer.DrawText(g, o.NoiDungTuyChon ?? "", Font, new Rectangle(x, y, labelW, RowH - 6), ThemeManager.Ink2,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+                    CrmPaint.Bar(g, new Rectangle(barX, y + (RowH - 6) / 2 - 5, Math.Max(20, barW), 10), o.TyLe / 100.0,
+                        top ? ThemeManager.Primary : ThemeManager.Blend(ThemeManager.Primary, Color.White, 0.45f), ThemeManager.Surface2);
+                    string v = o.SoNguoiChon.ToString("N0");
+                    string p = "  " + o.TyLe.ToString("0.#") + "%";
+                    var vs = TextRenderer.MeasureText(g, v, fVal, Size.Empty, TextFormatFlags.NoPadding);
+                    var ps = TextRenderer.MeasureText(g, p, fPct, Size.Empty, TextFormatFlags.NoPadding);
+                    int vx = x + inner - vs.Width - ps.Width;
+                    TextRenderer.DrawText(g, v, fVal, new Rectangle(vx, y, vs.Width + 2, RowH - 6), ThemeManager.Ink, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                    TextRenderer.DrawText(g, p, fPct, new Rectangle(vx + vs.Width, y, ps.Width + 2, RowH - 6), ThemeManager.Muted, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                    y += RowH;
                 }
             }
         }
 
-        // ── Helper ───────────────────────────────────────────────────────────
-        private Label MakeLabel(string text, Point loc, int width, int height,
-            Font font, Color color)
+        private void PaintAnswers(Graphics g, int x, int y, int inner)
         {
-            return new Label
+            var ans = Answers;
+            if (ans.Count == 0)
             {
-                Text      = text,
-                Location  = loc,
-                Size      = new Size(width, height),
-                ForeColor = color,
-                BackColor = Color.Transparent,
-                Font      = font,
-                AutoSize  = false
-            };
-        }
-
-        private void DrawRoundedCard(Graphics g, Rectangle rect)
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var path = GetRoundedPath(rect, 10))
+                TextRenderer.DrawText(g, "Chưa có câu trả lời nào.", Font, new Point(x, y + 4), ThemeManager.Muted, TextFormatFlags.NoPrefix);
+                return;
+            }
+            using (var fMeta = new Font(ThemeManager.FontFamily, 8.5F))
             {
-                using (var fill = new SolidBrush(_surface))
-                    g.FillPath(fill, path);
-                using (var pen = new Pen(Color.FromArgb(60, 60, 90), 1f))
-                    g.DrawPath(pen, path);
+                for (int i = 0; i < ans.Count; i++)
+                {
+                    var a = ans[i];
+                    int h = _answerH[i];
+                    var r = new Rectangle(x, y, inner, h);
+                    using (var path = SkinUtil.Round(r, 8))
+                    using (var br = new SolidBrush(ThemeManager.Surface2)) g.FillPath(br, path);
+                    using (var br = new SolidBrush(ThemeManager.Violet)) g.FillRectangle(br, x, y + 8, 3, h - 16);
+                    TextRenderer.DrawText(g, "“" + (a.NoiDung ?? "") + "”", Font, new Rectangle(x + 16, y + 8, inner - 28, h - 30), ThemeManager.Ink, Wrap);
+                    string meta = "— " + (string.IsNullOrWhiteSpace(a.TenKhachHang) ? "Khách ẩn danh" : a.TenKhachHang)
+                                  + (a.NgayTraLoi.HasValue ? " · " + a.NgayTraLoi.Value.ToString("dd/MM/yyyy") : "");
+                    TextRenderer.DrawText(g, meta, fMeta, new Rectangle(x + 16, y + h - 24, inner - 28, 18), ThemeManager.Muted,
+                        TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
+                    y += h + 8;
+                }
+                int con = (_q.TraLoiTuLuan?.Count ?? 0) - ans.Count;
+                if (con > 0)
+                    TextRenderer.DrawText(g, "và " + con + " câu trả lời khác — dùng \"Xuất CSV\" để xem đầy đủ.", fMeta, new Point(x, y + 4), ThemeManager.Muted, TextFormatFlags.NoPrefix);
             }
         }
-
-        private GraphicsPath GetRoundedPath(Rectangle r, int radius)
-        {
-            var path = new GraphicsPath();
-            int d = radius * 2;
-            path.AddArc(r.X,          r.Y,           d, d, 180, 90);
-            path.AddArc(r.Right - d,  r.Y,           d, d, 270, 90);
-            path.AddArc(r.Right - d,  r.Bottom - d,  d, d,   0, 90);
-            path.AddArc(r.X,          r.Bottom - d,  d, d,  90, 90);
-            path.CloseFigure();
-            return path;
-        }
-    }
-
-    // ── DTOs nội bộ form ─────────────────────────────────────────────────────
-    internal class ThongKeKhaoSatDTO
-    {
-        public string MaKhaoSat           { get; set; }
-        public string TieuDe              { get; set; }
-        public int    TongSoNguoiTraLoi   { get; set; }
-        public List<ChiTietCauHoiDTO> ChiTiet { get; set; }
-    }
-
-    internal class ChiTietCauHoiDTO
-    {
-        public string MaCauHoi      { get; set; }
-        public string NoiDungCauHoi { get; set; }
-        public string LoaiCauHoi    { get; set; }
-
-        // Trắc nghiệm: dữ liệu mảng object từ API — map theo KetQua
-        public List<TuyChonThongKeDTO> KetQuaTN     { get; set; }
-        // Tự luận: list string
-        public List<string>            KetQuaTuLuan { get; set; }
-    }
-
-    internal class TuyChonThongKeDTO
-    {
-        public string MaTuyChon      { get; set; }
-        public string NoiDungTuyChon { get; set; }
-        public int    SoNguoiChon    { get; set; }
-        public double TyLe           { get; set; }
     }
 }

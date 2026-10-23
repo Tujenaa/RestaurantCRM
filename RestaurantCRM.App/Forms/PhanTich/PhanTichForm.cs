@@ -9,7 +9,10 @@ using RestaurantCRM.AdminApp.Models;
 
 namespace RestaurantCRM.AdminApp.Forms.PhanTich
 {
-    /// <summary>Phân tích khách hàng: thẻ số liệu (từ API khi có) + xếp hạng khách hàng tiêu biểu (minh họa).</summary>
+    /// <summary>
+    /// Phân tích khách hàng: thẻ số liệu (api/ThongKe/DashboardMetrics) + xếp hạng khách hàng tiêu biểu
+    /// theo tổng chi tiêu thật (api/AdminKhachHang — tổng TongThanhToan của các hóa đơn đã hoàn thành).
+    /// </summary>
     public class PhanTichForm : Form
     {
         private readonly UcThongKe _kKhach, _kDiem, _kLuot, _kKhaoSat;
@@ -45,15 +48,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
             var all = new[] { _kKhach, _kDiem, _kLuot, _kKhaoSat };
             for (int i = 0; i < 4; i++) { all[i].Dock = DockStyle.Fill; kpis.Controls.Add(all[i], i, 0); }
 
-            // Xếp hạng khách hàng tiêu biểu (số liệu minh họa)
-            var top = new UcTopList { Dock = DockStyle.Fill, Title = "Khách hàng tiêu biểu theo chi tiêu", Subtitle = "SỐ LIỆU MINH HỌA — CHƯA LẤY TỪ API", Unit = "%" };
-            top.SetItems(new List<KeyValuePair<string, double>> {
-                new KeyValuePair<string, double>("Minh Anh", 88),
-                new KeyValuePair<string, double>("Quốc Bảo", 71),
-                new KeyValuePair<string, double>("Thu Hà", 57),
-                new KeyValuePair<string, double>("Hoàng Nam", 42),
-                new KeyValuePair<string, double>("Lan Phương", 28)
-            });
+            // Xếp hạng khách hàng tiêu biểu theo tổng chi tiêu (dữ liệu thật từ API)
+            var top = new UcTopList { Dock = DockStyle.Fill, Title = "Khách hàng tiêu biểu theo chi tiêu", Subtitle = "TỔNG TIỀN CÁC ĐƠN ĐÃ HOÀN THÀNH", Unit = "đ" };
 
             Controls.Add(top);
             Controls.Add(kpis);
@@ -77,6 +73,26 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
                 catch
                 {
                     foreach (var k in all) if (!k.IsDisposed) k.SetValue("—", "Chưa kết nối API");
+                }
+            };
+
+            Load += async (s, e) => {
+                try
+                {
+                    var ds = await new RestaurantCRM.AdminApp.Services.KhachHangService().GetAllAsync();
+                    if (IsDisposed) return;
+                    var items = new List<KeyValuePair<string, double>>();
+                    foreach (var k in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(
+                                 System.Linq.Enumerable.Where(ds, x => x.TongChiTieu > 0), x => x.TongChiTieu), 8))
+                        items.Add(new KeyValuePair<string, double>(k.HoTen + "  ·  " + k.SoDonHang + " đơn", k.TongChiTieu));
+                    if (items.Count == 0) top.Subtitle = "CHƯA CÓ ĐƠN HÀNG HOÀN THÀNH NÀO";
+                    top.SetItems(items);
+                }
+                catch (RestaurantCRM.AdminApp.Services.ApiException)
+                {
+                    if (IsDisposed) return;
+                    top.Subtitle = "KHÔNG TẢI ĐƯỢC DỮ LIỆU — KIỂM TRA API";
+                    top.SetItems(new List<KeyValuePair<string, double>>());
                 }
             };
         }
