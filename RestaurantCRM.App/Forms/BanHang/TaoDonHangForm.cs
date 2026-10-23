@@ -43,27 +43,46 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
         private bool _isRefreshing = false;
 
         private readonly FlowLayoutPanel _productsPanel;
-        private readonly FlowLayoutPanel _cartLines;
+        // ══════════════ CỘT PHẢI: GIỎ HÀNG ══════════════
+        private FlowLayoutPanel _cartLines;             // Vùng cuộn danh sách món (chỉ vùng này cuộn)
+        private int _lastRenderedLineCount;             // Nhận biết khi có món mới để tự cuộn tới món đó
 
-        // Khu vực khuyến mãi & thanh toán
-        private readonly RoundedPanel _pnlPromoBox;
-        private readonly Label _lblPromoIcon;
-        private readonly Label _lblPromoTitle;
-        private readonly Label _lblPromoSub;
-        private readonly Button _btnPromoAction;
-        private readonly Label _lnkChangePromo;
+        // Box khuyến mãi (giữ nguyên chức năng)
+        private RoundedPanel _pnlPromoBox;
+        private Label _lblPromoIcon;
+        private Label _lblPromoTitle;
+        private Label _lblPromoSub;
+        private Button _btnPromoAction;
+        private Label _lnkChangePromo;
 
-        private readonly Label _lblSubTotal;
-        private readonly Label _lblDiscount;
-        private readonly Label _total;
+        // Bảng tổng kết tiền (footer cố định)
+        private Label _lblSubTotalValue;                // "Tiền món"      → giá trị bên phải
+        private Label _lblDiscountCaption;              // "Giảm giá (…)"  → chỉ hiện khi có voucher
+        private Label _lblDiscountValue;
+        private Label _lblTotalValue;                   // "Tổng thanh toán" → giá trị lớn bên phải
 
-        private readonly TextBox _txtTenKhach;
-        private readonly TextBox _txtSdt;
-        private readonly TextBox _txtGhiChu;
+        // Header giỏ hàng
+        private Label _lblCartCount;
+        private Button _btnClearCart;
+
+        // Thông tin khách + nút thanh toán
+        private TextBox _txtTenKhach;
+        private TextBox _txtSdt;
+        private TextBox _txtGhiChu;
+        private Button _btnPay;
+
         private readonly TextBox _txtSearch;
         private readonly ComboBox _cboCategory;
         private readonly CheckBox _chkOnlyInStock;
-        private readonly Button _btnPay;
+
+        // Bảng màu giỏ hàng (Tailwind-like)
+        private static readonly Color CartCardBg = Color.FromArgb(248, 250, 252); // #F8FAFC
+        private static readonly Color CartCardBorder = Color.FromArgb(226, 232, 240); // #E2E8F0
+        private static readonly Color StepperBorder = Color.FromArgb(203, 213, 225); // slate-300
+        private static readonly Color StepperHover = Color.FromArgb(241, 245, 249); // slate-100
+        private static readonly Color Rose500 = Color.FromArgb(244, 63, 94);   // text-rose-500
+        private static readonly Color Rose600 = Color.FromArgb(225, 29, 72);   // hover: text-rose-600
+        private static readonly Color Rose50 = Color.FromArgb(255, 241, 242);
         private readonly Label _lblNhanVien;
 
         private readonly Color _accent = ThemeManager.Primary;
@@ -78,6 +97,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             Text = "Tạo đơn hàng mang đi tại quầy | RestaurantCRM";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1060, 710);
+            AutoScaleMode = AutoScaleMode.Font;
             BackColor = ThemeManager.Bg;
             Font = new Font("Segoe UI", 9.5F);
 
@@ -212,199 +232,10 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             menuPanel.Controls.Add(_productsPanel);
             _productsPanel.BringToFront();
 
-            // ================== NỘI DUNG GIỎ HÀNG ==================
-            // Chia 3 vùng Dock: thông tin khách (trên) / danh sách món (giữa, co giãn) / tổng tiền & thanh toán (đáy)
-            int cw = cartPanel.Width;
-            var cartTop = new Panel { Dock = DockStyle.Top, Height = 200, Width = cw, BackColor = Color.White };
-            var cartBottom = new Panel { Dock = DockStyle.Bottom, Height = 232, Width = cw, BackColor = Color.White };
-            cartTop.Controls.Add(new Label
-            {
-                Text = "Thông tin đơn mang đi",
-                Location = new Point(0, 0),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink
-            });
-
-            int half = (cw - 12) / 2;
-            var lblTen = new Label { Text = "Tên khách hàng", Location = new Point(0, 40), AutoSize = true, ForeColor = ThemeManager.Muted, Font = new Font("Segoe UI", 8.5F) };
-            cartTop.Controls.Add(lblTen);
-            _txtTenKhach = new TextBox { Text = "Khách mua mang đi", Location = new Point(0, 66), Width = half, Font = Font };
-            cartTop.Controls.Add(_txtTenKhach);
-
-            var lblSdt = new Label { Text = "Số điện thoại", Location = new Point(half + 12, 40), AutoSize = true, ForeColor = ThemeManager.Muted, Font = new Font("Segoe UI", 8.5F) };
-            cartTop.Controls.Add(lblSdt);
-            _txtSdt = new TextBox { Location = new Point(half + 12, 66), Width = half, Font = Font, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
-            cartTop.Controls.Add(_txtSdt);
-
-            var lblGhichu = new Label { Text = "Ghi chú đơn hàng", Location = new Point(0, 104), AutoSize = true, ForeColor = ThemeManager.Muted, Font = new Font("Segoe UI", 8.5F) };
-            cartTop.Controls.Add(lblGhichu);
-            _txtGhiChu = new TextBox { Text = "Bán mang đi tại quầy", Location = new Point(0, 130), Width = cw, Font = Font, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
-            cartTop.Controls.Add(_txtGhiChu);
-
-            var lblChiTietMon = new Label
-            {
-                Text = "Món đã chọn",
-                Location = new Point(0, 172),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink
-            };
-            cartTop.Controls.Add(lblChiTietMon);
-
-            _cartLines = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoScroll = true,
-                BackColor = Color.White
-            };
-
-            // ================== BOX GỢI Ý BEST DEAL KHUYẾN MÃI ==================
-            _pnlPromoBox = new RoundedPanel
-            {
-                Location = new Point(0, 8),
-                Size = new Size(cw, 62),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Radius = 10,
-                BorderWidth = 1,
-                BorderColor = ThemeManager.Line,
-                FillColor = ThemeManager.Surface2
-            };
-            cartBottom.Controls.Add(_pnlPromoBox);
-
-            _lblPromoIcon = new Label
-            {
-                Text = "✨",
-                Location = new Point(10, 10),
-                Size = new Size(24, 24),
-                Font = new Font("Segoe UI", 12F),
-                BackColor = Color.Transparent
-            };
-            _pnlPromoBox.Controls.Add(_lblPromoIcon);
-
-            _lblPromoTitle = new Label
-            {
-                Text = "Khuyến mãi & Voucher",
-                Location = new Point(38, 8),
-                Size = new Size(cw - 150, 20),
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                BackColor = Color.Transparent,
-                AutoEllipsis = true
-            };
-            _pnlPromoBox.Controls.Add(_lblPromoTitle);
-
-            _lblPromoSub = new Label
-            {
-                Text = "Chọn món để gợi ý ưu đãi tốt nhất",
-                Location = new Point(38, 29),
-                Size = new Size(cw - 150, 18),
-                Font = new Font("Segoe UI", 7.5F),
-                ForeColor = ThemeManager.Muted,
-                BackColor = Color.Transparent,
-                AutoEllipsis = true
-            };
-            _pnlPromoBox.Controls.Add(_lblPromoSub);
-
-            _btnPromoAction = new Button
-            {
-                Text = "Áp dụng",
-                Location = new Point(cw - 104, 8),
-                Size = new Size(96, 28),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold)
-            };
-            ButtonSkin.SetKind(_btnPromoAction, ButtonSkin.Kind.Soft);
-            _btnPromoAction.Click += (s, e) => HandlePromoActionClick();
-            _pnlPromoBox.Controls.Add(_btnPromoAction);
-
-            _lnkChangePromo = new Label
-            {
-                Text = "Đổi mã khác ▾",
-                Location = new Point(cw - 104, 38),
-                Size = new Size(96, 18),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Primary,
-                Cursor = Cursors.Hand,
-                TextAlign = ContentAlignment.TopCenter,
-                BackColor = Color.Transparent
-            };
-            _lnkChangePromo.Click += (s, e) => OpenSelectVoucherDialog();
-            _pnlPromoBox.Controls.Add(_lnkChangePromo);
-
-            // ================== CHI TIẾT TỔNG TIỀN ==================
-            _lblSubTotal = new Label
-            {
-                Text = "Tiền món: 0 đ",
-                Location = new Point(0, 80),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 8.5F),
-                ForeColor = ThemeManager.Muted,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-            cartBottom.Controls.Add(_lblSubTotal);
-
-            _lblDiscount = new Label
-            {
-                Text = "Ưu đãi voucher: 0 đ",
-                Location = new Point(0, 98),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Green,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left,
-                Visible = false
-            };
-            cartBottom.Controls.Add(_lblDiscount);
-
-            _total = new Label
-            {
-                Text = "Tổng thanh toán: 0 đ",
-                Location = new Point(0, 118),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-            cartBottom.Controls.Add(_total);
-
-            _btnPay = new Button
-            {
-                Text = "Xác nhận & Tạo hóa đơn",
-                Location = new Point(0, 154),
-                Size = new Size(cw, 44),
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            ButtonSkin.SetKind(_btnPay, ButtonSkin.Kind.Primary);
-            _btnPay.Click += async (s, e) => await Checkout();
-            cartBottom.Controls.Add(_btnPay);
-
-            var clear = new Button
-            {
-                Text = "Xóa giỏ hàng",
-                Location = new Point(0, 204),
-                Size = new Size(cw, 26),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 8.5F)
-            };
-            ButtonSkin.SetKind(clear, ButtonSkin.Kind.Ghost);
-            clear.ForeColor = ThemeManager.Muted;
-            clear.Click += (s, e) => {
-                _cart.Clear();
-                _appliedVoucher = null;
-                RenderCart();
-                UpdateProductsInPlace();
-            };
-            cartBottom.Controls.Add(clear);
-
-            cartPanel.Controls.Add(_cartLines);
-            cartPanel.Controls.Add(cartBottom);
-            cartPanel.Controls.Add(cartTop);
-            _cartLines.BringToFront();
+            // ================== CỘT PHẢI: THÔNG TIN ĐƠN + GIỎ HÀNG ==================
+            // Toàn bộ giao diện được dựng trong BuildCartColumn() (xem bên dưới constructor).
             cartPanel.Dock = DockStyle.Fill;
+            cartPanel.Controls.Add(BuildCartColumn());
             cartCard.Controls.Add(cartPanel);
 
             Controls.Add(menuCard);
@@ -416,6 +247,556 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 await InitData();
                 _autoRefreshTimer.Start();
             };
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  CỘT PHẢI – DỰNG GIAO DIỆN
+        //  Bố cục 4 hàng (TableLayoutPanel):
+        //   [0] Thông tin khách hàng        (cố định)
+        //   [1] "Món đã chọn (n)" + "Xóa tất cả"  (cố định)
+        //   [2] Danh sách món                (co giãn + cuộn dọc)  ← chỉ vùng này cuộn
+        //   [3] Voucher + Tổng kết + Nút thanh toán (cố định ở đáy)
+        // ════════════════════════════════════════════════════════════════════
+        private Control BuildCartColumn()
+        {
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                ColumnCount = 1,
+                RowCount = 4,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 148F));   // thông tin khách
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));    // header giỏ hàng
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));    // danh sách món (cuộn)
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // footer cố định
+
+            // Vùng cuộn: chiều cao = phần còn lại của cột → tự có thanh cuộn dọc khi nhiều món
+            _cartLines = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = Color.White,
+                Margin = Padding.Empty,
+                Padding = new Padding(0, 2, 0, 2)
+            };
+            // Khi thanh cuộn xuất hiện/biến mất, ClientSize đổi → co các thẻ món cho vừa chiều ngang (không bị cuộn ngang)
+            _cartLines.ClientSizeChanged += (s, e) => FitCartRowWidths();
+
+            layout.Controls.Add(BuildCustomerSection(), 0, 0);
+            layout.Controls.Add(BuildCartHeader(), 0, 1);
+            layout.Controls.Add(_cartLines, 0, 2);
+            layout.Controls.Add(BuildCartFooter(), 0, 3);
+            return layout;
+        }
+
+        // ── [0] Thông tin khách hàng ──
+        private Control BuildCustomerSection()
+        {
+            var t = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                ColumnCount = 2,
+                RowCount = 5,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));  // tiêu đề
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));  // caption
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));  // ô nhập
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 22F));  // caption ghi chú
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));  // ô nhập ghi chú
+
+            var title = new Label
+            {
+                Text = "Thông tin đơn mang đi",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                Margin = Padding.Empty
+            };
+            t.Controls.Add(title, 0, 0);
+            t.SetColumnSpan(title, 2);
+
+            t.Controls.Add(MakeCaption("Tên khách hàng", new Padding(0, 0, 6, 2)), 0, 1);
+            t.Controls.Add(MakeCaption("Số điện thoại", new Padding(6, 0, 0, 2)), 1, 1);
+
+            _txtTenKhach = new TextBox
+            {
+                Text = "Khách mua mang đi",
+                Font = Font,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right,
+                Margin = new Padding(0, 0, 6, 0)
+            };
+            _txtSdt = new TextBox
+            {
+                Font = Font,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right,
+                Margin = new Padding(6, 0, 0, 0)
+            };
+            t.Controls.Add(_txtTenKhach, 0, 2);
+            t.Controls.Add(_txtSdt, 1, 2);
+
+            var lblGhiChu = MakeCaption("Ghi chú đơn hàng", new Padding(0, 0, 0, 2));
+            t.Controls.Add(lblGhiChu, 0, 3);
+            t.SetColumnSpan(lblGhiChu, 2);
+
+            _txtGhiChu = new TextBox
+            {
+                Text = "Bán mang đi tại quầy",
+                Font = Font,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right,
+                Margin = Padding.Empty
+            };
+            t.Controls.Add(_txtGhiChu, 0, 4);
+            t.SetColumnSpan(_txtGhiChu, 2);
+            return t;
+        }
+
+        private static Label MakeCaption(string text, Padding margin)
+        {
+            return new Label
+            {
+                Text = text,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.BottomLeft,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = ThemeManager.Muted,
+                Margin = margin
+            };
+        }
+
+        // ── [1] Tiêu đề "Món đã chọn (n)" + nút "Xóa tất cả" ngang hàng, góc phải ──
+        private Control BuildCartHeader()
+        {
+            var t = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            _lblCartCount = new Label
+            {
+                Text = "Món đã chọn (0)",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                Margin = Padding.Empty
+            };
+
+            // Text-button nhỏ gọn: "🗑 Xóa tất cả" – chữ đỏ nhạt (rose-500), hover đậm hơn (rose-600).
+            // Chỉ hiện khi giỏ có ≥ 1 món (xem RenderCart). Có hộp thoại xác nhận trong ConfirmClearCart().
+            _btnClearCart = new Button
+            {
+                Text = "🗑  Xóa tất cả",
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Anchor = AnchorStyles.Right,               // canh giữa theo chiều dọc, dính mép phải
+                Margin = Padding.Empty,
+                Padding = new Padding(4, 0, 4, 0),
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Rose500,
+                BackColor = Color.White,
+                UseVisualStyleBackColor = false,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                TabStop = false,
+                UseMnemonic = false,
+                Visible = false,
+                AccessibleName = "Xóa tất cả món trong giỏ"
+            };
+            _btnClearCart.FlatAppearance.BorderSize = 0;
+            _btnClearCart.FlatAppearance.MouseOverBackColor = Color.White;
+            _btnClearCart.FlatAppearance.MouseDownBackColor = Rose50;
+            _btnClearCart.MouseEnter += (s, e) => _btnClearCart.ForeColor = Rose600;
+            _btnClearCart.MouseLeave += (s, e) => _btnClearCart.ForeColor = Rose500;
+            _btnClearCart.Click += (s, e) => ConfirmClearCart();
+
+            t.Controls.Add(_lblCartCount, 0, 0);
+            t.Controls.Add(_btnClearCart, 1, 0);
+            return t;
+        }
+
+        // ── [3] Footer cố định: Voucher → Tổng kết → Nút thanh toán ──
+        private Control BuildCartFooter()
+        {
+            var t = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.White,
+                ColumnCount = 2,
+                RowCount = 6,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 74F));   // 0: box voucher
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 1: Tiền món
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 2: Giảm giá (ẩn nếu không có → cao 0)
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 13F));   // 3: đường kẻ
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 4: Tổng thanh toán
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 58F));   // 5: nút thanh toán
+
+            // 0) Box gợi ý voucher / khuyến mãi
+            var promo = BuildPromoBox();
+            t.Controls.Add(promo, 0, 0);
+            t.SetColumnSpan(promo, 2);
+
+            // 1) Tiền món
+            Label subCaption = MakeSummaryLabel("Tiền món", 9.5F, false, ThemeManager.Muted, ContentAlignment.MiddleLeft);
+            _lblSubTotalValue = MakeSummaryLabel("0 đ", 9.5F, true, ThemeManager.Ink, ContentAlignment.MiddleRight);
+            t.Controls.Add(subCaption, 0, 1);
+            t.Controls.Add(_lblSubTotalValue, 1, 1);
+
+            // 2) Giảm giá (chỉ hiện khi có voucher)
+            _lblDiscountCaption = MakeSummaryLabel("Giảm giá", 9.5F, false, ThemeManager.Green, ContentAlignment.MiddleLeft);
+            _lblDiscountValue = MakeSummaryLabel("-0 đ", 9.5F, true, ThemeManager.Green, ContentAlignment.MiddleRight);
+            _lblDiscountCaption.Visible = false;
+            _lblDiscountValue.Visible = false;
+            t.Controls.Add(_lblDiscountCaption, 0, 2);
+            t.Controls.Add(_lblDiscountValue, 1, 2);
+
+            // 3) Đường kẻ phân cách
+            var divider = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Line, Margin = new Padding(0, 6, 0, 6) };
+            t.Controls.Add(divider, 0, 3);
+            t.SetColumnSpan(divider, 2);
+
+            // 4) Tổng thanh toán – to, đậm
+            Label totalCaption = MakeSummaryLabel("Tổng thanh toán", 11F, true, ThemeManager.Ink, ContentAlignment.MiddleLeft);
+            _lblTotalValue = MakeSummaryLabel("0 đ", 15F, true, ThemeManager.Ink, ContentAlignment.MiddleRight);
+            totalCaption.Margin = new Padding(0, 2, 0, 2);
+            _lblTotalValue.Margin = new Padding(0, 2, 0, 2);
+            t.Controls.Add(totalCaption, 0, 4);
+            t.Controls.Add(_lblTotalValue, 1, 4);
+
+            // 5) Nút chính – full chiều ngang
+            _btnPay = new Button
+            {
+                Text = "✓  Xác nhận & Tạo hóa đơn",
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 10, 0, 0),
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                UseMnemonic = false,                         // để dấu "&" hiển thị đúng
+                Cursor = Cursors.Hand
+            };
+            ButtonSkin.SetKind(_btnPay, ButtonSkin.Kind.Primary);
+            _btnPay.Click += async (s, e) => await Checkout();
+            t.Controls.Add(_btnPay, 0, 5);
+            t.SetColumnSpan(_btnPay, 2);
+
+            return t;
+        }
+
+        private static Label MakeSummaryLabel(string text, float size, bool bold, Color color, ContentAlignment align)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = true,
+                Anchor = align == ContentAlignment.MiddleRight ? AnchorStyles.Right : AnchorStyles.Left,
+                Font = new Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular),
+                ForeColor = color,
+                Margin = new Padding(0, 3, 0, 3),
+                UseMnemonic = false
+            };
+        }
+
+        // Box voucher: giữ nguyên các control & logic cũ (UpdatePromoBox / HandlePromoActionClick),
+        // chỉ đổi cách bố trí: vị trí các control con tính theo bề rộng thực tế của box (co giãn được).
+        private Control BuildPromoBox()
+        {
+            _pnlPromoBox = new RoundedPanel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 6, 0, 6),            // 74 - 12 = cao 62px
+                Radius = 10,
+                BorderWidth = 1,
+                BorderColor = ThemeManager.Line,
+                FillColor = ThemeManager.Surface2
+            };
+
+            _lblPromoIcon = new Label { Text = "✨", Location = new Point(10, 10), Size = new Size(24, 24), Font = new Font("Segoe UI", 12F), BackColor = Color.Transparent };
+            _lblPromoTitle = new Label
+            {
+                Text = "Khuyến mãi & Voucher",
+                Location = new Point(38, 8),
+                Size = new Size(200, 20),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                BackColor = Color.Transparent,
+                AutoEllipsis = true,
+                UseMnemonic = false
+            };
+            _lblPromoSub = new Label
+            {
+                Text = "Chọn món để gợi ý ưu đãi tốt nhất",
+                Location = new Point(38, 29),
+                Size = new Size(200, 18),
+                Font = new Font("Segoe UI", 7.5F),
+                ForeColor = ThemeManager.Muted,
+                BackColor = Color.Transparent,
+                AutoEllipsis = true,
+                UseMnemonic = false
+            };
+            _btnPromoAction = new Button
+            {
+                Text = "Áp dụng",
+                Size = new Size(96, 28),
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold)
+            };
+            ButtonSkin.SetKind(_btnPromoAction, ButtonSkin.Kind.Soft);
+            _btnPromoAction.Click += (s, e) => HandlePromoActionClick();
+            _lnkChangePromo = new Label
+            {
+                Text = "Đổi mã khác ▾",
+                Size = new Size(96, 18),
+                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Primary,
+                Cursor = Cursors.Hand,
+                TextAlign = ContentAlignment.TopCenter,
+                BackColor = Color.Transparent
+            };
+            _lnkChangePromo.Click += (s, e) => OpenSelectVoucherDialog();
+
+            _pnlPromoBox.Controls.Add(_lblPromoIcon);
+            _pnlPromoBox.Controls.Add(_lblPromoTitle);
+            _pnlPromoBox.Controls.Add(_lblPromoSub);
+            _pnlPromoBox.Controls.Add(_btnPromoAction);
+            _pnlPromoBox.Controls.Add(_lnkChangePromo);
+
+            _pnlPromoBox.Resize += (s, e) => LayoutPromoBox();
+            LayoutPromoBox();
+            return _pnlPromoBox;
+        }
+
+        private void LayoutPromoBox()
+        {
+            if (_pnlPromoBox == null) return;
+            int w = _pnlPromoBox.Width;
+            int rightX = w - 96 - 8;
+            _btnPromoAction.Location = new Point(rightX, 8);
+            _lnkChangePromo.Location = new Point(rightX, 38);
+            int textW = Math.Max(60, rightX - 38 - 6);
+            _lblPromoTitle.Width = textW;
+            _lblPromoSub.Width = textW;
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  CỘT PHẢI – THẺ MÓN TRONG GIỎ (Cart Item Card)
+        //   Hàng 1: Tên món (đậm)                              [🗑 xóa món]
+        //   Hàng 2: 140,000 đ / phần  (chữ nhỏ, xám)
+        //   Hàng 3: [ − | 2 | + ]                         Thành tiền (đậm, xanh)
+        // ════════════════════════════════════════════════════════════════════
+        private Control CreateCartItemCard(CartItem item, int width)
+        {
+            bool atMax = item.Quantity >= item.MaxStock;
+
+            var card = new RoundedPanel
+            {
+                Size = new Size(width, 96),
+                Margin = new Padding(0, 0, 0, 8),
+                Radius = 8,
+                BorderWidth = 1,
+                BorderColor = CartCardBorder,
+                FillColor = CartCardBg
+            };
+
+            // ── Hàng 1: tên món + nút xóa món ──
+            card.Controls.Add(new Label
+            {
+                Text = item.Name,
+                Location = new Point(12, 8),
+                Size = new Size(width - 12 - 44, 22),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AutoEllipsis = true,
+                UseMnemonic = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                BackColor = CartCardBg
+            });
+
+            var btnDelete = new Button
+            {
+                Text = ThemeManager.Glyph.Delete,
+                Location = new Point(width - 12 - 26, 6),
+                Size = new Size(26, 26),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                FlatStyle = FlatStyle.Flat,
+                Font = ThemeManager.Icon(10F),
+                ForeColor = ThemeManager.Muted,
+                BackColor = CartCardBg,
+                UseVisualStyleBackColor = false,
+                Cursor = Cursors.Hand,
+                TabStop = false,
+                AccessibleName = "Xóa món " + item.Name
+            };
+            btnDelete.FlatAppearance.BorderSize = 0;
+            btnDelete.FlatAppearance.MouseOverBackColor = ThemeManager.RedSoft;
+            btnDelete.MouseEnter += (s, e) => btnDelete.ForeColor = ThemeManager.Red;
+            btnDelete.MouseLeave += (s, e) => btnDelete.ForeColor = ThemeManager.Muted;
+            btnDelete.Click += (s, e) => { _cart.Remove(item); OnCartChanged(); };
+            card.Controls.Add(btnDelete);
+
+            // ── Hàng 2: đơn giá ──
+            string unitPriceText = $"{item.Price:N0} đ / phần";
+            if (item.Price < item.BasePrice)
+                unitPriceText += $"  ·  Giá gốc {item.BasePrice:N0} đ";
+            card.Controls.Add(new Label
+            {
+                Text = unitPriceText,
+                Location = new Point(12, 32),
+                Size = new Size(width - 24, 18),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AutoEllipsis = true,
+                UseMnemonic = false,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = ThemeManager.Muted,
+                BackColor = CartCardBg
+            });
+
+            // ── Hàng 3: stepper (trái) + thành tiền (phải) ──
+            var stepper = CreateStepper(item, atMax);
+            stepper.Location = new Point(12, 56);
+            stepper.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            card.Controls.Add(stepper);
+
+            card.Controls.Add(new Label
+            {
+                Text = $"{item.Price * item.Quantity:N0} đ",
+                Location = new Point(12 + stepper.Width + 8, 56),
+                Size = new Size(Math.Max(60, width - (12 + stepper.Width + 8) - 12), 32),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                TextAlign = ContentAlignment.MiddleRight,
+                AutoEllipsis = true,
+                UseMnemonic = false,
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                ForeColor = ThemeManager.Primary,
+                BackColor = CartCardBg
+            });
+
+            return card;
+        }
+
+        // Stepper liền khối  [ − | 2 | + ]  – nền trắng, viền mảnh, mỗi nút 30x30px.
+        // Viền ngoài + 2 vạch ngăn được vẽ bằng Paint của panel chứa → trông như 1 khối duy nhất.
+        private Control CreateStepper(CartItem item, bool atMax)
+        {
+            var host = new Panel { Size = new Size(96, 32), BackColor = Color.White };
+            host.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(StepperBorder))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, host.Width - 1, host.Height - 1);
+                    e.Graphics.DrawLine(pen, 31, 1, 31, host.Height - 2);   // vạch giữa [−] và số lượng
+                    e.Graphics.DrawLine(pen, 64, 1, 64, host.Height - 2);   // vạch giữa số lượng và [+]
+                }
+            };
+
+            var btnMinus = new Button
+            {
+                Text = "−",
+                Bounds = new Rectangle(1, 1, 30, 30),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink2,
+                BackColor = Color.White,
+                UseVisualStyleBackColor = false,
+                Cursor = Cursors.Hand,
+                TabStop = false,
+                AccessibleName = "Giảm số lượng " + item.Name
+            };
+            btnMinus.FlatAppearance.BorderSize = 0;
+            btnMinus.FlatAppearance.MouseOverBackColor = StepperHover;
+            btnMinus.Click += (s, e) =>
+            {
+                if (item.Quantity > 1) item.Quantity--;
+                else _cart.Remove(item);            // về 0 → gỡ món khỏi giỏ
+                OnCartChanged();
+            };
+
+            var lblQty = new Label
+            {
+                Text = item.Quantity.ToString(),
+                Bounds = new Rectangle(32, 1, 32, 30),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                BackColor = Color.White,
+                UseMnemonic = false
+            };
+
+            var btnPlus = new Button
+            {
+                Text = "+",
+                Bounds = new Rectangle(65, 1, 30, 30),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                ForeColor = ThemeManager.Primary,
+                BackColor = Color.White,
+                UseVisualStyleBackColor = false,
+                Cursor = atMax ? Cursors.No : Cursors.Hand,
+                Enabled = !atMax,                   // đạt tồn kho tối đa → khóa nút +
+                TabStop = false,
+                AccessibleName = "Tăng số lượng " + item.Name
+            };
+            btnPlus.FlatAppearance.BorderSize = 0;
+            btnPlus.FlatAppearance.MouseOverBackColor = StepperHover;
+            btnPlus.Click += (s, e) =>
+            {
+                if (item.Quantity >= item.MaxStock)
+                {
+                    MessageBox.Show(this,
+                        $"Món '{item.Name}' chỉ còn {item.MaxStock} suất trong kho.",
+                        "Đã đạt số lượng tối đa", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                item.Quantity++;
+                OnCartChanged();
+            };
+
+            host.Controls.Add(btnMinus);
+            host.Controls.Add(lblQty);
+            host.Controls.Add(btnPlus);
+            return host;
+        }
+
+        private void OnCartChanged()
+        {
+            RenderCart();
+            UpdateProductsInPlace();
+        }
+
+        // Co các thẻ món theo bề ngang khả dụng của vùng cuộn (trừ thanh cuộn dọc nếu có)
+        private void FitCartRowWidths()
+        {
+            if (_cartLines == null) return;
+            int avail = _cartLines.ClientSize.Width - _cartLines.Padding.Horizontal;
+            foreach (Control c in _cartLines.Controls)
+            {
+                int target = avail - c.Margin.Horizontal;
+                if (target > 0 && c.Width != target) c.Width = target;
+            }
         }
 
         private async Task RefreshStockContinuouslyAsync()
@@ -1016,99 +1397,82 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             return (best, maxDiscount, near, minMissing);
         }
 
+        private void ConfirmClearCart()
+        {
+            if (_cart.Count == 0) return;
+
+            // Hộp thoại xác nhận – mặc định chọn "Không" để tránh lỡ tay
+            var confirm = MessageBox.Show(
+                this,
+                $"Xóa toàn bộ {_cart.Count} món đã chọn khỏi giỏ hàng?",
+                "Xác nhận xóa giỏ hàng",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+            if (confirm != DialogResult.Yes) return;
+
+            _cart.Clear();
+            _appliedVoucher = null;
+            RenderCart();
+            UpdateProductsInPlace();
+        }
+
+        // Vẽ lại danh sách món trong vùng cuộn (giữ nguyên vị trí cuộn; có món mới thì cuộn tới món đó)
+        private void RenderCartLines()
+        {
+            int scrollY = Math.Abs(_cartLines.AutoScrollPosition.Y);
+            bool itemAdded = _cart.Count > _lastRenderedLineCount;
+
+            _cartLines.SuspendLayout();
+
+            // Gỡ control cũ ngay, nhưng Dispose trễ một nhịp (tránh hủy nút đang xử lý sự kiện Click của chính nó)
+            var old = _cartLines.Controls.Cast<Control>().ToList();
+            _cartLines.Controls.Clear();
+            if (IsHandleCreated) BeginInvoke(new Action(() => { foreach (var c in old) c.Dispose(); }));
+            else foreach (var c in old) c.Dispose();
+
+            int rowWidth = Math.Max(240, _cartLines.ClientSize.Width - _cartLines.Padding.Horizontal);
+
+            if (_cart.Count == 0)
+            {
+                _cartLines.Controls.Add(new Label
+                {
+                    Text = "Giỏ hàng đang trống.\nChọn món từ thực đơn để bắt đầu.",
+                    Size = new Size(rowWidth, 64),
+                    Margin = new Padding(0, 12, 0, 0),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = ThemeManager.Muted,
+                    Font = new Font("Segoe UI", 9F)
+                });
+            }
+            else
+            {
+                foreach (var item in _cart)
+                    _cartLines.Controls.Add(CreateCartItemCard(item, rowWidth));
+            }
+
+            _cartLines.ResumeLayout(true);
+            FitCartRowWidths();
+
+            if (itemAdded && _cartLines.Controls.Count > 0)
+                _cartLines.ScrollControlIntoView(_cartLines.Controls[_cartLines.Controls.Count - 1]);
+            else
+            {
+                try { _cartLines.AutoScrollPosition = new Point(0, scrollY); } catch { }
+            }
+            _lastRenderedLineCount = _cart.Count;
+        }
+
         private void RenderCart()
         {
-            _cartLines.Controls.Clear();
-            foreach (var item in _cart)
-            {
-                bool atMax = item.Quantity >= item.MaxStock;
+            // ── Header: "Món đã chọn (n)" + nút Xóa tất cả (chỉ hiện khi có món) ──
+            // n = tổng số phần. Muốn đếm số dòng món khác nhau thì đổi thành: _cart.Count
+            int itemCount = _cart.Sum(x => x.Quantity);
+            _lblCartCount.Text = $"Món đã chọn ({itemCount})";
+            _btnClearCart.Visible = _cart.Count > 0;
 
-                var row = new Panel
-                {
-                    Size = new Size(310, 56),
-                    BackColor = Color.FromArgb(248, 250, 252),
-                    Margin = new Padding(2)
-                };
-
-                row.Controls.Add(new Label
-                {
-                    Text = item.Name,
-                    Location = new Point(6, 4),
-                    Size = new Size(210, 18),
-                    AutoEllipsis = true,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                    ForeColor = ThemeManager.Ink
-                });
-
-                string priceText = item.Price < item.BasePrice
-                    ? $"{item.Quantity} × {item.Price:N0} đ (Gốc: {item.BasePrice:N0} đ)"
-                    : $"{item.Quantity} × {item.Price:N0} đ = {(item.Quantity * item.Price):N0} đ";
-
-                row.Controls.Add(new Label
-                {
-                    Text = priceText,
-                    Location = new Point(6, 22),
-                    AutoSize = true,
-                    ForeColor = ThemeManager.Muted,
-                    Font = new Font("Segoe UI", 8F)
-                });
-
-                row.Controls.Add(new Label
-                {
-                    Text = atMax ? $"⚠ Đạt tối đa kho (Còn: {item.MaxStock})" : $"Kho còn: {item.MaxStock} suất",
-                    Location = new Point(6, 38),
-                    AutoSize = true,
-                    ForeColor = atMax ? ThemeManager.Amber : Color.FromArgb(100, 116, 139),
-                    Font = new Font("Segoe UI", 7.5F, FontStyle.Bold)
-                });
-
-                var btnMinus = new Button
-                {
-                    Text = "−",
-                    Location = new Point(228, 12),
-                    Size = new Size(32, 32),
-                    FlatStyle = FlatStyle.Flat,
-                    ForeColor = ThemeManager.Red,
-                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                    Cursor = Cursors.Hand
-                };
-                btnMinus.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
-                btnMinus.Click += (s, e) => {
-                    if (item.Quantity > 1) item.Quantity--;
-                    else _cart.Remove(item);
-                    RenderCart();
-                    UpdateProductsInPlace();
-                };
-                row.Controls.Add(btnMinus);
-
-                var btnPlus = new Button
-                {
-                    Text = "+",
-                    Location = new Point(266, 12),
-                    Size = new Size(32, 32),
-                    FlatStyle = FlatStyle.Flat,
-                    ForeColor = atMax ? Color.FromArgb(148, 163, 184) : Color.FromArgb(22, 163, 74),
-                    BackColor = atMax ? Color.FromArgb(241, 245, 249) : Color.White,
-                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                    Cursor = atMax ? Cursors.No : Cursors.Hand
-                };
-                btnPlus.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
-                btnPlus.Click += (s, e) => {
-                    if (item.Quantity >= item.MaxStock)
-                    {
-                        MessageBox.Show(this,
-                            $"Món '{item.Name}' chỉ còn {item.MaxStock} suất trong kho.",
-                            "Đã đạt số lượng tối đa", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                    item.Quantity++;
-                    RenderCart();
-                    UpdateProductsInPlace();
-                };
-                row.Controls.Add(btnPlus);
-
-                _cartLines.Controls.Add(row);
-            }
+            // ── Danh sách món ──
+            RenderCartLines();
 
             decimal subTotal = _cart.Sum(x => x.Price * x.Quantity);
 
@@ -1116,26 +1480,16 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             if (_autoApplyBestDeal)
             {
                 var (bestVoucher, _, _, _) = FindBestVoucher(subTotal);
-                if (bestVoucher != null)
-                {
-                    _appliedVoucher = bestVoucher;
-                }
-                else
-                {
-                    _appliedVoucher = null;
-                }
+                _appliedVoucher = bestVoucher;   // null nếu không có mã phù hợp
             }
             else if (_appliedVoucher != null)
             {
-                // Kiểm tra voucher đang chọn thủ công còn hợp lệ không
+                // Voucher chọn thủ công: kiểm tra còn hợp lệ không
                 var (isEligible, _, _) = EvaluateVoucher(_appliedVoucher, subTotal);
-                if (!isEligible)
-                {
-                    _appliedVoucher = null;
-                }
+                if (!isEligible) _appliedVoucher = null;
             }
 
-            // Tính số tiền giảm voucher
+            // Tiền giảm của voucher
             decimal voucherDiscount = 0m;
             if (_appliedVoucher != null)
             {
@@ -1145,21 +1499,22 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
             decimal finalTotal = Math.Max(0, subTotal - voucherDiscount);
 
-            // Cập nhật Banner gợi ý Smart Deal
+            // Box gợi ý voucher
             UpdatePromoBox(subTotal);
 
-            // Cập nhật các dòng tổng kết
-            _lblSubTotal.Text = $"Tiền món: {subTotal:N0} đ";
-            if (_appliedVoucher != null && voucherDiscount > 0)
+            // ── Bảng tổng kết ──
+            _lblSubTotalValue.Text = $"{subTotal:N0} đ";
+
+            bool hasDiscount = _appliedVoucher != null && voucherDiscount > 0;
+            _lblDiscountCaption.Visible = hasDiscount;
+            _lblDiscountValue.Visible = hasDiscount;
+            if (hasDiscount)
             {
-                _lblDiscount.Text = $"Ưu đãi voucher ({_appliedVoucher.MaVoucher}): -{voucherDiscount:N0} đ";
-                _lblDiscount.Visible = true;
+                _lblDiscountCaption.Text = $"Giảm giá ({_appliedVoucher.MaVoucher})";
+                _lblDiscountValue.Text = $"-{voucherDiscount:N0} đ";
             }
-            else
-            {
-                _lblDiscount.Visible = false;
-            }
-            _total.Text = $"Tổng thanh toán: {finalTotal:N0} đ";
+
+            _lblTotalValue.Text = $"{finalTotal:N0} đ";
         }
 
         private void UpdatePromoBox(decimal subTotal)
