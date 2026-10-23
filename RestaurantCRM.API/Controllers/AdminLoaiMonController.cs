@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,25 +9,25 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminLoaiMonController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminLoaiMonController(RestaurantCrmContext context)
+        public AdminLoaiMonController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminLoaiMon - Lấy danh sách toàn bộ loại món.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<LoaiMon>>> GetLoaiMons()
         {
-            return await _context.LoaiMon.ToListAsync();
+            return await _service.Query<LoaiMon>().ToListAsync();
         }
 
         // GET: api/AdminLoaiMon/{id} - Lấy thông tin chi tiết một loại món.
         [HttpGet("{id}")]
         public async Task<ActionResult<LoaiMon>> GetLoaiMon(string id)
         {
-            var loaiMon = await _context.LoaiMon.FindAsync(id);
+            var loaiMon = await _service.FindAsync<LoaiMon>(id);
 
             if (loaiMon == null)
             {
@@ -43,11 +43,11 @@ namespace RestaurantCRM.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(loaiMon.MaLoaiMon))
             {
-                loaiMon.MaLoaiMon = await Helpers.CodeGenerator.GenerateMaLoaiMonAsync(_context);
+                loaiMon.MaLoaiMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaLoaiMonAsync(_service);
             }
             
-            _context.LoaiMon.Add(loaiMon);
-            await _context.SaveChangesAsync();
+            _service.Add(loaiMon);
+            await _service.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetLoaiMon), new { id = loaiMon.MaLoaiMon }, loaiMon);
         }
@@ -61,11 +61,11 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Mã loại món không khớp.");
             }
 
-            _context.Entry(loaiMon).State = EntityState.Modified;
+            _service.Update(loaiMon);
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _service.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -86,7 +86,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteLoaiMon(string id)
         {
-            var loaiMon = await _context.LoaiMon
+            var loaiMon = await _service.Query<LoaiMon>()
                 .Include(lm => lm.MonAn)
                 .FirstOrDefaultAsync(lm => lm.MaLoaiMon == id);
             
@@ -100,15 +100,15 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Không thể xóa loại món này vì vẫn còn các món ăn thuộc loại này. Vui lòng chuyển các món ăn sang loại khác trước khi xóa.");
             }
 
-            _context.LoaiMon.Remove(loaiMon);
-            await _context.SaveChangesAsync();
+            _service.Remove(loaiMon);
+            await _service.SaveChangesAsync();
 
             return NoContent();
         }
 
         private bool LoaiMonExists(string id)
         {
-            return _context.LoaiMon.Any(e => e.MaLoaiMon == id);
+            return _service.Query<LoaiMon>().Any(e => e.MaLoaiMon == id);
         }
     }
 }

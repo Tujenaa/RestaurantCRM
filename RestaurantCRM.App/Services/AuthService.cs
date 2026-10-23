@@ -40,8 +40,15 @@ namespace RestaurantCRM.AdminApp.Services {
                         Message = GetString(responseData, "message"),
                         Token = GetString(responseData, "token"),
                         Role = GetString(responseData, "role"),
-                        RoleId = GetNullableInt(responseData, "roleId")
+                        RoleId = GetNullableInt(responseData, "roleId"),
+                        Permissions = new List<string>()
                     };
+                    object permObj;
+                    if (responseData.TryGetValue("permissions", out permObj) && permObj is System.Collections.ArrayList permList) {
+                        foreach (var p in permList) {
+                            if (p != null) loginResult.Permissions.Add(p.ToString());
+                        }
+                    }
                     object userInfoValue;
                     if (responseData.TryGetValue("userInfo", out userInfoValue)) {
                         var userInfo = userInfoValue as Dictionary<string, object>;
@@ -88,6 +95,7 @@ namespace RestaurantCRM.AdminApp.Services {
         public string Token { get; set; }
         public string Role { get; set; }
         public int? RoleId { get; set; }
+        public List<string> Permissions { get; set; } = new List<string>();
         public UserInfo UserInfo { get; set; }
     }
 

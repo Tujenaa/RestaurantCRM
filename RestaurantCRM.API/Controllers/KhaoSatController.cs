@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,18 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class KhaoSatController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public KhaoSatController(RestaurantCrmContext context)
+        public KhaoSatController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/KhaoSat/HienTai - Lấy bài khảo sát đang được mở
         [HttpGet("HienTai")]
         public async Task<IActionResult> GetKhaoSatHienTai()
         {
-            var khaoSat = await _context.KhaoSat
+            var khaoSat = await _service.Query<KhaoSat>()
                 .Include(k => k.CauHoiKhaoSat)
                     .ThenInclude(c => c.TuyChonCauHoi)
                 .Where(k => k.TrangThai == "Open")
@@ -65,7 +65,7 @@ namespace RestaurantCRM.API.Controllers
                 NgayTraLoi = DateTime.Now
             };
 
-            _context.PhieuTraLoi.Add(phieuTraLoi);
+            _service.Add(phieuTraLoi);
 
             if (request.Answers != null && request.Answers.Any())
             {
@@ -79,11 +79,11 @@ namespace RestaurantCRM.API.Controllers
                         MaTuyChon = answer.MaTuyChon,
                         NoiDungTuDien = answer.NoiDungTuDien
                     };
-                    _context.CauTraLoi.Add(cauTraLoi);
+                    _service.Add(cauTraLoi);
                 }
             }
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công" });
         }

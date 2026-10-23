@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 using RestaurantCRM.API.Helpers;
 using Microsoft.IdentityModel.Tokens;
@@ -15,22 +15,22 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class KhachHangController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public KhachHangController(RestaurantCrmContext context)
+        public KhachHangController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // POST: api/KhachHang/DangKy - Đăng ký tài khoản khách hàng mới
         [HttpPost("DangKy")]
         public async Task<IActionResult> DangKy(RegisterRequest request)
         {
-            if (await _context.KhachHang.AnyAsync(k => k.Email == request.Email && !string.IsNullOrEmpty(request.Email)))
+            if (await _service.Query<KhachHang>().AnyAsync(k => k.Email == request.Email && !string.IsNullOrEmpty(request.Email)))
             {
                 return BadRequest("Email đã được sử dụng.");
             }
-            if (await _context.KhachHang.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && !string.IsNullOrEmpty(request.SoDienThoai)))
+            if (await _service.Query<KhachHang>().AnyAsync(k => k.SoDienThoai == request.SoDienThoai && !string.IsNullOrEmpty(request.SoDienThoai)))
             {
                 return BadRequest("Số điện thoại đã được sử dụng.");
             }
@@ -47,8 +47,8 @@ namespace RestaurantCRM.API.Controllers
                 TrangThai = "Active"
             };
 
-            _context.KhachHang.Add(khachHang);
-            await _context.SaveChangesAsync();
+            _service.Add(khachHang);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Đăng ký thành công", maKhachHang = khachHang.MaKhachHang });
         }
@@ -57,7 +57,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("DangNhap")]
         public async Task<IActionResult> DangNhap(LoginRequest request)
         {
-            var khachHang = await _context.KhachHang.FirstOrDefaultAsync(k =>
+            var khachHang = await _service.Query<KhachHang>().FirstOrDefaultAsync(k =>
                 (k.Email == request.EmailOrPhone || k.SoDienThoai == request.EmailOrPhone));
 
             if (khachHang == null || !PasswordVerifier.Verify(request.MatKhau, khachHang.MatKhau))
@@ -105,7 +105,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("ThongTin/{id}")]
         public async Task<IActionResult> ThongTin(string id)
         {
-            var khachHang = await _context.KhachHang
+            var khachHang = await _service.Query<KhachHang>()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(k => k.MaKhachHang == id);
 
@@ -130,16 +130,16 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("ThongTin/{id}")]
         public async Task<IActionResult> CapNhatThongTin(string id, UpdateProfileRequest request)
         {
-            if (!string.IsNullOrEmpty(request.Email) && await _context.KhachHang.AnyAsync(k => k.Email == request.Email && k.MaKhachHang != id))
+            if (!string.IsNullOrEmpty(request.Email) && await _service.Query<KhachHang>().AnyAsync(k => k.Email == request.Email && k.MaKhachHang != id))
             {
                 return BadRequest("Email đã được sử dụng bởi người khác.");
             }
-            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _context.KhachHang.AnyAsync(k => k.SoDienThoai == request.SoDienThoai && k.MaKhachHang != id))
+            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _service.Query<KhachHang>().AnyAsync(k => k.SoDienThoai == request.SoDienThoai && k.MaKhachHang != id))
             {
                 return BadRequest("Số điện thoại đã được sử dụng bởi người khác.");
             }
 
-            var khachHang = await _context.KhachHang.FindAsync(id);
+            var khachHang = await _service.FindAsync<KhachHang>(id);
             if (khachHang == null)
             {
                 return NotFound("Không tìm thấy thông tin khách hàng.");
@@ -152,7 +152,7 @@ namespace RestaurantCRM.API.Controllers
             khachHang.GioiTinh = string.IsNullOrWhiteSpace(request.GioiTinh) ? null : (request.GioiTinh.Length > 10 ? request.GioiTinh.Substring(0, 10) : request.GioiTinh);
             khachHang.DiaChi = request.DiaChi;
 
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok("Cập nhật thông tin thành công.");
         }
@@ -161,7 +161,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("DoiMatKhau/{id}")]
         public async Task<IActionResult> DoiMatKhau(string id, ChangePasswordRequest request)
         {
-            var khachHang = await _context.KhachHang.FindAsync(id);
+            var khachHang = await _service.FindAsync<KhachHang>(id);
             if (khachHang == null)
             {
                 return NotFound("Không tìm thấy thông tin khách hàng.");
@@ -173,7 +173,7 @@ namespace RestaurantCRM.API.Controllers
             }
 
             khachHang.MatKhau = BCrypt.Net.BCrypt.HashPassword(request.MatKhauMoi);
-            await _context.SaveChangesAsync();
+            await _service.SaveChangesAsync();
 
             return Ok("Đổi mật khẩu thành công.");
         }

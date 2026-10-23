@@ -46,26 +46,68 @@ INSERT INTO LOAI_MON (maLoaiMon, tenLoaiMon) VALUES
 ('LM05', N'Đồ uống & Tráng miệng');
 GO
 
--- 5. MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, soLuong, trangThai)
-INSERT INTO MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, soLuong, trangThai) VALUES
-('M01', 'LM03', N'Lẩu Thái chua cay', NULL, '/images/Lau_thai.jpg', 180000, 1, 'InStock'),
-('M02', 'LM01', N'Lẩu bò nhúng dấm', N'Nước lẩu bò nhúng dấm chua dịu, thơm tỏi.', '/images/Lau_bo_nhung_giam.png', 220000, 31, 'InStock'),
-('M03', 'LM03', N'Lẩu nấm thanh đạm nè', NULL, '/images/Lau_nam.jpg', 170000, 0, 'OutOfStock'),
-('M04', 'LM01', N'Lẩu gà lá é', NULL, '/images/Lau_ga_la_e.jpg', 200000, 0, 'OutOfStock'),
-('M05', 'LM02', N'Bò Mỹ thái lát', N'Thịt bò Mỹ thái lát mỏng dùng để nhúng lẩu.', '/images/Bo_my_thai_lat.jpg', 120000, 52, 'InStock'),
-('M06', 'LM02', N'Tôm sú tươi', N'Tôm sú tươi, thịt chắc và ngọt.', '/images/Tom_su_tuoi.jpg', 140000, 46, 'InStock'),
-('M07', 'LM02', N'Viên thả lẩu thập cẩm', NULL, '/images/Vien_tha_lau_thap_cam.jpg', 69999, 0, 'OutOfStock'),
-('M08', 'LM02', N'Ba chỉ heo thái mỏng nè', NULL, '/images/Ba_chi_thai_mong.jpg', 90000, 0, 'Discontinued'),
-('M09', 'LM03', N'Rau lẩu thập cẩm', N'Rau xanh tươi dùng kèm các món lẩu.', '/images/Rau.png', 50000, 95, 'InStock'),
-('M10', 'LM03', N'Nấm thập cẩm', N'Nhiều loại nấm tươi dùng cho món lẩu.', '/images/Nam.jpg', 60000, 77, 'InStock'),
-('M11', 'LM04', N'Mì Udon', N'Mì Udon ăn kèm lẩu.', '/images/Mi_udon.jpg', 25000, 117, 'InStock'),
-('M12', 'LM04', N'Bún tươi', N'Bún tươi dùng ăn kèm lẩu.', '/images/bun_tuoi.jpg', 14999, 146, 'InStock'),
-('M13', 'LM05', N'Trà đào cam sả', N'Trà đào kết hợp cam và sả.', '/images/Tra_dao_cam_sa.jpg', 40001, 93, 'Discontinued'),
-('M14', 'LM05', N'Chè khúc bạch', N'Món tráng miệng mát lạnh.', '/images/Che_khuc_bach.jpg', 35000, 54, 'InStock'),
-('M15', 'LM05', N'Nước ép cam', N'Nước ép cam tươi.', '/images/Nuoc_ep_cam.jpg', 40000, 0, 'OutOfStock');
+-- 5. MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, trangThai)
+INSERT INTO MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, trangThai) VALUES
+('M01', 'LM03', N'Lẩu Thái chua cay', NULL, '/images/Lau_thai.jpg', 180000, 'InStock'),
+('M02', 'LM01', N'Lẩu bò nhúng dấm', N'Nước lẩu bò nhúng dấm chua dịu, thơm tỏi.', '/images/Lau_bo_nhung_giam.png', 220000, 'InStock'),
+('M03', 'LM03', N'Lẩu nấm thanh đạm nè', NULL, '/images/Lau_nam.jpg', 170000, 'OutOfStock'),
+('M04', 'LM01', N'Lẩu gà lá é', NULL, '/images/Lau_ga_la_e.jpg', 200000, 'OutOfStock'),
+('M05', 'LM02', N'Bò Mỹ thái lát', N'Thịt bò Mỹ thái lát mỏng dùng để nhúng lẩu.', '/images/Bo_my_thai_lat.jpg', 120000, 'InStock'),
+('M06', 'LM02', N'Tôm sú tươi', N'Tôm sú tươi, thịt chắc và ngọt.', '/images/Tom_su_tuoi.jpg', 140000, 'InStock'),
+('M07', 'LM02', N'Viên thả lẩu thập cẩm', NULL, '/images/Vien_tha_lau_thap_cam.jpg', 69999, 'OutOfStock'),
+('M08', 'LM02', N'Ba chỉ heo thái mỏng nè', NULL, '/images/Ba_chi_thai_mong.jpg', 90000, 'Discontinued'),
+('M09', 'LM03', N'Rau lẩu thập cẩm', N'Rau xanh tươi dùng kèm các món lẩu.', '/images/Rau.png', 50000, 'InStock'),
+('M10', 'LM03', N'Nấm thập cẩm', N'Nhiều loại nấm tươi dùng cho món lẩu.', '/images/Nam.jpg', 60000, 'InStock'),
+('M11', 'LM04', N'Mì Udon', N'Mì Udon ăn kèm lẩu.', '/images/Mi_udon.jpg', 25000, 'InStock'),
+('M12', 'LM04', N'Bún tươi', N'Bún tươi dùng ăn kèm lẩu.', '/images/bun_tuoi.jpg', 14999, 'InStock'),
+('M13', 'LM05', N'Trà đào cam sả', N'Trà đào kết hợp cam và sả.', '/images/Tra_dao_cam_sa.jpg', 40001, 'Discontinued'),
+('M14', 'LM05', N'Chè khúc bạch', N'Món tráng miệng mát lạnh.', '/images/Che_khuc_bach.jpg', 35000, 'InStock'),
+('M15', 'LM05', N'Nước ép cam', N'Nước ép cam tươi.', '/images/Nuoc_ep_cam.jpg', 40000, 'OutOfStock');
 GO
 
--- 6. NHA_CUNG_CAP (maNhaCungCap, tenNhaCungCap, soDienThoai, diaChi, email)
+-- 6. NGUYEN_LIEU (maNguyenLieu, tenNguyenLieu, donViTinh, soLuongTon, giaNhapGanNhat, trangThai)
+INSERT INTO NGUYEN_LIEU (maNguyenLieu, tenNguyenLieu, donViTinh, soLuongTon, giaNhapGanNhat, trangThai) VALUES
+('NL01', N'Ba chỉ bò Mỹ thái lát', N'kg', 25.50, 80000, 'Active'),
+('NL02', N'Tôm sú tươi', N'kg', 18.00, 95000, 'Active'),
+('NL03', N'Viên thả lẩu thập cẩm', N'kg', 12.00, 40000, 'Active'),
+('NL04', N'Ba chỉ heo tươi', N'kg', 0.00, 55000, 'Active'),
+('NL05', N'Rau lẩu thập cẩm', N'kg', 35.00, 30000, 'Active'),
+('NL06', N'Nấm thập cẩm tươi', N'kg', 22.50, 38000, 'Active'),
+('NL07', N'Mì Udon đóng gói', N'gói', 120.00, 12000, 'Active'),
+('NL08', N'Bún tươi sạch', N'kg', 45.00, 7000, 'Active'),
+('NL09', N'Nước cốt lẩu Thái', N'lít', 30.00, 110000, 'Active'),
+('NL10', N'Nước cốt lẩu bò', N'lít', 25.00, 140000, 'Active'),
+('NL11', N'Nước cốt lẩu nấm', N'lít', 0.00, 100000, 'Active'),
+('NL12', N'Gà ta & lá é', N'kg', 0.00, 120000, 'Active'),
+('NL13', N'Nguyên liệu trà đào & sả', N'phần', 50.00, 22000, 'Active'),
+('NL14', N'Khúc bạch & hạnh nhân', N'phần', 40.00, 20000, 'Active'),
+('NL15', N'Cam sành tươi', N'kg', 0.00, 15000, 'Active');
+GO
+
+-- 7. DINH_LUONG (maDinhLuong, maMon, maNguyenLieu, soLuongCan)
+INSERT INTO DINH_LUONG (maDinhLuong, maMon, maNguyenLieu, soLuongCan) VALUES
+('DL01', 'M01', 'NL09', 1.50), -- Lẩu Thái cần 1.5 lít nước cốt
+('DL02', 'M01', 'NL02', 0.20), -- Lẩu Thái cần 0.2 kg tôm
+('DL03', 'M01', 'NL05', 0.30), -- Lẩu Thái cần 0.3 kg rau
+('DL04', 'M02', 'NL10', 1.50), -- Lẩu bò cần 1.5 lít nước cốt
+('DL05', 'M02', 'NL01', 0.30), -- Lẩu bò cần 0.3 kg bò Mỹ
+('DL06', 'M03', 'NL11', 1.50), -- Lẩu nấm cần 1.5 lít nước cốt
+('DL07', 'M03', 'NL06', 0.50), -- Lẩu nấm cần 0.5 kg nấm
+('DL08', 'M04', 'NL12', 1.00), -- Lẩu gà cần 1.0 kg gà & lá é
+('DL09', 'M05', 'NL01', 0.25), -- Bò Mỹ đĩa cần 0.25 kg bò Mỹ
+('DL10', 'M06', 'NL02', 0.25), -- Tôm sú đĩa cần 0.25 kg tôm
+('DL11', 'M07', 'NL03', 0.30), -- Viên thả lẩu đĩa cần 0.3 kg viên
+('DL12', 'M08', 'NL04', 0.25), -- Ba chỉ heo đĩa cần 0.25 kg ba chỉ
+('DL13', 'M09', 'NL05', 0.35), -- Rau đĩa cần 0.35 kg rau
+('DL14', 'M10', 'NL06', 0.30), -- Nấm đĩa cần 0.3 kg nấm
+('DL15', 'M11', 'NL07', 1.00), -- Mì Udon cần 1 gói
+('DL16', 'M12', 'NL08', 0.30), -- Bún tươi cần 0.3 kg
+('DL17', 'M13', 'NL13', 1.00), -- Trà đào cần 1 phần nguyên liệu
+('DL18', 'M14', 'NL14', 1.00), -- Chè khúc bạch cần 1 phần nguyên liệu
+('DL19', 'M15', 'NL15', 0.40); -- Nước cam cần 0.4 kg cam
+GO
+
+-- 8. NHA_CUNG_CAP (maNhaCungCap, tenNhaCungCap, soDienThoai, diaChi, email)
 INSERT INTO NHA_CUNG_CAP (maNhaCungCap, tenNhaCungCap, soDienThoai, diaChi, email) VALUES
 ('NCC01', N'Công ty TNHH Thực phẩm Sạch Việt', '02838123456', N'12 Nguyễn Văn Linh, Quận 7, TP.HCM', 'contact@thucphamsachviet.vn'),
 ('NCC02', N'Cơ sở Thịt bò Ba Miền', '02838234567', N'85 Quốc lộ 22, Hóc Môn, TP.HCM', 'thitbobamien@gmail.com'),
@@ -74,34 +116,39 @@ INSERT INTO NHA_CUNG_CAP (maNhaCungCap, tenNhaCungCap, soDienThoai, diaChi, emai
 ('NCC05', N'Hải sản Tươi Phú Quốc', '02839567890', N'Chợ đầu mối Bình Điền, Quận 8, TP.HCM', 'haisanphuquoc@gmail.com');
 GO
 
--- 7. PHIEU_NHAP_HANG (maPhieuNhap, maNhaCungCap, maNhanVien, ngayNhap, tongTien, ghiChu)
+-- 9. PHIEU_NHAP_HANG (maPhieuNhap, maNhaCungCap, maNhanVien, ngayNhap, tongTien, ghiChu)
 INSERT INTO PHIEU_NHAP_HANG (maPhieuNhap, maNhaCungCap, maNhanVien, ngayNhap, tongTien, ghiChu) VALUES
 ('PN01', 'NCC01', 'NV06', '2026-08-25T08:30:00', 8530000, N'Rau, nấm, mì và bún cho đợt đầu tháng'),
 ('PN02', 'NCC02', 'NV06', '2026-08-26T09:00:00', 8100000, N'Bò Mỹ và ba chỉ heo tươi'),
 ('PN03', 'NCC03', 'NV06', '2026-08-28T14:15:00', 3400000, N'Nguyên liệu đồ uống và tráng miệng'),
 ('PN04', 'NCC04', 'NV06', '2026-08-30T10:00:00', 15900000, N'Nước cốt các loại lẩu'),
-('PN05', 'NCC05', 'NV06', '2026-09-02T07:45:00', 7950000, N'Tôm sú và viên thả lẩu');
+('PN05', 'NCC05', 'NV06', '2026-09-02T07:45:00', 7950000, N'Tôm sú và viên thả lẩu'),
+('PN261015-001', 'NCC01', 'NV01', '2026-10-15T23:33:06', 220000, N'Nhập thử nghiệm nguyên liệu mới'),
+('PN261015-002', 'NCC01', 'NV01', '2026-10-15T23:36:58', 165000, N'Nhập bổ sung ba chỉ heo');
 GO
 
--- 8. CHI_TIET_PHIEU_NHAP (maChiTiet, maPhieuNhap, maMon, soLuong, donGiaNhap, thanhTien)
-INSERT INTO CHI_TIET_PHIEU_NHAP (maChiTiet, maPhieuNhap, maMon, soLuong, donGiaNhap, thanhTien) VALUES
-('CTPN01', 'PN01', 'M09', 100, 30000, 3000000),
-('CTPN02', 'PN01', 'M10', 80, 38000, 3040000),
-('CTPN03', 'PN01', 'M11', 120, 12000, 1440000),
-('CTPN04', 'PN01', 'M12', 150, 7000, 1050000),
-('CTPN05', 'PN02', 'M05', 60, 80000, 4800000),
-('CTPN06', 'PN02', 'M08', 60, 55000, 3300000),
-('CTPN07', 'PN03', 'M13', 100, 22000, 2200000),
-('CTPN08', 'PN03', 'M14', 60, 20000, 1200000),
-('CTPN09', 'PN04', 'M01', 40, 110000, 4400000),
-('CTPN10', 'PN04', 'M02', 35, 140000, 4900000),
-('CTPN11', 'PN04', 'M03', 30, 100000, 3000000),
-('CTPN12', 'PN04', 'M04', 30, 120000, 3600000),
-('CTPN13', 'PN05', 'M06', 50, 95000, 4750000),
-('CTPN14', 'PN05', 'M07', 80, 40000, 3200000);
+-- 10. CHI_TIET_PHIEU_NHAP (maChiTiet, maPhieuNhap, maNguyenLieu, soLuong, donGiaNhap, thanhTien)
+INSERT INTO CHI_TIET_PHIEU_NHAP (maChiTiet, maPhieuNhap, maNguyenLieu, soLuong, donGiaNhap, thanhTien) VALUES
+('CTPN01', 'PN01', 'NL05', 100.00, 30000, 3000000),
+('CTPN02', 'PN01', 'NL06', 80.00, 38000, 3040000),
+('CTPN03', 'PN01', 'NL07', 120.00, 12000, 1440000),
+('CTPN04', 'PN01', 'NL08', 150.00, 7000, 1050000),
+('CTPN05', 'PN02', 'NL01', 60.00, 80000, 4800000),
+('CTPN06', 'PN02', 'NL04', 60.00, 55000, 3300000),
+('CTPN07', 'PN03', 'NL13', 100.00, 22000, 2200000),
+('CTPN08', 'PN03', 'NL14', 60.00, 20000, 1200000),
+('CTPN09', 'PN04', 'NL09', 40.00, 110000, 4400000),
+('CTPN10', 'PN04', 'NL10', 35.00, 140000, 4900000),
+('CTPN11', 'PN04', 'NL11', 30.00, 100000, 3000000),
+('CTPN12', 'PN04', 'NL12', 30.00, 120000, 3600000),
+('CTPN13', 'PN05', 'NL02', 50.00, 95000, 4750000),
+('CTPN14', 'PN05', 'NL03', 80.00, 40000, 3200000),
+('CTPN42E8D5', 'PN261015-001', 'NL01', 1.00, 80000, 80000),
+('CTPN468EAF', 'PN261015-001', 'NL10', 1.00, 140000, 140000),
+('CTPNEBD894', 'PN261015-002', 'NL04', 3.00, 55000, 165000);
 GO
 
--- 9. CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, ngayBatDau, ngayKetThuc)
+-- 11. CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, ngayBatDau, ngayKetThuc)
 INSERT INTO CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, ngayBatDau, ngayKetThuc) VALUES
 ('KM01', N'Giảm 10% cho đơn từ 300.000đ', '2026-08-01', '2026-12-31'),
 ('KM02', N'Giảm 40.000đ cho đơn từ 250.000đ', '2026-08-01', '2026-12-31'),
@@ -111,7 +158,7 @@ INSERT INTO CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, ngayBatDau, 
 ('KM06', N'Bò Mỹ thái lát giảm 20.000đ', '2026-08-01', '2026-11-30');
 GO
 
--- 10. KM_THEO_SP (maKMSP, maChuongTrinh, maMon, phanTramGiam, tienGiam)
+-- 12. KM_THEO_SP (maKMSP, maChuongTrinh, maMon, phanTramGiam, tienGiam)
 INSERT INTO KM_THEO_SP (maKMSP, maChuongTrinh, maMon, phanTramGiam, tienGiam) VALUES
 ('KMSP01', 'KM03', 'M13', 20, NULL),
 ('KMSP02', 'KM03', 'M15', 20, NULL),
@@ -119,14 +166,14 @@ INSERT INTO KM_THEO_SP (maKMSP, maChuongTrinh, maMon, phanTramGiam, tienGiam) VA
 ('KMSP04', 'KM06', 'M05', NULL, 20000);
 GO
 
--- 11. KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa)
+-- 13. KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa)
 INSERT INTO KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa) VALUES
 ('KMV01', 'KM01', 'VOUCHER10', 300000, 10, NULL, NULL),
 ('KMV02', 'KM02', 'VOUCHER40K', 250000, NULL, 40000, NULL),
 ('KMV03', 'KM05', 'NHOM15', 700000, 15, NULL, NULL);
 GO
 
--- 12. HOA_DON (maHoaDon, maKhachHang, maNhanVien, maKMVoucher, tenKhachHang, soDienThoai, diaChiGiao, ngayDat, ngayHoanTat, trangThai, tongTienHang, tienGiamVoucher, tongThanhToan)
+-- 14. HOA_DON (maHoaDon, maKhachHang, maNhanVien, maKMVoucher, tenKhachHang, soDienThoai, diaChiGiao, ngayDat, ngayHoanTat, trangThai, tongTienHang, tienGiamVoucher, tongThanhToan)
 INSERT INTO HOA_DON (maHoaDon, maKhachHang, maNhanVien, maKMVoucher, tenKhachHang, soDienThoai, diaChiGiao, ngayDat, ngayHoanTat, trangThai, tongTienHang, tienGiamVoucher, tongThanhToan) VALUES
 ('DH01', 'KH01', 'NV02', 'KMV01', N'Nguyễn Thị Lan Anh', '0901234561', N'25 Lê Lợi, Quận 1, TP.HCM', '2026-09-01T11:30:00', '2026-09-01T12:15:00', 'Completed', 344000, 34400, 309600),
 ('DH02', 'KH02', 'NV02', 'KMV02', N'Trần Văn Minh', '0902345672', N'102 Cách Mạng Tháng 8, Quận 3, TP.HCM', '2026-09-03T18:45:00', '2026-09-03T19:30:00', 'Completed', 320000, 40000, 280000),
@@ -142,7 +189,7 @@ INSERT INTO HOA_DON (maHoaDon, maKhachHang, maNhanVien, maKMVoucher, tenKhachHan
 ('DH12', 'KH11', 'NV01', 'KMV01', N'Trịnh Quốc Việt', '0911234561', N'14 Nguyễn Đình Chiểu, Quận 3, TP.HCM', '2026-09-30T11:20:00', NULL, 'Pending', 460000, 46000, 414000);
 GO
 
--- 13. CHI_TIET_HOA_DON (maChiTiet, maHoaDon, maMon, maKMSP, tenMon, soLuong, donGiaGoc, tienGiamMon, donGiaSauGiam, thanhTien)
+-- 15. CHI_TIET_HOA_DON (maChiTiet, maHoaDon, maMon, maKMSP, tenMon, soLuong, donGiaGoc, tienGiamMon, donGiaSauGiam, thanhTien)
 INSERT INTO CHI_TIET_HOA_DON (maChiTiet, maHoaDon, maMon, maKMSP, tenMon, soLuong, donGiaGoc, tienGiamMon, donGiaSauGiam, thanhTien) VALUES
 ('CT001', 'DH01', 'M01', NULL, N'Lẩu Thái chua cay', 1, 180000, 0, 180000, 180000),
 ('CT002', 'DH01', 'M05', 'KMSP04', N'Bò Mỹ thái lát', 1, 120000, 20000, 100000, 100000),
@@ -190,7 +237,7 @@ INSERT INTO CHI_TIET_HOA_DON (maChiTiet, maHoaDon, maMon, maKMSP, tenMon, soLuon
 ('CT044', 'DH12', 'M09', NULL, N'Rau lẩu thập cẩm', 1, 50000, 0, 50000, 50000);
 GO
 
--- 14. THANH_TOAN (maThanhToan, maHoaDon, phuongThuc, trangThai, ngayThanhToan, soTien)
+-- 16. THANH_TOAN (maThanhToan, maHoaDon, phuongThuc, trangThai, ngayThanhToan, soTien)
 INSERT INTO THANH_TOAN (maThanhToan, maHoaDon, phuongThuc, trangThai, ngayThanhToan, soTien) VALUES
 ('TT01', 'DH01', N'Ví MoMo', 'Paid', '2026-09-01T11:35:00', 309600),
 ('TT02', 'DH02', N'Tiền mặt', 'Paid', '2026-09-03T19:30:00', 280000),
@@ -206,21 +253,21 @@ INSERT INTO THANH_TOAN (maThanhToan, maHoaDon, phuongThuc, trangThai, ngayThanhT
 ('TT12', 'DH12', N'Chuyển khoản', 'Pending', NULL, 414000);
 GO
 
--- 15. DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia)
-INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia) VALUES
-('DG01', 'KH01', 'DH01', 'M01', 5, N'Nước lẩu Thái chua cay đúng vị, thơm sả và lá chanh.', '2026-09-01T13:00:00'),
-('DG02', 'KH01', 'DH01', 'M13', 4, N'Trà đào thơm, hơi ngọt so với khẩu vị của mình.', '2026-09-01T13:02:00'),
-('DG03', 'KH02', 'DH02', 'M02', 5, N'Lẩu bò nhúng dấm chua dịu, nước dùng thơm tỏi, rất hợp ăn tối.', '2026-09-03T20:00:00'),
-('DG04', 'KH03', 'DH03', 'M05', 5, N'Bò Mỹ thái mỏng, nhúng vừa tới là mềm ngọt, sẽ quay lại.', '2026-09-05T21:00:00'),
-('DG05', 'KH03', 'DH03', 'M14', 5, N'Chè khúc bạch mát lạnh, ăn xong bữa lẩu rất đã.', '2026-09-05T21:05:00'),
-('DG06', 'KH04', 'DH04', 'M06', 5, N'Tôm sú tươi, thịt chắc ngọt, nước lẩu Thái chua cay vừa miệng.', '2026-09-08T14:00:00'),
-('DG07', 'KH05', 'DH05', 'M03', 4, N'Nước lẩu nấm ngọt thanh, nấm tươi, ăn không bị ngán.', '2026-09-10T19:30:00'),
-('DG08', 'KH07', 'DH07', 'M01', 3, N'Nguyên liệu tươi nhưng nước lẩu hơi nhạt, mong quán cải thiện.', '2026-09-15T21:30:00'),
-('DG09', 'KH09', 'DH09', 'M08', 5, N'Ba chỉ heo thái mỏng, nhúng giòn ngọt, cả nhóm đều thích.', '2026-09-20T21:00:00'),
-('DG10', 'KH10', 'DH10', 'M04', 4, N'Lẩu gà lá é thơm, thịt gà mềm, nước dùng đậm đà.', '2026-09-22T14:00:00');
+-- 17. DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia, trangThai)
+INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia, trangThai) VALUES
+('DG01', 'KH01', 'DH01', 'M01', 5, N'Nước lẩu Thái chua cay đúng vị, thơm sả và lá chanh.', '2026-09-01T13:00:00', 1),
+('DG02', 'KH01', 'DH01', 'M13', 4, N'Trà đào thơm, hơi ngọt so với khẩu vị của mình.', '2026-09-01T13:02:00', 1),
+('DG03', 'KH02', 'DH02', 'M02', 5, N'Lẩu bò nhúng dấm chua dịu, nước dùng thơm tỏi, rất hợp ăn tối.', '2026-09-03T20:00:00', 1),
+('DG04', 'KH03', 'DH03', 'M05', 5, N'Bò Mỹ thái mỏng, nhúng vừa tới là mềm ngọt, sẽ quay lại.', '2026-09-05T21:00:00', 1),
+('DG05', 'KH03', 'DH03', 'M14', 5, N'Chè khúc bạch mát lạnh, ăn xong bữa lẩu rất đã.', '2026-09-05T21:05:00', 1),
+('DG06', 'KH04', 'DH04', 'M06', 5, N'Tôm sú tươi, thịt chắc ngọt, nước lẩu Thái chua cay vừa miệng.', '2026-09-08T14:00:00', 1),
+('DG07', 'KH05', 'DH05', 'M03', 4, N'Nước lẩu nấm ngọt thanh, nấm tươi, ăn không bị ngán.', '2026-09-10T19:30:00', 1),
+('DG08', 'KH07', 'DH07', 'M01', 3, N'Nguyên liệu tươi nhưng nước lẩu hơi nhạt, mong quán cải thiện.', '2026-09-15T21:30:00', 1),
+('DG09', 'KH09', 'DH09', 'M08', 5, N'Ba chỉ heo thái mỏng, nhúng giòn ngọt, cả nhóm đều thích.', '2026-09-20T21:00:00', 1),
+('DG10', 'KH10', 'DH10', 'M04', 4, N'Lẩu gà lá é thơm, thịt gà mềm, nước dùng đậm đà.', '2026-09-22T14:00:00', 1);
 GO
 
--- 16. LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu)
+-- 18. LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu)
 INSERT INTO LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu) VALUES
 ('LS01', 'DH01', 'Pending', '2026-09-01T11:30:00', N'Khách đặt món online'),
 ('LS02', 'DH01', 'Confirmed', '2026-09-01T11:33:00', N'Nhân viên đã xác nhận đơn'),
@@ -266,40 +313,12 @@ INSERT INTO LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu)
 ('LS42', 'DH12', 'Pending', '2026-09-30T11:20:00', N'Đơn mới, chờ nhân viên xác nhận');
 GO
 
--- 17. PHAN_HOI (maPhanHoi, maKhachHang, maNhanVien, noiDung, danhGia, ngayPhanHoi, trangThai)
-INSERT INTO PHAN_HOI (maPhanHoi, maKhachHang, maNhanVien, noiDung, danhGia, ngayPhanHoi, trangThai) VALUES
-('PH01', 'KH01', 'NV04', N'Nước lẩu đậm đà, đồ nhúng đầy đủ, giao hàng nhanh. Cảm ơn quán!', 5, '2026-09-01T14:00:00', 'Resolved'),
-('PH02', 'KH02', 'NV04', N'Lẩu bò ngon nhưng đợi món hơi lâu vào giờ cao điểm.', 3, '2026-09-03T20:30:00', 'Resolved'),
-('PH03', 'KH03', 'NV04', N'Nhân viên phục vụ nhiệt tình, bàn sạch sẽ, châm nước lẩu kịp thời.', 5, '2026-09-05T21:30:00', 'Resolved'),
-('PH04', 'KH07', 'NV04', N'Nước lẩu Thái hơi nhạt so với lần trước, mong quán kiểm tra lại.', 2, '2026-09-15T21:45:00', 'Resolved'),
-('PH05', 'KH08', 'NV04', N'Mình đặt nhầm nồi lẩu nên đã hủy đơn, mong quán hỗ trợ hoàn tiền nhanh.', 3, '2026-09-18T10:30:00', 'Resolved'),
-('PH06', 'KH09', 'NV04', N'Bò Mỹ và ba chỉ rất ngon, đề nghị quán có thêm combo lẩu cho nhóm đông.', 5, '2026-09-20T21:15:00', 'Resolved'),
-('PH07', 'KH06', NULL, N'Đơn giao hơi trễ so với dự kiến, nồi lẩu bị nguội.', 3, '2026-09-29T20:30:00', 'Unresolved'),
-('PH08', 'KH12', NULL, N'Tài khoản của tôi bị khóa, nhờ quán kiểm tra giúp.', 2, '2026-09-30T09:00:00', 'Unresolved');
-GO
-
--- 18. TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui)
-INSERT INTO TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui) VALUES
-('TLDG01', 'DG01', 'NhanVien', NULL, 'NV04', N'Cảm ơn chị đã ủng hộ quán! Hẹn gặp lại chị vào lần sau.', '2026-09-02T08:00:00'),
-('TLDG02', 'DG02', 'NhanVien', NULL, 'NV04', N'Quán ghi nhận góp ý về độ ngọt. Lần sau chị có thể dặn bên mình giảm đường nhé.', '2026-09-02T08:05:00'),
-('TLDG03', 'DG02', 'KhachHang', 'KH01', NULL, N'Ok quán, cảm ơn nhé!', '2026-09-02T09:10:00'),
-('TLDG04', 'DG08', 'NhanVien', NULL, 'NV04', N'Cảm ơn anh đã góp ý. Quán sẽ kiểm tra lại công thức nước lẩu.', '2026-09-16T09:15:00'),
-('TLDG05', 'DG08', 'KhachHang', 'KH07', NULL, N'Mong quán cải thiện để lần sau mình có trải nghiệm tốt hơn.', '2026-09-16T10:00:00'),
-('TLDG06', 'DG08', 'NhanVien', NULL, 'NV04', N'Quán đã ghi nhận và sẽ điều chỉnh ngay.', '2026-09-16T10:30:00'),
-('TLDG07', 'DG10', 'NhanVien', NULL, 'NV04', N'Cảm ơn chị đã đánh giá. Quán rất vui vì chị thích món lẩu gà lá é.', '2026-09-22T15:00:00'),
-('TLDG08', 'DG10', 'KhachHang', 'KH10', NULL, N'Cảm ơn quán nhé!', '2026-09-22T15:30:00');
-GO
-
--- 19. TRA_LOI_PHAN_HOI (maTraLoi, maPhanHoi, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui)
-INSERT INTO TRA_LOI_PHAN_HOI (maTraLoi, maPhanHoi, nguoiGui, maKhachHang, maNhanVien, noiDung, ngayGui) VALUES
-('TLPH01', 'PH02', 'NhanVien', NULL, 'NV04', N'Quán xin lỗi vì thời gian phục vụ lâu. Quán sẽ tăng cường nhân viên vào giờ cao điểm.', '2026-09-04T08:30:00'),
-('TLPH02', 'PH02', 'KhachHang', 'KH02', NULL, N'Không sao, mong lần sau quán phục vụ nhanh hơn.', '2026-09-04T09:10:00'),
-('TLPH03', 'PH04', 'NhanVien', NULL, 'NV04', N'Quán đã kiểm tra lại công thức và sẽ điều chỉnh độ đậm đà của nước lẩu.', '2026-09-16T09:00:00'),
-('TLPH04', 'PH04', 'KhachHang', 'KH07', NULL, N'Cảm ơn quán đã phản hồi nhanh.', '2026-09-16T10:30:00'),
-('TLPH05', 'PH04', 'NhanVien', NULL, 'NV04', N'Cảm ơn anh đã góp ý để quán cải thiện chất lượng.', '2026-09-16T11:00:00'),
-('TLPH06', 'PH05', 'NhanVien', NULL, 'NV04', N'Quán đã tiếp nhận yêu cầu và hoàn tiền cho đơn hàng.', '2026-09-18T11:00:00'),
-('TLPH07', 'PH05', 'KhachHang', 'KH08', NULL, N'Cảm ơn quán đã hỗ trợ.', '2026-09-18T11:40:00'),
-('TLPH08', 'PH07', 'KhachHang', 'KH06', NULL, N'Mình mong quán hỗ trợ kiểm tra tình trạng giao hàng.', '2026-09-29T21:00:00');
+-- 19. TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, maNhanVien, noiDung, ngayGui)
+INSERT INTO TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, maNhanVien, noiDung, ngayGui) VALUES
+('TLDG01', 'DG01', 'NV04', N'Cảm ơn chị đã ủng hộ quán! Hẹn gặp lại chị vào lần sau.', '2026-09-02T08:00:00'),
+('TLDG02', 'DG02', 'NV04', N'Quán ghi nhận góp ý về độ ngọt. Lần sau chị có thể dặn bên mình giảm đường nhé.', '2026-09-02T08:05:00'),
+('TLDG03', 'DG08', 'NV04', N'Cảm ơn anh đã góp ý. Quán sẽ kiểm tra lại công thức nước lẩu.', '2026-09-16T09:15:00'),
+('TLDG04', 'DG10', 'NV04', N'Cảm ơn chị đã đánh giá. Quán rất vui vì chị thích món lẩu gà lá é.', '2026-09-22T15:00:00');
 GO
 
 -- 20. KHAO_SAT (maKhaoSat, maNhanVien, tieuDe, trangThai, ngayTao)

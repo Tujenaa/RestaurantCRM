@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,11 +9,11 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class KhuyenMaiController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public KhuyenMaiController(RestaurantCrmContext context)
+        public KhuyenMaiController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/KhuyenMai/Vouchers - Lấy danh sách Voucher hợp lệ
@@ -22,7 +22,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var vouchers = await _context.KmTheoVoucher
+            var vouchers = await _service.Query<KmTheoVoucher>()
                 .Include(v => v.MaChuongTrinhNavigation)
                 .Where(v => v.MaChuongTrinhNavigation != null 
                          && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
@@ -52,7 +52,7 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest(new { valid = false, message = "Vui lòng nhập mã giảm giá." });
 
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var voucher = await _context.KmTheoVoucher
+            var voucher = await _service.Query<KmTheoVoucher>()
                 .Include(v => v.MaChuongTrinhNavigation)
                 .FirstOrDefaultAsync(v => v.MaVoucher == code.Trim().ToUpper() || v.MaKmvoucher == code.Trim().ToUpper());
 
@@ -104,7 +104,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var giamGiaMons = await _context.KmTheoSp
+            var giamGiaMons = await _service.Query<KmTheoSp>()
                 .Include(k => k.MaChuongTrinhNavigation)
                 .Where(k => k.MaChuongTrinhNavigation != null 
                          && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today)

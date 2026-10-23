@@ -28,8 +28,8 @@ namespace RestaurantCRM.AdminApp {
         private static Form CreateWorkspace(string username, string displayName, System.Collections.Generic.List<string> roles) {
             if (roles == null) return null;
             if (roles.Contains("Admin")) return new Forms.Dashboard.AdminShellForm(username, displayName, roles);
-            if (roles.Contains("Bán hàng")) return new Forms.Dashboard.BanHangKhoShellForm(username, displayName);
-            if (roles.Contains("CRM")) return new Forms.Dashboard.CrmShellForm(username, displayName);
+            if (roles.Contains("Bán hàng")) return new Forms.Dashboard.BanHangKhoShellForm(username, displayName, roles);
+            if (roles.Contains("CRM")) return new Forms.Dashboard.CrmShellForm(username, displayName, roles);
             return null;
         }
     }

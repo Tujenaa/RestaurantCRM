@@ -28,7 +28,7 @@ namespace RestaurantCRM.AdminApp.Services {
             }
         }
 
-        public async Task<(bool Success, string Message)> DieuChinhTonKhoAsync(string maMon, int soLuongMoi, string ghiChu = null) {
+        public async Task<(bool Success, string Message)> DieuChinhTonKhoAsync(string maMon, decimal soLuongMoi, string ghiChu = null) {
             try {
                 var payload = new DieuChinhTonKhoDto {
                     SoLuongMoi = soLuongMoi,

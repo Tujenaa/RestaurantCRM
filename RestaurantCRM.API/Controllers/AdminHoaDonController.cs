@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,18 +10,18 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminHoaDonController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminHoaDonController(RestaurantCrmContext context)
+        public AdminHoaDonController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/AdminHoaDon - Lấy toàn bộ danh sách đơn hàng
         [HttpGet]
         public async Task<IActionResult> GetAllHoaDons()
         {
-            var hoaDons = await _context.HoaDon
+            var hoaDons = await _service.Query<HoaDon>()
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaNhanVienNavigation)
                 .OrderByDescending(d => d.NgayDat)
@@ -46,7 +46,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetChiTietHoaDon(string id)
         {
-            var hoaDon = await _context.HoaDon
+            var hoaDon = await _service.Query<HoaDon>()
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaNhanVienNavigation)
                 .Include(d => d.MaKmvoucherNavigation)
@@ -94,7 +94,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}/LichSuTrangThai")]
         public async Task<IActionResult> GetLichSuTrangThai(string id)
         {
-            var lichSu = await _context.LichSuTrangThai
+            var lichSu = await _service.Query<LichSuTrangThai>()
                 .Where(l => l.MaHoaDon == id)
                 .OrderByDescending(l => l.ThoiGian)
                 .Select(l => new
@@ -134,7 +134,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}/TrangThai")]
         public async Task<IActionResult> UpdateTrangThaiHoaDon(string id, UpdateOrderStatusRequest request)
         {
-            var hoaDon = await _context.HoaDon
+            var hoaDon = await _service.Query<HoaDon>()
                 .Include(d => d.ChiTietHoaDon)
                 .FirstOrDefaultAsync(d => d.MaHoaDon == id);
 
@@ -169,20 +169,18 @@ namespace RestaurantCRM.API.Controllers
                 }
             }
 
-            // Logic hoàn kho: Hoàn lại số lượng nếu đơn hủy
+            // Logic hoàn kho: Hoàn lại số lượng nguyên liệu nếu đơn hủy
             if (newNorm == "Cancelled")
             {
                 foreach (var chiTiet in hoaDon.ChiTietHoaDon)
                 {
-                    var monAn = await _context.MonAn.FindAsync(chiTiet.MaMon);
-                    if (monAn != null && monAn.SoLuong.HasValue)
+                    var dinhLuongs = await _service.Query<DinhLuong>().Where(dl => dl.MaMon == chiTiet.MaMon).ToListAsync();
+                    foreach (var dl in dinhLuongs)
                     {
-                        monAn.SoLuong += chiTiet.SoLuong;
-
-                        // Nếu hoàn lại kho làm số lượng > 0 và món đang ở trạng thái hết hàng (không phải Discontinued), mở lại InStock
-                        if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
+                        var nl = await _service.FindAsync<NguyenLieu>(dl.MaNguyenLieu);
+                        if (nl != null)
                         {
-                            monAn.TrangThai = "InStock";
+                            nl.SoLuongTon = (nl.SoLuongTon ?? 0) + (decimal)(chiTiet.SoLuong ?? 0) * dl.SoLuongCan;
                         }
                     }
                 }
@@ -191,7 +189,7 @@ namespace RestaurantCRM.API.Controllers
             // Gán nhân viên tiếp nhận đơn (người đầu tiên xác nhận/xử lý đơn)
             if (!string.IsNullOrEmpty(request.MaNhanVien) && string.IsNullOrEmpty(hoaDon.MaNhanVien))
             {
-                var nv = await _context.NhanVien.FirstOrDefaultAsync(n => n.MaNhanVien == request.MaNhanVien || n.TenDangNhap == request.MaNhanVien);
+                var nv = await _service.Query<NhanVien>().FirstOrDefaultAsync(n => n.MaNhanVien == request.MaNhanVien || n.TenDangNhap == request.MaNhanVien);
                 hoaDon.MaNhanVien = nv != null ? nv.MaNhanVien : request.MaNhanVien;
             }
 
@@ -207,7 +205,7 @@ namespace RestaurantCRM.API.Controllers
             // Load tên nhân viên để ghi log chi tiết
             if (hoaDon.MaNhanVienNavigation == null && !string.IsNullOrEmpty(hoaDon.MaNhanVien))
             {
-                await _context.Entry(hoaDon).Reference(h => h.MaNhanVienNavigation).LoadAsync();
+                await _service.LoadReferenceAsync(hoaDon, h => h.MaNhanVienNavigation);
             }
 
             var tenNv = hoaDon.MaNhanVienNavigation?.HoTen;
@@ -228,8 +226,8 @@ namespace RestaurantCRM.API.Controllers
                 GhiChu = note
             };
             
-            _context.LichSuTrangThai.Add(lichSu);
-            await _context.SaveChangesAsync();
+            _service.Add(lichSu);
+            await _service.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật trạng thái thành công", trangThai = newNorm });
         }

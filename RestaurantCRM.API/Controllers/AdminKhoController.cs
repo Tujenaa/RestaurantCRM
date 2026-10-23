@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,90 +9,81 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhoController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public AdminKhoController(RestaurantCrmContext context)
+        public AdminKhoController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        // GET: api/AdminKho - Danh sách tồn kho của tất cả món ăn
+        // GET: api/AdminKho - Danh sách tồn kho nguyên vật liệu
         [HttpGet]
         public async Task<IActionResult> GetTonKho()
         {
-            var ds = await _context.MonAn
-                .Include(m => m.MaLoaiMonNavigation)
-                .OrderBy(m => m.SoLuong)
-                .Select(m => new
+            var ds = await _service.Query<NguyenLieu>()
+                .OrderBy(nl => nl.SoLuongTon)
+                .Select(nl => new
                 {
-                    m.MaMon,
-                    m.TenMon,
-                    MaLoaiMon = m.MaLoaiMon,
-                    TenLoaiMon = m.MaLoaiMonNavigation != null ? m.MaLoaiMonNavigation.TenLoaiMon : null,
-                    m.DonGia,
-                    SoLuongTon = m.SoLuong ?? 0,
-                    TrangThai = m.TrangThai ?? "InStock",
-                    CanhBao = (m.SoLuong ?? 0) <= 0 ? "HetHang" : (m.SoLuong ?? 0) <= 10 ? "SapHet" : "DuHang"
+                    MaNguyenLieu = nl.MaNguyenLieu,
+                    TenNguyenLieu = nl.TenNguyenLieu,
+                    DonViTinh = nl.DonViTinh,
+                    SoLuongTon = nl.SoLuongTon ?? 0,
+                    GiaNhapGanNhat = nl.GiaNhapGanNhat ?? 0,
+                    TrangThai = nl.TrangThai ?? "Active",
+                    CanhBao = (nl.SoLuongTon ?? 0) <= 0 ? "HetHang" : (nl.SoLuongTon ?? 0) <= 10 ? "SapHet" : "DuHang",
+                    // Tương thích ngược với client cũ
+                    MaMon = nl.MaNguyenLieu,
+                    TenMon = nl.TenNguyenLieu
                 })
                 .ToListAsync();
 
             return Ok(ds);
         }
 
-        // GET: api/AdminKho/canh-bao - Lấy các mặt hàng sắp hết hoặc đã hết (<= 10)
+        // GET: api/AdminKho/canh-bao - Lấy các nguyên vật liệu sắp hết hoặc đã hết (<= 10)
         [HttpGet("canh-bao")]
-        public async Task<IActionResult> GetCanhBao([FromQuery] int nguong = 10)
+        public async Task<IActionResult> GetCanhBao([FromQuery] decimal nguong = 10)
         {
-            var ds = await _context.MonAn
-                .Include(m => m.MaLoaiMonNavigation)
-                .Where(m => (m.SoLuong ?? 0) <= nguong)
-                .OrderBy(m => m.SoLuong)
-                .Select(m => new
+            var ds = await _service.Query<NguyenLieu>()
+                .Where(nl => (nl.SoLuongTon ?? 0) <= nguong)
+                .OrderBy(nl => nl.SoLuongTon)
+                .Select(nl => new
                 {
-                    m.MaMon,
-                    m.TenMon,
-                    TenLoaiMon = m.MaLoaiMonNavigation != null ? m.MaLoaiMonNavigation.TenLoaiMon : null,
-                    m.DonGia,
-                    SoLuongTon = m.SoLuong ?? 0,
-                    TrangThai = m.TrangThai ?? "InStock",
-                    CanhBao = (m.SoLuong ?? 0) <= 0 ? "HetHang" : "SapHet"
+                    MaNguyenLieu = nl.MaNguyenLieu,
+                    TenNguyenLieu = nl.TenNguyenLieu,
+                    DonViTinh = nl.DonViTinh,
+                    SoLuongTon = nl.SoLuongTon ?? 0,
+                    GiaNhapGanNhat = nl.GiaNhapGanNhat ?? 0,
+                    TrangThai = nl.TrangThai ?? "Active",
+                    CanhBao = (nl.SoLuongTon ?? 0) <= 0 ? "HetHang" : "SapHet",
+                    // Tương thích ngược
+                    MaMon = nl.MaNguyenLieu,
+                    TenMon = nl.TenNguyenLieu
                 })
                 .ToListAsync();
 
             return Ok(ds);
         }
 
-        // PUT: api/AdminKho/dieu-chinh/{id} - Điều chỉnh / kiểm kê số lượng tồn kho
+        // PUT: api/AdminKho/dieu-chinh/{id} - Điều chỉnh / kiểm kê số lượng tồn kho nguyên liệu
         [HttpPut("dieu-chinh/{id}")]
         public async Task<IActionResult> DieuChinhTonKho(string id, [FromBody] DieuChinhTonKhoRequest request)
         {
-            var monAn = await _context.MonAn.FindAsync(id);
-            if (monAn == null)
+            var nl = await _service.FindAsync<NguyenLieu>(id);
+            if (nl == null)
             {
-                return NotFound("Không tìm thấy mặt hàng.");
+                return NotFound("Không tìm thấy nguyên vật liệu.");
             }
 
-            monAn.SoLuong = request.SoLuongMoi;
-            if (monAn.TrangThai != "Discontinued")
-            {
-                if (monAn.SoLuong <= 0)
-                {
-                    monAn.TrangThai = "OutOfStock";
-                }
-                else if (monAn.TrangThai == "OutOfStock")
-                {
-                    monAn.TrangThai = "InStock";
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Điều chỉnh tồn kho thành công", soLuongMoi = monAn.SoLuong });
+            nl.SoLuongTon = request.SoLuongMoi;
+            await _service.SaveChangesAsync();
+            return Ok(new { message = "Điều chỉnh tồn kho thành công", soLuongMoi = nl.SoLuongTon });
         }
     }
 
     public class DieuChinhTonKhoRequest
     {
-        public int SoLuongMoi { get; set; }
+        public decimal SoLuongMoi { get; set; }
         public string? GhiChu { get; set; }
     }
 }

@@ -130,8 +130,8 @@
                         🔄 Mua lại đơn này
                     </button>
                 </form>
-                <a class="btn secondary small" asp-controller="PhanHoi" asp-action="Index">
-                    ⭐ Đánh giá món
+                <a class="btn secondary small" asp-controller="PhanHoi" asp-action="Index" asp-route-maDonHang="@order.MaDonHang" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
+                    ⭐ Đánh giá đơn hàng
                 </a>
             }
             else if (order.TrangThaiLoc == "cancel")

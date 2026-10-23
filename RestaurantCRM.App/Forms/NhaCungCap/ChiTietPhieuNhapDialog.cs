@@ -14,6 +14,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 lblGhiChu.Text = $"Ghi chú: {phieuNhap.GhiChu ?? "Không có"}";
                 lblTongTien.Text = $"TỔNG GIÁ TRỊ: {(phieuNhap.TongTien.HasValue ? phieuNhap.TongTien.Value.ToString("N0") : "0")} VNĐ";
 
+                dgvChiTiet.AutoGenerateColumns = false;
                 dgvChiTiet.DataSource = phieuNhap.ChiTietPhieuNhaps;
             }
         }

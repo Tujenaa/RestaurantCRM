@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
@@ -10,11 +10,11 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class HoaDonController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public HoaDonController(RestaurantCrmContext context)
+        public HoaDonController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // POST: api/HoaDon - Tạo đơn hàng mới
@@ -26,10 +26,10 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Đơn hàng phải có ít nhất 1 món.");
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _service.BeginTransactionAsync();
             try
             {
-                var maHoaDon = await Helpers.CodeGenerator.GenerateMaHoaDonAsync(_context);
+                var maHoaDon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaHoaDonAsync(_service);
 
                 var isOnline = string.Equals(request.PhuongThucThanhToan, "online", StringComparison.OrdinalIgnoreCase)
                             || string.Equals(request.PhuongThucThanhToan, "transfer", StringComparison.OrdinalIgnoreCase);
@@ -37,7 +37,7 @@ namespace RestaurantCRM.API.Controllers
                 string? resolvedMaNhanVien = null;
                 if (!string.IsNullOrEmpty(request.MaNhanVien))
                 {
-                    var nv = await _context.NhanVien.FirstOrDefaultAsync(n => n.MaNhanVien == request.MaNhanVien || n.TenDangNhap == request.MaNhanVien);
+                    var nv = await _service.Query<NhanVien>().FirstOrDefaultAsync(n => n.MaNhanVien == request.MaNhanVien || n.TenDangNhap == request.MaNhanVien);
                     resolvedMaNhanVien = nv != null ? nv.MaNhanVien : request.MaNhanVien;
                 }
 
@@ -58,36 +58,83 @@ namespace RestaurantCRM.API.Controllers
                     TienGiamVoucher = 0
                 };
 
-                _context.HoaDon.Add(hoaDon);
+                _service.Add(hoaDon);
 
                 double tongTienHang = 0;
                 var today = DateOnly.FromDateTime(DateTime.Now);
 
                 // Lấy tất cả các món đang được sale hợp lệ
-                var activeDishPromos = await _context.KmTheoSp
+                var activeDishPromos = await _service.Query<KmTheoSp>()
                     .Include(c => c.MaChuongTrinhNavigation)
                     .Where(c => c.MaChuongTrinhNavigation != null
                              && (c.MaChuongTrinhNavigation.NgayBatDau == null || c.MaChuongTrinhNavigation.NgayBatDau <= today)
                              && (c.MaChuongTrinhNavigation.NgayKetThuc == null || c.MaChuongTrinhNavigation.NgayKetThuc >= today))
                     .ToListAsync();
 
+                // Bước 1: Tính toán tổng nguyên vật liệu cần tiêu thụ theo công thức BOM
+                var tongNguyenLieuCan = new Dictionary<string, decimal>();
+                var monAnCache = new Dictionary<string, MonAn>();
+
                 foreach (var item in request.Items)
                 {
-                    var monAn = await _context.MonAn.FindAsync(item.MaMon);
-                    if (monAn != null && monAn.DonGia.HasValue)
+                    var monAn = await _service.Query<MonAn>()
+                        .Include(m => m.DinhLuong)
+                            .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                        .FirstOrDefaultAsync(m => m.MaMon == item.MaMon);
+
+                    if (monAn == null)
                     {
-                        if (monAn.SoLuong == null || monAn.SoLuong < item.SoLuong)
-                        {
-                            return BadRequest($"Món ăn '{monAn.TenMon}' không đủ số lượng phục vụ (Chỉ còn: {monAn.SoLuong ?? 0}).");
-                        }
+                        return BadRequest($"Không tìm thấy món ăn với mã '{item.MaMon}'.");
+                    }
 
-                        // Trừ tồn kho món ăn
-                        monAn.SoLuong -= item.SoLuong;
-                        if (monAn.SoLuong <= 0 && monAn.TrangThai != "Discontinued")
-                        {
-                            monAn.TrangThai = "OutOfStock";
-                        }
+                    if (!monAn.DinhLuong.Any())
+                    {
+                        return BadRequest($"Món ăn '{monAn.TenMon}' chưa được thiết lập công thức định lượng, không thể đặt món.");
+                    }
 
+                    monAnCache[item.MaMon] = monAn;
+
+                    foreach (var dl in monAn.DinhLuong)
+                    {
+                        var can = (decimal)item.SoLuong * dl.SoLuongCan;
+                        if (tongNguyenLieuCan.ContainsKey(dl.MaNguyenLieu))
+                            tongNguyenLieuCan[dl.MaNguyenLieu] += can;
+                        else
+                            tongNguyenLieuCan[dl.MaNguyenLieu] = can;
+                    }
+                }
+
+                // Bước 2: Kiểm tra tồn kho nguyên liệu (sắp xếp key tăng dần để chống Deadlock)
+                var dsMaNl = tongNguyenLieuCan.Keys.OrderBy(k => k).ToList();
+                var dbNguyenLieu = await _service.Query<NguyenLieu>()
+                    .Where(nl => dsMaNl.Contains(nl.MaNguyenLieu))
+                    .ToListAsync();
+
+                foreach (var maNl in dsMaNl)
+                {
+                    var nl = dbNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == maNl);
+                    var canDung = tongNguyenLieuCan[maNl];
+                    if (nl == null || (nl.SoLuongTon ?? 0) < canDung)
+                    {
+                        string tenNl = nl?.TenNguyenLieu ?? maNl;
+                        string dvt = nl?.DonViTinh ?? "";
+                        decimal tonHienTai = nl?.SoLuongTon ?? 0;
+                        return BadRequest($"Không đủ nguyên liệu '{tenNl}' để thực hiện đơn hàng (Kho chỉ còn: {tonHienTai:N2} {dvt}, cần: {canDung:N2} {dvt}).");
+                    }
+                }
+
+                // Bước 3: Trừ tồn kho nguyên liệu
+                foreach (var maNl in dsMaNl)
+                {
+                    var nl = dbNguyenLieu.First(x => x.MaNguyenLieu == maNl);
+                    nl.SoLuongTon -= tongNguyenLieuCan[maNl];
+                }
+
+                foreach (var item in request.Items)
+                {
+                    var monAn = monAnCache[item.MaMon];
+                    if (monAn.DonGia.HasValue)
+                    {
                         double donGiaGoc = monAn.DonGia.Value;
                         double donGiaSauGiam = donGiaGoc;
                         double tienGiamMon = 0;
@@ -137,7 +184,7 @@ namespace RestaurantCRM.API.Controllers
                             ThanhTien = thanhTien
                         };
 
-                        _context.ChiTietHoaDon.Add(chiTiet);
+                        _service.Add(chiTiet);
                         tongTienHang += thanhTien;
                     }
                 }
@@ -148,7 +195,7 @@ namespace RestaurantCRM.API.Controllers
                 // Áp dụng Voucher (nếu có)
                 if (!string.IsNullOrEmpty(request.MaKmvoucher))
                 {
-                    var voucher = await _context.KmTheoVoucher
+                    var voucher = await _service.Query<KmTheoVoucher>()
                         .Include(v => v.MaChuongTrinhNavigation)
                         .FirstOrDefaultAsync(v => v.MaKmvoucher == request.MaKmvoucher || v.MaVoucher == request.MaKmvoucher);
 
@@ -194,7 +241,7 @@ namespace RestaurantCRM.API.Controllers
                         NgayThanhToan = DateTime.Now,
                         SoTien = hoaDon.TongThanhToan
                     };
-                    _context.ThanhToan.Add(thanhToan);
+                    _service.Add(thanhToan);
                 }
 
                 // Lưu lại lịch sử trạng thái
@@ -212,9 +259,9 @@ namespace RestaurantCRM.API.Controllers
                     ThoiGian = DateTime.Now,
                     GhiChu = logNote
                 };
-                _context.LichSuTrangThai.Add(lichSu);
+                _service.Add(lichSu);
 
-                await _context.SaveChangesAsync();
+                await _service.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return Ok(new { message = "Đặt hàng thành công", maHoaDon = hoaDon.MaHoaDon });
@@ -230,7 +277,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}/HuyDon")]
         public async Task<IActionResult> CancelOrder(string id, [FromQuery] string maKhachHang)
         {
-            var hoaDon = await _context.HoaDon
+            var hoaDon = await _service.Query<HoaDon>()
                 .Include(d => d.ChiTietHoaDon)
                 .FirstOrDefaultAsync(d => d.MaHoaDon == id && d.MaKhachHang == maKhachHang);
 
@@ -240,20 +287,22 @@ namespace RestaurantCRM.API.Controllers
             if (hoaDon.TrangThai != "Pending")
                 return BadRequest("Đơn hàng đã được xác nhận hoặc đang xử lý, không thể tự hủy.");
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _service.BeginTransactionAsync();
             try
             {
-                // Hoàn lại kho món ăn
+                // Hoàn lại kho nguyên vật liệu theo định lượng BOM
                 foreach (var chiTiet in hoaDon.ChiTietHoaDon)
                 {
-                    var monAn = await _context.MonAn.FindAsync(chiTiet.MaMon);
-                    if (monAn != null && monAn.SoLuong.HasValue)
+                    var dinhLuongs = await _service.Query<DinhLuong>().Where(dl => dl.MaMon == chiTiet.MaMon).ToListAsync();
+                    foreach (var dl in dinhLuongs)
                     {
-                        monAn.SoLuong += chiTiet.SoLuong;
-                        if (monAn.SoLuong > 0 && monAn.TrangThai == "OutOfStock")
-                            monAn.TrangThai = "InStock";
+                        var nl = await _service.FindAsync<NguyenLieu>(dl.MaNguyenLieu);
+                        if (nl != null)
+                        {
+                            nl.SoLuongTon = (nl.SoLuongTon ?? 0) + (decimal)(chiTiet.SoLuong ?? 0) * dl.SoLuongCan;
+                        }
                     }
-                    }
+                }
                 hoaDon.TrangThai = "Cancelled";
                 
                 var lichSu = new LichSuTrangThai
@@ -264,9 +313,9 @@ namespace RestaurantCRM.API.Controllers
                     ThoiGian = DateTime.Now,
                     GhiChu = "Khách hàng tự hủy đơn"
                 };
-                _context.LichSuTrangThai.Add(lichSu);
+                _service.Add(lichSu);
 
-                await _context.SaveChangesAsync();
+                await _service.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return Ok("Hủy đơn hàng thành công.");
@@ -282,7 +331,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("LichSu/{maKhachHang}")]
         public async Task<IActionResult> GetLichSuHoaDon(string maKhachHang)
         {
-            var hoaDons = await _context.HoaDon
+            var hoaDons = await _service.Query<HoaDon>()
                 .Where(d => d.MaKhachHang == maKhachHang)
                 .OrderByDescending(d => d.NgayDat)
                 .AsNoTracking()
@@ -303,7 +352,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetChiTietHoaDon(string id)
         {
-            var hoaDon = await _context.HoaDon
+            var hoaDon = await _service.Query<HoaDon>()
                 .Include(d => d.ChiTietHoaDon)
                     .ThenInclude(c => c.MaMonNavigation)
                 .Include(d => d.ThanhToan)

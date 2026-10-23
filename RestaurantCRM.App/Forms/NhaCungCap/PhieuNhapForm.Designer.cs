@@ -11,6 +11,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         private System.Windows.Forms.DataGridView dgvPhieuNhap;
         private System.Windows.Forms.DataGridViewTextBoxColumn colMaPhieu;
         private System.Windows.Forms.DataGridViewTextBoxColumn colNhaCungCap;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colMaNhanVien;
         private System.Windows.Forms.DataGridViewTextBoxColumn colNhanVien;
         private System.Windows.Forms.DataGridViewTextBoxColumn colNgayNhap;
         private System.Windows.Forms.DataGridViewTextBoxColumn colTongTien;
@@ -36,6 +37,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.dgvPhieuNhap = new System.Windows.Forms.DataGridView();
             this.colMaPhieu = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colNhaCungCap = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colMaNhanVien = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colNhanVien = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colNgayNhap = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colTongTien = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -127,15 +129,19 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.dgvPhieuNhap.AllowUserToAddRows = false;
             this.dgvPhieuNhap.AllowUserToDeleteRows = false;
+            this.dgvPhieuNhap.AllowUserToResizeColumns = true;
             this.dgvPhieuNhap.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.dgvPhieuNhap.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dgvPhieuNhap.AutoGenerateColumns = false;
+            this.dgvPhieuNhap.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.None;
+            this.dgvPhieuNhap.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.dgvPhieuNhap.BackgroundColor = System.Drawing.Color.White;
             this.dgvPhieuNhap.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvPhieuNhap.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.colMaPhieu,
             this.colNhaCungCap,
+            this.colMaNhanVien,
             this.colNhanVien,
             this.colNgayNhap,
             this.colTongTien,
@@ -153,27 +159,36 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // colMaPhieu
             // 
             this.colMaPhieu.DataPropertyName = "MaPhieuNhap";
-            this.colMaPhieu.FillWeight = 65F;
             this.colMaPhieu.HeaderText = "Mã Phiếu";
-            this.colMaPhieu.MinimumWidth = 85;
+            this.colMaPhieu.Width = 110;
+            this.colMaPhieu.MinimumWidth = 90;
             this.colMaPhieu.Name = "colMaPhieu";
             this.colMaPhieu.ReadOnly = true;
             // 
             // colNhaCungCap
             // 
             this.colNhaCungCap.DataPropertyName = "TenNhaCungCap";
-            this.colNhaCungCap.FillWeight = 120F;
             this.colNhaCungCap.HeaderText = "Nhà Cung Cấp";
-            this.colNhaCungCap.MinimumWidth = 140;
+            this.colNhaCungCap.Width = 240;
+            this.colNhaCungCap.MinimumWidth = 170;
             this.colNhaCungCap.Name = "colNhaCungCap";
             this.colNhaCungCap.ReadOnly = true;
+            // 
+            // colMaNhanVien
+            // 
+            this.colMaNhanVien.DataPropertyName = "MaNhanVien";
+            this.colMaNhanVien.HeaderText = "Mã NV";
+            this.colMaNhanVien.Width = 100;
+            this.colMaNhanVien.MinimumWidth = 80;
+            this.colMaNhanVien.Name = "colMaNhanVien";
+            this.colMaNhanVien.ReadOnly = true;
             // 
             // colNhanVien
             // 
             this.colNhanVien.DataPropertyName = "TenNhanVien";
-            this.colNhanVien.FillWeight = 80F;
-            this.colNhanVien.HeaderText = "Nhân Viên";
-            this.colNhanVien.MinimumWidth = 90;
+            this.colNhanVien.HeaderText = "Tên Nhân Viên";
+            this.colNhanVien.Width = 180;
+            this.colNhanVien.MinimumWidth = 140;
             this.colNhanVien.Name = "colNhanVien";
             this.colNhanVien.ReadOnly = true;
             // 
@@ -182,9 +197,9 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.colNgayNhap.DataPropertyName = "NgayNhap";
             dataGridViewCellStyle1.Format = "dd/MM/yyyy HH:mm";
             this.colNgayNhap.DefaultCellStyle = dataGridViewCellStyle1;
-            this.colNgayNhap.FillWeight = 85F;
             this.colNgayNhap.HeaderText = "Ngày Nhập";
-            this.colNgayNhap.MinimumWidth = 110;
+            this.colNgayNhap.Width = 160;
+            this.colNgayNhap.MinimumWidth = 130;
             this.colNgayNhap.Name = "colNgayNhap";
             this.colNgayNhap.ReadOnly = true;
             // 
@@ -195,18 +210,18 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             dataGridViewCellStyle2.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             dataGridViewCellStyle2.Format = "N0";
             this.colTongTien.DefaultCellStyle = dataGridViewCellStyle2;
-            this.colTongTien.FillWeight = 75F;
             this.colTongTien.HeaderText = "Tổng Tiền (đ)";
-            this.colTongTien.MinimumWidth = 95;
+            this.colTongTien.Width = 150;
+            this.colTongTien.MinimumWidth = 120;
             this.colTongTien.Name = "colTongTien";
             this.colTongTien.ReadOnly = true;
             // 
             // colGhiChu
             // 
             this.colGhiChu.DataPropertyName = "GhiChu";
-            this.colGhiChu.FillWeight = 90F;
             this.colGhiChu.HeaderText = "Ghi Chú";
-            this.colGhiChu.MinimumWidth = 100;
+            this.colGhiChu.Width = 280;
+            this.colGhiChu.MinimumWidth = 180;
             this.colGhiChu.Name = "colGhiChu";
             this.colGhiChu.ReadOnly = true;
             // 

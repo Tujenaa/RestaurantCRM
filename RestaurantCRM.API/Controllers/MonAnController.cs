@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantCRM.API.Data;
-using RestaurantCRM.API.Models;
+
+using RestaurantCRM.BusinessLogic.Models;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -9,20 +9,22 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class MonAnController : ControllerBase
     {
-        private readonly RestaurantCrmContext _context;
+        private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
-        public MonAnController(RestaurantCrmContext context)
+        public MonAnController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/MonAn - Lấy danh sách món ăn (hỗ trợ tìm kiếm theo tên và lọc theo loại món)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetMonAns([FromQuery] string? search = null, [FromQuery] string? maLoai = null, [FromQuery] string? sort = null)
         {
-            var query = _context.MonAn
+            var query = _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock"))
                 .AsNoTracking();
 
@@ -42,8 +44,23 @@ namespace RestaurantCRM.API.Controllers
                 if (activeKm != null) {
                     giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
                 }
+
+                int soSuatKhaDung = 0;
+                if (m.DinhLuong != null && m.DinhLuong.Any())
+                {
+                    soSuatKhaDung = (int)m.DinhLuong.Min(dl =>
+                    {
+                        var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                        if (dl.SoLuongCan <= 0) return 0;
+                        return Math.Floor(ton / dl.SoLuongCan);
+                    });
+                    if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+                }
+
                 return new {
-                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
+                    SoLuong = soSuatKhaDung,
+                    m.TrangThai,
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
             }).ToList();
@@ -70,9 +87,11 @@ namespace RestaurantCRM.API.Controllers
         {
             var now = DateTime.Now;
             var today = DateOnly.FromDateTime(now);
-            var list = await _context.MonAn
+            var list = await _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock")))
                 .AsNoTracking()
                 .ToListAsync();
@@ -84,8 +103,23 @@ namespace RestaurantCRM.API.Controllers
                 if (activeKm != null) {
                     giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
                 }
+
+                int soSuatKhaDung = 0;
+                if (m.DinhLuong != null && m.DinhLuong.Any())
+                {
+                    soSuatKhaDung = (int)m.DinhLuong.Min(dl =>
+                    {
+                        var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                        if (dl.SoLuongCan <= 0) return 0;
+                        return Math.Floor(ton / dl.SoLuongCan);
+                    });
+                    if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+                }
+
                 return new {
-                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia, m.SoLuong, m.TrangThai,
+                    m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
+                    SoLuong = soSuatKhaDung,
+                    m.TrangThai,
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
             }));
@@ -97,9 +131,11 @@ namespace RestaurantCRM.API.Controllers
         {
             var now = DateTime.Now;
             var today = DateOnly.FromDateTime(now);
-            var monAn = await _context.MonAn
+            var monAn = await _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)
@@ -114,8 +150,22 @@ namespace RestaurantCRM.API.Controllers
                 giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
             }
 
+            int soSuatKhaDung = 0;
+            if (monAn.DinhLuong != null && monAn.DinhLuong.Any())
+            {
+                soSuatKhaDung = (int)monAn.DinhLuong.Min(dl =>
+                {
+                    var ton = dl.MaNguyenLieuNavigation?.SoLuongTon ?? 0;
+                    if (dl.SoLuongCan <= 0) return 0;
+                    return Math.Floor(ton / dl.SoLuongCan);
+                });
+                if (soSuatKhaDung < 0) soSuatKhaDung = 0;
+            }
+
             return Ok(new {
-                monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia, monAn.SoLuong, monAn.TrangThai,
+                monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia,
+                SoLuong = soSuatKhaDung,
+                monAn.TrangThai,
                 DonGiaSauGiam = Math.Max(0, giaSauGiam)
             });
         }
@@ -124,7 +174,7 @@ namespace RestaurantCRM.API.Controllers
 
         private bool MonAnExists(string id)
         {
-            return _context.MonAn.Any(e => e.MaMon == id);
+            return _service.Query<MonAn>().Any(e => e.MaMon == id);
         }
 
         private static string RemoveDiacritics(string text)

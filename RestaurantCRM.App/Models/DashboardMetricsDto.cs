@@ -15,7 +15,7 @@ namespace RestaurantCRM.AdminApp.Models {
         // Phân hệ CRM
         public int TongKhachHang { get; set; }
         public double DiemDanhGiaTb { get; set; }
-        public int PhanHoiChuaXuLy { get; set; }
+        public int TongDanhGia { get; set; }
         public int KhaoSatDangMo { get; set; }
     }
 }

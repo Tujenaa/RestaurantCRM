@@ -87,7 +87,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.lblTieuDe.Name = "lblTieuDe";
             this.lblTieuDe.Size = new System.Drawing.Size(370, 30);
             this.lblTieuDe.TabIndex = 0;
-            this.lblTieuDe.Text = "🍽️ Quản Lý Món Ăn && Thực Đơn";
+            this.lblTieuDe.Text = "🍽️ Quản Lý Món Ăn và Thực Đơn";
             // 
             // lblPhuDe
             // 
@@ -260,8 +260,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             // 
             this.dgvMonAn.AllowUserToAddRows = false;
             this.dgvMonAn.AllowUserToDeleteRows = false;
+            this.dgvMonAn.AllowUserToResizeColumns = true;
             this.dgvMonAn.AllowUserToResizeRows = false;
-            this.dgvMonAn.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dgvMonAn.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.None;
+            this.dgvMonAn.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.dgvMonAn.BackgroundColor = System.Drawing.Color.White;
             this.dgvMonAn.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.dgvMonAn.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.SingleHorizontal;

@@ -44,7 +44,13 @@
                     </div>
                     <div style="text-align: right; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
                         <span class="price" style="font-size: 16px;">@((item.DonGiaSauGiam > 0 ? item.DonGiaSauGiam * item.SoLuong : item.DonGiaGoc * item.SoLuong).ToString("N0"))đ</span>
-                        <a href="/Menu/ChiTiet/@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px;">Chi tiết món →</a>
+                        <div style="display:flex; gap:6px;">
+                            @if (Model.TrangThaiLoc == "done")
+                            {
+                                <a href="/PhanHoi?maDonHang=@Model.MaDonHang&maMon=@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px; background:#fff7ed; border-color:#fed7aa; color:#c2410c;">⭐ Đánh giá món</a>
+                            }
+                            <a href="/Menu/ChiTiet/@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px;">Chi tiết món →</a>
+                        </div>
                     </div>
                 </div>
             }
@@ -78,7 +84,7 @@
             </div>
         }
 
-        <div style="margin-top: 24px; display:flex; gap:12px;">
+        <div style="margin-top: 24px; display:flex; gap:12px; flex-wrap:wrap;">
             @if (Model.CanCancel)
             {
                 <form asp-action="HuyDon" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?');">
@@ -97,6 +103,13 @@
                     🔄 Đặt lại các món này
                 </button>
             </form>
+
+            @if (Model.TrangThaiLoc == "done")
+            {
+                <a asp-controller="PhanHoi" asp-action="Index" asp-route-maDonHang="@Model.MaDonHang" class="btn secondary" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
+                    ⭐ Đánh giá đơn hàng này
+                </a>
+            }
         </div>
     </section>
 

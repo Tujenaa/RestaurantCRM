@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace RestaurantCRM.API.DTOs
 {
     public class PhieuNhapCreateRequest
@@ -10,8 +12,15 @@ namespace RestaurantCRM.API.DTOs
 
     public class ChiTietPhieuNhapRequest
     {
-        public string MaMon { get; set; } = null!;
-        public int SoLuong { get; set; }
+        // Nhập hàng theo nguyên liệu
+        public string? MaNguyenLieu { get; set; }
+
+        // Hỗ trợ fallback nếu client cũ gửi MaMon
+        public string? MaMon { get; set; }
+
+        public string TargetMaNguyenLieu => !string.IsNullOrWhiteSpace(MaNguyenLieu) ? MaNguyenLieu : (MaMon ?? "");
+
+        public decimal SoLuong { get; set; }
         public double DonGiaNhap { get; set; }
     }
 }
