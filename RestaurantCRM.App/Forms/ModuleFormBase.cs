@@ -25,140 +25,186 @@ namespace RestaurantCRM.AdminApp.Forms
     {
         private readonly DataTable _table = new DataTable();
         private readonly UcDataGridView _grid = new UcDataGridView();
-        private readonly ComboBox _filterColumn = new ComboBox();
         private readonly TextBox _filterValue = new TextBox();
+        private int _filterColIndex = 0;   // 0 = tất cả cột, i = cột thứ i-1
+        private readonly string[] _columns;
         private int _sortColumn = -1;
         private bool _sortAscending = true;
         private readonly ModuleField[] _fields;
         private readonly Color _accent;
         private readonly string _moduleTitle;
+        private Label _countLabel;
 
         public ModuleFormBase(string title, string description, string[] columns, ModuleField[] fields, string[][] rows, Color accent)
         {
-            _moduleTitle = title; _fields = fields; _accent = accent;
+            _moduleTitle = title; _fields = fields; _accent = ThemeManager.Primary; _columns = columns;
             Text = title + " | RestaurantCRM";
             StartPosition = FormStartPosition.CenterParent;
 
-            Size = new Size(960, 640);
+            Size = new Size(1060, 680);
+            MinimumSize = new Size(820, 520);
             BackColor = ThemeManager.Bg;
             Font = new Font("Segoe UI", 9.5F);
 
             for (int i = 0; i < columns.Length; i++) _table.Columns.Add("C" + i, typeof(string));
             foreach (string[] row in rows) _table.Rows.Add((object[])row);
 
-            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), BackColor = ThemeManager.Bg };
+            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(22, 20, 22, 18), BackColor = ThemeManager.Bg };
             Controls.Add(content);
-            var intro = new Panel { Dock = DockStyle.Top, Height = 78, BackColor = ThemeManager.Bg };
-            var panel = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Paper, Padding = new Padding(0) };
-            content.Controls.Add(panel);
-            content.Controls.Add(intro);
-            var titleLabel = new Label { Text = title, Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = ThemeManager.Ink, AutoSize = true, Location = new Point(0, 0) };
-            var descLabel = new Label { Text = description, Font = new Font("Segoe UI", 9.5F), ForeColor = ThemeManager.Muted, AutoSize = true, Location = new Point(2, 39) };
+
+            // ── Tiêu đề trang + nút tròn "+" ─────────────────────────────
+            var intro = new Panel { Dock = DockStyle.Top, Height = 74, BackColor = ThemeManager.Bg };
+            var titleLabel = new Label { Text = title, Font = new Font("Segoe UI", 17F, FontStyle.Bold), ForeColor = ThemeManager.Ink, AutoSize = true, Location = new Point(6, 2), BackColor = Color.Transparent, UseMnemonic = false };
+            var descLabel = new Label { Text = description, Font = new Font("Segoe UI", 9F), ForeColor = ThemeManager.Muted, AutoSize = true, Location = new Point(9, 40), BackColor = Color.Transparent, UseMnemonic = false };
             intro.Controls.Add(titleLabel); intro.Controls.Add(descLabel);
 
-            panel.Paint += (s, e) => { using (var pen = new Pen(ThemeManager.Line)) e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1); };
-
-            // Toolbar - premium tonal design
-            var toolbar = new Panel
+            // Nút chính "+ Thêm mới" (cùng kiểu với các màn danh sách khác)
+            var btnAdd = new Button { Text = "+ Thêm mới", Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            ButtonSkin.SetKind(btnAdd, ButtonSkin.Kind.Primary);
+            PageKit.FitButton(btnAdd, 120);
+            btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            Action placeIntro = () =>
             {
-                Dock = DockStyle.Top,
-                Height = 56,
-                BackColor = ThemeManager.Paper
+                bool embedded = !TopLevel;   // khi mở trong cửa sổ chính, tiêu đề đã nằm trên header
+                titleLabel.Visible = !embedded;
+                content.Padding = new Padding(22, embedded ? 6 : 20, 22, 18);
+                descLabel.Location = new Point(9, embedded ? 16 : 40);
+                intro.Height = embedded ? 54 : 74;
+                btnAdd.Location = new Point(intro.Width - btnAdd.Width - 10, embedded ? 4 : 16);
             };
-            toolbar.Paint += (s, e) => {
-                using (var pen = new Pen(ThemeManager.Line, 1))
-                    e.Graphics.DrawLine(pen, 0, toolbar.Height - 1, toolbar.Width, toolbar.Height - 1);
-                // top accent gradient strip
-                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                    new Rectangle(0, 0, toolbar.Width, 3),
-                    _accent, ThemeManager.Violet,
-                    System.Drawing.Drawing2D.LinearGradientMode.Horizontal))
-                    e.Graphics.FillRectangle(brush, 0, 0, toolbar.Width, 3);
-            };
-            panel.Controls.Add(toolbar);
-
-            // Chiều cao chuẩn cho tất cả controls trong toolbar
-            const int ctrlH = 32;
-            int ctrlY = (56 - ctrlH) / 2; // căn giữa dọc trong toolbar 56px
-
-            // Bên phải: Thêm mới / Sửa / Xóa
-            var btnAdd = MakeButton("＋ Thêm mới", true);
-            btnAdd.Size = new Size(112, ctrlH);
+            intro.Resize += (s, e) => placeIntro();
+            btnAdd.SizeChanged += (s, e) => placeIntro();
+            ParentChanged += (s, e) => placeIntro();
+            placeIntro();
             btnAdd.Click += (s, e) => OnAdd();
+            intro.Controls.Add(btnAdd);
 
-            var btnEdit = MakeButton("✏  Sửa", false);
-            btnEdit.Size = new Size(90, ctrlH);
-            btnEdit.Click += (s, e) => OnEdit();
-
-            var btnDelete = MakeButton("🗑  Xóa", false);
-            btnDelete.Size = new Size(90, ctrlH);
-            btnDelete.ForeColor = ThemeManager.Red;
-            btnDelete.FlatAppearance.BorderColor = Color.FromArgb(220, ThemeManager.Red);
-            btnDelete.Click += (s, e) => OnDelete();
-
-            // Đặt tay để căn giữa dọc chính xác
-            int rx = 0;
-            toolbar.SizeChanged += (s, e) => {
-                // Thêm mới (ngoài cùng phải)
-                btnAdd.Location = new Point(toolbar.Width - 14 - btnAdd.Width, ctrlY);
-                btnEdit.Location = new Point(btnAdd.Left - 8 - btnEdit.Width, ctrlY);
-                btnDelete.Location = new Point(btnEdit.Left - 8 - btnDelete.Width, ctrlY);
+            // ── Thẻ trắng chứa bảng ──────────────────────────────────────
+            var card = new RoundedPanel
+            {
+                Dock = DockStyle.Fill,
+                Radius = 14,
+                Shadow = 8,
+                FillColor = ThemeManager.Paper,
+                BorderColor = Color.FromArgb(120, ThemeManager.Line),
+                Padding = new Padding(8 + 18, 4 + 6, 8 + 18, 16 + 8)
             };
-            toolbar.Controls.Add(btnDelete);
-            toolbar.Controls.Add(btnEdit);
-            toolbar.Controls.Add(btnAdd);
+            content.Controls.Add(card);
+            content.Controls.Add(intro);
 
-            // Bên trái: ComboBox cột + TextBox tìm + nút Tìm + nút Bỏ lọc
-            // ComboBox: OwnerDrawFixed để ép chiều cao bằng ctrlH
-            _filterColumn.DropDownStyle = ComboBoxStyle.DropDownList;
-            _filterColumn.DrawMode = DrawMode.OwnerDrawFixed;
-            _filterColumn.ItemHeight = ctrlH - 2;
-            _filterColumn.Width = 130;
-            _filterColumn.Font = Font;
-            _filterColumn.Items.Add("Tất cả cột");
-            foreach (string column in columns) _filterColumn.Items.Add(column);
-            _filterColumn.SelectedIndex = 0;
-            _filterColumn.DrawItem += (s, e) => {
-                if (e.Index < 0) return;
-                e.DrawBackground();
-                string txt = _filterColumn.Items[e.Index].ToString();
-                using (var br = new SolidBrush(e.State.HasFlag(DrawItemState.Selected) ? SystemColors.HighlightText : ThemeManager.Ink))
-                    e.Graphics.DrawString(txt, e.Font ?? Font, br,
-                        e.Bounds.X + 6, e.Bounds.Y + (e.Bounds.Height - Font.Height) / 2);
-                e.DrawFocusRectangle();
+            // Thanh công cụ
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = ThemeManager.Paper };
+            card.Controls.Add(toolbar);
+
+            const int ctrlH = 36;
+            int ctrlY = (toolbar.Height - ctrlH) / 2;
+
+            // Ô tìm kiếm dạng pill
+            var search = new Panel { Location = new Point(0, ctrlY), Size = new Size(300, ctrlH), BackColor = ThemeManager.Paper };
+            bool focused = false;
+            search.Paint += (s, e) =>
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rc = new Rectangle(0, 0, search.Width - 1, search.Height - 1);
+                using (var path = ThemeManager.RoundedRect(rc, ctrlH / 2))
+                {
+                    using (var br = new SolidBrush(ThemeManager.Surface2)) g.FillPath(br, path);
+                    using (var pen = new Pen(focused ? ThemeManager.Primary : ThemeManager.Line, focused ? 1.5f : 1f)) g.DrawPath(pen, path);
+                }
+                using (var f = ThemeManager.Icon(9F))
+                    TextRenderer.DrawText(g, ThemeManager.Glyph.Search, f, new Rectangle(12, 0, 20, search.Height),
+                        focused ? ThemeManager.Primary : ThemeManager.Muted, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
             };
-            _filterColumn.Location = new Point(14, ctrlY);
+            _filterValue.BorderStyle = BorderStyle.None;
+            _filterValue.BackColor = ThemeManager.Surface2;
+            _filterValue.ForeColor = ThemeManager.Ink;
+            _filterValue.Font = new Font("Segoe UI", 9.5F);
+            _filterValue.Location = new Point(40, (ctrlH - _filterValue.PreferredHeight) / 2 + 1);
+            _filterValue.Width = search.Width - 40 - 34;
+            UiStyler.SetPlaceholder(_filterValue, "Tìm kiếm...");
+            _filterValue.Enter += (s, e) => { focused = true; search.Invalidate(); };
+            _filterValue.Leave += (s, e) => { focused = false; search.Invalidate(); };
+            search.Click += (s, e) => _filterValue.Focus();
 
-            // TextBox: Multiline=true để ép Height
-            _filterValue.Multiline = true;
-            _filterValue.Width = 200;
-            _filterValue.Height = ctrlH;
-            _filterValue.Font = Font;
-            _filterValue.BorderStyle = BorderStyle.FixedSingle;
-            _filterValue.Location = new Point(_filterColumn.Right + 8, ctrlY);
+            var clearBtn = new Label
+            {
+                Text = ThemeManager.Glyph.Clear,
+                Font = ThemeManager.Icon(7.5F),
+                ForeColor = ThemeManager.Muted,
+                BackColor = ThemeManager.Surface2,
+                Size = new Size(20, 20),
+                Location = new Point(search.Width - 30, (ctrlH - 20) / 2),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Cursor = Cursors.Hand,
+                Visible = false
+            };
+            clearBtn.Click += (s, e) => { _filterValue.Clear(); _filterValue.Focus(); };
+            _filterValue.TextChanged += (s, e) => { clearBtn.Visible = _filterValue.TextLength > 0; ApplyAdvancedFilter(); };
             _filterValue.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ApplyAdvancedFilter(); } };
+            search.Controls.Add(_filterValue);
+            search.Controls.Add(clearBtn);
+            toolbar.Controls.Add(search);
 
-            var applyFilter = MakeButton("🔍  Tìm", false);
-            applyFilter.Size = new Size(90, ctrlH);
-            applyFilter.Location = new Point(_filterValue.Right + 8, ctrlY);
-            applyFilter.Click += (s, e) => ApplyAdvancedFilter();
+            // Chip chọn cột lọc
+            var chip = new ChipButton { Location = new Point(search.Right + 10, ctrlY), Height = ctrlH };
+            chip.SetLabel("Tất cả cột", false);
+            var colMenu = new ContextMenuStrip { ShowImageMargin = false, Font = new Font("Segoe UI", 9.5F), BackColor = Color.White };
+            Action rebuildMenu = null;
+            rebuildMenu = () =>
+            {
+                colMenu.Items.Clear();
+                for (int i = 0; i <= _columns.Length; i++)
+                {
+                    int idx = i;
+                    string name = i == 0 ? "Tất cả cột" : _columns[i - 1];
+                    var it = new ToolStripMenuItem((idx == _filterColIndex ? "✓  " : "     ") + name)
+                    { ForeColor = idx == _filterColIndex ? ThemeManager.Primary : ThemeManager.Ink2 };
+                    it.Click += (s, e) =>
+                    {
+                        _filterColIndex = idx;
+                        chip.SetLabel(name, idx != 0);
+                        rebuildMenu();
+                        ApplyAdvancedFilter();
+                    };
+                    colMenu.Items.Add(it);
+                }
+            };
+            rebuildMenu();
+            chip.Click += (s, e) =>
+            {
+                if (chip.InClearZone)
+                {
+                    _filterColIndex = 0; chip.SetLabel("Tất cả cột", false); rebuildMenu(); ApplyAdvancedFilter();
+                    return;
+                }
+                colMenu.Show(chip, new Point(0, chip.Height + 4));
+            };
+            toolbar.Controls.Add(chip);
 
-            var clearFilter = MakeButton("✕ Bỏ lọc", false);
-            clearFilter.Size = new Size(90, ctrlH);
-            clearFilter.Location = new Point(applyFilter.Right + 8, ctrlY);
-            clearFilter.Click += (s, e) => { _filterValue.Clear(); _filterColumn.SelectedIndex = 0; ApplyAdvancedFilter(); };
+            // Nút Sửa / Xóa dạng "ghost" bên phải
+            var btnDelete = new GhostButton("Xóa", ThemeManager.Glyph.Delete, true) { Size = new Size(84, ctrlH) };
+            var btnEdit = new GhostButton("Sửa", ThemeManager.Glyph.Edit, false) { Size = new Size(84, ctrlH) };
+            btnEdit.Click += (s, e) => OnEdit();
+            btnDelete.Click += (s, e) => OnDelete();
+            Action placeRight = () =>
+            {
+                btnDelete.Location = new Point(toolbar.Width - btnDelete.Width, ctrlY);
+                btnEdit.Location = new Point(btnDelete.Left - 8 - btnEdit.Width, ctrlY);
+            };
+            toolbar.Resize += (s, e) => placeRight();
+            toolbar.Controls.Add(btnEdit);
+            toolbar.Controls.Add(btnDelete);
+            placeRight();
 
-            toolbar.Controls.Add(_filterColumn);
-            toolbar.Controls.Add(_filterValue);
-            toolbar.Controls.Add(applyFilter);
-            toolbar.Controls.Add(clearFilter);
+            // Chân thẻ: số bản ghi
+            var footer = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = ThemeManager.Paper };
+            _countLabel = new Label { AutoSize = true, Location = new Point(2, 16), Font = new Font("Segoe UI", 8.5F), ForeColor = ThemeManager.Muted, BackColor = Color.Transparent };
+            footer.Controls.Add(_countLabel);
+            footer.Paint += (s, e) => { using (var pen = new Pen(ThemeManager.Line)) e.Graphics.DrawLine(pen, 0, 0, footer.Width, 0); };
+            card.Controls.Add(footer);
 
-            // Kích hoạt lần đầu để đặt vị trí nút bên phải
-            toolbar.PerformLayout();
-            btnAdd.Location = new Point(toolbar.Width - 14 - btnAdd.Width, ctrlY);
-            btnEdit.Location = new Point(btnAdd.Left - 8 - btnEdit.Width, ctrlY);
-            btnDelete.Location = new Point(btnEdit.Left - 8 - btnDelete.Width, ctrlY);
-
+            // Bảng
             _grid.Dock = DockStyle.Fill;
             _grid.AutoGenerateColumns = false;
             for (int i = 0; i < columns.Length; i++)
@@ -168,16 +214,34 @@ namespace RestaurantCRM.AdminApp.Forms
             }
             _grid.DataSource = _table;
             for (int i = 0; i < columns.Length; i++) _grid.Columns[i].DataPropertyName = "C" + i;
-            _grid.DataBindingComplete += (s, e) => { foreach (DataGridViewColumn c in _grid.Columns) c.SortMode = DataGridViewColumnSortMode.Programmatic; };
+            if (_grid.Columns.Count > 0)
+            {
+                // Cột mã hiển thị như liên kết xanh (giống "#02313" trong mẫu)
+                var idStyle = _grid.Columns[0].DefaultCellStyle;
+                idStyle.ForeColor = ThemeManager.Primary;
+                idStyle.SelectionForeColor = ThemeManager.Primary;
+                idStyle.Font = new Font("Segoe UI", 9F);
+                _grid.Columns[0].FillWeight = 70;
+            }
+            _grid.DataBindingComplete += (s, e) => { foreach (DataGridViewColumn c in _grid.Columns) c.SortMode = DataGridViewColumnSortMode.Programmatic; UpdateCount(); };
             _grid.ColumnHeaderMouseClick += (s, e) => SortByColumn(e.ColumnIndex);
-            _grid.CellFormatting += (s, e) => {
+            _grid.ScrollBars = ScrollBars.Vertical;
+            _grid.CellFormatting += (s, e) =>
+            {
+                if (e.ColumnIndex == 0 && e.RowIndex >= 0)
+                {
+                    // ghi đè màu dòng xen kẽ để cột mã luôn xanh
+                    e.CellStyle.ForeColor = ThemeManager.Primary;
+                    e.CellStyle.SelectionForeColor = ThemeManager.Primary;
+                }
                 if (e.ColumnIndex >= 0 && e.ColumnIndex < _fields.Length && _fields[e.ColumnIndex].IsImage && e.Value != null)
                 {
                     string path = e.Value.ToString();
                     if (!string.IsNullOrEmpty(path)) { try { e.Value = Image.FromFile(path); } catch { e.Value = null; } } else e.Value = null;
                 }
             };
-            _grid.CellDoubleClick += (s, e) => {
+            _grid.CellDoubleClick += (s, e) =>
+            {
                 if (e.RowIndex >= 0)
                 {
                     string id = GetSelectedId();
@@ -185,8 +249,136 @@ namespace RestaurantCRM.AdminApp.Forms
                     OnRowDoubleClick(id, row);
                 }
             };
-            panel.Controls.Add(_grid);
+            _table.DefaultView.ListChanged += (s, e) => UpdateCount();
+            UiStyler.StyleGrid(_grid);
+            card.Controls.Add(_grid);
             _grid.BringToFront();
+            UpdateCount();
+        }
+
+        private void UpdateCount()
+        {
+            if (_countLabel == null) return;
+            int shown = _table.DefaultView.Count, total = _table.Rows.Count;
+            _countLabel.Text = shown == total
+                ? "Hiển thị " + total.ToString("N0") + " bản ghi"
+                : "Hiển thị " + shown.ToString("N0") + " / " + total.ToString("N0") + " bản ghi";
+        }
+
+        // ─────────────── Các control tự vẽ của thanh công cụ ───────────────
+
+        /// <summary>Nút tròn xanh "+" (giống nút nổi trong mẫu).</summary>
+        private class RoundAddButton : Control
+        {
+            private bool _hover;
+            public RoundAddButton()
+            {
+                Cursor = Cursors.Hand;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+                BackColor = Color.Transparent;
+            }
+            protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                int d = Math.Min(Width, Height) - 6;
+                var rc = new Rectangle((Width - d) / 2, 1, d, d);
+                using (var br = new SolidBrush(Color.FromArgb(40, ThemeManager.Primary))) g.FillEllipse(br, rc.X - 1, rc.Y + 3, rc.Width + 2, rc.Height + 2);
+                using (var br = new SolidBrush(_hover ? ThemeManager.PrimaryDark : ThemeManager.Primary)) g.FillEllipse(br, rc);
+                using (var f = ThemeManager.Icon(11F))
+                    TextRenderer.DrawText(g, ThemeManager.Glyph.Add, f, rc, Color.White,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            }
+        }
+
+        /// <summary>Chip lọc theo cột: trắng viền mảnh; khi đang lọc thì nền xanh nhạt + dấu ✕.</summary>
+        private class ChipButton : Control
+        {
+            private string _label = "";
+            private bool _active, _hover;
+            private Point _mouse;
+            public bool InClearZone { get { return _active && _mouse.X > Width - 30; } }
+            public ChipButton()
+            {
+                Cursor = Cursors.Hand;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+                BackColor = ThemeManager.Paper;
+            }
+            public void SetLabel(string label, bool active)
+            {
+                _label = label; _active = active;
+                using (var f = new Font("Segoe UI", 8.5F, FontStyle.Bold))
+                    Width = TextRenderer.MeasureText(_label, f).Width + 70;
+                Invalidate();
+            }
+            protected override void OnMouseMove(MouseEventArgs e) { _mouse = e.Location; base.OnMouseMove(e); }
+            protected override void OnMouseDown(MouseEventArgs e) { _mouse = e.Location; base.OnMouseDown(e); }
+            protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.Clear(ThemeManager.Paper);
+                var rc = new Rectangle(0, 0, Width - 1, Height - 1);
+                using (var path = ThemeManager.RoundedRect(rc, Height / 2))
+                {
+                    using (var br = new SolidBrush(_active ? ThemeManager.PrimarySoft : (_hover ? ThemeManager.Surface2 : ThemeManager.Paper))) g.FillPath(br, path);
+                    using (var pen = new Pen(_active ? Color.FromArgb(90, ThemeManager.Primary) : ThemeManager.Line)) g.DrawPath(pen, path);
+                }
+                Color c = _active ? ThemeManager.Primary : ThemeManager.Ink2;
+                using (var f = ThemeManager.Icon(8.5F))
+                    TextRenderer.DrawText(g, ThemeManager.Glyph.Filter, f, new Rectangle(12, 0, 18, Height), c,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                using (var f = new Font("Segoe UI", 8.5F, FontStyle.Bold))
+                    TextRenderer.DrawText(g, _label, f, new Rectangle(36, 0, Width - 66, Height), c,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                using (var f = ThemeManager.Icon(7F))
+                    TextRenderer.DrawText(g, _active ? ThemeManager.Glyph.Clear : ThemeManager.Glyph.ChevronDown, f,
+                        new Rectangle(Width - 28, 0, 16, Height), _active ? ThemeManager.Primary : ThemeManager.Muted,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            }
+        }
+
+        /// <summary>Nút phụ không viền: icon + chữ, hover nền nhạt (đỏ nhạt nếu là nút xóa).</summary>
+        private class GhostButton : Control
+        {
+            private readonly string _glyph;
+            private readonly bool _danger;
+            private bool _hover;
+            public GhostButton(string text, string glyph, bool danger)
+            {
+                Text = text; _glyph = glyph; _danger = danger;
+                Cursor = Cursors.Hand;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+                BackColor = ThemeManager.Paper;
+            }
+            protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.Clear(ThemeManager.Paper);
+                if (_hover)
+                    using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, Width - 1, Height - 1), 9))
+                    using (var br = new SolidBrush(_danger ? ThemeManager.RedSoft : ThemeManager.PrimarySoft))
+                        g.FillPath(br, path);
+                Color c = _hover ? (_danger ? ThemeManager.Red : ThemeManager.Primary) : ThemeManager.Ink2;
+                using (var fi = ThemeManager.Icon(9F))
+                using (var f = new Font("Segoe UI", 9F, FontStyle.Bold))
+                {
+                    var ts = TextRenderer.MeasureText(g, Text, f, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    int total = 16 + 8 + ts.Width;
+                    int x = (Width - total) / 2;
+                    TextRenderer.DrawText(g, _glyph, fi, new Rectangle(x, 0, 16, Height), c,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    TextRenderer.DrawText(g, Text, f, new Rectangle(x + 24, 0, ts.Width + 2, Height), c,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                }
+            }
         }
 
         protected virtual void OnAdd()
@@ -277,7 +469,7 @@ namespace RestaurantCRM.AdminApp.Forms
 
             string safeValue = value.Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]");
 
-            if (_filterColumn.SelectedIndex <= 0)
+            if (_filterColIndex <= 0)
             {
                 // Tìm tất cả cột
                 string filter = "";
@@ -290,7 +482,7 @@ namespace RestaurantCRM.AdminApp.Forms
             else
             {
                 // Tìm trong cột được chọn
-                int colIdx = _filterColumn.SelectedIndex - 1;
+                int colIdx = _filterColIndex - 1;
                 string column = "C" + colIdx;
                 _table.DefaultView.RowFilter = "Convert([" + column + "], 'System.String') LIKE '%" + safeValue + "%'";
             }

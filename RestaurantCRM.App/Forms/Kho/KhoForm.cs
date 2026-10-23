@@ -6,13 +6,17 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Helpers;
+using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Config;
 using RestaurantCRM.AdminApp.Forms.NhaCungCap;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
-namespace RestaurantCRM.AdminApp.Forms.Kho {
-    public partial class KhoForm : Form {
+namespace RestaurantCRM.AdminApp.Forms.Kho
+{
+    public partial class KhoForm : Form
+    {
         private readonly KhoService _khoService;
         private readonly NguyenLieuService _nguyenLieuService;
         private readonly BindingSource _bindingSource = new BindingSource();
@@ -20,7 +24,8 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
         private readonly Timer _refreshTimer;
         private bool _isRefreshing = false;
 
-        public KhoForm() {
+        public KhoForm()
+        {
             InitializeComponent();
 
             // 1. Chống chớp giật màn hình (Flickering): Kích hoạt DoubleBuffering cho Form và DataGridView
@@ -50,9 +55,25 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
                 _refreshTimer.Stop();
                 _refreshTimer.Dispose();
             };
+
+            // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
+            PageKit.BuildListPage(this, new ListPageSpec
+            {
+                Title = lblTieuDe,
+                Subtitle = lblSub,
+                HeaderActions = new Control[] { btnLamMoi, btnLapPhieuNhap },
+                PrimaryActions = new[] { btnThemNguyenLieu },
+                KpiLabels = new[] { lblTongMon, lblDuHang, lblSapHet, lblHetHang },
+                Search = txtTimKiem,
+                SearchIcon = lblTimKiem,
+                SearchPlaceholder = "Tìm nguyên liệu...",
+                Filters = new[] { new FilterSpec(cboBoLoc, lblBoLoc) },
+                Grid = dgvKho
+            });
         }
 
-        private void SetupContextMenu() {
+        private void SetupContextMenu()
+        {
             var contextMenu = new ContextMenuStrip();
             var mnuQuanLyNL = new ToolStripMenuItem("🥕 Quản lý danh mục nguyên liệu", null, btnThemNguyenLieu_Click);
             var mnuSua = new ToolStripMenuItem("✎ Sửa thông tin nguyên liệu", null, (s, e) => SuaNguyenLieu_Click(s, e));
@@ -61,36 +82,45 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             dgvKho.ContextMenuStrip = contextMenu;
         }
 
-        private static void EnableDoubleBuffered(Control control) {
+        private static void EnableDoubleBuffered(Control control)
+        {
             typeof(Control).InvokeMember("DoubleBuffered",
                 BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
                 null, control, new object[] { true });
         }
 
-        private async void KhoForm_Load(object sender, EventArgs e) {
+        private async void KhoForm_Load(object sender, EventArgs e)
+        {
             await LoadKho();
             _refreshTimer.Start();
         }
 
-        private async Task LoadKho() {
-            try {
+        private async Task LoadKho()
+        {
+            try
+            {
                 _allTonKho = await _khoService.GetTonKhoAsync() ?? new List<TonKhoDto>();
                 UpdateThongKe();
                 FilterData(preserveSelection: false);
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 MessageBox.Show("Lỗi khi tải dữ liệu tồn kho từ API: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private async Task LoadKhoSilently() {
+        private async Task LoadKhoSilently()
+        {
             if (_isRefreshing || IsDisposed) return;
             _isRefreshing = true;
-            try {
+            try
+            {
                 var fresh = await _khoService.GetTonKhoAsync();
-                if (fresh != null && !IsDisposed) {
+                if (fresh != null && !IsDisposed)
+                {
                     // Smart Refresh: Chỉ cập nhật bảng khi dữ liệu thực sự có sự thay đổi
-                    if (!HasTonKhoChanged(_allTonKho, fresh)) {
+                    if (!HasTonKhoChanged(_allTonKho, fresh))
+                    {
                         return; // Dữ liệu không thay đổi -> giữ nguyên giao diện, 0% chớp nháy
                     }
 
@@ -98,17 +128,23 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
                     UpdateThongKe();
                     FilterData(preserveSelection: true);
                 }
-            } catch {
+            }
+            catch
+            {
                 // Bỏ qua lỗi ngầm khi polling
-            } finally {
+            }
+            finally
+            {
                 _isRefreshing = false;
             }
         }
 
-        private bool HasTonKhoChanged(List<TonKhoDto> oldList, List<TonKhoDto> newList) {
+        private bool HasTonKhoChanged(List<TonKhoDto> oldList, List<TonKhoDto> newList)
+        {
             if (oldList == null || newList == null) return true;
             if (oldList.Count != newList.Count) return true;
-            for (int i = 0; i < oldList.Count; i++) {
+            for (int i = 0; i < oldList.Count; i++)
+            {
                 var a = oldList[i];
                 var b = newList[i];
                 if (a.MaNguyenLieu != b.MaNguyenLieu ||
@@ -117,14 +153,16 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
                     a.CanhBao != b.CanhBao ||
                     a.TenNguyenLieu != b.TenNguyenLieu ||
                     a.DonViTinh != b.DonViTinh ||
-                    a.TrangThai != b.TrangThai) {
+                    a.TrangThai != b.TrangThai)
+                {
                     return true;
                 }
             }
             return false;
         }
 
-        private void UpdateThongKe() {
+        private void UpdateThongKe()
+        {
             int tongSo = _allTonKho.Count;
             int hetHang = _allTonKho.Count(x => x.SoLuongTon <= 0);
             int sapHet = _allTonKho.Count(x => x.SoLuongTon > 0 && x.SoLuongTon <= 10);
@@ -136,7 +174,8 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             lblHetHang.Text = $"Đã hết: {hetHang} loại";
         }
 
-        private void FilterData(bool preserveSelection = false) {
+        private void FilterData(bool preserveSelection = false)
+        {
             var keyword = (txtTimKiem.Text ?? "").Trim().ToLower();
             int filterIndex = cboBoLoc.SelectedIndex;
 
@@ -150,7 +189,8 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
                 if (!matchKeyword) return false;
 
                 // Lọc theo tình trạng
-                switch (filterIndex) {
+                switch (filterIndex)
+                {
                     case 1: // Sắp hết (<= 10 & > 0)
                         return item.SoLuongTon > 0 && item.SoLuongTon <= 10;
                     case 2: // Đã hết (<= 0)
@@ -164,7 +204,8 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
 
             int scrollIndex = -1;
             string selectedMa = null;
-            if (preserveSelection) {
+            if (preserveSelection)
+            {
                 try { scrollIndex = dgvKho.FirstDisplayedScrollingRowIndex; } catch { }
                 selectedMa = GetSelected()?.MaNguyenLieu;
             }
@@ -173,13 +214,18 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             _bindingSource.DataSource = filtered;
             _bindingSource.ResetBindings(false);
 
-            if (preserveSelection) {
-                if (scrollIndex >= 0 && scrollIndex < dgvKho.Rows.Count) {
+            if (preserveSelection)
+            {
+                if (scrollIndex >= 0 && scrollIndex < dgvKho.Rows.Count)
+                {
                     try { dgvKho.FirstDisplayedScrollingRowIndex = scrollIndex; } catch { }
                 }
-                if (!string.IsNullOrEmpty(selectedMa)) {
-                    for (int i = 0; i < dgvKho.Rows.Count; i++) {
-                        if (dgvKho.Rows[i].DataBoundItem is TonKhoDto item && item.MaNguyenLieu == selectedMa) {
+                if (!string.IsNullOrEmpty(selectedMa))
+                {
+                    for (int i = 0; i < dgvKho.Rows.Count; i++)
+                    {
+                        if (dgvKho.Rows[i].DataBoundItem is TonKhoDto item && item.MaNguyenLieu == selectedMa)
+                        {
                             dgvKho.Rows[i].Selected = true;
                             try { dgvKho.CurrentCell = dgvKho.Rows[i].Cells[0]; } catch { }
                             break;
@@ -189,104 +235,132 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
             }
         }
 
-        private void dgvKho_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e) {
+        private void dgvKho_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
             if (e.RowIndex < 0 || e.RowIndex >= dgvKho.Rows.Count) return;
 
             var row = dgvKho.Rows[e.RowIndex];
-            if (row.DataBoundItem is TonKhoDto item) {
+            if (row.DataBoundItem is TonKhoDto item)
+            {
                 bool isNgungNhap = string.Equals(item.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase);
 
-                if (isNgungNhap) {
+                if (isNgungNhap)
+                {
                     // Những món ngừng nhập chuyển màu xám toàn bộ dòng
                     row.DefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
                     row.DefaultCellStyle.ForeColor = Color.FromArgb(148, 163, 184);
                     row.DefaultCellStyle.SelectionBackColor = Color.FromArgb(226, 232, 240);
                     row.DefaultCellStyle.SelectionForeColor = Color.FromArgb(100, 116, 139);
-                } else if (item.SoLuongTon <= 0) {
-                    // Đã hết hàng: đỏ nhạt dịu mắt
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(254, 226, 226);
-                    row.DefaultCellStyle.ForeColor = Color.FromArgb(185, 28, 28);
-                    row.DefaultCellStyle.SelectionBackColor = Color.FromArgb(254, 202, 202);
-                    row.DefaultCellStyle.SelectionForeColor = Color.FromArgb(153, 27, 27);
-                } else if (item.SoLuongTon <= 10) {
-                    // Sắp hết hàng: vàng cam nhạt dịu mắt
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(254, 243, 199);
-                    row.DefaultCellStyle.ForeColor = Color.FromArgb(180, 83, 9);
-                    row.DefaultCellStyle.SelectionBackColor = Color.FromArgb(253, 230, 138);
-                    row.DefaultCellStyle.SelectionForeColor = Color.FromArgb(146, 64, 14);
-                } else {
+                }
+                else if (item.SoLuongTon <= 0)
+                {
+                    // Đã hết hàng: nền trắng, trạng thái hiển thị bằng pill đỏ ở cột Trạng thái
+                    row.DefaultCellStyle.BackColor = Color.White;
+                    row.DefaultCellStyle.ForeColor = ThemeManager.Ink2;
+                    row.DefaultCellStyle.SelectionBackColor = ThemeManager.PrimarySoft;
+                    row.DefaultCellStyle.SelectionForeColor = ThemeManager.Ink;
+                }
+                else if (item.SoLuongTon <= 10)
+                {
+                    // Sắp hết hàng: nền trắng, trạng thái hiển thị bằng pill vàng
+                    row.DefaultCellStyle.BackColor = Color.White;
+                    row.DefaultCellStyle.ForeColor = ThemeManager.Ink2;
+                    row.DefaultCellStyle.SelectionBackColor = ThemeManager.PrimarySoft;
+                    row.DefaultCellStyle.SelectionForeColor = ThemeManager.Ink;
+                }
+                else
+                {
                     // Đủ hàng: xen kẽ trắng và xám nhẹ
-                    row.DefaultCellStyle.BackColor = (e.RowIndex % 2 == 0) ? Color.White : Color.FromArgb(248, 250, 252);
-                    row.DefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
-                    row.DefaultCellStyle.SelectionBackColor = Color.FromArgb(224, 231, 255);
-                    row.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
+                    row.DefaultCellStyle.BackColor = Color.White;
+                    row.DefaultCellStyle.ForeColor = ThemeManager.Ink2;
+                    row.DefaultCellStyle.SelectionBackColor = ThemeManager.PrimarySoft;
+                    row.DefaultCellStyle.SelectionForeColor = ThemeManager.Ink;
                 }
 
                 // Định dạng trực quan cột Trạng Thái Kho
-                if (e.ColumnIndex >= 0 && dgvKho.Columns[e.ColumnIndex].DataPropertyName == "TrangThaiHienThi") {
-                    if (item.SoLuongTon <= 0) {
+                if (e.ColumnIndex >= 0 && dgvKho.Columns[e.ColumnIndex].DataPropertyName == "TrangThaiHienThi")
+                {
+                    if (item.SoLuongTon <= 0)
+                    {
                         e.Value = "❌ Đã hết hàng";
-                    } else if (item.SoLuongTon <= 10) {
+                    }
+                    else if (item.SoLuongTon <= 10)
+                    {
                         e.Value = "⚠️ Sắp hết hàng";
-                    } else {
+                    }
+                    else
+                    {
                         e.Value = "✅ Còn đủ hàng";
                     }
                     e.FormattingApplied = true;
                 }
 
                 // Định dạng số lượng tồn: gọn gàng không bị số 0 vô nghĩa ở đuôi
-                if (e.ColumnIndex >= 0 && dgvKho.Columns[e.ColumnIndex].DataPropertyName == "SoLuongTon") {
+                if (e.ColumnIndex >= 0 && dgvKho.Columns[e.ColumnIndex].DataPropertyName == "SoLuongTon")
+                {
                     e.Value = item.SoLuongTon.ToString("#,##0.##");
                     e.FormattingApplied = true;
                 }
             }
         }
 
-        private void txtTimKiem_TextChanged(object sender, EventArgs e) {
+        private void txtTimKiem_TextChanged(object sender, EventArgs e)
+        {
             FilterData(preserveSelection: false);
         }
 
-        private void cboBoLoc_SelectedIndexChanged(object sender, EventArgs e) {
+        private void cboBoLoc_SelectedIndexChanged(object sender, EventArgs e)
+        {
             FilterData(preserveSelection: false);
         }
 
-        private async void btnLamMoi_Click(object sender, EventArgs e) {
+        private async void btnLamMoi_Click(object sender, EventArgs e)
+        {
             txtTimKiem.Clear();
             cboBoLoc.SelectedIndex = 0;
             await LoadKho();
         }
 
-        private async void btnLapPhieuNhap_Click(object sender, EventArgs e) {
+        private async void btnLapPhieuNhap_Click(object sender, EventArgs e)
+        {
             var selected = GetSelected();
             string defaultMaNL = (selected != null && selected.TrangThai == "Active") ? selected.MaNguyenLieu : null;
 
-            using (var dialog = new PhieuNhapDialog(defaultMaNL)) {
-                if (dialog.ShowDialog(this) == DialogResult.OK) {
+            using (var dialog = new PhieuNhapDialog(defaultMaNL))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
                     // Sau khi nhập kho thành công, tự động tải lại bảng tồn kho
                     await LoadKho();
                 }
             }
         }
 
-        private void dgvKho_DoubleClick(object sender, EventArgs e) {
+        private void dgvKho_DoubleClick(object sender, EventArgs e)
+        {
             SuaNguyenLieu_Click(sender, e);
         }
 
-        private async void btnThemNguyenLieu_Click(object sender, EventArgs e) {
-            using (var form = new NguyenLieuForm()) {
+        private async void btnThemNguyenLieu_Click(object sender, EventArgs e)
+        {
+            using (var form = new NguyenLieuForm())
+            {
                 form.ShowDialog(this);
                 await LoadKho();
             }
         }
 
-        private async void SuaNguyenLieu_Click(object sender, EventArgs e) {
+        private async void SuaNguyenLieu_Click(object sender, EventArgs e)
+        {
             var selected = GetSelected();
-            if (selected == null) {
+            if (selected == null)
+            {
                 MessageBox.Show("Vui lòng chọn một mặt hàng trong danh sách để sửa thông tin.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var nlDto = new NguyenLieuDto {
+            var nlDto = new NguyenLieuDto
+            {
                 MaNguyenLieu = selected.MaNguyenLieu,
                 TenNguyenLieu = selected.TenNguyenLieu,
                 DonViTinh = selected.DonViTinh,
@@ -295,15 +369,19 @@ namespace RestaurantCRM.AdminApp.Forms.Kho {
                 TrangThai = selected.TrangThai
             };
 
-            using (var dialog = new NguyenLieuDialog(_nguyenLieuService, nlDto)) {
-                if (dialog.ShowDialog(this) == DialogResult.OK) {
+            using (var dialog = new NguyenLieuDialog(_nguyenLieuService, nlDto))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadKho();
                 }
             }
         }
 
-        private TonKhoDto GetSelected() {
-            if (dgvKho.SelectedRows.Count > 0) {
+        private TonKhoDto GetSelected()
+        {
+            if (dgvKho.SelectedRows.Count > 0)
+            {
                 return dgvKho.SelectedRows[0].DataBoundItem as TonKhoDto;
             }
             return null;

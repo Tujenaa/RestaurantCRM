@@ -1,214 +1,149 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
-namespace RestaurantCRM.AdminApp.Controls {
+namespace RestaurantCRM.AdminApp.Controls
+{
+    /// <summary>Một dòng trong danh sách "Hoạt động gần đây".</summary>
+    public class ActivityItem
+    {
+        public string Who;       // tên người (dùng làm avatar)
+        public string Text;      // nội dung chính
+        public DateTime? Time;   // thời điểm
+        public string Status;    // trạng thái (vẽ pill nếu nhận diện được)
+    }
+
     /// <summary>
-    /// Bảng điều khiển bên phải (Right Sidebar): Calendar Timeline & New Team Members
-    /// Tái hiện 100% cột bên phải trong giao diện tham khảo.
+    /// Cột "Hoạt động gần đây": avatar tròn, thời gian tương đối, nội dung, pill trạng thái.
+    /// Tự vẽ toàn bộ, cuộn bằng con lăn chuột khi danh sách dài.
     /// </summary>
-    public class UcRightPanel : UserControl {
-        public UcRightPanel() {
-            Width = 270;
-            Dock = DockStyle.Right;
-            BackColor = ThemeManager.Paper;
-            Font = new Font("Segoe UI", 9F);
-            Padding = new Padding(18, 16, 18, 16);
-            AutoScroll = true;
+    public class UcActivityFeed : RoundedPanel
+    {
+        private List<ActivityItem> _items = new List<ActivityItem>();
+        private bool _loading = true;
+        private int _scroll;
+        private const int ItemH = 66;
+        private const int HeaderH = 64;
 
-            BuildLayout();
+        public string Title { get; set; } = "Hoạt động gần đây";
+
+        public UcActivityFeed()
+        {
+            Radius = 14;
+            Shadow = 8;
+            FillColor = ThemeManager.Paper;
+            BorderColor = Color.FromArgb(120, ThemeManager.Line);
+            Size = new Size(300, 500);
+            DoubleBuffered = true;
         }
 
-        protected override void OnPaint(PaintEventArgs e) {
+        public void SetItems(List<ActivityItem> items)
+        {
+            _items = items ?? new List<ActivityItem>();
+            _loading = false;
+            _scroll = 0;
+            Invalidate();
+        }
+
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            base.OnMouseWheel(e);
+            int contentH = _items.Count * ItemH;
+            int viewH = CardRect.Height - HeaderH - 10;
+            int maxScroll = Math.Max(0, contentH - viewH);
+            _scroll = Math.Max(0, Math.Min(maxScroll, _scroll - e.Delta / 3));
+            Invalidate();
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); Focus(); }
+
+        private static string Ago(DateTime? t)
+        {
+            if (!t.HasValue) return "";
+            var d = DateTime.Now - t.Value;
+            if (d.TotalMinutes < 1) return "VỪA XONG";
+            if (d.TotalMinutes < 60) return ((int)d.TotalMinutes) + " PHÚT TRƯỚC";
+            if (d.TotalHours < 24) return ((int)d.TotalHours) + " GIỜ TRƯỚC";
+            if (d.TotalDays < 7) return ((int)d.TotalDays) + " NGÀY TRƯỚC";
+            return t.Value.ToString("dd/MM/yyyy");
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
             base.OnPaint(e);
-            // Đường kẻ viền trái phân cách nhẹ
-            using (var pen = new Pen(ColorTranslator.FromHtml("#E2E8F0"), 1))
-                e.Graphics.DrawLine(pen, 0, 0, 0, Height);
-        }
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            var card = CardRect;
 
-        private void BuildLayout() {
-            Controls.Clear();
-            int y = 14;
+            using (var f = new Font("Segoe UI", 11.5F, FontStyle.Bold))
+                TextRenderer.DrawText(g, Title, f, new Point(card.X + 22, card.Y + 22), ThemeManager.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            using (var f = ThemeManager.Icon(9F))
+                TextRenderer.DrawText(g, ThemeManager.Glyph.More, f, new Point(card.Right - 34, card.Y + 25), ThemeManager.Muted, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
 
-            // 1. Calendar Header
-            var lblCalendar = new Label {
-                Text = "Calendar",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                Location = new Point(16, y),
-                AutoSize = true
-            };
-            Controls.Add(lblCalendar);
-
-            // Nút tròn tím cạnh chữ Calendar
-            var btnCalDot = new Label {
-                Text = "▶",
-                Font = new Font("Segoe UI", 7F),
-                ForeColor = Color.White,
-                BackColor = ColorTranslator.FromHtml("#7C3AED"),
-                Size = new Size(24, 24),
-                Location = new Point(Width - 52, y + 2),
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            btnCalDot.Paint += (s, e) => {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var path = new GraphicsPath()) {
-                    path.AddEllipse(0, 0, 23, 23);
-                    using (var brush = new SolidBrush(ColorTranslator.FromHtml("#7C3AED")))
-                        e.Graphics.FillPath(brush, path);
-                }
-                TextRenderer.DrawText(e.Graphics, "▶", new Font("Segoe UI", 7F),
-                    btnCalDot.ClientRectangle, Color.White,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            };
-            Controls.Add(btnCalDot);
-
-            y += 34;
-
-            // Month subhead
-            var lblMonth = new Label {
-                Text = "JULY 2024",
-                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#94A3B8"),
-                Location = new Point(17, y),
-                AutoSize = true
-            };
-            Controls.Add(lblMonth);
-
-            y += 20;
-
-            // 2. Timeline items
-            var timelineItems = new[] {
-                ("10 AM", "Intro to Scrum", "Họp giao ban đầu ca", ColorTranslator.FromHtml("#F97316")),
-                ("12 PM", "Office Hours", "Phục vụ cao điểm trưa", ColorTranslator.FromHtml("#06B6D4")),
-                ("10 AM", "Company Meeting", "Kiểm tra kho & NCC", ColorTranslator.FromHtml("#8B5CF6")),
-                ("12 PM", "Managing People", "Chăm sóc & Phản hồi", ColorTranslator.FromHtml("#10B981"))
-            };
-
-            foreach (var item in timelineItems) {
-                var pnlItem = new Panel {
-                    Location = new Point(16, y),
-                    Size = new Size(Width - 36, 42),
-                    BackColor = Color.Transparent
-                };
-
-                // Giờ (10 AM / 12 PM)
-                var lblTime = new Label {
-                    Text = item.Item1,
-                    Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
-                    ForeColor = ColorTranslator.FromHtml("#64748B"),
-                    Location = new Point(0, 4),
-                    Size = new Size(44, 18),
-                    TextAlign = ContentAlignment.MiddleRight
-                };
-                pnlItem.Controls.Add(lblTime);
-
-                // Thanh sọc màu dọc
-                var stripe = new Panel {
-                    Location = new Point(50, 4),
-                    Size = new Size(3, 30),
-                    BackColor = item.Item4
-                };
-                pnlItem.Controls.Add(stripe);
-
-                // Tiêu đề sự kiện
-                var lblEventTitle = new Label {
-                    Text = item.Item2,
-                    Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                    ForeColor = ThemeManager.Ink,
-                    Location = new Point(58, 2),
-                    AutoSize = true
-                };
-                pnlItem.Controls.Add(lblEventTitle);
-
-                var lblEventSub = new Label {
-                    Text = item.Item3,
-                    Font = new Font("Segoe UI", 7F),
-                    ForeColor = ThemeManager.Muted,
-                    Location = new Point(58, 18),
-                    AutoSize = true
-                };
-                pnlItem.Controls.Add(lblEventSub);
-
-                Controls.Add(pnlItem);
-                y += 46;
+            var view = new Rectangle(card.X + 1, card.Y + HeaderH, card.Width - 2, card.Height - HeaderH - 10);
+            if (_loading || _items.Count == 0)
+            {
+                using (var f = new Font("Segoe UI", 9F))
+                    TextRenderer.DrawText(g, _loading ? "Đang tải..." : "Chưa có hoạt động nào", f, view, ThemeManager.Muted,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.Top);
+                return;
             }
 
-            y += 10;
+            var state = g.Save();
+            g.SetClip(view);
+            using (var fTime = new Font("Segoe UI", 6.75F, FontStyle.Bold))
+            using (var fText = new Font("Segoe UI", 8.5F))
+            using (var fAv = new Font("Segoe UI", 8F, FontStyle.Bold))
+            using (var fPill = new Font("Segoe UI", 7F, FontStyle.Bold))
+            using (var linePen = new Pen(Color.FromArgb(244, 245, 249)))
+            {
+                for (int i = 0; i < _items.Count; i++)
+                {
+                    var it = _items[i];
+                    int y = view.Y + i * ItemH - _scroll;
+                    if (y + ItemH < view.Y || y > view.Bottom) continue;
+                    int x = card.X + 22;
 
-            // 3. New Team Members Header
-            var lblMembersHeader = new Label {
-                Text = "New Team Members",
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                Location = new Point(16, y),
-                AutoSize = true
-            };
-            Controls.Add(lblMembersHeader);
+                    // avatar
+                    var av = new Rectangle(x, y + 14, 34, 34);
+                    using (var br = new SolidBrush(ThemeManager.AvatarColor(it.Who))) g.FillEllipse(br, av);
+                    TextRenderer.DrawText(g, ThemeManager.Initials(it.Who), fAv, av, Color.White,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
 
-            y += 30;
-
-            // Members list
-            var members = new[] {
-                ("Kate Loren", "Quản lý nhà hàng", ColorTranslator.FromHtml("#7C3AED")),
-                ("Anthony Murray", "Trưởng ca bán hàng", ColorTranslator.FromHtml("#F97316")),
-                ("Tatiana Rivera", "Chuyên viên CRM & CSKH", ColorTranslator.FromHtml("#0D9488")),
-                ("Thomas Scott", "Bếp trưởng & Thực đơn", ColorTranslator.FromHtml("#DC2626"))
-            };
-
-            foreach (var m in members) {
-                var pnlMember = new Panel {
-                    Location = new Point(16, y),
-                    Size = new Size(Width - 36, 44),
-                    BackColor = Color.Transparent
-                };
-
-                // Avatar tròn màu sắc với Initials
-                var avatar = new Label {
-                    Text = ThemeManager.Initials(m.Item1),
-                    Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    Size = new Size(32, 32),
-                    Location = new Point(4, 4),
-                    TextAlign = ContentAlignment.MiddleCenter
-                };
-                Color avColor = m.Item3;
-                avatar.Paint += (s, e) => {
-                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    using (var path = new GraphicsPath()) {
-                        path.AddEllipse(0, 0, 31, 31);
-                        using (var brush = new SolidBrush(avColor))
-                            e.Graphics.FillPath(brush, path);
+                    // chấm trạng thái nhỏ trên avatar
+                    Color sf, sb;
+                    bool hasStatus = ThemeManager.TryStatusColors(it.Status, out sf, out sb);
+                    if (hasStatus)
+                    {
+                        using (var br = new SolidBrush(Color.White)) g.FillEllipse(br, av.Right - 11, av.Y - 2, 13, 13);
+                        using (var br = new SolidBrush(sf)) g.FillEllipse(br, av.Right - 9, av.Y, 9, 9);
                     }
-                    TextRenderer.DrawText(e.Graphics, avatar.Text, avatar.Font,
-                        avatar.ClientRectangle, Color.White,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-                };
-                pnlMember.Controls.Add(avatar);
 
-                var lblName = new Label {
-                    Text = m.Item1,
-                    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                    ForeColor = ThemeManager.Ink,
-                    Location = new Point(44, 4),
-                    AutoSize = true
-                };
-                pnlMember.Controls.Add(lblName);
+                    int tx = av.Right + 12;
+                    int tw = card.Right - 20 - tx;
+                    TextRenderer.DrawText(g, Ago(it.Time), fTime, new Rectangle(tx, y + 12, tw, 14), ThemeManager.Muted,
+                        TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    TextRenderer.DrawText(g, it.Text ?? "", fText, new Rectangle(tx, y + 27, tw, 34), ThemeManager.Ink2,
+                        TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
 
-                var lblRole = new Label {
-                    Text = m.Item2,
-                    Font = new Font("Segoe UI", 7F),
-                    ForeColor = ThemeManager.Muted,
-                    Location = new Point(44, 22),
-                    AutoSize = true
-                };
-                pnlMember.Controls.Add(lblRole);
+                    if (i < _items.Count - 1) g.DrawLine(linePen, tx, y + ItemH - 1, card.Right - 20, y + ItemH - 1);
+                }
+            }
+            g.Restore(state);
 
-                Controls.Add(pnlMember);
-                y += 46;
+            // gợi ý cuộn: mờ dần ở đáy
+            if (_items.Count * ItemH - _scroll > view.Height)
+            {
+                var fade = new Rectangle(view.X, view.Bottom - 30, view.Width, 30);
+                using (var br = new LinearGradientBrush(fade, Color.FromArgb(0, Color.White), Color.White, LinearGradientMode.Vertical))
+                    g.FillRectangle(br, fade);
             }
         }
     }
+
+    /// <summary>Tên cũ — giữ để tương thích.</summary>
+    public class UcRightPanel : UcActivityFeed { }
 }

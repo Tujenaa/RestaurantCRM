@@ -6,102 +6,105 @@ using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Controls
 {
+    /// <summary>
+    /// Header tối giản nằm trên nền xám của vùng nội dung:
+    /// breadcrumb nhỏ + tiêu đề trang bên trái, ngày và avatar người dùng bên phải.
+    /// </summary>
     public partial class UcHeader : UserControl
     {
         public Label TitleLabel { get; set; }
         public Label BreadcrumbLabel { get; set; }
-        private Label _lblUserInfo;
-        private Label _lblDate;
-        private Color _accentColor = ThemeManager.Primary;
+        private string _userName = "";
+        private string _userRole = "";
 
         public UcHeader()
         {
-            Height = 68;
+            Height = 76;
             Dock = DockStyle.Top;
-            BackColor = ThemeManager.Paper;
+            BackColor = ThemeManager.Bg;
             DoubleBuffered = true;
 
             BreadcrumbLabel = new Label
             {
-                Text = "Trang quản trị  ›  Tổng quan",
-                Font = new Font("Segoe UI", 8F),
+                Text = "Tổng quan",
+                Font = new Font("Segoe UI", 8.5F),
                 ForeColor = ThemeManager.Muted,
                 AutoSize = true,
-                Location = new Point(24, 12)
+                Location = new Point(30, 16),
+                BackColor = Color.Transparent
             };
             Controls.Add(BreadcrumbLabel);
 
             TitleLabel = new Label
             {
                 Text = "Dashboard",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 AutoSize = true,
-                Location = new Point(22, 28)
+                Location = new Point(27, 34),
+                BackColor = Color.Transparent
             };
             Controls.Add(TitleLabel);
 
-            // Thông tin tài khoản đăng nhập (ở góc phải phía trên)
-            _lblUserInfo = new Label
-            {
-                Text = "👤 Đang tải...",
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                AutoSize = true,
-                Location = new Point(Width - 220, 14)
-            };
-            Controls.Add(_lblUserInfo);
-
-            // Ngày giờ hiện tại (ở góc phải phía dưới, không bao giờ bị đè chữ)
-            _lblDate = new Label
-            {
-                Text = "📅  " + DateTime.Now.ToString("dddd, dd/MM/yyyy"),
-                Font = new Font("Segoe UI", 8.5F),
-                ForeColor = ThemeManager.Muted,
-                AutoSize = true,
-                Location = new Point(Width - 220, 36)
-            };
-            Controls.Add(_lblDate);
-
-            Resize += (s, e) => RepositionRightLabels();
-
-            Paint += (s, e) => {
-                var g = e.Graphics;
-                // Đường viền đáy thanh mảnh
-                using (var pen = new Pen(ThemeManager.Line, 1))
-                    g.DrawLine(pen, 0, Height - 1, Width, Height - 1);
-
-                // Dải màu nhấn tinh tế bên trái
-                using (var brush = new LinearGradientBrush(
-                    new Rectangle(0, 0, 4, Height),
-                    _accentColor,
-                    ThemeManager.Violet,
-                    LinearGradientMode.Vertical))
-                    g.FillRectangle(brush, 0, 0, 4, Height);
-            };
+            Resize += (s, e) => Invalidate();
         }
 
-        private void RepositionRightLabels()
+        protected override void OnPaint(PaintEventArgs e)
         {
-            if (_lblUserInfo != null)
-                _lblUserInfo.Left = ClientSize.Width - _lblUserInfo.Width - 24;
-            if (_lblDate != null)
-                _lblDate.Left = ClientSize.Width - _lblDate.Width - 24;
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            int right = Width - 30;
+
+            // Avatar tròn
+            var av = new Rectangle(right - 36, 22, 36, 36);
+            using (var br = new SolidBrush(ThemeManager.AvatarColor(_userName))) g.FillEllipse(br, av);
+            using (var f = new Font("Segoe UI", 9F, FontStyle.Bold))
+                TextRenderer.DrawText(g, ThemeManager.Initials(_userName), f, av, Color.White,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+
+            // Tên + vai trò
+            using (var f1 = new Font("Segoe UI", 9F, FontStyle.Bold))
+            using (var f2 = new Font("Segoe UI", 8F))
+            {
+                var nameSize = TextRenderer.MeasureText(g, _userName, f1, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                var roleSize = TextRenderer.MeasureText(g, _userRole, f2, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                int tw = Math.Max(nameSize.Width, roleSize.Width);
+                int tx = av.Left - 12 - tw;
+                TextRenderer.DrawText(g, _userName, f1, new Point(tx + tw - nameSize.Width, 24), ThemeManager.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                TextRenderer.DrawText(g, _userRole, f2, new Point(tx + tw - roleSize.Width, 42), ThemeManager.Muted, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                right = tx - 18;
+            }
+
+            // Pill ngày
+            string date = DateTime.Now.ToString("dd/MM/yyyy");
+            using (var fi = ThemeManager.Icon(8.5F))
+            using (var f = new Font("Segoe UI", 8.5F, FontStyle.Bold))
+            {
+                var ts = TextRenderer.MeasureText(g, date, f, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                var pill = new Rectangle(right - ts.Width - 44, 24, ts.Width + 44, 32);
+                using (var path = ThemeManager.RoundedRect(pill, 16))
+                using (var br = new SolidBrush(Color.White))
+                    g.FillPath(br, path);
+                TextRenderer.DrawText(g, ThemeManager.Glyph.Calendar, fi, new Rectangle(pill.X + 12, pill.Y, 16, pill.Height),
+                    ThemeManager.Primary, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                TextRenderer.DrawText(g, date, f, new Rectangle(pill.X + 32, pill.Y, ts.Width + 4, pill.Height),
+                    ThemeManager.Primary, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            }
         }
 
         public void SetUserInfo(string displayName, string role)
         {
-            _lblUserInfo.Text = "👤 " + displayName + "  (" + role + ")";
-            RepositionRightLabels();
+            _userName = displayName ?? "";
+            _userRole = role == null ? "" : "Phân hệ " + role;
+            Invalidate();
         }
 
         public void SetTitle(string title, string section = "Hệ thống")
         {
             TitleLabel.Text = title;
-            BreadcrumbLabel.Text = "Trang quản trị  ›  " + section;
-            _accentColor = ThemeManager.Primary;
-            if (section == "CRM" || section == "Chăm sóc khách hàng") _accentColor = ThemeManager.Violet;
-            else if (section == "Bán hàng" || section == "BÁN HÀNG") _accentColor = ThemeManager.Teal;
+            BreadcrumbLabel.Text = "Phân hệ " + section + "  /  " + title;
             Invalidate();
         }
     }
