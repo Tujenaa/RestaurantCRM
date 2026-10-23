@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -491,7 +491,8 @@ namespace RestaurantCRM.AdminApp.Controls
                     int w = _dp.Width, h = _dp.Height;
                     using (var pen = new Pen(bg, 2)) g.DrawRectangle(pen, 1, 1, w - 2, h - 2);
                     using (var pen = new Pen(bg, 1)) g.DrawRectangle(pen, 0, 0, w - 1, h - 1);
-                    var btn = new Rectangle(w - 22, 0, 22, h);
+                    int btnW = Math.Max(34, SystemInformation.VerticalScrollBarWidth + 14);
+                    var btn = new Rectangle(w - btnW, 0, btnW, h);
                     using (var br = new SolidBrush(bg)) g.FillRectangle(br, btn);
                     using (var f = ThemeManager.Icon(9F))
                         TextRenderer.DrawText(g, ThemeManager.Glyph.Calendar, f, btn, ThemeManager.Muted,
