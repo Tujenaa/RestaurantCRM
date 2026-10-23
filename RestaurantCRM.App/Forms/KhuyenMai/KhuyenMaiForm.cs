@@ -4,12 +4,15 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
-namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
-    public class KhuyenMaiForm : Form {
+namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
+{
+    public class KhuyenMaiForm : Form
+    {
         private readonly KhuyenMaiService _service;
 
         private List<ChuongTrinhDto> _chuongTrinhList = new List<ChuongTrinhDto>();
@@ -27,7 +30,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
         private DataGridView _dgvVoucher;
         private DataGridView _dgvKmMon;
 
-        public KhuyenMaiForm() {
+        public KhuyenMaiForm()
+        {
             _service = new KhuyenMaiService();
 
             Text = "Quản lý Khuyến Mãi & Voucher";
@@ -40,137 +44,124 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             LoadAllDataAsync();
         }
 
-        private void InitFormLayout() {
-            // Header panel
-            var header = new Panel {
-                Dock = DockStyle.Top,
-                Height = 100,
-                BackColor = ThemeManager.Paper,
-                Padding = new Padding(24, 16, 24, 16)
-            };
+        private void InitFormLayout()
+        {
+            Padding = new Padding(14, 6, 14, 10);
 
-            var lblTitle = new Label {
-                Text = "QUẢN LÝ KHUYẾN MÃI & VOUCHER",
-                Font = new Font("Segoe UI", 15F, FontStyle.Bold),
-                ForeColor = ThemeManager.Blue,
-                Location = new Point(24, 16),
-                AutoSize = true
+            // ── Hàng đầu: tiêu đề + mô tả + nút ─────────────────────────
+            var header = new Panel { Dock = DockStyle.Top, Height = 76, BackColor = ThemeManager.Bg };
+            var lblTitle = new Label
+            {
+                Text = "Quản lý khuyến mãi & voucher",
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                Location = new Point(10, 8),
+                AutoSize = true,
+                UseMnemonic = false
             };
-            var lblSub = new Label {
+            var lblSub = new Label
+            {
                 Text = "Tạo chương trình ưu đãi, voucher giảm giá đơn hàng và áp dụng khuyến mãi tự động cho từng món ăn.",
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = ThemeManager.Muted,
-                Location = new Point(26, 48),
+                Location = new Point(12, 44),
                 AutoSize = true
             };
 
-            // Buttons on Top Header
-            var btnTaoVoucher = new Button {
-                Text = "🎟️ + TẠO VOUCHER / ƯU ĐÃI",
-                Size = new Size(220, 42),
-                Location = new Point(header.Width - 480, 20),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = ThemeManager.Blue,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
+            var actions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = ThemeManager.Bg,
+                Padding = new Padding(0, 14, 8, 0)
             };
-            btnTaoVoucher.FlatAppearance.BorderSize = 0;
+            var btnTaoVoucher = new Button { Text = "+ Tạo voucher / ưu đãi" };
+            ButtonSkin.SetKind(btnTaoVoucher, ButtonSkin.Kind.Primary);
+            PageKit.FitButton(btnTaoVoucher);
+            btnTaoVoucher.Margin = new Padding(8, 0, 0, 0);
             btnTaoVoucher.Click += (s, e) => OpenTaoVoucherDialog();
 
-            var btnTaoCT = new Button {
-                Text = "📋 + Thêm chương trình",
-                Size = new Size(160, 42),
-                Location = new Point(header.Width - 250, 20),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.FromArgb(235, 243, 255),
-                ForeColor = ThemeManager.Blue,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnTaoCT.FlatAppearance.BorderSize = 0;
+            var btnTaoCT = new Button { Text = "+ Thêm chương trình" };
+            ButtonSkin.SetKind(btnTaoCT, ButtonSkin.Kind.Secondary);
+            PageKit.FitButton(btnTaoCT);
+            btnTaoCT.Margin = new Padding(8, 0, 0, 0);
             btnTaoCT.Click += (s, e) => OpenTaoChuongTrinhDialog();
 
-            var btnRefresh = new Button {
-                Text = "🔄 Tải lại",
-                Size = new Size(75, 42),
-                Location = new Point(header.Width - 80, 20),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.FromArgb(240, 243, 248),
-                ForeColor = ThemeManager.Ink,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnRefresh.FlatAppearance.BorderSize = 0;
+            var btnRefresh = new Button { Text = "Làm mới" };
+            ButtonSkin.SetKind(btnRefresh, ButtonSkin.Kind.Secondary);
+            PageKit.FitButton(btnRefresh);
+            btnRefresh.Margin = new Padding(8, 0, 0, 0);
             btnRefresh.Click += (s, e) => LoadAllDataAsync();
 
+            actions.Controls.Add(btnTaoVoucher);
+            actions.Controls.Add(btnTaoCT);
+            actions.Controls.Add(btnRefresh);
+            header.Controls.Add(actions);
             header.Controls.Add(lblTitle);
             header.Controls.Add(lblSub);
-            header.Controls.Add(btnTaoVoucher);
-            header.Controls.Add(btnTaoCT);
-            header.Controls.Add(btnRefresh);
-            Controls.Add(header);
-
-            // Summary Stats Panel
-            var pnlStats = new Panel {
-                Dock = DockStyle.Top,
-                Height = 65,
-                Padding = new Padding(24, 10, 24, 10),
-                BackColor = ThemeManager.Bg
+            Action placeTitle = () => {
+                bool embedded = !TopLevel;   // mở trong cửa sổ chính: tiêu đề đã nằm trên header chung
+                lblTitle.Visible = !embedded;
+                lblSub.Location = new Point(12, embedded ? 16 : 44);
+                header.Height = embedded ? 54 : 76;
+                actions.Padding = new Padding(0, embedded ? 4 : 14, 8, 0);
             };
+            placeTitle();
+            ParentChanged += (s, e) => placeTitle();
 
-            _lblStatCT = CreateStatCard(pnlStats, "Chương trình đang áp dụng", "0", 0, ThemeManager.Blue);
-            _lblStatVoucher = CreateStatCard(pnlStats, "Voucher toàn đơn", "0", 250, ThemeManager.Purple);
-            _lblStatMon = CreateStatCard(pnlStats, "Món ăn đang giảm giá", "0", 500, ThemeManager.Green);
-            Controls.Add(pnlStats);
+            // ── Thẻ KPI ─────────────────────────────────────────────────
+            var kpis = new TableLayoutPanel { Dock = DockStyle.Top, Height = 104, ColumnCount = 3, RowCount = 1, BackColor = ThemeManager.Bg };
+            kpis.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            for (int i = 0; i < 3; i++) kpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            _lblStatCT = new Label { Text = "0" };
+            _lblStatVoucher = new Label { Text = "0" };
+            _lblStatMon = new Label { Text = "0" };
+            kpis.Controls.Add(new KpiTile(_lblStatCT, "Chương trình đang áp dụng", ThemeManager.Primary) { Dock = DockStyle.Fill }, 0, 0);
+            kpis.Controls.Add(new KpiTile(_lblStatVoucher, "Voucher toàn đơn", ThemeManager.Violet) { Dock = DockStyle.Fill }, 1, 0);
+            kpis.Controls.Add(new KpiTile(_lblStatMon, "Món ăn đang giảm giá", ThemeManager.Green) { Dock = DockStyle.Fill }, 2, 0);
 
-            // Main TabControl
-            _tabMain = new TabControl {
+            // ── Thẻ trắng chứa các tab ──────────────────────────────────
+            var card = PageKit.NewCard();
+            card.Dock = DockStyle.Fill;
+            card.Padding = new Padding(8 + 20, 4 + 10, 8 + 20, 4 + 8 + 12);
+
+            _tabMain = new TabControl
+            {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
-                Padding = new Point(16, 8)
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular)
             };
 
             // 1. Tab Chương trình
-            var tabCT = new TabPage("📋 Chương trình khuyến mãi");
+            var tabCT = new TabPage("Chương trình khuyến mãi");
             InitTabChuongTrinh(tabCT);
             _tabMain.TabPages.Add(tabCT);
 
             // 2. Tab Voucher toàn đơn
-            var tabVoucher = new TabPage("🎟️ Voucher toàn hóa đơn");
+            var tabVoucher = new TabPage("Voucher toàn hóa đơn");
             InitTabVoucher(tabVoucher);
             _tabMain.TabPages.Add(tabVoucher);
 
             // 3. Tab Món khuyến mãi
-            var tabMon = new TabPage("🍲 Ưu đãi theo món ăn");
+            var tabMon = new TabPage("Ưu đãi theo món ăn");
             InitTabMon(tabMon);
             _tabMain.TabPages.Add(tabMon);
 
-            Controls.Add(_tabMain);
-            _tabMain.BringToFront();
-        }
-
-        private Label CreateStatCard(Panel parent, string title, string val, int x, Color color) {
-            var card = new Panel {
-                Location = new Point(x, 6),
-                Size = new Size(230, 52),
-                BackColor = ThemeManager.Paper
-            };
-            var lblT = new Label { Text = title, Location = new Point(10, 6), AutoSize = true, Font = new Font("Segoe UI", 8F), ForeColor = ThemeManager.Muted };
-            var lblV = new Label { Text = val, Location = new Point(10, 24), AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = color };
-            card.Controls.Add(lblT);
-            card.Controls.Add(lblV);
-            parent.Controls.Add(card);
-            return lblV;
+            card.Controls.Add(_tabMain);
+            Controls.Add(card);
+            Controls.Add(kpis);
+            Controls.Add(header);
+            card.BringToFront();
         }
 
         // ================= TAB 1: CHƯƠNG TRÌNH KHUYẾN MÃI =================
-        private void InitTabChuongTrinh(TabPage tab) {
-            tab.BackColor = ThemeManager.Bg;
+        private void InitTabChuongTrinh(TabPage tab)
+        {
+            tab.BackColor = Color.White;
 
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 44, Padding = new Padding(10, 5, 10, 5), BackColor = ThemeManager.Paper };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 58, Padding = new Padding(0, 6, 0, 12), BackColor = Color.White };
             var btnAdd = CreateToolButton("➕ Thêm chương trình", 0, ThemeManager.Blue, Color.White);
             btnAdd.Click += (s, e) => OpenTaoChuongTrinhDialog();
 
@@ -203,15 +194,17 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             _dgvChuongTrinh.Columns["SoLuongMonKm"].Width = 110;
 
             _dgvChuongTrinh.CellFormatting += Dgv_CellFormatting;
+            PageKit.FitColumns(_dgvChuongTrinh);
             tab.Controls.Add(_dgvChuongTrinh);
             _dgvChuongTrinh.BringToFront();
         }
 
         // ================= TAB 2: VOUCHER TOÀN HÓA ĐƠN =================
-        private void InitTabVoucher(TabPage tab) {
-            tab.BackColor = ThemeManager.Bg;
+        private void InitTabVoucher(TabPage tab)
+        {
+            tab.BackColor = Color.White;
 
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 44, Padding = new Padding(10, 5, 10, 5), BackColor = ThemeManager.Paper };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 58, Padding = new Padding(0, 6, 0, 12), BackColor = Color.White };
             var btnAdd = CreateToolButton("➕ Thêm Voucher mới", 0, ThemeManager.Purple, Color.White);
             btnAdd.Click += (s, e) => OpenTaoVoucherDialog();
 
@@ -242,15 +235,17 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             _dgvVoucher.Columns["TrangThai"].Width = 120;
 
             _dgvVoucher.CellFormatting += Dgv_CellFormatting;
+            PageKit.FitColumns(_dgvVoucher);
             tab.Controls.Add(_dgvVoucher);
             _dgvVoucher.BringToFront();
         }
 
         // ================= TAB 3: ƯU ĐÃI THEO MÓN ĂN =================
-        private void InitTabMon(TabPage tab) {
-            tab.BackColor = ThemeManager.Bg;
+        private void InitTabMon(TabPage tab)
+        {
+            tab.BackColor = Color.White;
 
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 44, Padding = new Padding(10, 5, 10, 5), BackColor = ThemeManager.Paper };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 58, Padding = new Padding(0, 6, 0, 12), BackColor = Color.White };
             var btnAdd = CreateToolButton("➕ Thêm ưu đãi món", 0, ThemeManager.Green, Color.White);
             btnAdd.Click += (s, e) => OpenTaoVoucherDialog(true);
 
@@ -283,27 +278,39 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             _dgvKmMon.Columns["TrangThai"].Width = 115;
 
             _dgvKmMon.CellFormatting += Dgv_CellFormatting;
+            PageKit.FitColumns(_dgvKmMon);
             tab.Controls.Add(_dgvKmMon);
             _dgvKmMon.BringToFront();
         }
 
-        private Button CreateToolButton(string text, int x, Color bg, Color fg) {
-            var btn = new Button {
-                Text = text,
-                Location = new Point(x, 5),
-                Size = new Size(155, 34),
-                BackColor = bg,
-                ForeColor = fg,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
+        private Button CreateToolButton(string text, int x, Color bg, Color fg)
+        {
+            var btn = new Button { Text = text };
+            // Nút đầu tiên (thêm) là nút chính; nút đỏ là nút xóa; còn lại nút phụ
+            if (fg == ThemeManager.Red) ButtonSkin.SetKind(btn, ButtonSkin.Kind.Danger);
+            else if (fg == Color.White) ButtonSkin.SetKind(btn, ButtonSkin.Kind.Primary);
+            else ButtonSkin.SetKind(btn, ButtonSkin.Kind.Secondary);
+            PageKit.FitButton(btn);
+            int left = 0;
+            // xếp nối tiếp theo thứ tự tạo, cách nhau 8px (bỏ qua tọa độ x cố định cũ)
+            if (x > 0) left = _toolX + 8;
+            btn.Location = new Point(left, 6);
+            _toolX = btn.Right;
+            // Khi nút tự giãn theo chữ, xếp lại các nút trên cùng thanh công cụ
+            btn.SizeChanged += (s, e) => {
+                var p = btn.Parent;
+                if (p == null) return;
+                int lx = 0;
+                foreach (Control c in p.Controls) if (c is Button) { c.Left = lx; lx = c.Right + 8; }
             };
-            btn.FlatAppearance.BorderSize = 0;
             return btn;
         }
+        private int _toolX;
 
-        private DataGridView CreateStyledGrid() {
-            var grid = new DataGridView {
+        private DataGridView CreateStyledGrid()
+        {
+            var grid = new DataGridView
+            {
                 Dock = DockStyle.Fill,
                 BackgroundColor = ThemeManager.Paper,
                 BorderStyle = BorderStyle.None,
@@ -314,37 +321,48 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
-                RowTemplate = { Height = 36 },
+                RowTemplate = { Height = 46 },
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
-                ColumnHeadersHeight = 38,
+                ColumnHeadersHeight = 44,
                 EnableHeadersVisualStyles = false,
                 GridColor = Color.FromArgb(238, 242, 246)
             };
-            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(245, 248, 252);
-            grid.ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Ink;
-            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
-            grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(234, 242, 255);
+            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
+            grid.ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Muted;
+            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            grid.DefaultCellStyle.SelectionBackColor = ThemeManager.PrimarySoft;
             grid.DefaultCellStyle.SelectionForeColor = ThemeManager.Ink;
+            UiStyler.StyleGrid(grid);
             return grid;
         }
 
-        private void Dgv_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e) {
+        private void Dgv_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
             var grid = sender as DataGridView;
             if (grid == null) return;
 
             string colName = grid.Columns[e.ColumnIndex].Name;
-            if (colName == "TrangThai" && e.Value != null) {
+            if (colName == "TrangThai" && e.Value != null)
+            {
                 string status = e.Value.ToString();
-                if (status == "Đang áp dụng") {
+                if (status == "Đang áp dụng")
+                {
                     e.CellStyle.ForeColor = ThemeManager.Green;
                     e.CellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
-                } else if (status == "Đã kết thúc") {
+                }
+                else if (status == "Đã kết thúc")
+                {
                     e.CellStyle.ForeColor = ThemeManager.Muted;
-                } else if (status == "Chưa diễn ra") {
+                }
+                else if (status == "Chưa diễn ra")
+                {
                     e.CellStyle.ForeColor = ThemeManager.Amber;
                 }
-            } else if ((colName == "DonGiaGoc" || colName == "DonGiaSauGiam" || colName == "GiaTriDonToiThieu" || colName == "GiamToiDa") && e.Value != null) {
-                if (double.TryParse(e.Value.ToString(), out var num)) {
+            }
+            else if ((colName == "DonGiaGoc" || colName == "DonGiaSauGiam" || colName == "GiaTriDonToiThieu" || colName == "GiamToiDa") && e.Value != null)
+            {
+                if (double.TryParse(e.Value.ToString(), out var num))
+                {
                     if (num > 0) e.Value = num.ToString("N0") + " đ";
                     else if (colName == "GiaTriDonToiThieu" || colName == "GiamToiDa") e.Value = "Không giới hạn";
                 }
@@ -352,8 +370,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
         }
 
         // ================= DATA LOADING =================
-        private async void LoadAllDataAsync() {
-            try {
+        private async void LoadAllDataAsync()
+        {
+            try
+            {
                 Cursor = Cursors.WaitCursor;
 
                 _chuongTrinhList = await _service.GetChuongTrinhListAsync();
@@ -362,7 +382,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
 
                 // 1. Fill ChuongTrinh
                 _dgvChuongTrinh.Rows.Clear();
-                foreach (var ct in _chuongTrinhList) {
+                foreach (var ct in _chuongTrinhList)
+                {
                     _dgvChuongTrinh.Rows.Add(
                         ct.MaChuongTrinh,
                         ct.TenChuongTrinh,
@@ -376,7 +397,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
 
                 // 2. Fill Voucher
                 _dgvVoucher.Rows.Clear();
-                foreach (var v in _voucherList) {
+                foreach (var v in _voucherList)
+                {
                     _dgvVoucher.Rows.Add(
                         v.MaVoucher,
                         $"[{v.MaChuongTrinh}] {v.TenChuongTrinh}",
@@ -391,7 +413,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
 
                 // 3. Fill KmMon
                 _dgvKmMon.Rows.Clear();
-                foreach (var m in _kmMonList) {
+                foreach (var m in _kmMonList)
+                {
                     _dgvKmMon.Rows.Add(
                         m.MaMon,
                         m.TenMon,
@@ -409,24 +432,33 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _lblStatCT.Text = _chuongTrinhList.Count(x => x.TrangThai == "Đang áp dụng").ToString() + " / " + _chuongTrinhList.Count;
                 _lblStatVoucher.Text = _voucherList.Count.ToString();
                 _lblStatMon.Text = _kmMonList.Count.ToString();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 MessageBox.Show(this, "Lỗi khi tải dữ liệu khuyến mãi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            } finally {
+            }
+            finally
+            {
                 Cursor = Cursors.Default;
             }
         }
 
         // ================= ACTIONS =================
-        private void OpenTaoChuongTrinhDialog() {
-            using (var dlg = new ChuongTrinhDialog(_service)) {
-                if (dlg.ShowDialog(this) == DialogResult.OK) {
+        private void OpenTaoChuongTrinhDialog()
+        {
+            using (var dlg = new ChuongTrinhDialog(_service))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
                     LoadAllDataAsync();
                 }
             }
         }
 
-        private void EditSelectedChuongTrinh() {
-            if (_dgvChuongTrinh.SelectedRows.Count == 0) {
+        private void EditSelectedChuongTrinh()
+        {
+            if (_dgvChuongTrinh.SelectedRows.Count == 0)
+            {
                 MessageBox.Show(this, "Vui lòng chọn chương trình cần chỉnh sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -434,15 +466,19 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             var item = _chuongTrinhList.FirstOrDefault(x => x.MaChuongTrinh == maCT);
             if (item == null) return;
 
-            using (var dlg = new ChuongTrinhDialog(_service, item)) {
-                if (dlg.ShowDialog(this) == DialogResult.OK) {
+            using (var dlg = new ChuongTrinhDialog(_service, item))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
                     LoadAllDataAsync();
                 }
             }
         }
 
-        private async Task DeleteSelectedChuongTrinhAsync() {
-            if (_dgvChuongTrinh.SelectedRows.Count == 0) {
+        private async Task DeleteSelectedChuongTrinhAsync()
+        {
+            if (_dgvChuongTrinh.SelectedRows.Count == 0)
+            {
                 MessageBox.Show(this, "Vui lòng chọn chương trình cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -453,28 +489,37 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             if (confirm != DialogResult.Yes) return;
 
             var (ok, msg) = await _service.DeleteChuongTrinhAsync(maCT);
-            if (ok) {
+            if (ok)
+            {
                 MessageBox.Show(this, "Đã xóa chương trình khuyến mãi.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 LoadAllDataAsync();
-            } else {
+            }
+            else
+            {
                 MessageBox.Show(this, msg, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void OpenTaoVoucherDialog(bool defaultTheoMon = false) {
+        private void OpenTaoVoucherDialog(bool defaultTheoMon = false)
+        {
             string preselectedCtId = null;
-            if (_dgvChuongTrinh.SelectedRows.Count > 0) {
+            if (_dgvChuongTrinh.SelectedRows.Count > 0)
+            {
                 preselectedCtId = _dgvChuongTrinh.SelectedRows[0].Cells["MaChuongTrinh"].Value?.ToString();
             }
-            using (var dlg = new TaoVoucherDialog(_service, preselectedCtId, defaultTheoMon)) {
-                if (dlg.ShowDialog(this) == DialogResult.OK) {
+            using (var dlg = new TaoVoucherDialog(_service, preselectedCtId, defaultTheoMon))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
                     LoadAllDataAsync();
                 }
             }
         }
 
-        private async Task DeleteSelectedVoucherAsync() {
-            if (_dgvVoucher.SelectedRows.Count == 0) {
+        private async Task DeleteSelectedVoucherAsync()
+        {
+            if (_dgvVoucher.SelectedRows.Count == 0)
+            {
                 MessageBox.Show(this, "Vui lòng chọn Voucher cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -486,16 +531,21 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             if (confirm != DialogResult.Yes) return;
 
             var (ok, msg) = await _service.DeleteVoucherAsync(item.MaKmvoucher);
-            if (ok) {
+            if (ok)
+            {
                 MessageBox.Show(this, $"Đã xóa voucher '{maVoucher}'.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 LoadAllDataAsync();
-            } else {
+            }
+            else
+            {
                 MessageBox.Show(this, msg, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private async Task DeleteSelectedKmMonAsync() {
-            if (_dgvKmMon.SelectedRows.Count == 0) {
+        private async Task DeleteSelectedKmMonAsync()
+        {
+            if (_dgvKmMon.SelectedRows.Count == 0)
+            {
                 MessageBox.Show(this, "Vui lòng chọn món ưu đãi cần hủy.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -507,10 +557,13 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             if (confirm != DialogResult.Yes) return;
 
             var (ok, msg) = await _service.DeleteKmMonAsync(item.MaKmsp);
-            if (ok) {
+            if (ok)
+            {
                 MessageBox.Show(this, $"Đã hủy ưu đãi cho món '{item.TenMon}'.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 LoadAllDataAsync();
-            } else {
+            }
+            else
+            {
                 MessageBox.Show(this, msg, "Không thể hủy", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

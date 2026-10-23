@@ -4,16 +4,21 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Helpers;
+using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Config;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
-namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
-    public partial class PhieuNhapForm : Form {
+namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
+{
+    public partial class PhieuNhapForm : Form
+    {
         private readonly PhieuNhapService _pnService;
         private List<PhieuNhapDto> _allPhieuNhap = new List<PhieuNhapDto>();
 
-        public PhieuNhapForm() {
+        public PhieuNhapForm()
+        {
             InitializeComponent();
             dgvPhieuNhap.AutoGenerateColumns = false;
             dgvPhieuNhap.AllowUserToResizeColumns = true;
@@ -23,23 +28,42 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _pnService = new PhieuNhapService(httpClient);
+
+            // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
+            PageKit.BuildListPage(this, new ListPageSpec
+            {
+                Title = lblTieuDe,
+                Subtitle = lblSub,
+                HeaderActions = new Control[] { btnLamMoi },
+                PrimaryActions = new[] { btnTaoPhieuNhap },
+                Search = txtTimKiem,
+                SearchIcon = lblTimKiem,
+                SearchPlaceholder = "Tìm theo mã phiếu, nhà cung cấp...",
+                Grid = dgvPhieuNhap,
+                SecondaryActions = new[] { btnXemChiTiet }
+            });
         }
 
-        private async void PhieuNhapForm_Load(object sender, EventArgs e) {
+        private async void PhieuNhapForm_Load(object sender, EventArgs e)
+        {
             await LoadData();
         }
 
-        private async Task LoadData() {
-            try {
+        private async Task LoadData()
+        {
+            try
+            {
                 _allPhieuNhap = await _pnService.GetAllAsync();
                 FilterData();
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 MessageBox.Show("Lỗi khi tải danh sách phiếu nhập: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void FilterData() {
+        private void FilterData()
+        {
             var keyword = (txtTimKiem.Text ?? "").Trim().ToLower();
             var filtered = _allPhieuNhap.Where(p =>
                 string.IsNullOrEmpty(keyword) ||
@@ -54,50 +78,67 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             dgvPhieuNhap.DataSource = filtered;
         }
 
-        private void txtTimKiem_TextChanged(object sender, EventArgs e) {
+        private void txtTimKiem_TextChanged(object sender, EventArgs e)
+        {
             FilterData();
         }
 
-        private async void btnLamMoi_Click(object sender, EventArgs e) {
+        private async void btnLamMoi_Click(object sender, EventArgs e)
+        {
             txtTimKiem.Clear();
             await LoadData();
         }
 
-        private async void btnTaoPhieuNhap_Click(object sender, EventArgs e) {
-            using (var dialog = new PhieuNhapDialog()) {
-                if (dialog.ShowDialog(this) == DialogResult.OK) {
+        private async void btnTaoPhieuNhap_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new PhieuNhapDialog())
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadData();
                 }
             }
         }
 
-        private async void btnXemChiTiet_Click(object sender, EventArgs e) {
+        private async void btnXemChiTiet_Click(object sender, EventArgs e)
+        {
             var selected = GetSelected();
-            if (selected == null) {
+            if (selected == null)
+            {
                 MessageBox.Show("Vui lòng chọn một phiếu nhập để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            try {
+            try
+            {
                 var detail = await _pnService.GetByIdAsync(selected.MaPhieuNhap);
-                if (detail != null) {
-                    using (var dialog = new ChiTietPhieuNhapDialog(detail)) {
+                if (detail != null)
+                {
+                    using (var dialog = new ChiTietPhieuNhapDialog(detail))
+                    {
                         dialog.ShowDialog(this);
                     }
-                } else {
+                }
+                else
+                {
                     MessageBox.Show("Không tìm thấy thông tin chi tiết của phiếu nhập này.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 MessageBox.Show("Lỗi khi tải chi tiết phiếu nhập: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void dgvPhieuNhap_DoubleClick(object sender, EventArgs e) {
+        private void dgvPhieuNhap_DoubleClick(object sender, EventArgs e)
+        {
             btnXemChiTiet_Click(sender, e);
         }
 
-        private PhieuNhapDto GetSelected() {
-            if (dgvPhieuNhap.SelectedRows.Count > 0) {
+        private PhieuNhapDto GetSelected()
+        {
+            if (dgvPhieuNhap.SelectedRows.Count > 0)
+            {
                 return dgvPhieuNhap.SelectedRows[0].DataBoundItem as PhieuNhapDto;
             }
             return null;

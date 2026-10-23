@@ -34,6 +34,9 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
         private readonly Panel _main;
         private Color _accent;
         private UcSidebar _sidebar;
+        private Action _relayout;
+        private Panel _host;
+        private Form _current;
 
         public DashboardForm() : this("admin", "Trần An", new List<string> { "Admin" }) { }
         public DashboardForm(string role) : this("admin", "Trần An", new List<string> { role }) { }
@@ -52,7 +55,8 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             _accent = ThemeManager.AccentFor(_role);
 
             Text = _role + " Workspace | RestaurantCRM";
-            Size = new Size(1180, 760);
+            var wa = Screen.PrimaryScreen.WorkingArea;
+            Size = new Size(Math.Min(1320, wa.Width), Math.Min(820, wa.Height));
             MinimumSize = new Size(980, 640);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = ThemeManager.Bg;
@@ -66,12 +70,17 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 BackColor = ThemeManager.Bg,
-                Padding = new Padding(24, 18, 24, 24)
+                Padding = new Padding(0)
             };
             _main.Controls.Add(_body);
+            _body.Resize += (s, e) => _relayout?.Invoke();
 
-            _header = new UcHeader { Dock = DockStyle.Top, Height = 68 };
-            _header.SetTitle("Tổng quan", _role);
+            // Vùng chứa màn hình chức năng (mở ngay trong cửa sổ chính, không popup)
+            _host = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Bg, Padding = new Padding(8, 0, 8, 8), Visible = false };
+            _main.Controls.Add(_host);
+
+            _header = new UcHeader { Dock = DockStyle.Top };
+            _header.SetTitle("Dashboard", _role);
             _header.SetUserInfo(_displayName, _role);
             _main.Controls.Add(_header);
 
@@ -124,11 +133,10 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
 
         private void OnMenuSelected(string item)
         {
-            if (item == "Đăng xuất") { IsLoggedOut = true; Close(); return; }
+            if (item == "Đăng xuất") { CloseModule(); IsLoggedOut = true; Close(); return; }
             if (item == "Dashboard")
             {
-                _header.SetTitle("Dashboard", _role);
-                RenderDashboard();
+                ShowDashboard();
                 return;
             }
             if (!PermissionHelper.CanOpen(_role, item))
@@ -136,9 +144,77 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 MessageBox.Show(this, "Bạn không có quyền mở chức năng này trong phân hệ hiện tại.", "Không đủ quyền", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            Form form = CreateModule(item);
+            Form form;
+            try { form = CreateModule(item); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Không mở được chức năng \"" + item + "\".\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
             if (form == null) return;
-            form.ShowDialog(this);
+            ShowModule(item, form);
+        }
+
+        // ─────────────── Mở màn hình chức năng trong cửa sổ chính ───────────────
+        private void ShowModule(string item, Form form)
+        {
+            CloseModule();
+            _current = form;
+            form.TopLevel = false;
+            form.FormBorderStyle = FormBorderStyle.None;
+            form.StartPosition = FormStartPosition.Manual;
+            form.MinimumSize = Size.Empty;
+            form.MaximumSize = Size.Empty;
+            form.Dock = DockStyle.Fill;
+            form.FormClosed += (s, e) =>
+            {
+                if (_current != form) return;
+                _current = null;
+                if (!IsDisposed && !Disposing) ShowDashboard();
+            };
+
+            _host.SuspendLayout();
+            _host.Controls.Add(form);
+            _host.ResumeLayout(true);
+            _body.Visible = false;
+            _host.Visible = true;
+            _host.BringToFront();
+            _header.SetTitle(TitleFor(item), _role);
+            _sidebar.SetActive(item);
+            form.Show();
+        }
+
+        private void CloseModule()
+        {
+            var f = _current;
+            _current = null;
+            if (f == null) return;
+            try { f.Close(); } catch { }
+            try { if (!f.IsDisposed) f.Dispose(); } catch { }
+        }
+
+        private void ShowDashboard()
+        {
+            CloseModule();
+            _host.Visible = false;
+            _body.Visible = true;
+            _body.BringToFront();
+            _header.SetTitle("Dashboard", _role);
+            _sidebar.SetActive("Dashboard");
+            RenderDashboard();
+        }
+
+        private static string TitleFor(string item)
+        {
+            switch (item)
+            {
+                case "Thực đơn": return "Thực đơn món ăn";
+                case "Kho hàng": return "Kho hàng";
+                case "Phiếu nhập hàng": return "Phiếu nhập hàng";
+                case "Báo cáo bán hàng": return "Báo cáo doanh thu";
+                case "Đơn hàng": return "Đơn hàng";
+                default: return item;
+            }
         }
 
         private Form CreateModule(string item)
@@ -166,304 +242,378 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             }
         }
 
+        // ═════════════════════════════════════════════════════════════════
+        //  DASHBOARD — bố cục giống mẫu:
+        //  [4 thẻ số liệu]                         [Hoạt động
+        //  [Biểu đồ doanh thu theo tháng       ]     gần đây
+        //  [Thao tác nhanh]  [Món bán chạy     ]     ...]
+        // ═════════════════════════════════════════════════════════════════
         private void RenderDashboard()
         {
-            _body.Controls.Clear();
             _body.SuspendLayout();
+            var old = new Control[_body.Controls.Count];
+            _body.Controls.CopyTo(old, 0);
+            _body.Controls.Clear();
+            foreach (var c in old) c.Dispose();
+            _body.AutoScrollPosition = new Point(0, 0);
 
-            int contentW = Math.Max(700, _body.ClientSize.Width - 48);
+            const int padX = 22;      // lề trái/phải (thẻ đã có 8px bóng đổ => mép thẻ cách ~30px)
+            const int feedW = 300;
+            const int gap = 4;        // khoảng giữa 2 control (cộng 16px bóng => ~20px giữa mép thẻ)
 
-            // ── 1. Welcome Banner ────────────────────────────────────────────
-            var welcomeCard = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(contentW, 84),
-                BackColor = ThemeManager.Paper
-            };
-            welcomeCard.Paint += (s, e) => {
-                var g = e.Graphics;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                // card border
-                using (var pen = new Pen(ThemeManager.Line, 1))
-                    g.DrawRectangle(pen, 0, 0, welcomeCard.Width - 1, welcomeCard.Height - 1);
-                // accent left bar
-                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                    new Rectangle(0, 0, 4, welcomeCard.Height), _accent, ThemeManager.Violet,
-                    System.Drawing.Drawing2D.LinearGradientMode.Vertical))
-                    g.FillRectangle(brush, 0, 0, 4, welcomeCard.Height);
-            };
-
-            var lblGreeting = new Label
-            {
-                Text = "Xin chào, " + _displayName + " 👋",
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                AutoSize = true,
-                Location = new Point(20, 14),
-                BackColor = Color.Transparent
-            };
-            welcomeCard.Controls.Add(lblGreeting);
-
-            var lblDate = new Label
-            {
-                Text = DateTime.Now.ToString("dddd, dd/MM/yyyy") + "  ·  Chúc bạn một ngày làm việc hiệu quả!",
-                Font = new Font("Segoe UI", 8.5F),
-                ForeColor = ThemeManager.Muted,
-                AutoSize = true,
-                Location = new Point(22, 46),
-                BackColor = Color.Transparent
-            };
-            welcomeCard.Controls.Add(lblDate);
-
-            var statusBadge = new Label
-            {
-                Text = "● Hệ thống sẵn sàng",
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                ForeColor = ThemeManager.Green,
-                BackColor = ThemeManager.GreenSoft,
-                Size = new Size(148, 28),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(contentW - 164, 28)
-            };
-            welcomeCard.Controls.Add(statusBadge);
-            _body.Controls.Add(welcomeCard);
-
-            // ── 2. KPI Cards (TableLayoutPanel — 4 cột đều nhau) ────────────
-            var kpiTable = new TableLayoutPanel
-            {
-                Location = new Point(0, 100),
-                Size = new Size(contentW, 130),
-                ColumnCount = 4,
-                RowCount = 1,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0),
-                Padding = new Padding(0)
-            };
-            kpiTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            for (int ci = 0; ci < 4; ci++) kpiTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-
-            UcThongKe kpi1 = null, kpi2 = null, kpi3 = null, kpi4 = null;
+            // 1. Thẻ số liệu
+            UcThongKe kpi1, kpi2, kpi3, kpi4;
             if (_role == "Admin")
             {
                 kpi1 = new UcThongKe("Món ăn", "...", "Trong thực đơn", "🍲", ThemeManager.Primary);
                 kpi2 = new UcThongKe("Nhà cung cấp", "...", "Đối tác cung ứng", "🏢", ThemeManager.Teal);
-                kpi3 = new UcThongKe("Phiếu nhập", "...", "Đã nhập tháng này", "📥", ThemeManager.Violet);
-                kpi4 = new UcThongKe("Tài khoản", "...", "Nhân viên hoạt động", "👤", ThemeManager.Sky);
+                kpi3 = new UcThongKe("Phiếu nhập", "...", "Tháng này", "📥", ThemeManager.Violet);
+                kpi4 = new UcThongKe("Tài khoản", "...", "Nhân viên", "👤", ThemeManager.Sky);
             }
             else if (_role == "Bán hàng")
             {
-                kpi1 = new UcThongKe("Doanh thu", "...", "Hôm nay", "💰", ThemeManager.Green);
+                kpi1 = new UcThongKe("Doanh thu hôm nay", "...", "Đơn hoàn thành", "💰", ThemeManager.Green);
                 kpi2 = new UcThongKe("Chờ xử lý", "...", "Đơn hàng mới", "⏳", ThemeManager.Amber);
-                kpi3 = new UcThongKe("Đang phục vụ", "...", "Bàn tại quán", "🍽️", ThemeManager.Teal);
-                kpi4 = new UcThongKe("Hoàn tất", "...", "Đơn giao thành công", "✅", ThemeManager.Primary);
+                kpi3 = new UcThongKe("Đang thực hiện", "...", "Chuẩn bị / giao", "🍽", ThemeManager.Teal);
+                kpi4 = new UcThongKe("Hoàn tất", "...", "Trong hôm nay", "✅", ThemeManager.Primary);
             }
             else
             {
-                kpi1 = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ khách", "👥", ThemeManager.Primary);
-                kpi2 = new UcThongKe("Đánh giá TB", "...", "Trung bình đánh giá", "⭐", ThemeManager.Amber);
-                kpi3 = new UcThongKe("Đánh giá hiển thị", "...", "Tổng đánh giá", "⭐", ThemeManager.Violet);
+                kpi1 = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ", "👥", ThemeManager.Primary);
+                kpi2 = new UcThongKe("Điểm đánh giá", "...", "Trung bình", "⭐", ThemeManager.Amber);
+                kpi3 = new UcThongKe("Lượt đánh giá", "...", "Đang hiển thị", "💬", ThemeManager.Violet);
                 kpi4 = new UcThongKe("Khảo sát mở", "...", "Đang diễn ra", "📋", ThemeManager.Teal);
             }
+            var kpis = new[] { kpi1, kpi2, kpi3, kpi4 };
+            foreach (var k in kpis) _body.Controls.Add(k);
 
-            Action<UcThongKe, int> addKpi = (k, col) => {
-                k.Dock = DockStyle.Fill;
-                k.Margin = col < 3 ? new Padding(0, 0, 14, 0) : new Padding(0);
-                kpiTable.Controls.Add(k, col, 0);
+            // 2. Biểu đồ
+            var chart = new UcLineChart
+            {
+                Title = "Doanh thu theo tháng",
+                Caption = "Năm " + DateTime.Now.Year,
+                Unit = "đ"
             };
-            if (kpi1 != null) addKpi(kpi1, 0);
-            if (kpi2 != null) addKpi(kpi2, 1);
-            if (kpi3 != null) addKpi(kpi3, 2);
-            if (kpi4 != null) addKpi(kpi4, 3);
+            _body.Controls.Add(chart);
 
-            _body.Controls.Add(kpiTable);
-            LoadMetricsAsync(kpi1, kpi2, kpi3, kpi4);
+            // 3a. Thao tác nhanh
+            var quick = BuildQuickActions();
+            _body.Controls.Add(quick);
 
-            // ── 3. Hai cột dưới ──────────────────────────────────────────────
-            int midY = 248;
-            int gap = 16;
-            int colW = Math.Max(320, (contentW - gap) / 2);
+            // 3b. Món bán chạy
+            var top = new UcTopList { Title = "Món bán chạy", Subtitle = "TOP 5 THEO SỐ LƯỢNG ĐÃ BÁN", Unit = "phần" };
+            _body.Controls.Add(top);
 
-            // 3.1 Thao tác nhanh
-            var quickPanel = new RoundedPanel
+            // 4. Hoạt động gần đây (cột phải)
+            var feed = new UcActivityFeed { Title = _role == "CRM" ? "Đánh giá mới nhất" : "Hoạt động gần đây" };
+            _body.Controls.Add(feed);
+
+            // Khoảng trống cuối trang để cuộn không sát mép
+            var spacer = new Panel { Size = new Size(1, 1), BackColor = ThemeManager.Bg };
+            _body.Controls.Add(spacer);
+
+            _relayout = () =>
             {
-                Location = new Point(0, midY),
-                Size = new Size(colW, 260),
-                Radius = 12,
-                FillColor = ThemeManager.Paper,
-                BorderColor = ThemeManager.Line
+                int w = Math.Max(760, _body.ClientSize.Width - padX * 2);
+                int x0 = padX - _body.HorizontalScroll.Value;
+                int y0 = 0 - _body.VerticalScroll.Value;
+                int leftW = w - feedW - gap;
+
+                // hàng thẻ
+                int kw = (leftW - gap * 3) / 4;
+                for (int i = 0; i < kpis.Length; i++)
+                    kpis[i].SetBounds(x0 + i * (kw + gap), y0, kw, 136);
+
+                // biểu đồ
+                chart.SetBounds(x0, y0 + 136 + gap, leftW, 320);
+
+                // hàng dưới
+                int rowY = chart.Bottom + gap;
+                int qw = (leftW - gap) / 2;
+                int qCount = 0;
+                foreach (Control c in quick.Controls) if (c is QuickActionButton) qCount++;
+                int cols = QuickCols(qw);
+                int rowH = Math.Max(286, 4 + 72 + ((qCount + cols - 1) / cols) * 58 + 20 + 20);
+                quick.SetBounds(x0, rowY, qw, rowH);
+                top.SetBounds(x0 + qw + gap, rowY, leftW - qw - gap, rowH);
+
+                // cột hoạt động
+                feed.SetBounds(x0 + leftW + gap, y0, feedW, top.Bottom - y0);
+                spacer.Location = new Point(x0, top.Bottom + 24);
+
+                // nút thao tác nhanh: lưới 2 cột
+                LayoutQuickButtons(quick);
             };
-
-            var lblQuickTitle = new Label
-            {
-                Text = "⚡ Thao tác nhanh",
-                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                AutoSize = true,
-                Location = new Point(16, 14),
-                BackColor = Color.Transparent
-            };
-            quickPanel.Controls.Add(lblQuickTitle);
-
-            var lblQuickSub = new Label
-            {
-                Text = "Truy cập nhanh các phân hệ nghiệp vụ chính",
-                Font = new Font("Segoe UI", 8F),
-                ForeColor = ThemeManager.Muted,
-                AutoSize = true,
-                Location = new Point(17, 36),
-                BackColor = Color.Transparent
-            };
-            quickPanel.Controls.Add(lblQuickSub);
-
-            (string Title, string Cmd, string Icon)[] actions;
-            if (_role == "Admin")
-            {
-                actions = new[] {
-                    ("Tạo đơn hàng", "Tạo đơn hàng", "📝"),
-                    ("Đơn hàng", "Đơn hàng", "🧾"),
-                    ("Món ăn", "Món ăn", "🍲"),
-                    ("Nhà cung cấp", "Nhà cung cấp", "🏢"),
-                    ("Phiếu nhập", "Phiếu nhập hàng", "📥"),
-                    ("Khuyến mãi", "Khuyến mãi", "🎟️"),
-                    ("Tài khoản", "Tài khoản", "👤"),
-                    ("Phân quyền", "Vai trò & phân quyền", "🛡️")
-                };
-            }
-            else if (_role == "Bán hàng")
-            {
-                actions = new[] {
-                    ("Tạo đơn hàng", "Tạo đơn hàng", "📝"),
-                    ("Đơn hàng", "Đơn hàng", "🧾"),
-                    ("Thực đơn", "Thực đơn", "🍲"),
-                    ("Khuyến mãi", "Khuyến mãi", "🎟️"),
-                    ("Kiểm tra kho", "Kho hàng", "📦"),
-                    ("Báo cáo", "Báo cáo bán hàng", "📈")
-                };
-            }
-            else
-            {
-                actions = new[] {
-                    ("Khách hàng", "Khách hàng", "👥"),
-                    ("Đánh giá", "Đánh giá", "⭐"),
-                    ("Khảo sát", "Khảo sát", "📋"),
-                    ("Phân tích", "Phân tích khách hàng", "📊")
-                };
-            }
-
-            int btnX = 14, btnY = 60;
-            int btnW = Math.Max(120, (colW - 42) / 2);
-            int btnH = 46;
-            int colIdx = 0;
-            foreach (var act in actions)
-            {
-                var btn = new Button
-                {
-                    Text = "  " + act.Icon + "  " + act.Title,
-                    Location = new Point(btnX, btnY),
-                    Size = new Size(btnW, btnH),
-                    FlatStyle = FlatStyle.Flat,
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    ForeColor = ThemeManager.Ink,
-                    BackColor = ThemeManager.Surface2,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                    Cursor = Cursors.Hand,
-                    Tag = act.Cmd
-                };
-                btn.FlatAppearance.BorderColor = ThemeManager.Line;
-                btn.FlatAppearance.BorderSize = 1;
-                btn.FlatAppearance.MouseOverBackColor = ThemeManager.PrimarySoft;
-                btn.Click += (s, e) => OnMenuSelected((string)((Button)s).Tag);
-                quickPanel.Controls.Add(btn);
-                colIdx++;
-                btnX += btnW + 14;
-                if (colIdx % 2 == 0) { btnX = 14; btnY += btnH + 8; }
-            }
-            quickPanel.Height = Math.Max(240, btnY + btnH + 18);
-            _body.Controls.Add(quickPanel);
-
-            // 3.2 Top Món ăn bán chạy
-            var membersTable = new UcCurrentMembersTable
-            {
-                Location = new Point(colW + gap, midY),
-                Size = new Size(colW, quickPanel.Height)
-            };
-            _body.Controls.Add(membersTable);
-
+            _relayout();
             _body.ResumeLayout(true);
 
-            // ── Responsive ───────────────────────────────────────────────────
-            _body.Resize += (s, e) => {
-                int w = Math.Max(700, _body.ClientSize.Width - 48);
-                welcomeCard.Width = w;
-                statusBadge.Left = welcomeCard.Width - statusBadge.Width - 16;
-                kpiTable.Width = w;
+            LoadMetricsAsync(kpi1, kpi2, kpi3, kpi4);
+            LoadChartAsync(chart);
+            LoadTopAsync(top);
+            LoadFeedAsync(feed);
+        }
 
-                int half = Math.Max(320, (w - gap) / 2);
-                quickPanel.Width = half;
-                membersTable.Width = half;
-                membersTable.Left = half + gap;
+        // ─────────────── Thao tác nhanh ───────────────
+        private RoundedPanel BuildQuickActions()
+        {
+            var card = new RoundedPanel
+            {
+                Radius = 14,
+                Shadow = 8,
+                FillColor = ThemeManager.Paper,
+                BorderColor = Color.FromArgb(120, ThemeManager.Line)
+            };
+            card.Paint += (s, e) =>
+            {
+                var r = card.CardRect;
+                using (var f = new Font("Segoe UI", 11.5F, FontStyle.Bold))
+                    TextRenderer.DrawText(e.Graphics, "Thao tác nhanh", f, new Point(r.X + 24, r.Y + 20), ThemeManager.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                using (var f = new Font("Segoe UI", 7F, FontStyle.Bold))
+                    TextRenderer.DrawText(e.Graphics, "MỞ NHANH CHỨC NĂNG", f, new Point(r.X + 24, r.Y + 44), ThemeManager.Muted, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            };
 
-                int bW = Math.Max(120, (half - 42) / 2);
-                int bX = 14, bY = 60, cI = 0;
-                foreach (Control c in quickPanel.Controls)
+            (string Title, string Cmd, string Glyph)[] actions;
+            if (_role == "Admin")
+                actions = new[] {
+                    ("Tài khoản", "Tài khoản", ThemeManager.Glyph.Contact),
+                    ("Phân quyền", "Vai trò & phân quyền", ThemeManager.Glyph.Shield),
+                    ("Sao lưu", "Sao lưu dữ liệu", ThemeManager.Glyph.Save),
+                };
+            else if (_role == "Bán hàng")
+                actions = new[] {
+                    ("Tạo đơn hàng", "Tạo đơn hàng", ThemeManager.Glyph.Cart),
+                    ("Đơn hàng", "Đơn hàng", ThemeManager.Glyph.List),
+                    ("Thực đơn", "Thực đơn", ThemeManager.Glyph.Book),
+                    ("Khuyến mãi", "Khuyến mãi", ThemeManager.Glyph.Tag),
+                    ("Kho hàng", "Kho hàng", ThemeManager.Glyph.Package),
+                    ("Báo cáo", "Báo cáo bán hàng", ThemeManager.Glyph.Chart),
+                };
+            else
+                actions = new[] {
+                    ("Khách hàng", "Khách hàng", ThemeManager.Glyph.People),
+                    ("Đánh giá", "Đánh giá", ThemeManager.Glyph.Star),
+                    ("Khảo sát", "Khảo sát", ThemeManager.Glyph.Document),
+                    ("Phân tích", "Phân tích khách hàng", ThemeManager.Glyph.Diagnostic),
+                };
+
+            foreach (var a in actions)
+            {
+                if (!PermissionHelper.CanOpen(_role, a.Cmd)) continue;
+                var btn = new QuickActionButton(a.Title, a.Glyph) { Tag = a.Cmd };
+                btn.Click += (s, e) => OnMenuSelected((string)((Control)s).Tag);
+                card.Controls.Add(btn);
+            }
+            return card;
+        }
+
+        /// <summary>2 cột nếu đủ rộng để chữ không bị cắt, ngược lại 1 cột.</summary>
+        private static int QuickCols(int cardWidth)
+        {
+            int inner = cardWidth - 16 - 40;          // trừ bóng đổ + lề trong
+            return (inner - 10) / 2 >= 140 ? 2 : 1;
+        }
+
+        private static void LayoutQuickButtons(RoundedPanel card)
+        {
+            var r = card.CardRect;
+            int cols = QuickCols(card.Width);
+            int x = r.X + 20, y = r.Y + 72;
+            int bw = (r.Width - 40 - 10 * (cols - 1)) / cols, bh = 48;
+            int i = 0;
+            foreach (Control c in card.Controls)
+            {
+                if (!(c is QuickActionButton)) continue;
+                c.SetBounds(x + (i % cols) * (bw + 10), y + (i / cols) * (bh + 10), bw, bh);
+                i++;
+            }
+        }
+
+        /// <summary>Nút thao tác nhanh tự vẽ: icon trong vòng tròn nhạt + chữ, hover viền xanh.</summary>
+        private class QuickActionButton : Control
+        {
+            private readonly string _glyph;
+            private bool _hover;
+            public QuickActionButton(string text, string glyph)
+            {
+                Text = text; _glyph = glyph;
+                Cursor = Cursors.Hand;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+                BackColor = Color.White;
+            }
+            protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.Clear(Color.White);
+                var rc = new Rectangle(0, 0, Width - 1, Height - 1);
+                using (var path = ThemeManager.RoundedRect(rc, 10))
                 {
-                    if (c is Button b)
+                    using (var br = new SolidBrush(_hover ? ThemeManager.PrimarySoft : ThemeManager.Surface2)) g.FillPath(br, path);
+                    using (var pen = new Pen(_hover ? Color.FromArgb(120, ThemeManager.Primary) : ThemeManager.Line)) g.DrawPath(pen, path);
+                }
+                var ic = new Rectangle(10, (Height - 30) / 2, 30, 30);
+                using (var br = new SolidBrush(_hover ? ThemeManager.Primary : Color.White)) g.FillEllipse(br, ic);
+                using (var f = ThemeManager.Icon(9.5F))
+                    TextRenderer.DrawText(g, _glyph, f, ic, _hover ? Color.White : ThemeManager.Primary,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                using (var f = new Font("Segoe UI", 9F, FontStyle.Bold))
+                    TextRenderer.DrawText(g, Text, f, new Rectangle(ic.Right + 10, 0, Width - ic.Right - 14, Height),
+                        _hover ? ThemeManager.Primary : ThemeManager.Ink, TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            }
+        }
+
+        // ─────────────── Tải dữ liệu ───────────────
+        private System.Net.Http.HttpClient NewHttp()
+        {
+            return new System.Net.Http.HttpClient
+            {
+                BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/"),
+                Timeout = TimeSpan.FromSeconds(15)
+            };
+        }
+
+        private void OnUi(Action a)
+        {
+            if (IsDisposed) return;
+            if (InvokeRequired) BeginInvoke(a); else a();
+        }
+
+        private class DoanhThuThangDto { public int Thang { get; set; } public double DoanhThu { get; set; } }
+        private class MonBanChayDto { public string TenMon { get; set; } public double TongSoLuongBan { get; set; } }
+        private class DanhGiaFeedDto
+        {
+            public string TenKhachHang { get; set; }
+            public string TenMon { get; set; }
+            public int? SoSao { get; set; }
+            public string NoiDung { get; set; }
+            public DateTime? NgayDanhGia { get; set; }
+        }
+
+        private async void LoadChartAsync(UcLineChart chart)
+        {
+            var labels = new string[12];
+            var values = new double[12];
+            for (int i = 0; i < 12; i++) labels[i] = "T" + (i + 1);
+            try
+            {
+                using (var http = NewHttp())
+                {
+                    var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<DoanhThuThangDto>>(
+                        http, "api/ThongKe/DoanhThuTheoThang?nam=" + DateTime.Now.Year);
+                    if (data != null)
+                        foreach (var d in data)
+                            if (d.Thang >= 1 && d.Thang <= 12) values[d.Thang - 1] = d.DoanhThu;
+                }
+            }
+            catch { /* API chưa sẵn sàng -> biểu đồ hiển thị trống */ }
+            OnUi(() => { if (!chart.IsDisposed) chart.SetData(labels, values); });
+        }
+
+        private async void LoadTopAsync(UcTopList top)
+        {
+            var items = new List<KeyValuePair<string, double>>();
+            try
+            {
+                using (var http = NewHttp())
+                {
+                    var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<MonBanChayDto>>(http, "api/ThongKe/MonBanChay?top=5");
+                    if (data != null)
+                        foreach (var d in data) items.Add(new KeyValuePair<string, double>(d.TenMon, d.TongSoLuongBan));
+                }
+            }
+            catch { }
+            OnUi(() => { if (!top.IsDisposed) top.SetItems(items); });
+        }
+
+        private async void LoadFeedAsync(UcActivityFeed feed)
+        {
+            var items = new List<ActivityItem>();
+            try
+            {
+                using (var http = NewHttp())
+                {
+                    if (_role == "CRM")
                     {
-                        b.Location = new Point(bX, bY);
-                        b.Width = bW;
-                        cI++;
-                        bX += bW + 14;
-                        if (cI % 2 == 0) { bX = 14; bY += btnH + 8; }
+                        var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<DanhGiaFeedDto>>(http, "api/AdminDanhGia");
+                        if (data != null)
+                            foreach (var d in data)
+                            {
+                                if (items.Count >= 15) break;
+                                string who = string.IsNullOrWhiteSpace(d.TenKhachHang) ? "Khách ẩn danh" : d.TenKhachHang;
+                                string stars = d.SoSao.HasValue ? d.SoSao.Value + "★" : "";
+                                items.Add(new ActivityItem
+                                {
+                                    Who = who,
+                                    Time = d.NgayDanhGia,
+                                    Text = who + " đánh giá " + stars + (string.IsNullOrEmpty(d.TenMon) ? "" : " món " + d.TenMon),
+                                    Status = null
+                                });
+                            }
+                    }
+                    else
+                    {
+                        var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<HoaDonDto>>(http, "api/AdminHoaDon");
+                        if (data != null)
+                            foreach (var d in data)
+                            {
+                                if (items.Count >= 15) break;
+                                string who = string.IsNullOrWhiteSpace(d.TenKhachHang) ? "Khách vãng lai" : d.TenKhachHang;
+                                items.Add(new ActivityItem
+                                {
+                                    Who = who,
+                                    Time = d.NgayDat,
+                                    Text = who + " đặt đơn #" + d.MaHoaDon + " · " + (d.TongThanhToan ?? 0).ToString("N0") + " đ"
+                                           + (string.IsNullOrEmpty(d.TrangThai) ? "" : " · " + ThemeManager.CleanStatus(d.TrangThai)),
+                                    Status = d.TrangThai
+                                });
+                            }
                     }
                 }
-                quickPanel.Height = Math.Max(240, bY + btnH + 18);
-                membersTable.Height = quickPanel.Height;
-            };
+            }
+            catch { }
+            OnUi(() => { if (!feed.IsDisposed) feed.SetItems(items); });
         }
 
         private async void LoadMetricsAsync(UcThongKe c1, UcThongKe c2, UcThongKe c3, UcThongKe c4)
         {
             try
             {
-                using (var http = new System.Net.Http.HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") })
+                using (var http = NewHttp())
                 {
                     var metrics = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<DashboardMetricsDto>(http, "api/ThongKe/DashboardMetrics");
                     if (metrics == null || IsDisposed) return;
 
-                    void UpdateCards()
+                    OnUi(() =>
                     {
-                        if (IsDisposed) return;
                         if (_role == "Admin")
                         {
-                            c1?.SetValue(metrics.SoMonAn.ToString("N0"), "Trong thực đơn");
-                            c2?.SetValue(metrics.SoNhaCungCap.ToString("N0"), "Đối tác cung ứng");
-                            c3?.SetValue(metrics.SoPhieuNhapThangNay.ToString("N0"), "Đã nhập tháng này");
-                            c4?.SetValue(metrics.SoTaiKhoan.ToString("N0"), "Nhân viên hệ thống");
+                            c1?.SetValue(metrics.SoMonAn.ToString("N0"));
+                            c2?.SetValue(metrics.SoNhaCungCap.ToString("N0"));
+                            c3?.SetValue(metrics.SoPhieuNhapThangNay.ToString("N0"));
+                            c4?.SetValue(metrics.SoTaiKhoan.ToString("N0"));
                         }
                         else if (_role == "Bán hàng")
                         {
-                            c1?.SetValue(metrics.DoanhThuHomNay.ToString("N0") + " đ", "Hôm nay");
-                            c2?.SetValue(metrics.DonChoXuLy.ToString("N0"), "Đơn chờ xử lý");
-                            c3?.SetValue(metrics.DonDangGiao.ToString("N0"), "Đang thực hiện");
-                            c4?.SetValue(metrics.DonHoanThanhHomNay.ToString("N0"), "Hoàn thành hôm nay");
+                            c1?.SetValue(metrics.DoanhThuHomNay.ToString("N0") + " đ");
+                            c2?.SetValue(metrics.DonChoXuLy.ToString("N0"));
+                            c3?.SetValue(metrics.DonDangGiao.ToString("N0"));
+                            c4?.SetValue(metrics.DonHoanThanhHomNay.ToString("N0"));
                         }
                         else
                         {
-                            c1?.SetValue(metrics.TongKhachHang.ToString("N0"), "Tổng hồ sơ khách");
-                            c2?.SetValue(metrics.DiemDanhGiaTb.ToString("0.0") + " / 5", "Trung bình đánh giá");
-                            c3?.SetValue(metrics.TongDanhGia.ToString("N0"), "Tổng đánh giá");
-                            c4?.SetValue(metrics.KhaoSatDangMo.ToString("N0"), "Đang diễn ra");
+                            c1?.SetValue(metrics.TongKhachHang.ToString("N0"));
+                            c2?.SetValue(metrics.DiemDanhGiaTb.ToString("0.0") + " / 5");
+                            c3?.SetValue(metrics.TongDanhGia.ToString("N0"));
+                            c4?.SetValue(metrics.KhaoSatDangMo.ToString("N0"));
                         }
-                    }
-
-                    if (InvokeRequired) Invoke((Action)UpdateCards);
-                    else UpdateCards();
+                    });
                 }
             }
             catch
             {
-                // Giữ nguyên giá trị mặc định nếu API chưa sẵn sàng
+                OnUi(() => { foreach (var c in new[] { c1, c2, c3, c4 }) c?.SetValue("—", "Chưa kết nối API"); });
             }
         }
     }
