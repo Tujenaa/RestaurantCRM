@@ -1,712 +1,270 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Net.Http;
-using System.Net.Http.Json;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Controls;
+using RestaurantCRM.AdminApp.DTOs.KhaoSat;
+using RestaurantCRM.AdminApp.Helpers;
+using RestaurantCRM.AdminApp.Services;
 
 namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 {
-    public partial class KhaoSatForm : ModuleFormBase
+    /// <summary>
+    /// Quản trị khảo sát: danh sách, tìm kiếm, lọc trạng thái; tạo / sửa khảo sát và câu hỏi;
+    /// xem trước như khách hàng thấy; mở / đóng khảo sát; xem thống kê kết quả; xóa khảo sát chưa có phiếu.
+    /// </summary>
+    public partial class KhaoSatForm : Form
     {
-        private static readonly HttpClient _http = new HttpClient
-        {
-            BaseAddress = new Uri("http://localhost:5275")
-        };
+        private readonly KhaoSatService _service = new KhaoSatService();
+        private List<KhaoSatDto> _all = new List<KhaoSatDto>();
+        private bool _loading;
 
-        private List<KhaoSatDTO> _danhSach = new List<KhaoSatDTO>();
+        private readonly DataGridView _grid = new DataGridView();
+        private readonly TextBox _txtSearch = new TextBox();
+        private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label _lblCount = new Label();
+        private readonly Label _lblFooter = new Label();
+        private readonly Label _kTong = new Label { Text = "Tổng khảo sát: —" };
+        private readonly Label _kMo = new Label { Text = "Đang mở: —" };
+        private readonly Label _kNhap = new Label { Text = "Bản nháp: —" };
+        private readonly Label _kPhieu = new Label { Text = "Phiếu trả lời: —" };
+        private readonly Button _btnThem = new Button { Text = "Tạo khảo sát" };
+        private readonly Button _btnLamMoi = new Button { Text = "Làm mới" };
+        private readonly Button _btnSua = new Button { Text = "Sửa & câu hỏi" };
+        private readonly Button _btnXemTruoc = new Button { Text = "Xem trước" };
+        private readonly Button _btnMoDong = new Button { Text = "Mở khảo sát" };
+        private readonly Button _btnThongKe = new Button { Text = "Thống kê" };
+        private readonly Button _btnXoa = new Button { Text = "Xóa" };
 
-        public KhaoSatForm() : base(
-            title: "Quản lý Khảo Sát",
-            description: "Danh sách khảo sát khách hàng",
-            columns: new[] { "Mã KS", "Tiêu Đề", "Mô Tả", "Trạng Thái", "Ngày Tạo" },
-            fields: new ModuleField[] { },
-            rows: new string[][] { },
-            accent: Color.FromArgb(139, 92, 246)
-        )
+        public KhaoSatForm()
         {
-            this.Load += async (s, e) => await LoadData();
+            InitializeComponent();
+            Text = "Khảo sát";
+            Size = new Size(1180, 720);
+            Font = new Font(ThemeManager.FontFamily, 9.5F);
+            StartPosition = FormStartPosition.CenterParent;
+
+            BuildGrid();
+            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Nháp", "Đang mở", "Đã đóng" });
+            _cboTrangThai.SelectedIndex = 0;
+
+            PageKit.BuildListPage(this, new ListPageSpec
+            {
+                Title = new Label { Text = "Khảo sát" },
+                Subtitle = new Label { Text = "Tạo bộ câu hỏi, mở cho khách trả lời và theo dõi kết quả." },
+                PrimaryActions = new[] { _btnThem },
+                HeaderActions = new Control[] { _btnLamMoi },
+                KpiLabels = new[] { _kTong, _kMo, _kNhap, _kPhieu },
+                Search = _txtSearch,
+                SearchPlaceholder = "Tìm theo mã hoặc tiêu đề khảo sát...",
+                Filters = new[] { new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }) },
+                CountLabel = _lblCount,
+                Grid = _grid,
+                SecondaryActions = new[] { _btnSua, _btnXemTruoc, _btnMoDong, _btnThongKe },
+                DangerActions = new[] { _btnXoa },
+                FooterInfo = _lblFooter
+            });
+
+            _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _grid.SelectionChanged += (s, e) => UpdateSelectionUi();
+            _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) Sua(); };
+            _grid.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter) { e.Handled = true; Sua(); }
+                else if (e.KeyCode == Keys.Delete) { e.Handled = true; Xoa(); }
+            };
+
+            _btnThem.Click += (s, e) => TaoMoi();
+            _btnLamMoi.Click += async (s, e) => await LoadDataAsync();
+            _btnSua.Click += (s, e) => Sua();
+            _btnXemTruoc.Click += (s, e) => XemTruoc();
+            _btnMoDong.Click += (s, e) => MoDong();
+            _btnThongKe.Click += (s, e) => ThongKe();
+            _btnXoa.Click += (s, e) => Xoa();
+
+            UpdateSelectionUi();
+            Load += async (s, e) => await LoadDataAsync();
         }
 
-        // ==================== LOAD DATA ====================
-        public async Task LoadData()
+        private void BuildGrid()
         {
+            var g = _grid;
+            g.AllowUserToAddRows = false; g.AllowUserToDeleteRows = false; g.AllowUserToResizeRows = false;
+            g.ReadOnly = true; g.MultiSelect = false; g.RowHeadersVisible = false; g.AutoGenerateColumns = false;
+            g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            AddCol("Ma", "Mã KS", 80);
+            AddCol("TieuDe", "Tiêu đề", 320);
+            AddCol("SoCauHoi", "Số câu hỏi", 90, DataGridViewContentAlignment.MiddleRight);
+            AddCol("SoPhieu", "Phiếu trả lời", 100, DataGridViewContentAlignment.MiddleRight);
+            AddCol("NguoiTao", "Người tạo", 150);
+            AddCol("NgayTao", "Ngày tạo", 100).DefaultCellStyle.Format = "dd/MM/yyyy";
+            AddCol("TrangThai", "Trạng thái", 110);
+        }
+
+        private DataGridViewColumn AddCol(string name, string header, int width, DataGridViewContentAlignment align = DataGridViewContentAlignment.MiddleLeft)
+        {
+            var c = new DataGridViewTextBoxColumn { Name = name, HeaderText = header, Width = width, SortMode = DataGridViewColumnSortMode.Automatic };
+            c.DefaultCellStyle.Alignment = align;
+            _grid.Columns.Add(c);
+            return c;
+        }
+
+        // ── Dữ liệu ──────────────────────────────────────────────────────────
+
+        public async Task LoadDataAsync(string chonMa = null)
+        {
+            if (_loading) return;
+            _loading = true;
+            _btnLamMoi.Enabled = false;
+            _lblCount.Text = "Đang tải...";
+            if (chonMa == null) chonMa = SelectedDto()?.MaKhaoSat;
             try
             {
-                _danhSach = await _http.GetFromJsonAsync<List<KhaoSatDTO>>("/api/AdminKhaoSat")
-                    ?? new List<KhaoSatDTO>();
-
-                var rows = new List<object[]>();
-                foreach (var ks in _danhSach)
-                {
-                    rows.Add(new object[]
-                    {
-                        ks.MaKhaoSat ?? "",
-                        ks.TieuDe ?? "",
-                        ks.MoTa ?? "",
-                        ks.TrangThai ?? "",
-                        ks.NgayTao?.ToString("dd/MM/yyyy") ?? ""
-                    });
-                }
-
-                SetTableData(rows);
+                _all = await _service.GetAllAsync();
+                _kTong.Text = "Tổng khảo sát: " + _all.Count.ToString("N0");
+                _kMo.Text = "Đang mở: " + _all.Count(k => k.DangMo).ToString("N0");
+                _kNhap.Text = "Bản nháp: " + _all.Count(k => k.LaNhap).ToString("N0");
+                _kPhieu.Text = "Phiếu trả lời: " + _all.Sum(k => k.SoNguoiTraLoi).ToString("N0");
+                ApplyFilter(chonMa);
             }
-            catch (Exception ex)
+            catch (ApiException ex)
             {
-                MessageBox.Show($"Lỗi kết nối API: {ex.Message}",
-                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _lblCount.Text = "Không tải được dữ liệu";
+                if (!IsDisposed) Notify.Error(this, ex.Message, "Lỗi tải danh sách khảo sát");
             }
-        }
-
-        // ==================== HOOKS CHO TOOLBAR BUTTONS ====================
-        protected override async void OnAdd()
-        {
-            await MoFormChiTiet(null);
-        }
-
-        protected override async void OnEdit()
-        {
-            string maKS = GetSelectedId();
-            if (string.IsNullOrEmpty(maKS))
+            finally
             {
-                MessageBox.Show("Vui lòng chọn khảo sát cần xem/sửa!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                _loading = false;
+                if (!IsDisposed) _btnLamMoi.Enabled = true;
             }
-            await MoFormChiTiet(maKS);
         }
 
-        protected override async void OnDelete()
+        private void ApplyFilter(string chonMa = null)
         {
-            string maKS = GetSelectedId();
-            if (string.IsNullOrEmpty(maKS))
+            if (chonMa == null) chonMa = SelectedDto()?.MaKhaoSat;
+            string q = (_txtSearch.Text ?? "").Trim().ToLowerInvariant();
+            string tt = _cboTrangThai.SelectedItem as string ?? "Tất cả";
+
+            var list = _all.Where(k =>
+                (tt == "Tất cả" || k.TrangThaiHienThi == tt) &&
+                (q.Length == 0 || (k.MaKhaoSat ?? "").ToLowerInvariant().Contains(q) || (k.TieuDe ?? "").ToLowerInvariant().Contains(q))).ToList();
+
+            _grid.SuspendLayout();
+            _grid.Rows.Clear();
+            int chon = -1;
+            foreach (var k in list)
             {
-                MessageBox.Show("Vui lòng chọn khảo sát cần xóa!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                int i = _grid.Rows.Add(k.MaKhaoSat, k.TieuDe, k.SoCauHoi, k.SoNguoiTraLoi,
+                    string.IsNullOrWhiteSpace(k.NguoiTao) ? (k.MaNhanVien ?? "—") : k.NguoiTao, (object)k.NgayTao, k.TrangThaiHienThi);
+                _grid.Rows[i].Tag = k;
+                if (k.MaKhaoSat == chonMa) chon = i;
             }
-            await XoaKhaoSat(maKS);
-        }
-
-        protected override async void OnRowDoubleClick(string id, System.Data.DataRow row)
-        {
-            if (!string.IsNullOrEmpty(id))
+            _grid.ResumeLayout();
+            _grid.ClearSelection();
+            if (chon >= 0)
             {
-                await MoFormChiTiet(id);
+                _grid.Rows[chon].Selected = true;
+                _grid.CurrentCell = _grid.Rows[chon].Cells[0];
+            }
+            _lblCount.Text = list.Count == _all.Count ? "Hiển thị " + list.Count + " khảo sát" : "Hiển thị " + list.Count + " / " + _all.Count + " khảo sát";
+            UpdateSelectionUi();
+        }
+
+        private KhaoSatDto SelectedDto()
+        {
+            if (_grid.SelectedRows.Count == 0) return null;
+            return _grid.SelectedRows[0].Tag as KhaoSatDto;
+        }
+
+        private void UpdateSelectionUi()
+        {
+            var k = SelectedDto();
+            bool has = k != null;
+            foreach (var b in new[] { _btnSua, _btnXemTruoc, _btnMoDong, _btnThongKe, _btnXoa }) b.Enabled = has;
+            _btnMoDong.Text = has && k.DangMo ? "Đóng khảo sát" : "Mở khảo sát";
+            _lblFooter.Text = has
+                ? k.TieuDe + " · " + k.SoCauHoi + " câu hỏi · " + k.SoNguoiTraLoi + " phiếu"
+                : "Chọn một khảo sát để thao tác";
+        }
+
+        // ── Thao tác ─────────────────────────────────────────────────────────
+
+        private async void TaoMoi()
+        {
+            using (var dlg = new KhaoSatDialog(null))
+            {
+                Notify.ShowDialog(dlg, this);
+                if (dlg.DataChanged) await LoadDataAsync(dlg.MaKhaoSat);
             }
         }
 
-        // ==================== XÓA KHẢO SÁT ====================
-        public async Task XoaKhaoSat(string maKS)
+        private async void Sua()
         {
-            var cf = MessageBox.Show(
-                $"Bạn có chắc muốn xóa khảo sát #{maKS}?",
-                "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            var k = SelectedDto();
+            if (k == null) return;
+            using (var dlg = new KhaoSatDialog(k.MaKhaoSat))
+            {
+                Notify.ShowDialog(dlg, this);
+                if (dlg.DataChanged) await LoadDataAsync(k.MaKhaoSat);
+            }
+        }
 
-            if (cf != DialogResult.Yes) return;
-
+        private async void XemTruoc()
+        {
+            var k = SelectedDto();
+            if (k == null) return;
             try
             {
-                var res = await _http.DeleteAsync($"/api/AdminKhaoSat/{maKS}");
-                if (res.IsSuccessStatusCode)
-                {
-                    MessageBox.Show("Xóa khảo sát thành công!", "Thành công",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadData();
-                }
-                else
-                {
-                    string err = await res.Content.ReadAsStringAsync();
-                    MessageBox.Show(string.IsNullOrEmpty(err) ? "Xóa thất bại!" : err, "Lỗi",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                var ct = await _service.GetByIdAsync(k.MaKhaoSat);
+                if (IsDisposed || ct == null) return;
+                using (var dlg = new KhaoSatXemTruocDialog(ct)) Notify.ShowDialog(dlg, this);
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Lỗi kết nối API: {ex.Message}", "Lỗi",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch (ApiException ex) { Notify.Error(this, ex.Message); }
         }
 
-        // ==================== MO FORM CHI TIET / TAO MOI ====================
-        private async Task MoFormChiTiet(string maKS = null)
+        private async void MoDong()
         {
-            bool isNew = maKS == null;
-            KhaoSatChiTietDTO chiTiet = null;
+            var k = SelectedDto();
+            if (k == null) return;
+            bool mo = !k.DangMo;
+            string hoi = mo
+                ? "Mở khảo sát \"" + k.TieuDe + "\"?\nKhách hàng sẽ thấy và trả lời được khảo sát trên website."
+                : "Đóng khảo sát \"" + k.TieuDe + "\"?\nKhách hàng sẽ không gửi thêm câu trả lời được. Kết quả đã thu vẫn được giữ.";
+            if (!Notify.Confirm(this, hoi, mo ? "Mở khảo sát" : "Đóng khảo sát")) return;
 
-            if (!isNew)
-            {
-                try
-                {
-                    chiTiet = await _http.GetFromJsonAsync<KhaoSatChiTietDTO>
-                        ($"/api/AdminKhaoSat/{maKS}");
-                }
-                catch
-                {
-                    MessageBox.Show("Không lấy được thông tin khảo sát!",
-                        "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-            }
-
-            using (var form = new Form())
-            {
-                form.Text = isNew ? "Tạo khảo sát mới" : $"Chi tiết khảo sát #{maKS}";
-                form.Size = new Size(700, 680);
-                form.StartPosition = FormStartPosition.CenterParent;
-                form.FormBorderStyle = FormBorderStyle.FixedDialog;
-                form.MaximizeBox = false;
-
-                // --- Tiêu đề ---
-                var lblTieuDe = new Label { Text = "Tiêu Đề *", Location = new Point(16, 16), AutoSize = true };
-                var txtTieuDe = new TextBox
-                {
-                    Location = new Point(16, 36),
-                    Width = 650,
-                    Text = chiTiet?.TieuDe ?? ""
-                };
-
-                // --- Mô tả ---
-                var lblMoTa = new Label { Text = "Mô Tả", Location = new Point(16, 70), AutoSize = true };
-                var txtMoTa = new RichTextBox
-                {
-                    Location = new Point(16, 90),
-                    Size = new Size(650, 60),
-                    Text = chiTiet?.MoTa ?? ""
-                };
-
-                // --- Trạng thái ---
-                var lblTrangThai = new Label { Text = "Trạng Thái", Location = new Point(16, 164), AutoSize = true };
-                var cboTrangThai = new ComboBox
-                {
-                    Location = new Point(16, 184),
-                    Width = 200,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                cboTrangThai.Items.AddRange(new object[] { "Draft", "Active", "Closed" });
-                cboTrangThai.SelectedItem = chiTiet?.TrangThai ?? "Draft";
-
-                // --- Danh sách câu hỏi ---
-                var lblCauHoi = new Label
-                {
-                    Text = "Câu hỏi:",
-                    Location = new Point(16, 220),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold)
-                };
-
-                var panelCauHoi = new Panel
-                {
-                    Location = new Point(16, 240),
-                    Size = new Size(650, 300),
-                    AutoScroll = true,
-                    BorderStyle = BorderStyle.FixedSingle
-                };
-
-                // Render câu hỏi hiện có
-                var cauHoiList = chiTiet?.CauHois ?? new List<CauHoiDTO>();
-                RenderCauHois(panelCauHoi, cauHoiList, maKS, isNew);
-
-                // --- Nút thêm câu hỏi ---
-                var btnThemCauHoi = new Button
-                {
-                    Text = "+ Thêm câu hỏi",
-                    Location = new Point(16, 550),
-                    Size = new Size(150, 32),
-                    FlatStyle = FlatStyle.Flat
-                };
-
-                btnThemCauHoi.Click += async (s, e) =>
-                {
-                    if (isNew)
-                    {
-                        MessageBox.Show("Vui lòng lưu khảo sát trước khi thêm câu hỏi.",
-                            "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
-                    await MoFormCauHoi(maKS, null);
-                    // Reload lại chi tiết
-                    chiTiet = await _http.GetFromJsonAsync<KhaoSatChiTietDTO>
-                        ($"/api/AdminKhaoSat/{maKS}");
-                    cauHoiList = chiTiet?.CauHois ?? new List<CauHoiDTO>();
-                    RenderCauHois(panelCauHoi, cauHoiList, maKS, false);
-                };
-
-                // --- Nút lưu / hủy ---
-                var btnLuu = new Button
-                {
-                    Text = "Lưu",
-                    Location = new Point(540, 590),
-                    Size = new Size(126, 36),
-                    BackColor = Color.FromArgb(139, 92, 246),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat
-                };
-
-                var btnHuy = new Button
-                {
-                    Text = "Hủy",
-                    Location = new Point(404, 590),
-                    Size = new Size(126, 36),
-                    FlatStyle = FlatStyle.Flat
-                };
-
-                btnHuy.Click += (s, e) => form.Close();
-
-                btnLuu.Click += async (s, e) =>
-                {
-                    if (string.IsNullOrWhiteSpace(txtTieuDe.Text))
-                    {
-                        MessageBox.Show("Vui lòng nhập tiêu đề!", "Thiếu thông tin",
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    HttpResponseMessage res;
-                    if (isNew)
-                    {
-                        var dto = new
-                        {
-                            TieuDe = txtTieuDe.Text.Trim(),
-                            MaNhanVien = (string)null,
-                            CauHois = new List<object>()
-                        };
-                        res = await _http.PostAsJsonAsync("/api/AdminKhaoSat", dto);
-                    }
-                    else
-                    {
-                        // Cập nhật tiêu đề
-                        res = await _http.PutAsJsonAsync($"/api/AdminKhaoSat/{maKS}",
-                            new { TieuDe = txtTieuDe.Text.Trim() });
-
-                        // Cập nhật trạng thái nếu đã chọn
-                        var trangThai = cboTrangThai.SelectedItem?.ToString();
-                        if (!string.IsNullOrEmpty(trangThai))
-                            await _http.PutAsJsonAsync(
-                                $"/api/AdminKhaoSat/{maKS}/status", trangThai);
-                    }
-
-                    if (res.IsSuccessStatusCode)
-                    {
-                        MessageBox.Show(isNew ? "Tạo khảo sát thành công!" : "Cập nhật thành công!",
-                            "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        form.Close();
-                        await LoadData();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Thao tác thất bại!",
-                            "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                };
-
-                form.Controls.AddRange(new Control[]
-                {
-                    lblTieuDe, txtTieuDe,
-                    lblMoTa, txtMoTa,
-                    lblTrangThai, cboTrangThai,
-                    lblCauHoi, panelCauHoi,
-                    btnThemCauHoi,
-                    btnLuu, btnHuy
-                });
-
-                form.ShowDialog(this);
-            }
+            _btnMoDong.Enabled = false;
+            var r = await _service.SetStatusAsync(k.MaKhaoSat, mo ? KhaoSatConst.DangMo : KhaoSatConst.DaDong);
+            if (IsDisposed) return;
+            if (!r.Success) { _btnMoDong.Enabled = true; Notify.Error(this, r.Message, mo ? "Chưa mở được khảo sát" : "Không đóng được khảo sát"); return; }
+            await LoadDataAsync(k.MaKhaoSat);
         }
 
-        // ==================== RENDER CAU HOI ====================
-        private void RenderCauHois(Panel panel, List<CauHoiDTO> cauHois,
-            string maKS, bool isNew)
+        private void ThongKe()
         {
-            panel.Controls.Clear();
-            int y = 8;
+            var k = SelectedDto();
+            if (k == null) return;
+            using (var dlg = new ThongKeKhaoSatForm(k.MaKhaoSat, k.TieuDe)) Notify.ShowDialog(dlg, this);
+        }
 
-            foreach (var ch in cauHois)
+        private async void Xoa()
+        {
+            var k = SelectedDto();
+            if (k == null) return;
+            if (k.SoNguoiTraLoi > 0)
             {
-                // Label câu hỏi
-                string loaiHien = ch.LoaiCauHoi == "TuLuan" ? "Tự luận" : "Trắc nghiệm";
-                var lblCH = new Label
-                {
-                    Text = $"• [{loaiHien}] {ch.NoiDung}",
-                    Location = new Point(8, y),
-                    Width = 520,
-                    AutoSize = false,
-                    Height = 20
-                };
-
-                // Nút sửa câu hỏi
-                var btnSuaCH = new Button
-                {
-                    Text = "Sửa",
-                    Location = new Point(536, y - 2),
-                    Size = new Size(50, 24),
-                    FlatStyle = FlatStyle.Flat,
-                    Tag = ch.MaCauHoi
-                };
-                btnSuaCH.Click += async (s, e) =>
-                {
-                    await MoFormCauHoi(maKS, ch);
-                    var chiTiet = await _http.GetFromJsonAsync<KhaoSatChiTietDTO>
-                        ($"/api/AdminKhaoSat/{maKS}");
-                    RenderCauHois(panel, chiTiet?.CauHois ?? new List<CauHoiDTO>(), maKS, false);
-                };
-
-                // Nút xóa câu hỏi
-                var btnXoaCH = new Button
-                {
-                    Text = "Xóa",
-                    Location = new Point(592, y - 2),
-                    Size = new Size(50, 24),
-                    FlatStyle = FlatStyle.Flat,
-                    Tag = ch.MaCauHoi
-                };
-                btnXoaCH.Click += async (s, e) =>
-                {
-                    var cf = MessageBox.Show("Xóa câu hỏi này?", "Xác nhận",
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (cf != DialogResult.Yes) return;
-
-                    // Gọi API xóa câu hỏi (endpoint cần bổ sung)
-                    var res = await _http.DeleteAsync(
-                        $"/api/AdminKhaoSat/{maKS}/CauHoi/{ch.MaCauHoi}");
-                    if (res.IsSuccessStatusCode)
-                    {
-                        var chiTiet = await _http.GetFromJsonAsync<KhaoSatChiTietDTO>
-                            ($"/api/AdminKhaoSat/{maKS}");
-                        RenderCauHois(panel, chiTiet?.CauHois ?? new List<CauHoiDTO>(), maKS, false);
-                    }
-                    else
-                        MessageBox.Show("Xóa thất bại!", "Lỗi",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                };
-
-                panel.Controls.AddRange(new Control[] { lblCH, btnSuaCH, btnXoaCH });
-                y += 26;
-
-                // Hiển thị tùy chọn nếu không phải tự luận
-                if (ch.LoaiCauHoi != "TuLuan" && ch.LoaiCauHoi != "Tự luận" && ch.TuyChons != null)
-                {
-                    foreach (var tc in ch.TuyChons)
-                    {
-                        var lblTC = new Label
-                        {
-                            Text = $"     ◦ {tc.NoiDung}",
-                            Location = new Point(24, y),
-                            Width = 460,
-                            AutoSize = false,
-                            Height = 18,
-                            ForeColor = Color.Gray
-                        };
-                        panel.Controls.Add(lblTC);
-                        y += 20;
-                    }
-                }
-
-                y += 6;
+                Notify.Warn(this, "Khảo sát \"" + k.TieuDe + "\" đã có " + k.SoNguoiTraLoi + " phiếu trả lời nên không thể xóa (cần giữ dữ liệu thống kê).\nBạn có thể đóng khảo sát thay thế.", "Không thể xóa");
+                return;
             }
+            if (!Notify.Confirm(this, "Xóa khảo sát \"" + k.TieuDe + "\" cùng toàn bộ câu hỏi và tùy chọn?\nThao tác này không hoàn tác được.", "Xóa khảo sát", true)) return;
+            _btnXoa.Enabled = false;
+            var r = await _service.DeleteAsync(k.MaKhaoSat);
+            if (IsDisposed) return;
+            if (!r.Success) { _btnXoa.Enabled = true; Notify.Error(this, r.Message); return; }
+            await LoadDataAsync();
         }
-
-        // ==================== FORM CAU HOI ====================
-        private async Task MoFormCauHoi(string maKS, CauHoiDTO cauHoi)
-        {
-            bool isNew = cauHoi == null;
-
-            using (var form = new Form())
-            {
-                form.Text = isNew ? "Thêm câu hỏi" : "Sửa câu hỏi";
-                form.Size = new Size(520, 560);
-                form.StartPosition = FormStartPosition.CenterParent;
-                form.FormBorderStyle = FormBorderStyle.FixedDialog;
-                form.MaximizeBox = false;
-
-                var lblNoiDung = new Label { Text = "Nội dung câu hỏi *", Location = new Point(16, 16), AutoSize = true };
-                var txtNoiDung = new TextBox
-                {
-                    Location = new Point(16, 36),
-                    Width = 470,
-                    Text = cauHoi?.NoiDung ?? ""
-                };
-
-                var lblLoai = new Label { Text = "Loại câu hỏi", Location = new Point(16, 72), AutoSize = true };
-                var cboLoai = new ComboBox
-                {
-                    Location = new Point(16, 92),
-                    Width = 200,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-                cboLoai.Items.AddRange(new object[] { "Trắc nghiệm", "Tự luận" });
-                // Map API value → tên hiển thị
-                string loaiHienThi = (cauHoi?.LoaiCauHoi == "TuLuan") ? "Tự luận" : "Trắc nghiệm";
-                cboLoai.SelectedItem = loaiHienThi;
-
-                // --- Panel tùy chọn ---
-                var lblTuyChon = new Label
-                {
-                    Text = "Tùy chọn (mỗi dòng 1 tùy chọn):",
-                    Location = new Point(16, 128),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold)
-                };
-
-                var panelTuyChon = new Panel
-                {
-                    Location = new Point(16, 150),
-                    Size = new Size(470, 220),
-                    AutoScroll = true,
-                    BorderStyle = BorderStyle.FixedSingle
-                };
-
-                var tuyChonInputs = new List<TextBox>();
-
-                void RenderTuyChons()
-                {
-                    panelTuyChon.Controls.Clear();
-                    tuyChonInputs.Clear();
-                    int ty = 8;
-
-                    var dsTuyChon = cauHoi?.TuyChons ?? new List<TuyChonDTO>();
-                    foreach (var tc in dsTuyChon)
-                        ThemDongTuyChon(tc.NoiDung);
-
-                    if (dsTuyChon.Count == 0)
-                        ThemDongTuyChon("");
-
-                    void ThemDongTuyChon(string text)
-                    {
-                        var txt = new TextBox
-                        {
-                            Location = new Point(8, ty),
-                            Width = 380,
-                            Text = text
-                        };
-                        var btnXoa = new Button
-                        {
-                            Text = "✕",
-                            Location = new Point(396, ty - 1),
-                            Size = new Size(32, 24),
-                            FlatStyle = FlatStyle.Flat,
-                            Tag = txt
-                        };
-                        btnXoa.Click += (s, e) =>
-                        {
-                            tuyChonInputs.Remove(txt);
-                            panelTuyChon.Controls.Remove(txt);
-                            panelTuyChon.Controls.Remove(btnXoa);
-                        };
-
-                        tuyChonInputs.Add(txt);
-                        panelTuyChon.Controls.Add(txt);
-                        panelTuyChon.Controls.Add(btnXoa);
-                        ty += 32;
-                    }
-                }
-
-                RenderTuyChons();
-
-                // Ẩn/hiện tùy chọn theo loại câu hỏi (btnThemDong sẽ được gán sau)
-                cboLoai.SelectedIndexChanged += (s, e) =>
-                {
-                    bool isTuLuan = cboLoai.SelectedItem?.ToString() == "Tự luận";
-                    lblTuyChon.Visible = !isTuLuan;
-                    panelTuyChon.Visible = !isTuLuan;
-                };
-
-                if (cauHoi?.LoaiCauHoi == "TuLuan")
-                {
-                    lblTuyChon.Visible = false;
-                    panelTuyChon.Visible = false;
-                }
-
-                var btnThemDong = new Button
-                {
-                    Text = "+ Thêm tùy chọn",
-                    Location = new Point(16, 380),
-                    Size = new Size(140, 28),
-                    FlatStyle = FlatStyle.Flat,
-                    Visible = cauHoi?.LoaiCauHoi != "TuLuan"
-                };
-
-                // Gán thêm logic ẩn/hiện btnThemDong sau khi đã khai báo
-                cboLoai.SelectedIndexChanged += (s, e) =>
-                {
-                    btnThemDong.Visible = cboLoai.SelectedItem?.ToString() != "Tự luận";
-                };
-
-                btnThemDong.Click += (s, e) =>
-                {
-                    // Thêm TextBox mới vào panelTuyChon
-                    int ty = panelTuyChon.Controls.Count > 0
-                        ? panelTuyChon.Controls[panelTuyChon.Controls.Count - 1].Bottom + 4
-                        : 8;
-                    var txt = new TextBox { Location = new Point(8, ty), Width = 380 };
-                    var btnX = new Button
-                    {
-                        Text = "✕",
-                        Location = new Point(396, ty - 1),
-                        Size = new Size(32, 24),
-                        FlatStyle = FlatStyle.Flat
-                    };
-                    btnX.Click += (_, __) =>
-                    {
-                        tuyChonInputs.Remove(txt);
-                        panelTuyChon.Controls.Remove(txt);
-                        panelTuyChon.Controls.Remove(btnX);
-                    };
-                    tuyChonInputs.Add(txt);
-                    panelTuyChon.Controls.Add(txt);
-                    panelTuyChon.Controls.Add(btnX);
-                };
-
-                var btnLuu = new Button
-                {
-                    Text = "Lưu",
-                    Location = new Point(374, 474),
-                    Size = new Size(112, 36),
-                    BackColor = Color.FromArgb(139, 92, 246),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat
-                };
-
-                var btnHuy = new Button
-                {
-                    Text = "Hủy",
-                    Location = new Point(254, 474),
-                    Size = new Size(112, 36),
-                    FlatStyle = FlatStyle.Flat
-                };
-                btnHuy.Click += (s, e) => form.Close();
-
-                btnLuu.Click += async (s, e) =>
-                {
-                    if (string.IsNullOrWhiteSpace(txtNoiDung.Text))
-                    {
-                        MessageBox.Show("Vui lòng nhập nội dung câu hỏi!",
-                            "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    var tuyChons = new List<string>();
-                    bool isTuLuan = cboLoai.SelectedItem?.ToString() == "Tự luận";
-                    if (!isTuLuan)
-                        foreach (var t in tuyChonInputs)
-                            if (!string.IsNullOrWhiteSpace(t.Text))
-                                tuyChons.Add(t.Text.Trim());
-
-                    // Map tên hiển thị → giá trị API
-                    string loaiApi = isTuLuan ? "TuLuan" : "TracNghiem";
-
-                    var dto = new
-                    {
-                        NoiDung = txtNoiDung.Text.Trim(),
-                        LoaiCauHoi = loaiApi,
-                        TuyChons = tuyChons
-                    };
-
-                    HttpResponseMessage res;
-                    if (isNew)
-                        // POST thêm câu hỏi (endpoint cần bổ sung vào AdminKhaoSatController)
-                        res = await _http.PostAsJsonAsync(
-                            $"/api/AdminKhaoSat/{maKS}/CauHoi", dto);
-                    else
-                        res = await _http.PutAsJsonAsync(
-                            $"/api/AdminKhaoSat/{maKS}/CauHoi/{cauHoi.MaCauHoi}", dto);
-
-                    if (res.IsSuccessStatusCode)
-                    {
-                        MessageBox.Show("Lưu câu hỏi thành công!",
-                            "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        form.Close();
-                    }
-                    else
-                        MessageBox.Show("Lưu thất bại! Kiểm tra lại API.",
-                            "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                };
-
-                form.Controls.AddRange(new Control[]
-                {
-                    lblNoiDung, txtNoiDung,
-                    lblLoai, cboLoai,
-                    lblTuyChon, panelTuyChon,
-                    btnThemDong,
-                    btnLuu, btnHuy
-                });
-
-                form.ShowDialog(this);
-            }
-        }
-
-        // ==================== MO / DONG KHAO SAT ====================
-        public async Task DoiTrangThaiKhaoSat(string maKS, string trangThai)
-        {
-            // trangThai phải là "Draft", "Active" hoặc "Closed"
-            string msg = trangThai == "Active" ? "kích hoạt" : "đóng";
-            var cf = MessageBox.Show($"Bạn có chắc muốn {msg} khảo sát này?",
-                "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (cf != DialogResult.Yes) return;
-
-            var res = await _http.PutAsJsonAsync(
-                $"/api/AdminKhaoSat/{maKS}/status", trangThai);
-
-            if (res.IsSuccessStatusCode)
-            {
-                MessageBox.Show($"Đã {msg} khảo sát!", "Thành công",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                await LoadData();
-            }
-            else
-                MessageBox.Show("Thao tác thất bại!", "Lỗi",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-
-        // ==================== XEM THONG KE ====================
-        /// <summary>
-        /// Mở cửa sổ thống kê kết quả khảo sát theo mã và tiêu đề.
-        /// </summary>
-        public void MoFormThongKe(string maKS, string tieuDe)
-        {
-            var frm = new ThongKeKhaoSatForm(maKS, tieuDe);
-            frm.ShowDialog(this);
-        }
-
-        /// <summary>
-        /// Mở thống kê cho dòng đang được chọn trong DataGridView.
-        /// Gọi từ menu context hoặc nút bên ngoài: maKS = ô [0], tieuDe = ô [1].
-        /// </summary>
-        public void XemThongKeDongDangChon(DataGridView dgv)
-        {
-            if (dgv.CurrentRow == null) return;
-            string maKS = dgv.CurrentRow.Cells[0].Value?.ToString();
-            string tieuDe = dgv.CurrentRow.Cells[1].Value?.ToString();
-            if (string.IsNullOrEmpty(maKS)) return;
-            MoFormThongKe(maKS, tieuDe ?? "");
-        }
-    }
-
-    // ==================== DTOs ====================
-    public class KhaoSatDTO
-    {
-        public string MaKhaoSat { get; set; }
-        public string TieuDe { get; set; }
-        public string MoTa { get; set; }
-        public string TrangThai { get; set; }
-        public DateTime? NgayTao { get; set; }
-    }
-
-    public class KhaoSatChiTietDTO : KhaoSatDTO
-    {
-        public List<CauHoiDTO> CauHois { get; set; }
-    }
-
-    public class CauHoiDTO
-    {
-        public string MaCauHoi { get; set; }
-        public string NoiDung { get; set; }
-        public string LoaiCauHoi { get; set; }
-        public List<TuyChonDTO> TuyChons { get; set; }
-    }
-
-    public class TuyChonDTO
-    {
-        public string MaTuyChon { get; set; }
-        public string NoiDung { get; set; }
     }
 }

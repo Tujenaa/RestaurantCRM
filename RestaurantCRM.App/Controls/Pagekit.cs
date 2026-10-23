@@ -194,6 +194,19 @@ namespace RestaurantCRM.AdminApp.Controls
                     flow.Controls.Add(c);
                 }
             filterRow.Controls.Add(flow);
+            // Ô tìm kiếm co lại (300 → 180px) khi thẻ hẹp để các chip lọc không bị cắt
+            PillSearch searchPill = null;
+            foreach (Control c in flow.Controls) if (c is PillSearch) searchPill = (PillSearch)c;
+            if (searchPill != null)
+            {
+                flow.Resize += (s, e) =>
+                {
+                    int others = 0;
+                    foreach (Control c in flow.Controls) if (c != searchPill && c.Visible) others += c.Width + c.Margin.Horizontal;
+                    int w = Math.Max(180, Math.Min(300, flow.ClientSize.Width - others - searchPill.Margin.Horizontal - 4));
+                    if (searchPill.Width != w) searchPill.Width = w;
+                };
+            }
             if (spec.CountLabel != null)
             {
                 var cl = spec.CountLabel;

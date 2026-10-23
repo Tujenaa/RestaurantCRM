@@ -137,7 +137,7 @@ namespace RestaurantCRM.AdminApp.Helpers
             string[] blue = { "đang giao", "delivering", "đang phục vụ", "xác nhận", "confirmed", "đang xử lý", "processing", "mới" };
             string[] green = { "hoàn thành", "completed", "active", "hoạt động", "đang diễn ra", "còn hàng", "instock", "in stock", "đã thanh toán",
                                "đã duyệt", "hiển thị", "đang bán", "còn món", "mở", "đã giao", "đủ hàng", "còn đủ", "kích hoạt", "sẵn sàng",
-                               "đã xử lý", "đang kinh doanh", "đang nhập", "đang áp dụng", "thành công", "bán chạy" };
+                               "đã xử lý", "đã trả lời", "đang kinh doanh", "đang nhập", "đang áp dụng", "thành công", "bán chạy" };
             if (ContainsAny(v, amber)) { fore = Amber; back = AmberSoft; return true; }
             if (ContainsAny(v, red)) { fore = Red; back = RedSoft; return true; }
             if (ContainsAny(v, blue)) { fore = Primary; back = PrimarySoft; return true; }
