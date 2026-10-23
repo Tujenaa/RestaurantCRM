@@ -100,6 +100,51 @@ public class PhanHoiService
     }
 
     /// <summary>
+    /// Lấy danh sách đánh giá của riêng khách hàng (lịch sử cá nhân), xếp mới -> cũ
+    /// </summary>
+    public async Task<IReadOnlyList<PhanHoiItemViewModel>> GetByKhachHangAsync(string? maKhachHang)
+    {
+        if (string.IsNullOrWhiteSpace(maKhachHang))
+        {
+            return Array.Empty<PhanHoiItemViewModel>();
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/DanhGia/KhachHang/{Uri.EscapeDataString(maKhachHang)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var apiReviews = await response.Content.ReadFromJsonAsync<List<ApiDanhGiaDto>>();
+                if (apiReviews != null && apiReviews.Count > 0)
+                {
+                    return apiReviews
+                        .OrderByDescending(x => x.NgayDanhGia ?? DateTime.MinValue)
+                        .Select(MapFromApi)
+                        .ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Không thể tải đánh giá của khách hàng {MaKhachHang} từ API ({Message}), chuyển sang fallback.", maKhachHang, ex.Message);
+        }
+
+        lock (_items)
+        {
+            return _items
+                .Where(x => string.Equals(x.MaKhachHang, maKhachHang, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.NgayGui)
+                .Select(x =>
+                {
+                    x.TraLois = x.TraLois.OrderByDescending(t => t.NgayGui).ToList();
+                    return x;
+                })
+                .ToList();
+        }
+    }
+
+    /// <summary>
     /// Lấy danh sách đánh giá sắp xếp theo thứ tự mới nhất đến cũ nhất.
     /// Các câu trả lời trong từng đánh giá cũng được sắp xếp từ mới nhất đến cũ nhất.
     /// </summary>
@@ -206,6 +251,7 @@ public class PhanHoiService
             MaMon = maMon,
             TenMon = tenMon,
             MaDonHang = maDonHang,
+            MaKhachHang = customerId ?? "KH01",
             TenKhachHang = string.IsNullOrWhiteSpace(customerName) ? "Khách hàng thân thiết" : customerName,
             DanhGia = Math.Clamp(rating, 1, 5),
             NoiDung = noiDung,

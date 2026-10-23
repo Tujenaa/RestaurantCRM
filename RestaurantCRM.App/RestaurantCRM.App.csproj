@@ -84,6 +84,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Config\ApiConfig.cs" />
+    <Compile Include="Controls\Modernkit.cs" />
+    <Compile Include="Controls\Pagekit.cs" />
     <Compile Include="Controls\UcDataGridView.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -105,9 +107,7 @@
     <Compile Include="Controls\UcGrowthChart.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Controls\UcRightPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Include="Controls\UcRightPanel.cs" />
     <Compile Include="Controls\UcCurrentMembersTable.cs">
       <SubType>Component</SubType>
     </Compile>

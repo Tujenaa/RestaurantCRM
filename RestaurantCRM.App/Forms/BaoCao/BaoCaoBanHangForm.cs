@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using RestaurantCRM.AdminApp.Config;
 using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
@@ -18,6 +19,7 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
         private DateTimePicker _dtpTuNgay;
         private DateTimePicker _dtpDenNgay;
         private Button _btnLoc;
+        private Button _btnRefresh;
 
         private UcThongKe _cardDoanhThu;
         private UcThongKe _cardLoiNhuan;
@@ -37,7 +39,7 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
         public BaoCaoBanHangForm() {
             _service = new BaoCaoService();
 
-            Text = "Báo cáo bán hàng & Doanh thu | RestaurantCRM";
+            Text = "Báo cáo bán hàng | RestaurantCRM";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1180, 800);
             MinimumSize = new Size(1000, 700);
@@ -55,38 +57,68 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 BackColor = ThemeManager.Bg,
-                Padding = new Padding(24, 20, 24, 24)
+                Padding = new Padding(20, 14, 20, 20)
             };
             Controls.Add(scrollPanel);
 
-            int y = 16;
+            int y = 14;
             int fullWidth = 1100;
 
-            // 1. Header Title & Filter Bar
+            // 1. Header Title & Actions (hỗ trợ cả nhúng trong Dashboard tab)
+            var pnlHeader = new Panel {
+                Location = new Point(20, y),
+                Size = new Size(fullWidth, 68),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = ThemeManager.Bg
+            };
+
             var lblTitle = new Label {
                 Text = "Báo cáo bán hàng & Doanh thu",
-                Location = new Point(24, y),
+                Location = new Point(0, 4),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 UseMnemonic = false
             };
-            scrollPanel.Controls.Add(lblTitle);
-            y += 36;
+            pnlHeader.Controls.Add(lblTitle);
 
             var lblSubtitle = new Label {
-                Text = "Theo dõi thực thu, chiết khấu khuyến mãi, giá vốn nguyên liệu và biên lợi nhuận bán lẻ.",
-                Location = new Point(26, y),
+                Text = "Theo dõi doanh thu thực thu, chiết khấu khuyến mãi, giá vốn nguyên liệu và biên lợi nhuận.",
+                Location = new Point(2, 38),
                 AutoSize = true,
                 ForeColor = ThemeManager.Muted,
                 UseMnemonic = false
             };
-            scrollPanel.Controls.Add(lblSubtitle);
-            y += 28;
+            pnlHeader.Controls.Add(lblSubtitle);
 
-            // Panel Bộ lọc thời gian (Filter Bar)
+            _btnRefresh = new Button {
+                Text = "Làm mới",
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Size = new Size(95, 32),
+                Cursor = Cursors.Hand
+            };
+            ButtonSkin.SetKind(_btnRefresh, ButtonSkin.Kind.Secondary);
+            PageKit.FitButton(_btnRefresh);
+            _btnRefresh.Location = new Point(pnlHeader.Width - _btnRefresh.Width - 4, 16);
+            _btnRefresh.Click += async (s, e) => await LoadDataAsync();
+            pnlHeader.Controls.Add(_btnRefresh);
+
+            Action place = () => {
+                bool embedded = !TopLevel;
+                lblTitle.Visible = !embedded;
+                lblSubtitle.Location = new Point(2, embedded ? 12 : 38);
+                pnlHeader.Height = embedded ? 48 : 68;
+                _btnRefresh.Location = new Point(pnlHeader.Width - _btnRefresh.Width - 4, embedded ? 6 : 16);
+            };
+            pnlHeader.Resize += (s, e) => place();
+            ParentChanged += (s, e) => place();
+
+            scrollPanel.Controls.Add(pnlHeader);
+            y += 74;
+
+            // 2. Panel Bộ lọc thời gian (Filter Bar)
             var pnlFilter = new Panel {
-                Location = new Point(24, y),
+                Location = new Point(20, y),
                 Size = new Size(fullWidth, 54),
                 BackColor = ThemeManager.Paper,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
@@ -151,9 +183,9 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
             scrollPanel.Controls.Add(pnlFilter);
             y += 66;
 
-            // 2. Hàng Thẻ KPI (KPI Cards)
+            // 3. Hàng Thẻ KPI (KPI Cards)
             var pnlCards = new FlowLayoutPanel {
-                Location = new Point(24, y),
+                Location = new Point(20, y),
                 Size = new Size(fullWidth + 20, 132),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 WrapContents = false,
@@ -176,9 +208,9 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
             scrollPanel.Controls.Add(pnlCards);
             y += 140;
 
-            // 3. Khối Biểu đồ Doanh thu theo ngày
+            // 4. Khối Biểu đồ Doanh thu theo ngày
             _pnlChartCard = new Panel {
-                Location = new Point(24, y),
+                Location = new Point(20, y),
                 Size = new Size(fullWidth, 310),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = ThemeManager.Paper,
@@ -212,9 +244,9 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
             scrollPanel.Controls.Add(_pnlChartCard);
             y += 325;
 
-            // 4. Bảng Cơ cấu Doanh thu & Lợi nhuận theo Món ăn
+            // 5. Bảng Cơ cấu Doanh thu & Lợi nhuận theo Món ăn
             var pnlGridCard = new Panel {
-                Location = new Point(24, y),
+                Location = new Point(20, y),
                 Size = new Size(fullWidth, 260),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = ThemeManager.Paper,
@@ -275,10 +307,10 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
             scrollPanel.Controls.Add(pnlGridCard);
             y += 275;
 
-            // 5. Dòng trạng thái cuối trang
+            // 6. Dòng trạng thái cuối trang
             _lblStatus = new Label {
                 Text = "Dữ liệu được cập nhật từ hệ thống quản lý bán hàng RestaurantCRM.",
-                Location = new Point(26, y),
+                Location = new Point(22, y),
                 AutoSize = true,
                 ForeColor = ThemeManager.Muted,
                 Font = new Font("Segoe UI", 9F, FontStyle.Italic),
@@ -319,7 +351,6 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
                     return;
             }
 
-            // Tự động tải lại báo cáo
             _ = LoadDataAsync();
         }
 
@@ -415,14 +446,13 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
             int chartHeight = h - bottomMargin - topMargin;
 
             double maxVal = items.Max(x => x.DoanhThu);
-            if (maxVal <= 0) maxVal = 100000; // Giá trị trần tối thiểu để vẽ
+            if (maxVal <= 0) maxVal = 100000;
 
             // Vẽ đường trục ngang cơ sở
             using (var linePen = new Pen(ThemeManager.Line, 1f)) {
                 g.DrawLine(linePen, 10, h - bottomMargin, w - 10, h - bottomMargin);
             }
 
-            // Tính bề rộng của mỗi cột
             int availableWidth = w - 40;
             int slotWidth = Math.Max(20, availableWidth / count);
             int barWidth = Math.Min(48, Math.Max(12, slotWidth - 14));

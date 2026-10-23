@@ -214,9 +214,9 @@
                 <h2 style="font-size:24px; margin:0 0 6px;">💬 Đánh giá & Phản hồi về "@dish.TenMon"</h2>
                 <p style="margin:0; color:var(--muted); font-size:14px;">Trải nghiệm ẩm thực thực tế từ những khách hàng đã thưởng thức món ăn này tại Lẩu Phố.</p>
             </div>
-            <a href="/PhanHoi?maMon=@dish.MaMon" class="btn" style="padding:10px 20px; font-weight:700; border-radius:10px;">
-                ⭐ Viết đánh giá món này
-            </a>
+            <div style="font-size:13px; color:var(--muted); background:#f8fafc; padding:8px 14px; border-radius:10px; border:1px dashed #cbd5e1;">
+                ℹ️ Đánh giá được gửi từ đơn hàng đã hoàn tất
+            </div>
         </div>
 
         <div style="display:grid; grid-template-columns: 280px 1fr; gap:36px; align-items:start;">
@@ -294,16 +294,6 @@
                                     </div>
                                 }
 
-                                <!-- Phản hồi nhanh tại món ăn -->
-                                <div style="margin-top:10px; border-top:1px dashed var(--line); padding-top:8px;">
-                                    <form asp-controller="PhanHoi" asp-action="PhanHoiLai" method="post" style="display:flex; gap:8px;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="maDanhGia" value="@review.MaDanhGia" />
-                                        <input type="hidden" name="returnUrl" value="/Menu/ChiTiet/@dish.MaMon" />
-                                        <input type="text" name="noiDung" placeholder="Nhập câu trả lời hoặc trao đổi thêm..." required style="flex:1; padding:6px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px;" />
-                                        <button type="submit" class="btn small" style="padding:6px 14px; font-size:12.5px;">Gửi</button>
-                                    </form>
-                                </div>
                             </div>
                         }
                     </div>

@@ -9,6 +9,10 @@ using RestaurantCRM.AdminApp.Services;
 
 namespace RestaurantCRM.AdminApp.Forms.Auth
 {
+    /// <summary>
+    /// Màn đăng nhập cùng phong cách với ứng dụng: nền xám nhạt, bên trái giới thiệu + hình minh họa
+    /// (thẻ số liệu, biểu đồ), bên phải thẻ đăng nhập trắng bo góc.
+    /// </summary>
     public class LoginForm : Form
     {
         private readonly TextBox _username;
@@ -24,322 +28,275 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
         {
             _authService = new AuthService();
             Text = "RestaurantCRM  |  Đăng nhập hệ thống";
-            ClientSize = new Size(900, 600);
-            MinimumSize = new Size(800, 540);
+            ClientSize = new Size(960, 600);
             StartPosition = FormStartPosition.CenterScreen;
-            BackColor = Color.White;
+            BackColor = ThemeManager.Bg;
             Font = new Font("Segoe UI", 9.5F);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
+            DoubleBuffered = true;
 
-            // ── Panel trái: Branding ──────────────────────────────────────
-            var leftW = 360;
-            var pnlLeft = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(leftW, ClientSize.Height),
-                BackColor = ThemeManager.Primary
-            };
-            pnlLeft.Paint += (s, e) => PaintLeftBrand(e.Graphics, pnlLeft.Size);
-            Controls.Add(pnlLeft);
+            // ── Bên trái: giới thiệu + minh họa (tự vẽ) ─────────────────
+            var left = new Panel { Location = new Point(0, 0), Size = new Size(500, ClientSize.Height), BackColor = ThemeManager.Bg };
+            left.Paint += (s, e) => PaintShowcase(e.Graphics, left.Size);
+            SkinUtil.EnableDoubleBuffer(left);
+            Controls.Add(left);
 
-            // ── Panel phải: Form ──────────────────────────────────────────
-            var pnlRight = new Panel
-            {
-                Location = new Point(leftW, 0),
-                Size = new Size(ClientSize.Width - leftW, ClientSize.Height),
-                BackColor = Color.White
-            };
-            Controls.Add(pnlRight);
+            // ── Bên phải: thẻ đăng nhập ────────────────────────────────
+            var card = PageKit.NewCard();
+            card.Size = new Size(420, 520);
+            card.Location = new Point(500, (ClientSize.Height - card.Height) / 2 + 4);
+            Controls.Add(card);
 
-            int pw = pnlRight.Width;
-            int formX = 52;
-            int inputW = pw - formX * 2;
+            int x = 8 + 36, w = card.Width - 2 * x;
 
-            // Tiêu đề form
-            var lblHello = new Label
+            var lblTitle = new Label
             {
                 Text = "Đăng nhập",
-                Font = new Font("Segoe UI", 22F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 AutoSize = true,
-                Location = new Point(formX, 80),
+                Location = new Point(x - 3, 40),
                 BackColor = Color.Transparent
             };
-            pnlRight.Controls.Add(lblHello);
+            card.Controls.Add(lblTitle);
 
             var lblSub = new Label
             {
-                Text = "Nhập thông tin để truy cập hệ thống",
-                Font = new Font("Segoe UI", 9.5F),
+                Text = "Chào mừng trở lại! Nhập thông tin để tiếp tục.",
+                Font = new Font("Segoe UI", 9F),
                 ForeColor = ThemeManager.Muted,
                 AutoSize = true,
-                Location = new Point(formX, 118),
+                Location = new Point(x, 82),
                 BackColor = Color.Transparent
             };
-            pnlRight.Controls.Add(lblSub);
+            card.Controls.Add(lblSub);
 
-            // Divider
-            var div = new Panel
-            {
-                Location = new Point(formX, 148),
-                Size = new Size(40, 3),
-                BackColor = ThemeManager.Primary
-            };
-            pnlRight.Controls.Add(div);
+            card.Controls.Add(MakeCaption("Tên đăng nhập", x, 124));
+            _username = new TextBox();
+            card.Controls.Add(new LoginField(_username, ThemeManager.Glyph.Contact) { Location = new Point(x, 146), Size = new Size(w, 44) });
 
-            // Username
-            var lblUser = new Label
-            {
-                Text = "Tên đăng nhập",
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink2,
-                Location = new Point(formX, 172),
-                AutoSize = true,
-                BackColor = Color.Transparent
-            };
-            pnlRight.Controls.Add(lblUser);
+            card.Controls.Add(MakeCaption("Mật khẩu", x, 204));
+            _password = new TextBox { UseSystemPasswordChar = true };
+            card.Controls.Add(new LoginField(_password, "\uE72E") { Location = new Point(x, 226), Size = new Size(w, 44) });
 
-            _username = new TextBox
-            {
-                BorderStyle = BorderStyle.None,
-                Font = new Font("Segoe UI", 10.5F),
-                Location = new Point(formX + 36, 202),
-                Width = inputW - 36 - 8
-            };
-            var boxUser = MakeInputBox(pnlRight, formX, 192, inputW, "👤", _username);
-
-            // Password
-            var lblPass = new Label
-            {
-                Text = "Mật khẩu",
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink2,
-                Location = new Point(formX, 258),
-                AutoSize = true,
-                BackColor = Color.Transparent
-            };
-            pnlRight.Controls.Add(lblPass);
-
-            _password = new TextBox
-            {
-                BorderStyle = BorderStyle.None,
-                Font = new Font("Segoe UI", 10.5F),
-                UseSystemPasswordChar = true,
-                Location = new Point(formX + 36, 288),
-                Width = inputW - 36 - 8
-            };
-            var boxPass = MakeInputBox(pnlRight, formX, 278, inputW, "🔒", _password);
-
-            // Khi focus vào ô → đổi màu viền
-            Action<Panel, bool> highlight = (box, active) => {
-                box.Tag = active;
-                box.Invalidate();
-            };
-            _username.Enter += (s, e) => highlight(boxUser, true);
-            _username.Leave += (s, e) => highlight(boxUser, false);
-            _password.Enter += (s, e) => highlight(boxPass, true);
-            _password.Leave += (s, e) => highlight(boxPass, false);
-
-            // Error
             _error = new Label
             {
                 Text = "",
-                Location = new Point(formX, 336),
-                Size = new Size(inputW, 20),
+                Location = new Point(x, 278),
+                Size = new Size(w, 36),
                 ForeColor = ThemeManager.Red,
                 Font = new Font("Segoe UI", 8.5F),
                 Visible = false,
                 BackColor = Color.Transparent
             };
-            pnlRight.Controls.Add(_error);
+            card.Controls.Add(_error);
 
-            // Nút đăng nhập
             var btnLogin = new Button
             {
-                Text = "Đăng nhập  →",
-                Location = new Point(formX, 364),
-                Size = new Size(inputW, 46),
-                BackColor = ThemeManager.Primary,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Text = "Đăng nhập",
+                Location = new Point(x, 318),
+                Size = new Size(w, 46),
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold)
             };
-            btnLogin.FlatAppearance.BorderSize = 0;
-            // gradient hover
-            btnLogin.Paint += (s, e) => {
-                var b = (Button)s;
-                var rc = new Rectangle(0, 0, b.Width, b.Height);
-                using (var br = new LinearGradientBrush(rc, ThemeManager.Primary, ThemeManager.Violet, LinearGradientMode.Horizontal))
-                    e.Graphics.FillRectangle(br, rc);
-                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, rc, Color.White,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            };
+            ButtonSkin.SetKind(btnLogin, ButtonSkin.Kind.Primary);
             btnLogin.Click += async (s, e) => await SubmitLogin();
-            pnlRight.Controls.Add(btnLogin);
+            card.Controls.Add(btnLogin);
             AcceptButton = btnLogin;
 
-            // Demo chips
+            // Đăng nhập nhanh (tài khoản mẫu trong SampleData.sql, mật khẩu 123456)
             var lblDemo = new Label
             {
-                Text = "Đăng nhập nhanh (mật khẩu: 123456)",
-                Font = new Font("Segoe UI", 8F),
+                Text = "ĐĂNG NHẬP NHANH  ·  MẬT KHẨU 123456",
+                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
                 ForeColor = ThemeManager.Muted,
-                Location = new Point(formX, 426),
+                Location = new Point(x, 388),
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
-            pnlRight.Controls.Add(lblDemo);
-
-            var demoFlow = new FlowLayoutPanel
-            {
-                Location = new Point(formX, 448),
-                Size = new Size(inputW, 80),
-                BackColor = Color.Transparent,
-                WrapContents = true
-            };
+            card.Controls.Add(lblDemo);
 
             var demoAccounts = new[] {
-                ("admin",    "🛡 Admin"),
-                ("quanly01", "👔 Quản lý"),
-                ("thungan01","💰 Thu ngân"),
-                ("cskh01",   "🎧 CSKH")
+                ("admin",     "Admin"),
+                ("quanly01",  "Quản lý"),
+                ("thungan01", "Thu ngân"),
+                ("thungan02", "CSKH")
             };
+            int cx = x;
             foreach (var acc in demoAccounts)
             {
-                string user = acc.Item1, label = acc.Item2;
-                var chip = new Button
+                string user = acc.Item1;
+                var chip = new Button { Text = acc.Item2, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
+                ButtonSkin.SetKind(chip, ButtonSkin.Kind.Soft);
+                int cw = TextRenderer.MeasureText(acc.Item2, chip.Font).Width + 30;
+                chip.SetBounds(cx, 412, cw, 32);
+                cx += cw + 8;
+                chip.Click += (s, e) =>
                 {
-                    Text = label,
-                    Height = 30,
-                    AutoSize = true,
-                    BackColor = Color.FromArgb(243, 244, 246),
-                    ForeColor = ThemeManager.Ink,
-                    FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Segoe UI", 8.5F),
-                    Margin = new Padding(0, 0, 8, 8),
-                    Cursor = Cursors.Hand
-                };
-                chip.FlatAppearance.BorderColor = ThemeManager.Line;
-                chip.FlatAppearance.MouseOverBackColor = ThemeManager.PrimarySoft;
-                chip.Click += (s, e) => {
                     _username.Text = user;
                     _password.Text = "123456";
                     _error.Visible = false;
+                    _password.Focus();
                 };
-                demoFlow.Controls.Add(chip);
-            }
-            pnlRight.Controls.Add(demoFlow);
-        }
-
-        // ── Vẽ panel trái brand ───────────────────────────────────────────
-        private void PaintLeftBrand(Graphics g, Size sz)
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            // Nền gradient
-            using (var br = new LinearGradientBrush(new Rectangle(0, 0, sz.Width, sz.Height),
-                ThemeManager.Primary, ThemeManager.Violet, LinearGradientMode.ForwardDiagonal))
-                g.FillRectangle(br, 0, 0, sz.Width, sz.Height);
-
-            // Vòng tròn trang trí góc trên phải
-            using (var br = new SolidBrush(Color.FromArgb(30, 255, 255, 255)))
-            {
-                g.FillEllipse(br, sz.Width - 120, -60, 200, 200);
-                g.FillEllipse(br, sz.Width - 60, 80, 130, 130);
-            }
-            // Vòng tròn trang trí góc dưới trái
-            using (var br = new SolidBrush(Color.FromArgb(20, 255, 255, 255)))
-            {
-                g.FillEllipse(br, -80, sz.Height - 180, 220, 220);
-                g.FillEllipse(br, 40, sz.Height - 100, 150, 150);
+                card.Controls.Add(chip);
             }
 
-            // Logo badge
-            var badgeRect = new Rectangle((sz.Width - 64) / 2, 130, 64, 64);
-            using (var path = ThemeManager.RoundedRect(badgeRect, 18))
-            using (var br = new SolidBrush(Color.FromArgb(50, 255, 255, 255)))
-                g.FillPath(br, path);
-            using (var pen = new Pen(Color.FromArgb(90, 255, 255, 255), 1.5f))
-            using (var path = ThemeManager.RoundedRect(badgeRect, 18))
-                g.DrawPath(pen, path);
-            using (var f = new Font(ThemeManager.EmojiFont, 22F))
-                TextRenderer.DrawText(g, "🍽️", f, badgeRect, Color.White,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-
-            // App name
-            using (var fBold = new Font("Segoe UI", 20F, FontStyle.Bold))
-                TextRenderer.DrawText(g, "LK CORP", fBold,
-                    new Rectangle(0, 212, sz.Width, 36), Color.White,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-
-            using (var fSub = new Font("Segoe UI", 10F))
-                TextRenderer.DrawText(g, "Restaurant CRM", fSub,
-                    new Rectangle(0, 252, sz.Width, 24), Color.FromArgb(200, 255, 255, 255),
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-
-            // Divider
-            using (var pen = new Pen(Color.FromArgb(60, 255, 255, 255), 1))
-                g.DrawLine(pen, sz.Width / 2 - 50, 292, sz.Width / 2 + 50, 292);
-
-            // Tagline
-            using (var fTag = new Font("Segoe UI", 9F, FontStyle.Italic))
-                TextRenderer.DrawText(g, "Quản lý thông minh — Phục vụ xuất sắc", fTag,
-                    new Rectangle(20, 306, sz.Width - 40, 44), Color.FromArgb(180, 255, 255, 255),
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak);
-
-            // Chấm trang trí nhỏ
-            using (var br = new SolidBrush(Color.FromArgb(40, 255, 255, 255)))
+            var lblFoot = new Label
             {
-                for (int i = 0; i < 5; i++)
-                    g.FillEllipse(br, 28 + i * 22, sz.Height - 60, 10, 10);
-            }
-        }
-
-        // ── Tạo input box có icon + viền tuỳ chỉnh ───────────────────────
-        private Panel MakeInputBox(Panel parent, int x, int y, int w, string icon, TextBox tb)
-        {
-            var box = new Panel
-            {
-                Location = new Point(x, y),
-                Size = new Size(w, 44),
-                BackColor = Color.White
-            };
-            box.Paint += (s, e) => {
-                bool active = box.Tag is bool b && b;
-                var rc = new Rectangle(0, 0, box.Width - 1, box.Height - 1);
-                using (var pen = new Pen(active ? ThemeManager.Primary : ThemeManager.Line, active ? 1.8f : 1f))
-                    e.Graphics.DrawRectangle(pen, rc);
-            };
-
-            // Icon trái
-            var lblIcon = new Label
-            {
-                Text = icon,
-                Font = new Font("Segoe UI Emoji", 11F),
+                Text = "© " + DateTime.Now.Year + " LK Corp · Restaurant CRM",
+                Font = new Font("Segoe UI", 8F),
                 ForeColor = ThemeManager.Muted,
-                Size = new Size(34, 44),
-                Location = new Point(0, 0),
-                TextAlign = ContentAlignment.MiddleCenter,
+                AutoSize = true,
+                Location = new Point(x, 470),
                 BackColor = Color.Transparent
             };
-            box.Controls.Add(lblIcon);
+            card.Controls.Add(lblFoot);
 
-            // Đường kẻ dọc ngăn icon và textbox
-            var sep = new Panel { Location = new Point(34, 8), Size = new Size(1, 28), BackColor = ThemeManager.Line };
-            box.Controls.Add(sep);
-
-            tb.Location = new Point(44, (44 - tb.Height) / 2 + 1);
-            tb.Width = w - 52;
-            tb.BackColor = Color.White;
-            box.Controls.Add(tb);
-
-            parent.Controls.Add(box);
-            return box;
+            Shown += (s, e) => _username.Focus();
         }
 
-        // ── Xử lý đăng nhập ──────────────────────────────────────────────
+        private static Label MakeCaption(string text, int x, int y)
+        {
+            return new Label
+            {
+                Text = text,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink2,
+                Location = new Point(x, y),
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+        }
+
+        /// <summary>Ô nhập bo góc có icon bên trái, viền xanh khi đang nhập.</summary>
+        private class LoginField : Control
+        {
+            private readonly TextBox _tb;
+            private readonly string _glyph;
+            private bool _focus;
+            public LoginField(TextBox tb, string glyph)
+            {
+                _tb = tb; _glyph = glyph;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+                tb.BorderStyle = BorderStyle.None;
+                tb.BackColor = ThemeManager.Surface2;
+                tb.ForeColor = ThemeManager.Ink;
+                tb.Font = new Font("Segoe UI", 10.5F);
+                tb.Tag = UiStyler.NoStyleTag;
+                Controls.Add(tb);
+                tb.Enter += (s, e) => { _focus = true; Invalidate(); };
+                tb.Leave += (s, e) => { _focus = false; Invalidate(); };
+                Cursor = Cursors.IBeam;
+                Click += (s, e) => tb.Focus();
+            }
+            protected override void OnResize(EventArgs e)
+            {
+                base.OnResize(e);
+                _tb.SetBounds(46, (Height - _tb.PreferredHeight) / 2 + 1, Width - 46 - 14, _tb.PreferredHeight);
+            }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.Clear(Color.White);
+                var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
+                using (var path = SkinUtil.Round(r, 10))
+                {
+                    using (var br = new SolidBrush(ThemeManager.Surface2)) g.FillPath(br, path);
+                    using (var pen = new Pen(_focus ? ThemeManager.Primary : ThemeManager.Line, _focus ? 1.6f : 1f)) g.DrawPath(pen, path);
+                }
+                using (var f = ThemeManager.Icon(11F))
+                    TextRenderer.DrawText(g, _glyph, f, new Rectangle(14, 0, 22, Height), _focus ? ThemeManager.Primary : ThemeManager.Muted,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+            }
+        }
+
+        // ── Vẽ phần giới thiệu bên trái ─────────────────────────────────
+        private void PaintShowcase(Graphics g, Size sz)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            int x = 56;
+
+            // Logo
+            var badge = new Rectangle(x, 44, 30, 30);
+            using (var path = ThemeManager.RoundedRect(badge, 8))
+            using (var br = new SolidBrush(ThemeManager.Primary)) g.FillPath(br, path);
+            using (var f = ThemeManager.Icon(11F))
+                TextRenderer.DrawText(g, ThemeManager.Glyph.Home, f, badge, Color.White,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+            using (var f1 = new Font("Segoe UI", 14F, FontStyle.Bold))
+            using (var f2 = new Font("Segoe UI", 14F))
+            {
+                TextRenderer.DrawText(g, "LK", f1, new Point(x + 40, 46), ThemeManager.Ink, TextFormatFlags.NoPadding);
+                int lw = TextRenderer.MeasureText(g, "LK", f1, Size.Empty, TextFormatFlags.NoPadding).Width;
+                TextRenderer.DrawText(g, "restaurant", f2, new Point(x + 42 + lw, 46), ThemeManager.Primary, TextFormatFlags.NoPadding);
+            }
+
+            // Khẩu hiệu
+            using (var f = new Font("Segoe UI", 22F, FontStyle.Bold))
+            {
+                TextRenderer.DrawText(g, "Quản lý nhà hàng", f, new Point(x - 2, 112), ThemeManager.Ink, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, "gọn gàng mỗi ngày", f, new Point(x - 2, 152), ThemeManager.Primary, TextFormatFlags.NoPadding);
+            }
+            using (var f = new Font("Segoe UI", 9.5F))
+                TextRenderer.DrawText(g, "Đơn hàng, kho, khuyến mãi và chăm sóc khách hàng\ntrên cùng một nền tảng.", f,
+                    new Rectangle(x, 202, sz.Width - x - 30, 44), ThemeManager.Muted, TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+
+            // Thẻ biểu đồ minh họa
+            var chart = new Rectangle(x, 276, 360, 200);
+            ThemeManager.DrawSoftShadow(g, chart, 14, 8);
+            using (var path = ThemeManager.RoundedRect(chart, 14))
+            using (var br = new SolidBrush(Color.White)) g.FillPath(br, path);
+            using (var f = new Font("Segoe UI", 9.5F, FontStyle.Bold))
+                TextRenderer.DrawText(g, "Doanh thu tuần này", f, new Point(chart.X + 20, chart.Y + 18), ThemeManager.Ink, TextFormatFlags.NoPadding);
+            using (var f = new Font("Segoe UI", 7F, FontStyle.Bold))
+                TextRenderer.DrawText(g, "+12% SO VỚI TUẦN TRƯỚC", f, new Point(chart.X + 20, chart.Y + 40), ThemeManager.Green, TextFormatFlags.NoPadding);
+            float[] v = { 0.35f, 0.5f, 0.42f, 0.7f, 0.55f, 0.82f, 0.74f };
+            var plot = new RectangleF(chart.X + 22, chart.Y + 70, chart.Width - 44, chart.Height - 96);
+            var pts = new PointF[v.Length];
+            for (int i = 0; i < v.Length; i++) pts[i] = new PointF(plot.X + plot.Width * i / (v.Length - 1), plot.Bottom - plot.Height * v[i]);
+            using (var pen = new Pen(Color.FromArgb(240, 242, 247)))
+                for (int i = 0; i <= 3; i++) { float y = plot.Bottom - plot.Height * i / 3; g.DrawLine(pen, plot.X, y, plot.Right, y); }
+            using (var area = new GraphicsPath())
+            {
+                area.AddCurve(pts, 0.45f);
+                area.AddLine(pts[pts.Length - 1].X, pts[pts.Length - 1].Y, pts[pts.Length - 1].X, plot.Bottom);
+                area.AddLine(pts[pts.Length - 1].X, plot.Bottom, pts[0].X, plot.Bottom);
+                area.CloseFigure();
+                using (var br = new LinearGradientBrush(new RectangleF(plot.X, plot.Y - 1, plot.Width, plot.Height + 2),
+                    Color.FromArgb(50, ThemeManager.Primary), Color.FromArgb(0, ThemeManager.Primary), LinearGradientMode.Vertical))
+                    g.FillPath(br, area);
+            }
+            using (var pen = new Pen(ThemeManager.Primary, 2.4f) { LineJoin = LineJoin.Round })
+                g.DrawCurve(pen, pts, 0.45f);
+            var dot = pts[5];
+            using (var br = new SolidBrush(Color.White)) g.FillEllipse(br, dot.X - 6, dot.Y - 6, 12, 12);
+            using (var pen = new Pen(ThemeManager.Primary, 3f)) g.DrawEllipse(pen, dot.X - 5, dot.Y - 5, 10, 10);
+
+            // Thẻ số liệu nhỏ nổi bên cạnh
+            var stat = new Rectangle(x + 250, 236, 170, 76);
+            ThemeManager.DrawSoftShadow(g, stat, 12, 8);
+            using (var path = ThemeManager.RoundedRect(stat, 12))
+            using (var br = new SolidBrush(Color.White)) g.FillPath(br, path);
+            using (var f = new Font("Segoe UI", 16F, FontStyle.Bold))
+                TextRenderer.DrawText(g, "128", f, new Point(stat.X + 16, stat.Y + 12), ThemeManager.Ink, TextFormatFlags.NoPadding);
+            using (var f = new Font("Segoe UI", 7F, FontStyle.Bold))
+                TextRenderer.DrawText(g, "KHÁCH HÀNG THÂN THIẾT", f, new Point(stat.X + 16, stat.Y + 46), ThemeManager.Muted, TextFormatFlags.NoPadding);
+            var circle = new Rectangle(stat.Right - 40, stat.Y + 14, 24, 24);
+            using (var pen = new Pen(ThemeManager.Green, 1.4f)) g.DrawEllipse(pen, circle);
+            using (var f = ThemeManager.Icon(8F))
+                TextRenderer.DrawText(g, ThemeManager.Glyph.Up, f, circle, ThemeManager.Green,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+
+            // Pill trạng thái minh họa
+            var pill = new Rectangle(x + 20, 500, 118, 28);
+            using (var path = ThemeManager.RoundedRect(pill, 8))
+            using (var br = new SolidBrush(ThemeManager.GreenSoft)) g.FillPath(br, path);
+            using (var f = new Font("Segoe UI", 8F, FontStyle.Bold))
+                TextRenderer.DrawText(g, "● Hệ thống sẵn sàng", f, pill, ThemeManager.Green, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        }
+
         private async System.Threading.Tasks.Task SubmitLogin()
         {
             string username = _username.Text.Trim();

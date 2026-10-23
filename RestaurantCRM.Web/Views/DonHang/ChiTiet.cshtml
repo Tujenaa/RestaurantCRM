@@ -47,7 +47,7 @@
                         <div style="display:flex; gap:6px;">
                             @if (Model.TrangThaiLoc == "done")
                             {
-                                <a href="/PhanHoi?maDonHang=@Model.MaDonHang&maMon=@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px; background:#fff7ed; border-color:#fed7aa; color:#c2410c;">⭐ Đánh giá món</a>
+                                <a href="/PhanHoi/DanhGia?maDonHang=@Model.MaDonHang&maMon=@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px; background:#fff7ed; border-color:#fed7aa; color:#c2410c;">⭐ Đánh giá món</a>
                             }
                             <a href="/Menu/ChiTiet/@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px;">Chi tiết món →</a>
                         </div>
@@ -106,7 +106,7 @@
 
             @if (Model.TrangThaiLoc == "done")
             {
-                <a asp-controller="PhanHoi" asp-action="Index" asp-route-maDonHang="@Model.MaDonHang" class="btn secondary" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
+                <a asp-controller="PhanHoi" asp-action="DanhGia" asp-route-maDonHang="@Model.MaDonHang" class="btn secondary" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
                     ⭐ Đánh giá đơn hàng này
                 </a>
             }

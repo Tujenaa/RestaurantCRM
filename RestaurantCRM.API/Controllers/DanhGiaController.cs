@@ -47,6 +47,40 @@ namespace RestaurantCRM.API.Controllers
             return Ok(danhGias);
         }
 
+        // GET: api/DanhGia/KhachHang/{maKhachHang} - Lấy lịch sử đánh giá của riêng một khách hàng
+        [HttpGet("KhachHang/{maKhachHang}")]
+        public async Task<IActionResult> GetDanhGiaByKhachHang(string maKhachHang)
+        {
+            var danhGias = await _service.Query<DanhGia>()
+                .Where(d => d.MaKhachHang == maKhachHang)
+                .Where(d => d.TrangThai)
+                .Include(d => d.MaKhachHangNavigation)
+                .Include(d => d.MaMonNavigation)
+                .Include(d => d.TraLoiDanhGia)
+                .OrderByDescending(d => d.NgayDanhGia)
+                .Select(d => new
+                {
+                    d.MaDanhGia,
+                    d.MaMon,
+                    TenMon = d.MaMonNavigation != null ? d.MaMonNavigation.TenMon : "Món ngon Lẩu Phố",
+                    d.MaHoaDon,
+                    d.SoSao,
+                    d.NoiDung,
+                    d.NgayDanhGia,
+                    TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách hàng",
+                    HoiThoai = d.TraLoiDanhGia.OrderByDescending(t => t.NgayGui).Select(t => new
+                    {
+                        t.MaTraLoi,
+                        t.NoiDung,
+                        t.NgayGui,
+                        NguoiTraLoi = t.MaNhanVienNavigation.HoTen
+                    })
+                })
+                .ToListAsync();
+
+            return Ok(danhGias);
+        }
+
         // POST: api/DanhGia - Gửi đánh giá cho món ăn
         [HttpPost]
         public async Task<IActionResult> CreateDanhGia(ReviewRequest request)

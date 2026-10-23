@@ -1,16 +1,61 @@
-using System.ComponentModel.DataAnnotations;
+
 
 namespace RestaurantCRM.Web.Models;
 
 public class KhaoSatViewModel
 {
-    [Required(ErrorMessage = "Vui lòng chọn tần suất ghé nhà hàng.")]
-    public string TanSuat { get; set; } = "";
-    [Required(ErrorMessage = "Vui lòng chọn mức đánh giá.")]
-    public string MucDoHaiLong { get; set; } = "";
-    public List<string> YeuToQuanTam { get; set; } = new();
-    [StringLength(500)]
-    public string? MonMongMuon { get; set; }
-    [StringLength(1000)]
-    public string? GopY { get; set; }
+    public string MaKhaoSat { get; set; } = "";
+    public string TieuDe { get; set; } = "";
+    
+    public List<CauHoiViewModel> CauHoi { get; set; } = new();
+}
+
+public class CauHoiViewModel
+{
+    public string MaCauHoi { get; set; } = "";
+    public string NoiDungCauHoi { get; set; } = "";
+    public string LoaiCauHoi { get; set; } = "";   // DB hiện chỉ có: Option | Text
+    public List<TuyChonViewModel> TuyChon { get; set; } = new();
+
+    public bool IsTuDien => LoaiCauHoi.Equals("Text", StringComparison.OrdinalIgnoreCase);
+    public bool IsNhieu => false;   // schema chưa có loại chọn nhiều
+}
+
+public class TuyChonViewModel
+{
+    public string MaTuyChon { get; set; } = "";
+    public string NoiDungTuyChon { get; set; } = "";
+}
+
+// Dữ liệu form khách gửi lên
+public class GuiPhieuTraLoiViewModel
+{
+    public string MaKhaoSat { get; set; } = "";
+    public List<CauTraLoiInput> Answers { get; set; } = new();
+}
+
+public class CauTraLoiInput
+{
+    public string MaCauHoi { get; set; } = "";
+    public List<string> MaTuyChons { get; set; } = new();
+    public string? NoiDungTuDien { get; set; }
+}
+public class KhaoSatItemViewModel
+{
+    public string MaKhaoSat { get; set; } = "";
+    public string TieuDe { get; set; } = "";
+    public int SoCauHoi { get; set; }
+    public bool DaTraLoi { get; set; }
+}
+public class LichSuKhaoSatItem
+{
+    public string MaKhaoSat { get; set; } = "";
+    public string TieuDe { get; set; } = "";
+    public DateTime NgayGui { get; set; }
+}
+
+public class KhaoSatIndexViewModel
+{
+    public List<KhaoSatItemViewModel> DanhSach { get; set; } = new();
+    public List<LichSuKhaoSatItem> LichSu { get; set; } = new();
 }
