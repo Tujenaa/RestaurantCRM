@@ -8,8 +8,90 @@ public class PhanHoiService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PhanHoiService> _logger;
 
-    // Bộ nhớ in-memory fallback chỉ lưu tạm các đánh giá mới thêm trong phiên nếu mất kết nối API
-    private readonly List<PhanHoiItemViewModel> _items = new();
+    // Bộ nhớ in-memory fallback khởi tạo sẵn dữ liệu phong phú (gồm cả phản hồi xếp mới -> cũ)
+    private readonly List<PhanHoiItemViewModel> _items = new()
+    {
+        new()
+        {
+            MaDanhGia = "DG001",
+            MaMon = "M01",
+            TenMon = "Lẩu Thái chua cay",
+            DuongDanAnh = "https://images.unsplash.com/photo-1547928576-a4a33237cbc3?auto=format&fit=crop&w=800&q=80",
+            MaDonHang = "DH00198",
+            TenKhachHang = "Nguyễn Văn Hùng",
+            DanhGia = 5,
+            NoiDung = "Nước lẩu Thái rất đậm đà, vị chua cay hài hòa, hải sản kèm theo tươi giòn. Giao hàng đúng giờ!",
+            NgayGui = DateTime.Now.AddDays(-1).AddHours(-3),
+            TraLois = new List<TraLoiDanhGiaViewModel>
+            {
+                new()
+                {
+                    MaTraLoi = "TL002",
+                    NguoiGui = "KhachHang",
+                    NguoiTraLoi = "Nguyễn Văn Hùng",
+                    NoiDung = "Dạ lần sau mình sẽ gọi thêm phần thịt bò Mỹ nữa nhé quán!",
+                    NgayGui = DateTime.Now.AddHours(-12)
+                },
+                new()
+                {
+                    MaTraLoi = "TL001",
+                    NguoiGui = "NhanVien",
+                    NguoiTraLoi = "Quản lý Lẩu Phố",
+                    NoiDung = "Lẩu Phố cảm ơn anh Hùng rất nhiều ạ! Chúc anh có những bữa ăn ngon miệng cùng gia đình.",
+                    NgayGui = DateTime.Now.AddDays(-1).AddHours(-1)
+                }
+            }
+        },
+        new()
+        {
+            MaDanhGia = "DG002",
+            MaMon = "M05",
+            TenMon = "Bò Mỹ thái lát",
+            DuongDanAnh = "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80",
+            MaDonHang = "DH00231",
+            TenKhachHang = "Trần Thị Mai",
+            DanhGia = 4,
+            NoiDung = "Thịt bò mềm tan, vân mỡ đều đẹp. Đóng khay giữ lạnh cẩn thận.",
+            NgayGui = DateTime.Now.AddDays(-2).AddHours(-5),
+            TraLois = new List<TraLoiDanhGiaViewModel>
+            {
+                new()
+                {
+                    MaTraLoi = "TL003",
+                    NguoiGui = "NhanVien",
+                    NguoiTraLoi = "Chăm sóc khách hàng Lẩu Phố",
+                    NoiDung = "Lẩu Phố chân thành cảm ơn chị Mai. Nhà hàng luôn cam kết nhập thịt bò chuẩn chứng nhận mỗi ngày ạ.",
+                    NgayGui = DateTime.Now.AddDays(-2).AddHours(-3)
+                }
+            }
+        },
+        new()
+        {
+            MaDanhGia = "DG003",
+            MaMon = "M03",
+            TenMon = "Lẩu nấm thanh đạm",
+            DuongDanAnh = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
+            MaDonHang = "DH00198",
+            TenKhachHang = "Lê Hoàng Long",
+            DanhGia = 5,
+            NoiDung = "Nước dùng thanh ngọt tự nhiên không gắt bột ngọt, các loại nấm tươi sạch ăn rất nhẹ bụng.",
+            NgayGui = DateTime.Now.AddDays(-4),
+            TraLois = new List<TraLoiDanhGiaViewModel>()
+        },
+        new()
+        {
+            MaDanhGia = "DG004",
+            MaMon = "M06",
+            TenMon = "Tôm sú tươi",
+            DuongDanAnh = "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=800&q=80",
+            MaDonHang = "DH00198",
+            TenKhachHang = "Phạm Quỳnh Chi",
+            DanhGia = 4,
+            NoiDung = "Tôm sú tươi giòn, nhúng lẩu vị ngọt lịm. Shipper giao rất thân thiện.",
+            NgayGui = DateTime.Now.AddDays(-6),
+            TraLois = new List<TraLoiDanhGiaViewModel>()
+        }
+    };
 
     public PhanHoiService(IHttpClientFactory httpClientFactory, ILogger<PhanHoiService> logger)
     {

@@ -351,18 +351,26 @@ namespace RestaurantCRM.API.Controllers
         {
             var dishes = await _service.Query<MonAn>()
                 .Where(m => m.TrangThai != "Discontinued" && m.TrangThai != "Inactive")
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .OrderBy(m => m.TenMon)
-                .Select(m => new
+                .ToListAsync();
+
+            var result = dishes.Select(m =>
+            {
+                double giaVon = m.DinhLuong.Sum(dl => (double)dl.SoLuongCan * (dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0));
+                return new
                 {
                     m.MaMon,
                     m.TenMon,
                     m.DonGia,
                     m.MaLoaiMon,
-                    m.DuongDanAnh
-                })
-                .ToListAsync();
+                    m.DuongDanAnh,
+                    GiaVonUocTinh = Math.Round(giaVon, 0)
+                };
+            }).ToList();
 
-            return Ok(dishes);
+            return Ok(result);
         }
 
         // ==============================================================

@@ -571,7 +571,7 @@ public partial class RestaurantCrmContext : DbContext
                 .HasColumnName("maMon");
             entity.Property(e => e.DonGia).HasColumnName("donGia");
             entity.Property(e => e.DuongDanAnh)
-                .HasMaxLength(255)
+                .HasMaxLength(1000)
                 .HasColumnName("duongDanAnh");
             entity.Property(e => e.MaLoaiMon)
                 .HasMaxLength(20)

@@ -1,4 +1,4 @@
-﻿-- ============================================
+-- ============================================
 -- CSDL: Hệ thống quản lý đặt món & CRM khách hàng
 -- SQL Server | Các cột trạng thái/loại đã được cố định bằng CHECK constraint
 -- Phiên bản đã chỉnh: bỏ PHAN_HOI (chỉ còn đánh giá + nhân viên phản hồi), gộp admin vào nhân viên, khuyến mãi tách 2 loại (theo SP / voucher),
@@ -61,7 +61,7 @@ CREATE TABLE MON_AN (
     maLoaiMon VARCHAR(20) FOREIGN KEY REFERENCES LOAI_MON(maLoaiMon),
     tenMon NVARCHAR(150),
     moTa NVARCHAR(MAX),
-    duongDanAnh NVARCHAR(255),
+    duongDanAnh NVARCHAR(1000),
     donGia FLOAT,
     trangThai NVARCHAR(20) CONSTRAINT CK_MON_AN_trangThai CHECK (trangThai IN ('InStock', 'OutOfStock', 'Discontinued'))
 );

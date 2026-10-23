@@ -13,6 +13,10 @@ using RestaurantCRM.AdminApp.Services;
 
 namespace RestaurantCRM.AdminApp.Forms.MonAn {
     public partial class MonAnDialog : Form {
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern int SendMessage(IntPtr hWnd, int msg, int wParam, [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPWStr)] string lParam);
+        private const int EM_SETCUEBANNER = 0x1501;
+
         private readonly MonAnService _monAnService;
         private readonly LoaiMonService _loaiMonService;
         private readonly NguyenLieuService _nguyenLieuService;
@@ -36,6 +40,13 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
 
             this.DoubleBuffered = true;
             picHinhAnh.Paint += picHinhAnh_Paint;
+            picHinhAnh.LoadCompleted += (s, ev) => {
+                if (ev.Error != null) {
+                    picHinhAnh.ImageLocation = null;
+                    picHinhAnh.Image = null;
+                    picHinhAnh.Invalidate();
+                }
+            };
 
             SetupDinhLuongGrid();
             numGia.ValueChanged += (s, e) => RecalculateCogs();
@@ -184,6 +195,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
 
         private async void MonAnDialog_Load(object sender, EventArgs e) {
             try {
+                // Đặt placeholder (cue banner) hướng dẫn nhập URL
+                SendMessage(txtHinhAnhUrl.Handle, EM_SETCUEBANNER, 0, "https://... (Dán đường link ảnh tại đây)");
+
                 // 1. Tải danh mục loại món
                 await LoadLoaiMonDropdown();
 
@@ -209,17 +223,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                     cboLoaiMon.SelectedValue = _monAnCurrent.MaLoaiMon;
                     chkTrangThai.Checked = _monAnCurrent.TrangThai;
                     txtMoTa.Text = _monAnCurrent.MoTa ?? "";
-                    txtHinhAnhUrl.Text = _monAnCurrent.HinhAnhUrl ?? "";
-
-                    if (!string.IsNullOrEmpty(_monAnCurrent.HinhAnhUrl)) {
-                        try {
-                            if (File.Exists(_monAnCurrent.HinhAnhUrl)) {
-                                picHinhAnh.Image = Image.FromFile(_monAnCurrent.HinhAnhUrl);
-                            } else {
-                                picHinhAnh.ImageLocation = _monAnCurrent.HinhAnhUrl;
-                            }
-                        } catch { }
-                    }
+                    txtHinhAnhUrl.Text = _monAnCurrent.HinhAnhUrl ?? ""; // Sẽ tự động kích hoạt LoadImagePreview qua sự kiện TextChanged
 
                     // Tải chi tiết định lượng từ server
                     var detail = await _monAnService.GetByIdAsync(_monAnCurrent.MaMonAn);
@@ -252,26 +256,6 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             if (nl == null) return;
             lblDvtInfo.Text = nl.DonViTinh ?? "đơn vị";
             lblGiaNhapInfo.Text = $"Giá nhập: {nl.GiaNhapGanNhat:N0} đ/{nl.DonViTinh}";
-        }
-
-        private async void btnThemNguyenLieuMoi_Click(object sender, EventArgs e) {
-            using (var dialog = new RestaurantCRM.AdminApp.Forms.Kho.NguyenLieuDialog(_nguyenLieuService)) {
-                if (dialog.ShowDialog(this) == DialogResult.OK && dialog.CreatedOrUpdatedNguyenLieu != null) {
-                    var newNl = dialog.CreatedOrUpdatedNguyenLieu;
-                    _allNguyenLieu = await _nguyenLieuService.GetAllAsync() ?? new List<NguyenLieuDto>();
-                    cboNguyenLieu.DataSource = null;
-                    cboNguyenLieu.DisplayMember = "DisplayText";
-                    cboNguyenLieu.ValueMember = "MaNguyenLieu";
-                    cboNguyenLieu.DataSource = _allNguyenLieu;
-
-                    var found = _allNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == newNl.MaNguyenLieu);
-                    if (found != null) {
-                        cboNguyenLieu.SelectedItem = found;
-                        UpdateNguyenLieuInfo(found);
-                    }
-                    numSoLuongCan.Focus();
-                }
-            }
         }
 
         private void btnThemNL_Click(object sender, EventArgs e) {
@@ -345,7 +329,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 var g = e.Graphics;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 using (var brush = new SolidBrush(Color.FromArgb(148, 163, 184))) {
-                    var text = "🖼️ Chưa có hình ảnh món ăn\nNhấn 'Chọn ảnh' phía trên để tải lên";
+                    var text = string.IsNullOrWhiteSpace(txtHinhAnhUrl.Text)
+                        ? "🖼️ Chưa có hình ảnh món ăn\nDán đường dẫn ảnh (URL) vào ô phía trên để tải lên"
+                        : "⚠️ Đang tải hoặc link ảnh không hợp lệ / không thể kết nối\nVui lòng kiểm tra lại đường dẫn URL";
                     using (var font = new Font("Segoe UI", 9.5F, FontStyle.Regular)) {
                         var sf = new StringFormat {
                             Alignment = StringAlignment.Center,
@@ -357,16 +343,34 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             }
         }
 
-        private void btnChonHinh_Click(object sender, EventArgs e) {
-            using (var ofd = new OpenFileDialog()) {
-                ofd.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp";
-                if (ofd.ShowDialog() == DialogResult.OK) {
-                    txtHinhAnhUrl.Text = ofd.FileName;
-                    try {
-                        picHinhAnh.Image = Image.FromFile(ofd.FileName);
-                    } catch { }
+        private void txtHinhAnhUrl_TextChanged(object sender, EventArgs e) {
+            LoadImagePreview(txtHinhAnhUrl.Text.Trim());
+        }
+
+        private void LoadImagePreview(string url) {
+            if (string.IsNullOrWhiteSpace(url)) {
+                picHinhAnh.ImageLocation = null;
+                picHinhAnh.Image = null;
+                picHinhAnh.Invalidate();
+                return;
+            }
+
+            try {
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uriResult) &&
+                    (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)) {
+                    picHinhAnh.WaitOnLoad = false;
+                    picHinhAnh.ImageLocation = url;
+                } else if (File.Exists(url)) {
+                    picHinhAnh.Image = Image.FromFile(url);
+                } else {
+                    picHinhAnh.ImageLocation = null;
+                    picHinhAnh.Image = null;
                     picHinhAnh.Invalidate();
                 }
+            } catch {
+                picHinhAnh.ImageLocation = null;
+                picHinhAnh.Image = null;
+                picHinhAnh.Invalidate();
             }
         }
 

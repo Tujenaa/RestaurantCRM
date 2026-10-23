@@ -27,7 +27,7 @@
                 <div class="media-frame">
                     @if (!string.IsNullOrWhiteSpace(dish.DuongDanAnh))
                     {
-                        <img src="@dish.DuongDanAnh" alt="@dish.TenMon" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px;" />
+                        <img src="@dish.DuongDanAnh" alt="@dish.TenMon" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px;" onerror="this.onerror=null; this.src='/images/default.jpg';" />
                     }
                     else
                     {

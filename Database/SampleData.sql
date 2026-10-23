@@ -48,21 +48,21 @@ GO
 
 -- 5. MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, trangThai)
 INSERT INTO MON_AN (maMon, maLoaiMon, tenMon, moTa, duongDanAnh, donGia, trangThai) VALUES
-('M01', 'LM03', N'Lẩu Thái chua cay', NULL, '/images/Lau_thai.jpg', 180000, 'InStock'),
-('M02', 'LM01', N'Lẩu bò nhúng dấm', N'Nước lẩu bò nhúng dấm chua dịu, thơm tỏi.', '/images/Lau_bo_nhung_giam.png', 220000, 'InStock'),
-('M03', 'LM03', N'Lẩu nấm thanh đạm nè', NULL, '/images/Lau_nam.jpg', 170000, 'OutOfStock'),
-('M04', 'LM01', N'Lẩu gà lá é', NULL, '/images/Lau_ga_la_e.jpg', 200000, 'OutOfStock'),
-('M05', 'LM02', N'Bò Mỹ thái lát', N'Thịt bò Mỹ thái lát mỏng dùng để nhúng lẩu.', '/images/Bo_my_thai_lat.jpg', 120000, 'InStock'),
-('M06', 'LM02', N'Tôm sú tươi', N'Tôm sú tươi, thịt chắc và ngọt.', '/images/Tom_su_tuoi.jpg', 140000, 'InStock'),
-('M07', 'LM02', N'Viên thả lẩu thập cẩm', NULL, '/images/Vien_tha_lau_thap_cam.jpg', 69999, 'OutOfStock'),
-('M08', 'LM02', N'Ba chỉ heo thái mỏng nè', NULL, '/images/Ba_chi_thai_mong.jpg', 90000, 'Discontinued'),
-('M09', 'LM03', N'Rau lẩu thập cẩm', N'Rau xanh tươi dùng kèm các món lẩu.', '/images/Rau.png', 50000, 'InStock'),
-('M10', 'LM03', N'Nấm thập cẩm', N'Nhiều loại nấm tươi dùng cho món lẩu.', '/images/Nam.jpg', 60000, 'InStock'),
-('M11', 'LM04', N'Mì Udon', N'Mì Udon ăn kèm lẩu.', '/images/Mi_udon.jpg', 25000, 'InStock'),
-('M12', 'LM04', N'Bún tươi', N'Bún tươi dùng ăn kèm lẩu.', '/images/bun_tuoi.jpg', 14999, 'InStock'),
-('M13', 'LM05', N'Trà đào cam sả', N'Trà đào kết hợp cam và sả.', '/images/Tra_dao_cam_sa.jpg', 40001, 'Discontinued'),
-('M14', 'LM05', N'Chè khúc bạch', N'Món tráng miệng mát lạnh.', '/images/Che_khuc_bach.jpg', 35000, 'InStock'),
-('M15', 'LM05', N'Nước ép cam', N'Nước ép cam tươi.', '/images/Nuoc_ep_cam.jpg', 40000, 'OutOfStock');
+('M01', 'LM03', N'Lẩu Thái chua cay', NULL, 'https://images.unsplash.com/photo-1547928576-a4a33237cbc3?auto=format&fit=crop&w=800&q=80', 180000, 'InStock'),
+('M02', 'LM01', N'Lẩu bò nhúng dấm', N'Nước lẩu bò nhúng dấm chua dịu, thơm tỏi.', 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80', 220000, 'InStock'),
+('M03', 'LM03', N'Lẩu nấm thanh đạm nè', NULL, 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80', 170000, 'OutOfStock'),
+('M04', 'LM01', N'Lẩu gà lá é', NULL, 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80', 200000, 'OutOfStock'),
+('M05', 'LM02', N'Bò Mỹ thái lát', N'Thịt bò Mỹ thái lát mỏng dùng để nhúng lẩu.', 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80', 120000, 'InStock'),
+('M06', 'LM02', N'Tôm sú tươi', N'Tôm sú tươi, thịt chắc và ngọt.', 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=800&q=80', 140000, 'InStock'),
+('M07', 'LM02', N'Viên thả lẩu thập cẩm', NULL, 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=800&q=80', 69999, 'OutOfStock'),
+('M08', 'LM02', N'Ba chỉ heo thái mỏng nè', NULL, 'https://images.unsplash.com/photo-1602498456745-e9503b30470b?auto=format&fit=crop&w=800&q=80', 90000, 'Discontinued'),
+('M09', 'LM03', N'Rau lẩu thập cẩm', N'Rau xanh tươi dùng kèm các món lẩu.', 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80', 50000, 'InStock'),
+('M10', 'LM03', N'Nấm thập cẩm', N'Nhiều loại nấm tươi dùng cho món lẩu.', 'https://images.unsplash.com/photo-1509358271058-acd22cc93898?auto=format&fit=crop&w=800&q=80', 60000, 'InStock'),
+('M11', 'LM04', N'Mì Udon', N'Mì Udon ăn kèm lẩu.', 'https://images.unsplash.com/photo-1618841557871-b4664fbf0cb3?auto=format&fit=crop&w=800&q=80', 25000, 'InStock'),
+('M12', 'LM04', N'Bún tươi', N'Bún tươi dùng ăn kèm lẩu.', 'https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=800&q=80', 14999, 'InStock'),
+('M13', 'LM05', N'Trà đào cam sả', N'Trà đào kết hợp cam và sả.', 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80', 40001, 'Discontinued'),
+('M14', 'LM05', N'Chè khúc bạch', N'Món tráng miệng mát lạnh.', 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80', 35000, 'InStock'),
+('M15', 'LM05', N'Nước ép cam', N'Nước ép cam tươi.', 'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=800&q=80', 40000, 'OutOfStock');
 GO
 
 -- 6. NGUYEN_LIEU (maNguyenLieu, tenNguyenLieu, donViTinh, soLuongTon, giaNhapGanNhat, trangThai)

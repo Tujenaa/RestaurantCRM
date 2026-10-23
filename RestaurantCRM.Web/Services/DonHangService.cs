@@ -28,9 +28,9 @@ public class DonHangService
             TienTrinh = Steps(),
             ChiTiet = new()
             {
-                new() { MaMon = "M01", TenMon = "Lẩu Thái chua cay", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 180000, DonGiaSauGiam = 180000, ThanhTien = 180000 },
-                new() { MaMon = "M05", TenMon = "Bò Mỹ thái lát", DuongDanAnh = "/images/default.jpg", SoLuong = 2, DonGiaGoc = 120000, DonGiaSauGiam = 120000, ThanhTien = 240000 },
-                new() { MaMon = "M09", TenMon = "Rau lẩu thập cẩm", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 50000, DonGiaSauGiam = 50000, ThanhTien = 50000 }
+                new() { MaMon = "M01", TenMon = "Lẩu Thái chua cay", DuongDanAnh = "https://images.unsplash.com/photo-1547928576-a4a33237cbc3?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 180000, DonGiaSauGiam = 180000, ThanhTien = 180000 },
+                new() { MaMon = "M05", TenMon = "Bò Mỹ thái lát", DuongDanAnh = "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80", SoLuong = 2, DonGiaGoc = 120000, DonGiaSauGiam = 120000, ThanhTien = 240000 },
+                new() { MaMon = "M09", TenMon = "Rau lẩu thập cẩm", DuongDanAnh = "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 50000, DonGiaSauGiam = 50000, ThanhTien = 50000 }
             }
         },
         new()
@@ -48,8 +48,8 @@ public class DonHangService
             TienTrinh = Steps(),
             ChiTiet = new()
             {
-                new() { MaMon = "M03", TenMon = "Lẩu nấm thanh đạm", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 170000, DonGiaSauGiam = 170000, ThanhTien = 170000 },
-                new() { MaMon = "M06", TenMon = "Tôm sú tươi", DuongDanAnh = "/images/default.jpg", SoLuong = 1, DonGiaGoc = 140000, DonGiaSauGiam = 140000, ThanhTien = 140000 }
+                new() { MaMon = "M03", TenMon = "Lẩu nấm thanh đạm", DuongDanAnh = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 170000, DonGiaSauGiam = 170000, ThanhTien = 170000 },
+                new() { MaMon = "M06", TenMon = "Tôm sú tươi", DuongDanAnh = "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 140000, DonGiaSauGiam = 140000, ThanhTien = 140000 }
             }
         }
     };
