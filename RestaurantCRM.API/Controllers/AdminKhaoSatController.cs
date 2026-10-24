@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -17,11 +18,11 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhaoSatController : ControllerBase
     {
-        public const string Nhap = "Draft";
-        public const string DangMo = "Open";
-        public const string DaDong = "Closed";
-        public const string TracNghiem = "Option";
-        public const string TuLuan = "Text";
+        public const string Nhap = AdminKhaoSatService.Nhap;
+        public const string DangMo = AdminKhaoSatService.DangMo;
+        public const string DaDong = AdminKhaoSatService.DaDong;
+        public const string TracNghiem = AdminKhaoSatService.TracNghiem;
+        public const string TuLuan = AdminKhaoSatService.TuLuan;
 
         private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
@@ -486,69 +487,18 @@ namespace RestaurantCRM.API.Controllers
             // Lấy toàn bộ câu trả lời của khảo sát một lần rồi đếm trong bộ nhớ
             var cauTraLois = await _service.Query<CauTraLoi>()
                 .Where(c => c.MaPhieuTraLoiNavigation != null && c.MaPhieuTraLoiNavigation.MaKhaoSat == id)
-                .Select(c => new
+                .Select(c => new KhaoSatAnswerItem
                 {
-                    c.MaCauHoi,
-                    c.MaTuyChon,
-                    c.MaPhieuTraLoi,
-                    c.NoiDungTuDien,
+                    MaCauHoi = c.MaCauHoi,
+                    MaTuyChon = c.MaTuyChon,
+                    MaPhieuTraLoi = c.MaPhieuTraLoi,
+                    NoiDungTuDien = c.NoiDungTuDien,
                     TenKhachHang = c.MaPhieuTraLoiNavigation!.MaKhachHangNavigation != null ? c.MaPhieuTraLoiNavigation.MaKhachHangNavigation.HoTen : null,
                     NgayTraLoi = c.MaPhieuTraLoiNavigation.NgayTraLoi
                 })
                 .ToListAsync();
 
-            var cauHoiResults = new List<object>();
-            foreach (var ch in SapXep(khaoSat.CauHoiKhaoSat, c => c.MaCauHoi))
-            {
-                var cuaCauHoi = cauTraLois.Where(c => c.MaCauHoi == ch.MaCauHoi).ToList();
-                int soLuotTraLoi = cuaCauHoi.Select(c => c.MaPhieuTraLoi).Distinct().Count();
-                bool laTuLuan = ChuanHoaLoai(ch.LoaiCauHoi) == TuLuan;
-
-                if (!laTuLuan)
-                {
-                    var thongKeTuyChon = SapXep(ch.TuyChonCauHoi, t => t.MaTuyChon).Select(tc =>
-                    {
-                        int soNguoiChon = cuaCauHoi.Count(c => c.MaTuyChon == tc.MaTuyChon);
-                        return new
-                        {
-                            tc.MaTuyChon,
-                            tc.NoiDungTuyChon,
-                            SoNguoiChon = soNguoiChon,
-                            // Tỷ lệ trên số phiếu đã trả lời câu này (câu nhiều lựa chọn có thể vượt 100% khi cộng lại)
-                            TyLe = soLuotTraLoi > 0 ? Math.Round((double)soNguoiChon / soLuotTraLoi * 100, 2) : 0.0
-                        };
-                    }).ToList();
-
-                    cauHoiResults.Add(new
-                    {
-                        ch.MaCauHoi,
-                        ch.NoiDungCauHoi,
-                        LoaiCauHoi = "TracNghiem",
-                        SoLuotTraLoi = soLuotTraLoi,
-                        KetQuaTN = thongKeTuyChon,
-                        KetQuaTuLuan = (object?)null,
-                        TraLoiTuLuan = (object?)null
-                    });
-                }
-                else
-                {
-                    var tuLuan = cuaCauHoi
-                        .Where(c => !string.IsNullOrWhiteSpace(c.NoiDungTuDien))
-                        .OrderByDescending(c => c.NgayTraLoi)
-                        .ToList();
-
-                    cauHoiResults.Add(new
-                    {
-                        ch.MaCauHoi,
-                        ch.NoiDungCauHoi,
-                        LoaiCauHoi = "TuLuan",
-                        SoLuotTraLoi = soLuotTraLoi,
-                        KetQuaTN = (object?)null,
-                        KetQuaTuLuan = tuLuan.Select(c => c.NoiDungTuDien).ToList(),
-                        TraLoiTuLuan = tuLuan.Select(c => new { NoiDung = c.NoiDungTuDien, c.TenKhachHang, c.NgayTraLoi }).ToList()
-                    });
-                }
-            }
+            var cauHoiResults = AdminKhaoSatService.AggregateQuestionResults(khaoSat.CauHoiKhaoSat, cauTraLois);
 
             return Ok(new
             {
@@ -564,69 +514,20 @@ namespace RestaurantCRM.API.Controllers
         // ── Hàm hỗ trợ ───────────────────────────────────────────────────────
 
         /// <summary>Quy đổi trạng thái về giá trị hợp lệ của CSDL (Draft / Open / Closed).</summary>
-        public static string? ChuanHoaTrangThai(string? s)
-        {
-            switch ((s ?? "").Trim().ToLowerInvariant())
-            {
-                case "draft": case "nhap": case "nháp": return Nhap;
-                case "open": case "active": case "dangmo": case "đang mở": return DangMo;
-                case "closed": case "close": case "dadong": case "đã đóng": return DaDong;
-                default: return null;
-            }
-        }
+        public static string? ChuanHoaTrangThai(string? s) => AdminKhaoSatService.ChuanHoaTrangThai(s);
 
         /// <summary>Quy đổi loại câu hỏi về giá trị hợp lệ của CSDL (Option / Text).</summary>
-        public static string? ChuanHoaLoai(string? s)
-        {
-            switch ((s ?? "").Trim().ToLowerInvariant())
-            {
-                case "option": case "tracnghiem": case "trắc nghiệm": case "choice": return TracNghiem;
-                case "text": case "tuluan": case "tự luận": return TuLuan;
-                default: return null;
-            }
-        }
+        public static string? ChuanHoaLoai(string? s) => AdminKhaoSatService.ChuanHoaLoai(s);
 
-        private static string? KiemTraCauHoi(string? noiDung, string? loaiCauHoi, List<string>? tuyChons)
-        {
-            if (string.IsNullOrWhiteSpace(noiDung))
-                return "Nội dung câu hỏi không được để trống.";
-            if (noiDung.Trim().Length > 500)
-                return "Nội dung câu hỏi tối đa 500 ký tự.";
+        private static string? KiemTraCauHoi(string? noiDung, string? loaiCauHoi, List<string>? tuyChons) =>
+            AdminKhaoSatService.KiemTraCauHoi(noiDung, loaiCauHoi, tuyChons);
 
-            var loai = ChuanHoaLoai(loaiCauHoi);
-            if (loai == null)
-                return "Loại câu hỏi không hợp lệ. Chấp nhận 'Option' (trắc nghiệm) hoặc 'Text' (tự luận).";
-
-            if (loai == TracNghiem)
-            {
-                var ds = LamSachTuyChon(tuyChons);
-                if (ds.Count < 2)
-                    return "Câu hỏi trắc nghiệm cần ít nhất 2 tùy chọn (không tính tùy chọn trống hoặc trùng nhau).";
-                if (ds.Any(t => t.Length > 255))
-                    return "Nội dung tùy chọn tối đa 255 ký tự.";
-            }
-            return null;
-        }
-
-        /// <summary>Bỏ tùy chọn trống, cắt khoảng trắng và bỏ trùng (giữ thứ tự).</summary>
-        private static List<string> LamSachTuyChon(List<string>? tuyChons)
-        {
-            var kq = new List<string>();
-            if (tuyChons == null) return kq;
-            foreach (var t in tuyChons)
-            {
-                if (string.IsNullOrWhiteSpace(t)) continue;
-                var v = t.Trim();
-                if (!kq.Contains(v)) kq.Add(v);
-            }
-            return kq;
-        }
+        private static List<string> LamSachTuyChon(List<string>? tuyChons) =>
+            AdminKhaoSatService.LamSachTuyChon(tuyChons);
 
         /// <summary>Sắp theo mã tự nhiên: CH2 trước CH10.</summary>
-        private static IEnumerable<T> SapXep<T>(IEnumerable<T> items, Func<T, string> key)
-        {
-            return items.OrderBy(x => key(x).Length).ThenBy(key, StringComparer.Ordinal);
-        }
+        private static IEnumerable<T> SapXep<T>(IEnumerable<T> items, Func<T, string> key) =>
+            AdminKhaoSatService.SapXep(items, key);
 
         private async Task<int> SoTiepTheoAsync<TEntity>(string prefix,
             System.Linq.Expressions.Expression<Func<TEntity, bool>> loc,

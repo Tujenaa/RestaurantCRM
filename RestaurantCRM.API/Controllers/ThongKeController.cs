@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using RestaurantCRM.API.DTOs;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -305,6 +307,131 @@ namespace RestaurantCRM.API.Controllers
                 DoanhThuTheoNgay = doanhThuTheoNgay,
                 TopMonBanChay = topMon
             });
+        }
+
+        // GET: api/ThongKe/PhanTichKhachHang - Báo cáo phân tích cơ cấu độ tuổi, giới tính và sở thích món ăn
+        [HttpGet("PhanTichKhachHang")]
+        public async Task<IActionResult> GetPhanTichKhachHang()
+        {
+            var khachHangs = await _service.Query<KhachHang>()
+                .Select(k => new { k.MaKhachHang, k.NgaySinh, k.GioiTinh })
+                .ToListAsync();
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            int tongKhachHang = khachHangs.Count;
+
+            // 1. Phân tích nhóm tuổi
+            int duoi18 = 0;
+            int tu18Den24 = 0;
+            int tu25Den34 = 0;
+            int tu35Den50 = 0;
+            int tren50 = 0;
+            int chuaCapNhatTuoi = 0;
+            int tongTuoi = 0;
+            int coNgaySinh = 0;
+
+            foreach (var k in khachHangs)
+            {
+                if (!k.NgaySinh.HasValue)
+                {
+                    chuaCapNhatTuoi++;
+                    continue;
+                }
+
+                var dob = k.NgaySinh.Value;
+                int tuoi = today.Year - dob.Year;
+                if (dob > today.AddYears(-tuoi)) tuoi--;
+
+                if (tuoi < 0 || tuoi > 130)
+                {
+                    chuaCapNhatTuoi++;
+                    continue;
+                }
+
+                tongTuoi += tuoi;
+                coNgaySinh++;
+
+                if (tuoi < 18) duoi18++;
+                else if (tuoi <= 24) tu18Den24++;
+                else if (tuoi <= 34) tu25Den34++;
+                else if (tuoi <= 50) tu35Den50++;
+                else tren50++;
+            }
+
+            double RoundPct(int count) => tongKhachHang > 0 ? Math.Round((double)count / tongKhachHang * 100, 1) : 0;
+
+            var dsDoTuoi = new List<NhomDoTuoiDto>
+            {
+                new NhomDoTuoiDto { TenNhom = "< 18", MoTa = "Học sinh / Dưới 18 tuổi", SoLuong = duoi18, TyLe = RoundPct(duoi18) },
+                new NhomDoTuoiDto { TenNhom = "18 - 24", MoTa = "Sinh viên / Giới trẻ", SoLuong = tu18Den24, TyLe = RoundPct(tu18Den24) },
+                new NhomDoTuoiDto { TenNhom = "25 - 34", MoTa = "Nhân viên văn phòng / Trẻ", SoLuong = tu25Den34, TyLe = RoundPct(tu25Den34) },
+                new NhomDoTuoiDto { TenNhom = "35 - 50", MoTa = "Trung niên / Gia đình", SoLuong = tu35Den50, TyLe = RoundPct(tu35Den50) },
+                new NhomDoTuoiDto { TenNhom = "> 50", MoTa = "Lớn tuổi", SoLuong = tren50, TyLe = RoundPct(tren50) },
+                new NhomDoTuoiDto { TenNhom = "Chưa rõ", MoTa = "Chưa cập nhật ngày sinh", SoLuong = chuaCapNhatTuoi, TyLe = RoundPct(chuaCapNhatTuoi) }
+            };
+
+            // 2. Phân tích giới tính
+            var genderGroups = khachHangs
+                .GroupBy(k => string.IsNullOrWhiteSpace(k.GioiTinh) ? "Khác / Chưa rõ" : k.GioiTinh.Trim())
+                .Select(g => new GioiTinhStatDto
+                {
+                    TenGioiTinh = g.Key,
+                    SoLuong = g.Count(),
+                    TyLe = RoundPct(g.Count())
+                })
+                .OrderByDescending(x => x.SoLuong)
+                .ToList();
+
+            // 3. Phân tích sở thích món ăn (lấy từ các hóa đơn hoàn thành)
+            var chiTiets = await _service.Query<ChiTietHoaDon>()
+                .Where(c => c.MaHoaDonNavigation != null &&
+                           (c.MaHoaDonNavigation.TrangThai == "Completed" || c.MaHoaDonNavigation.TrangThai == "Hoàn thành"))
+                .Select(c => new
+                {
+                    c.MaMon,
+                    TenMon = c.TenMon ?? (c.MaMonNavigation != null ? c.MaMonNavigation.TenMon : "Món chưa xác định"),
+                    TenLoaiMon = (c.MaMonNavigation != null && c.MaMonNavigation.MaLoaiMonNavigation != null)
+                        ? c.MaMonNavigation.MaLoaiMonNavigation.TenLoaiMon
+                        : "Khác",
+                    SoLuong = c.SoLuong ?? 1,
+                    ThanhTien = c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))
+                })
+                .ToListAsync();
+
+            int tongSoLuongMonGoi = chiTiets.Sum(c => c.SoLuong);
+
+            var topMonUaThich = chiTiets
+                .GroupBy(c => new { c.MaMon, c.TenMon, c.TenLoaiMon })
+                .Select(g =>
+                {
+                    int sl = g.Sum(x => x.SoLuong);
+                    double doanhThu = g.Sum(x => x.ThanhTien);
+                    double tyLe = tongSoLuongMonGoi > 0 ? Math.Round((double)sl / tongSoLuongMonGoi * 100, 1) : 0;
+                    return new MonUaThichDto
+                    {
+                        MaMon = g.Key.MaMon ?? string.Empty,
+                        TenMon = g.Key.TenMon ?? "Không xác định",
+                        TenLoaiMon = g.Key.TenLoaiMon ?? "Khác",
+                        SoLuongGoi = sl,
+                        DoanhThu = Math.Round(doanhThu, 0),
+                        TyLeUaThich = tyLe
+                    };
+                })
+                .OrderByDescending(x => x.SoLuongGoi)
+                .Take(12)
+                .ToList();
+
+            var response = new PhanTichKhachHangResponse
+            {
+                TongKhachHang = tongKhachHang,
+                KhachHangCoNgaySinh = coNgaySinh,
+                DoTuoiTrungBinh = coNgaySinh > 0 ? Math.Round((double)tongTuoi / coNgaySinh, 1) : 0,
+                DoTuoi = dsDoTuoi,
+                GioiTinh = genderGroups,
+                TopMonUaThich = topMonUaThich
+            };
+
+            return Ok(response);
         }
     }
 }

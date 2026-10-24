@@ -87,7 +87,26 @@
     <Compile Include="Controls\Dialogkit.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Controls\Modernkit.cs" />
+    <Compile Include="Controls\Skins\SkinUtil.cs" />
+    <Compile Include="Controls\Skins\ButtonSkin.cs" />
+    <Compile Include="Controls\Skins\FieldSkin.cs" />
+    <Compile Include="Controls\Skins\ContainerSkins.cs" />
+    <Compile Include="Controls\Common\PillSearch.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\Common\ComboChip.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\Common\KpiTile.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\BaoCao\BaoCaoKpiTile.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\BaoCao\SalesLineChartRenderer.cs" />
+    <Compile Include="Controls\PhanHoi\ChatBubble.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Controls\Pagekit.cs" />
     <Compile Include="Controls\UcDataGridView.cs">
       <SubType>Component</SubType>
@@ -104,9 +123,6 @@
     <Compile Include="Controls\RoundedPanel.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Controls\UcHighlightCard.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="Controls\UcGrowthChart.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -114,18 +130,27 @@
     <Compile Include="Controls\UcCurrentMembersTable.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="DTOs\Auth\LoginRequest.cs" />
-    <Compile Include="DTOs\Auth\LoginResponse.cs" />
-    <Compile Include="DTOs\DonHang\DonHangDto.cs" />
+    <Compile Include="Controls\UcCustomerDemographics.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DTOs\KhachHang\KhachHangDto.cs" />
     <Compile Include="DTOs\KhaoSat\KhaoSatDto.cs" />
-    <Compile Include="DTOs\MonAn\MonAnDto.cs" />
-    <Compile Include="DTOs\MonAn\MonAnRequest.cs" />
     <Compile Include="DTOs\PhanHoi\PhanHoi.cs" />
     <Compile Include="Forms\Auth\LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\BanHang\TaoDonHangForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\BanHang\CartPanelBuilder.cs" />
+    <Compile Include="Controls\BanHang\MenuPanelBuilder.cs" />
+    <Compile Include="Models\CartItem.cs" />
+    <Compile Include="Services\BanHang\CartService.cs" />
+    <Compile Include="Services\BanHang\OrderCalculationService.cs" />
+    <Compile Include="Forms\BanHang\ChonVoucherDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\BanHang\XacNhanDonHangDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\BaoCao\BaoCaoBanHangForm.cs">
@@ -144,9 +169,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\HoaDon\HoaDonForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\DanhGia\DanhGiaForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\KhachHang\Khachhangchitietdialog.cs">
@@ -194,11 +216,12 @@
     <Compile Include="Forms\KhuyenMai\TaoVoucherDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\PhanHoi\PhanHoi.cs">
+    <Compile Include="Services\KhuyenMai\VoucherMarginCalculator.cs" />
+    <Compile Include="Forms\PhanHoi\PhanHoiForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\PhanHoi\PhanHoi.Designer.cs">
-      <DependentUpon>PhanHoi.cs</DependentUpon>
+    <Compile Include="Forms\PhanHoi\PhanHoiForm.Designer.cs">
+      <DependentUpon>PhanHoiForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Models\KhuyenMaiDto.cs" />
     <Compile Include="Services\KhuyenMaiService.cs" />
@@ -222,12 +245,10 @@
     <Compile Include="Helpers\ThemeManager.cs" />
     <Compile Include="Helpers\UiStyler.cs" />
     <Compile Include="Helpers\TokenHelper.cs" />
-    <Compile Include="Helpers\ValidationHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\ApiService.cs" />
     <Compile Include="Services\AuthService.cs" />
-    <Compile Include="Services\DonHangService.cs" />
     <Compile Include="Services\KhachHangService.cs" />
     <Compile Include="Services\KhaoSatService.cs" />
     <Compile Include="Services\MonAnService.cs" />
@@ -266,6 +287,7 @@
     <Compile Include="Models\MonAnDto.cs" />
     <Compile Include="Models\NguyenLieuDto.cs" />
     <Compile Include="Models\DashboardMetricsDto.cs" />
+    <Compile Include="Models\PhanTichKhachHangDto.cs" />
     <Compile Include="Services\LoaiMonService.cs" />
     <Compile Include="Services\NguyenLieuService.cs" />
     <Compile Include="Services\PhieuNhapService.cs" />
@@ -351,9 +373,6 @@
     </Compile>
     <Compile Include="Models\BaoCaoDoanhThuDto.cs" />
     <Compile Include="Services\BaoCaoService.cs" />
-    <Compile Include="Forms\BaoCao\BaoCaoBanHangForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

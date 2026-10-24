@@ -6,7 +6,6 @@ using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Forms.BanHang;
 using RestaurantCRM.AdminApp.Forms.BaoCao;
-using RestaurantCRM.AdminApp.Forms.DanhGia;
 using RestaurantCRM.AdminApp.Forms.HoaDon;
 using RestaurantCRM.AdminApp.Forms.KhachHang;
 using RestaurantCRM.AdminApp.Forms.Kho;
