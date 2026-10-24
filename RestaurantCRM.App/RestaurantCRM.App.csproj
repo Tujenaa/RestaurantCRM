@@ -123,18 +123,11 @@
     <Compile Include="Forms\BanHang\TaoDonHangForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\BanHang\TaoDonHangForm.Menu.cs">
-      <SubType>Form</SubType>
-      <DependentUpon>TaoDonHangForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\BanHang\TaoDonHangForm.Cart.cs">
-      <SubType>Form</SubType>
-      <DependentUpon>TaoDonHangForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\BanHang\TaoDonHangForm.Logic.cs">
-      <SubType>Form</SubType>
-      <DependentUpon>TaoDonHangForm.cs</DependentUpon>
-    </Compile>
+    <Compile Include="Controls\BanHang\CartPanelBuilder.cs" />
+    <Compile Include="Controls\BanHang\MenuPanelBuilder.cs" />
+    <Compile Include="Models\CartItem.cs" />
+    <Compile Include="Services\BanHang\CartService.cs" />
+    <Compile Include="Services\BanHang\OrderCalculationService.cs" />
     <Compile Include="Forms\BanHang\ChonVoucherDialog.cs">
       <SubType>Form</SubType>
     </Compile>

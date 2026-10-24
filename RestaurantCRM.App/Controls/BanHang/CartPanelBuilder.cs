@@ -1,23 +1,78 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Helpers;
+using RestaurantCRM.AdminApp.Models;
+using RestaurantCRM.AdminApp.Services.BanHang;
 
-namespace RestaurantCRM.AdminApp.Forms.BanHang
+namespace RestaurantCRM.AdminApp.Controls.BanHang
 {
-    public partial class TaoDonHangForm
+    /// <summary>
+    /// Chuyên trách dựng giao diện và cập nhật hiển thị cho cột Giỏ hàng bên phải:
+    /// - Thông tin khách hàng (Tên, SĐT, Ghi chú)
+    /// - Tiêu đề số lượng món và nút xóa giỏ hàng
+    /// - Danh sách thẻ món cuộn dọc và sửa số lượng inline
+    /// - Box voucher và bảng tổng kết tiền thanh toán
+    /// </summary>
+    public class CartPanelBuilder
     {
-        // ════════════════════════════════════════════════════════════════════
-        //  CỘT PHẢI – DỰNG GIAO DIỆN
-        //  Bố cục 4 hàng (TableLayoutPanel):
-        //   [0] Thông tin khách hàng        (cố định)
-        //   [1] "Món đã chọn (n)" + "Xóa tất cả"  (cố định)
-        //   [2] Danh sách món                (co giãn + cuộn dọc)  ← chỉ vùng này cuộn
-        //   [3] Voucher + Tổng kết + Nút thanh toán (cố định ở đáy)
-        // ════════════════════════════════════════════════════════════════════
-        private Control BuildCartColumn()
+        private static readonly Color CartCardBg = Color.FromArgb(248, 250, 252);
+        private static readonly Color CartCardBorder = Color.FromArgb(226, 232, 240);
+        private static readonly Color StepperBorder = Color.FromArgb(203, 213, 225);
+        private static readonly Color Rose500 = Color.FromArgb(244, 63, 94);
+        private static readonly Color Rose600 = Color.FromArgb(225, 29, 72);
+        private static readonly Color Rose50 = Color.FromArgb(255, 241, 242);
+
+        private readonly Font _baseFont;
+        private readonly Color _accent = ThemeManager.Primary;
+
+        // UI Controls
+        private FlowLayoutPanel _cartLines;
+        private int _lastRenderedLineCount;
+
+        private RoundedPanel _pnlPromoBox;
+        private Label _lblPromoIcon;
+        private Label _lblPromoTitle;
+        private Label _lblPromoSub;
+        private Button _btnPromoAction;
+        private Label _lnkChangePromo;
+        private TextBox _txtQuickVoucher;
+        private Button _btnQuickApply;
+
+        private Label _lblCartCount;
+        private Button _btnClearCart;
+
+        private Label _lblSubTotalValue;
+        private Label _lblDiscountCaption;
+        private Label _lblDiscountValue;
+        private Label _lblTotalValue;
+
+        private TextBox _txtTenKhach;
+        private TextBox _txtSdt;
+        private TextBox _txtGhiChu;
+        private Button _btnPay;
+
+        // Callbacks
+        public event Action<CartItem, int> QuantityChanged;
+        public event Action<CartItem> ItemRemoved;
+        public event Action ClearCartRequested;
+        public event Action<string> QuickVoucherApplied;
+        public event Action SelectVoucherClicked;
+        public event Action PromoActionClicked;
+        public event Action CheckoutClicked;
+
+        public string CustomerName => _txtTenKhach?.Text?.Trim() ?? "";
+        public string CustomerPhone => _txtSdt?.Text?.Trim() ?? "";
+        public string Note => _txtGhiChu?.Text?.Trim() ?? "";
+
+        public CartPanelBuilder(Font baseFont)
+        {
+            _baseFont = baseFont ?? new Font("Segoe UI", 9.5F);
+        }
+
+        public Control BuildCartColumn()
         {
             var layout = new TableLayoutPanel
             {
@@ -29,12 +84,11 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 Padding = Padding.Empty
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 118F));   // thông tin khách (tối ưu chiều cao)
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 118F));   // thông tin khách
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));    // header giỏ hàng
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));    // danh sách món (cuộn)
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));    // danh sách món cuộn
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // footer cố định
 
-            // Vùng cuộn: chiều cao = phần còn lại của cột → tự có thanh cuộn dọc khi nhiều món
             _cartLines = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -45,7 +99,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 Margin = Padding.Empty,
                 Padding = new Padding(0, 2, 0, 2)
             };
-            // Khi thanh cuộn xuất hiện/biến mất, ClientSize đổi → co các thẻ món cho vừa chiều ngang (không bị cuộn ngang)
             _cartLines.ClientSizeChanged += (s, e) => FitCartRowWidths();
 
             layout.Controls.Add(BuildCustomerSection(), 0, 0);
@@ -55,7 +108,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             return layout;
         }
 
-        // ── [0] Thông tin khách hàng ──
         private Control BuildCustomerSection()
         {
             var t = new TableLayoutPanel
@@ -69,11 +121,11 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));  // tiêu đề
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));  // caption
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));  // ô nhập
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));  // caption ghi chú
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));  // ô nhập ghi chú
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
 
             var title = new Label
             {
@@ -93,13 +145,13 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             _txtTenKhach = new TextBox
             {
                 Text = "Khách mua mang đi",
-                Font = Font,
+                Font = _baseFont,
                 Anchor = AnchorStyles.Left | AnchorStyles.Right,
                 Margin = new Padding(0, 0, 6, 0)
             };
             _txtSdt = new TextBox
             {
-                Font = Font,
+                Font = _baseFont,
                 Anchor = AnchorStyles.Left | AnchorStyles.Right,
                 Margin = new Padding(6, 0, 0, 0)
             };
@@ -113,7 +165,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             _txtGhiChu = new TextBox
             {
                 Text = "Bán mang đi tại quầy",
-                Font = Font,
+                Font = _baseFont,
                 Anchor = AnchorStyles.Left | AnchorStyles.Right,
                 Margin = Padding.Empty
             };
@@ -135,7 +187,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
         }
 
-        // ── [1] Tiêu đề "Món đã chọn (n)" + nút "Xóa tất cả" ngang hàng, góc phải ──
         private Control BuildCartHeader()
         {
             var t = new TableLayoutPanel
@@ -161,7 +212,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 Margin = Padding.Empty
             };
 
-            // Text-button nhỏ gọn: "🗑 Xóa tất cả" – chữ đỏ nhạt (rose-500), hover đậm hơn (rose-600).
             _btnClearCart = new Button
             {
                 Text = "🗑  Xóa tất cả",
@@ -186,14 +236,13 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             _btnClearCart.FlatAppearance.MouseDownBackColor = Rose50;
             _btnClearCart.MouseEnter += (s, e) => _btnClearCart.ForeColor = Rose600;
             _btnClearCart.MouseLeave += (s, e) => _btnClearCart.ForeColor = Rose500;
-            _btnClearCart.Click += (s, e) => ConfirmClearCart();
+            _btnClearCart.Click += (s, e) => ClearCartRequested?.Invoke();
 
             t.Controls.Add(_lblCartCount, 0, 0);
             t.Controls.Add(_btnClearCart, 1, 0);
             return t;
         }
 
-        // ── [3] Footer cố định: Voucher → Tổng kết → Nút thanh toán ──
         private Control BuildCartFooter()
         {
             var t = new TableLayoutPanel
@@ -209,25 +258,22 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 46F));   // 0: box voucher thu gọn
-            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 1: Tiền món
-            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 2: Giảm giá (ẩn nếu không có → cao 0)
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 13F));   // 3: đường kẻ
-            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 4: Tổng thanh toán
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 58F));   // 5: nút thanh toán
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 46F));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 13F));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 58F));
 
-            // 0) Box gợi ý voucher / khuyến mãi
             var promo = BuildPromoBox();
             t.Controls.Add(promo, 0, 0);
             t.SetColumnSpan(promo, 2);
 
-            // 1) Tiền món
             Label subCaption = MakeSummaryLabel("Tiền món", 9.5F, false, ThemeManager.Muted, ContentAlignment.MiddleLeft);
             _lblSubTotalValue = MakeSummaryLabel("0 đ", 9.5F, true, ThemeManager.Ink, ContentAlignment.MiddleRight);
             t.Controls.Add(subCaption, 0, 1);
             t.Controls.Add(_lblSubTotalValue, 1, 1);
 
-            // 2) Giảm giá (chỉ hiện khi có voucher)
             _lblDiscountCaption = MakeSummaryLabel("Giảm giá", 9.5F, false, ThemeManager.Green, ContentAlignment.MiddleLeft);
             _lblDiscountValue = MakeSummaryLabel("-0 đ", 9.5F, true, ThemeManager.Green, ContentAlignment.MiddleRight);
             _lblDiscountCaption.Visible = false;
@@ -235,12 +281,10 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             t.Controls.Add(_lblDiscountCaption, 0, 2);
             t.Controls.Add(_lblDiscountValue, 1, 2);
 
-            // 3) Đường kẻ phân cách
             var divider = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Line, Margin = new Padding(0, 6, 0, 6) };
             t.Controls.Add(divider, 0, 3);
             t.SetColumnSpan(divider, 2);
 
-            // 4) Tổng thanh toán – to, đậm
             Label totalCaption = MakeSummaryLabel("Tổng thanh toán", 11F, true, ThemeManager.Ink, ContentAlignment.MiddleLeft);
             _lblTotalValue = MakeSummaryLabel("0 đ", 15F, true, ThemeManager.Ink, ContentAlignment.MiddleRight);
             totalCaption.Margin = new Padding(0, 2, 0, 2);
@@ -248,7 +292,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             t.Controls.Add(totalCaption, 0, 4);
             t.Controls.Add(_lblTotalValue, 1, 4);
 
-            // 5) Nút chính – full chiều ngang
             _btnPay = new Button
             {
                 Text = "✓  Xác nhận đơn hàng",
@@ -259,7 +302,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 Cursor = Cursors.Hand
             };
             ButtonSkin.SetKind(_btnPay, ButtonSkin.Kind.Primary);
-            _btnPay.Click += async (s, e) => await Checkout();
+            _btnPay.Click += (s, e) => CheckoutClicked?.Invoke();
             t.Controls.Add(_btnPay, 0, 5);
             t.SetColumnSpan(_btnPay, 2);
 
@@ -280,7 +323,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
         }
 
-        // Box voucher thu gọn: cao 38-40px, gọn gàng, hỗ trợ cả nhập mã nhanh lẫn chọn voucher
         private Control BuildPromoBox()
         {
             _pnlPromoBox = new RoundedPanel
@@ -327,7 +369,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 UseMnemonic = false
             };
 
-            // Ô nhập mã nhanh
             _txtQuickVoucher = new TextBox
             {
                 Font = new Font("Segoe UI", 8.5F),
@@ -353,7 +394,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 if (e.KeyCode == Keys.Enter)
                 {
                     e.SuppressKeyPress = true;
-                    ApplyQuickVoucher();
+                    QuickVoucherApplied?.Invoke(_txtQuickVoucher.Text);
                 }
             };
 
@@ -365,7 +406,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 Cursor = Cursors.Hand
             };
             ButtonSkin.SetKind(_btnQuickApply, ButtonSkin.Kind.Primary);
-            _btnQuickApply.Click += (s, e) => ApplyQuickVoucher();
+            _btnQuickApply.Click += (s, e) => QuickVoucherApplied?.Invoke(_txtQuickVoucher.Text);
 
             _btnPromoAction = new Button
             {
@@ -375,7 +416,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 Cursor = Cursors.Hand
             };
             ButtonSkin.SetKind(_btnPromoAction, ButtonSkin.Kind.Soft);
-            _btnPromoAction.Click += (s, e) => HandlePromoActionClick();
+            _btnPromoAction.Click += (s, e) => PromoActionClicked?.Invoke();
 
             _lnkChangePromo = new Label
             {
@@ -387,7 +428,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent
             };
-            _lnkChangePromo.Click += (s, e) => OpenSelectVoucherDialog();
+            _lnkChangePromo.Click += (s, e) => SelectVoucherClicked?.Invoke();
 
             _pnlPromoBox.Controls.Add(_lblPromoIcon);
             _pnlPromoBox.Controls.Add(_lblPromoTitle);
@@ -407,11 +448,10 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             if (_pnlPromoBox == null) return;
             int w = _pnlPromoBox.Width;
 
-            if (_appliedVoucher != null)
+            if (_btnPromoAction.Visible)
             {
                 _txtQuickVoucher.Visible = false;
                 _btnQuickApply.Visible = false;
-                _btnPromoAction.Visible = true;
                 _lnkChangePromo.Visible = true;
 
                 int rightMargin = 8;
@@ -424,7 +464,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             }
             else
             {
-                _btnPromoAction.Visible = false;
                 _lnkChangePromo.Visible = true;
                 _txtQuickVoucher.Visible = true;
                 _btnQuickApply.Visible = true;
@@ -443,12 +482,111 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  CỘT PHẢI – THẺ MÓN TRONG GIỎ (Cart Item Card)
-        //   Hàng 1: Tên món (đậm, tự ngắt dòng)               [🗑 xóa món]
-        //   Hàng 2: 140,000 đ / phần (chữ nhỏ, xám)
-        //   Hàng 3: [SL: 2 ✎] (click để sửa)                  Thành tiền (đậm, xanh)
-        // ════════════════════════════════════════════════════════════════════
+        public void SetPayButtonEnabled(bool enabled)
+        {
+            if (_btnPay != null) _btnPay.Enabled = enabled;
+        }
+
+        public void ResetQuickVoucherText()
+        {
+            if (_txtQuickVoucher != null)
+            {
+                _txtQuickVoucher.Text = "Mã voucher...";
+                _txtQuickVoucher.ForeColor = ThemeManager.Muted;
+            }
+        }
+
+        public void Render(CartService cartService, OrderCalculationService calcService, VoucherDto appliedVoucher, IEnumerable<VoucherDto> allVouchers)
+        {
+            int distinctCount = cartService.DistinctCount;
+            int totalQty = cartService.TotalQuantity;
+            if (distinctCount <= 0)
+            {
+                _lblCartCount.Text = "Món đã chọn (0)";
+            }
+            else if (distinctCount == totalQty)
+            {
+                _lblCartCount.Text = $"Món đã chọn ({distinctCount} món)";
+            }
+            else
+            {
+                _lblCartCount.Text = $"Món đã chọn ({distinctCount} món · {totalQty} phần)";
+            }
+            _btnClearCart.Visible = distinctCount > 0;
+
+            RenderCartLines(cartService);
+
+            decimal subTotal = cartService.SubTotal;
+            var (bestVoucher, bestDisc, nearVoucher, missingForNear) = calcService.FindBestVoucher(subTotal, allVouchers);
+            var (_, voucherDiscount, finalTotal) = calcService.CalculateTotals(cartService.Items, appliedVoucher);
+
+            UpdatePromoBox(subTotal, appliedVoucher, bestVoucher, bestDisc, nearVoucher, missingForNear, calcService);
+
+            _lblSubTotalValue.Text = $"{subTotal:N0} đ";
+
+            bool hasDiscount = appliedVoucher != null && voucherDiscount > 0;
+            _lblDiscountCaption.Visible = hasDiscount;
+            _lblDiscountValue.Visible = hasDiscount;
+            if (hasDiscount)
+            {
+                _lblDiscountCaption.Text = $"Giảm giá ({appliedVoucher.MaVoucher})";
+                _lblDiscountValue.Text = $"-{voucherDiscount:N0} đ";
+            }
+
+            _lblTotalValue.Text = $"{finalTotal:N0} đ";
+        }
+
+        private void RenderCartLines(CartService cartService)
+        {
+            int scrollY = Math.Abs(_cartLines.AutoScrollPosition.Y);
+            bool itemAdded = cartService.DistinctCount > _lastRenderedLineCount;
+
+            _cartLines.SuspendLayout();
+
+            var old = _cartLines.Controls.Cast<Control>().ToList();
+            _cartLines.Controls.Clear();
+            foreach (var c in old) c.Dispose();
+
+            int rowWidth = Math.Max(240, _cartLines.ClientSize.Width - _cartLines.Padding.Horizontal);
+
+            if (cartService.DistinctCount == 0)
+            {
+                _cartLines.Controls.Add(new Label
+                {
+                    Text = "Giỏ hàng đang trống.\nChọn món từ thực đơn để bắt đầu.",
+                    Size = new Size(rowWidth, 64),
+                    Margin = new Padding(0, 12, 0, 0),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = ThemeManager.Muted,
+                    Font = new Font("Segoe UI", 9F)
+                });
+            }
+            else
+            {
+                foreach (var item in cartService.Items)
+                {
+                    _cartLines.Controls.Add(CreateCartItemCard(item, rowWidth));
+                }
+            }
+
+            _cartLines.ResumeLayout(true);
+            FitCartRowWidths();
+
+            if (itemAdded && _cartLines.Controls.Count > 0)
+            {
+                var lastControl = _cartLines.Controls[_cartLines.Controls.Count - 1];
+                if (lastControl.Bottom > _cartLines.ClientSize.Height)
+                {
+                    _cartLines.ScrollControlIntoView(lastControl);
+                }
+            }
+            else
+            {
+                try { _cartLines.AutoScrollPosition = new Point(0, scrollY); } catch { }
+            }
+            _lastRenderedLineCount = cartService.DistinctCount;
+        }
+
         private Control CreateCartItemCard(CartItem item, int width)
         {
             var card = new RoundedPanel
@@ -461,7 +599,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 FillColor = CartCardBg
             };
 
-            // Nút xóa món (thùng rác) ở góc phải
             var btnDelete = new Button
             {
                 Text = ThemeManager.Glyph.Delete,
@@ -481,28 +618,14 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             btnDelete.FlatAppearance.MouseOverBackColor = ThemeManager.RedSoft;
             btnDelete.MouseEnter += (s, e) => btnDelete.ForeColor = ThemeManager.Red;
             btnDelete.MouseLeave += (s, e) => btnDelete.ForeColor = ThemeManager.Muted;
-            btnDelete.Click += (s, e) =>
-            {
-                var confirm = MessageBox.Show(this,
-                    $"Xác nhận xóa món '{item.Name}' khỏi giỏ hàng?",
-                    "Xác nhận xóa món",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-                if (confirm == DialogResult.Yes)
-                {
-                    _cart.Remove(item);
-                    OnCartChanged();
-                }
-            };
+            btnDelete.Click += (s, e) => ItemRemoved?.Invoke(item);
             card.Controls.Add(btnDelete);
 
-            // Ô chỉnh số lượng dạng pill [SL: 2 ✎] đặt KẾ BÊN NÚT THÙNG RÁC
             var qtyEditor = CreateInlineQuantityEditor(item);
             qtyEditor.Location = new Point(btnDelete.Left - qtyEditor.Width - 6, 6);
             qtyEditor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             card.Controls.Add(qtyEditor);
 
-            // Hàng 1: Tên món ăn
             int nameAvailableWidth = Math.Max(100, qtyEditor.Left - 10 - 6);
             var lblName = new Label
             {
@@ -518,7 +641,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             card.Controls.Add(lblName);
 
-            // Hàng 2 (trái): Đơn giá nhỏ gọn
             string unitPriceText = $"{item.Price:N0} đ / phần";
             if (item.Price < item.BasePrice)
                 unitPriceText += $" (Gốc {item.BasePrice:N0} đ)";
@@ -536,7 +658,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             card.Controls.Add(lblPrice);
 
-            // Hàng 2 (phải): Tổng tiền món
             var lblTotal = new Label
             {
                 Text = $"Thành tiền: {item.Price * item.Quantity:N0} đ",
@@ -555,7 +676,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             return card;
         }
 
-        // Tạo control hiển thị số lượng dạng pill [ SL: 2 ✎ ] và cho phép click sửa trực tiếp tại dòng
         private Control CreateInlineQuantityEditor(CartItem item)
         {
             var host = new Panel
@@ -564,7 +684,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 BackColor = Color.Transparent
             };
 
-            // Chế độ 1: Hiển thị nhãn [ SL: {qty} ✎ ]
             var pnlView = new RoundedPanel
             {
                 Dock = DockStyle.Fill,
@@ -587,7 +706,6 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             pnlView.Controls.Add(lblView);
 
-            // Chế độ 2: Panel chỉnh sửa trực tiếp với ô nhập + nút lưu + nút hủy
             var pnlEdit = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -662,39 +780,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                     switchToView();
                     return;
                 }
-
-                if (newQty <= 0)
-                {
-                    var confirm = MessageBox.Show(this,
-                        $"Bạn đã nhập số lượng là 0.\nXác nhận xóa món '{item.Name}' khỏi giỏ hàng?",
-                        "Xác nhận xóa món",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                    if (confirm == DialogResult.Yes)
-                    {
-                        _cart.Remove(item);
-                        OnCartChanged();
-                    }
-                    else
-                    {
-                        numInput.Value = item.Quantity;
-                        switchToView();
-                    }
-                    return;
-                }
-
-                if (newQty > item.MaxStock)
-                {
-                    MessageBox.Show(this,
-                        $"Món '{item.Name}' trong kho chỉ còn {item.MaxStock} suất.\nSố lượng không được vượt quá tồn kho khả dụng.",
-                        "Vượt quá tồn kho", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    numInput.Value = Math.Min(item.Quantity, item.MaxStock);
-                    return;
-                }
-
-                item.Quantity = newQty;
                 switchToView();
-                OnCartChanged();
+                QuantityChanged?.Invoke(item, newQty);
             };
 
             pnlView.Click += (s, e) => switchToEdit();
@@ -731,7 +818,76 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             return host;
         }
 
-        // Co các thẻ món theo bề ngang khả dụng của vùng cuộn (trừ thanh cuộn dọc nếu có)
+        private void UpdatePromoBox(decimal subTotal, VoucherDto appliedVoucher, VoucherDto best, decimal bestDisc, VoucherDto near, decimal missing, OrderCalculationService calcService)
+        {
+            if (subTotal <= 0)
+            {
+                _lblPromoIcon.Text = "🎟️";
+                _lblPromoTitle.Text = "Voucher / Giảm giá";
+                _lblPromoTitle.ForeColor = ThemeManager.Ink;
+                _lblPromoSub.Text = "Chưa có món";
+                _btnPromoAction.Visible = false;
+                _lnkChangePromo.Text = "Chọn mã ▾";
+                _pnlPromoBox.FillColor = Color.FromArgb(248, 250, 252);
+                _pnlPromoBox.BorderColor = Color.FromArgb(226, 232, 240);
+                LayoutPromoBox();
+                return;
+            }
+
+            if (appliedVoucher != null)
+            {
+                var (_, disc, _) = calcService.EvaluateVoucher(appliedVoucher, subTotal);
+                _lblPromoIcon.Text = "✔";
+                _lblPromoTitle.Text = $"Mã [{appliedVoucher.MaVoucher}]";
+                _lblPromoTitle.ForeColor = Color.FromArgb(22, 163, 74);
+                _lblPromoSub.Text = $"Giảm -{disc:N0} đ";
+                _btnPromoAction.Visible = true;
+                _btnPromoAction.Text = "Bỏ mã";
+                _btnPromoAction.BackColor = Color.FromArgb(254, 242, 242);
+                _btnPromoAction.ForeColor = ThemeManager.Red;
+                _lnkChangePromo.Text = "Đổi mã ▾";
+                _pnlPromoBox.FillColor = Color.FromArgb(240, 253, 244);
+                _pnlPromoBox.BorderColor = Color.FromArgb(187, 247, 208);
+                LayoutPromoBox();
+                return;
+            }
+
+            if (best != null)
+            {
+                _lblPromoIcon.Text = "✨";
+                _lblPromoTitle.Text = $"Gợi ý: [{best.MaVoucher}]";
+                _lblPromoTitle.ForeColor = Color.FromArgb(79, 70, 229);
+                _lblPromoSub.Text = $"Giảm {bestDisc:N0} đ";
+                _btnPromoAction.Visible = false;
+                _lnkChangePromo.Text = "Chọn mã ▾";
+                _pnlPromoBox.FillColor = Color.FromArgb(238, 242, 255);
+                _pnlPromoBox.BorderColor = Color.FromArgb(199, 210, 254);
+            }
+            else if (near != null)
+            {
+                _lblPromoIcon.Text = "💡";
+                _lblPromoTitle.Text = $"+{missing:N0} đ";
+                _lblPromoTitle.ForeColor = ThemeManager.Amber;
+                _lblPromoSub.Text = $"Nhận mã [{near.MaVoucher}]";
+                _btnPromoAction.Visible = false;
+                _lnkChangePromo.Text = "Xem mã ▾";
+                _pnlPromoBox.FillColor = Color.FromArgb(255, 251, 235);
+                _pnlPromoBox.BorderColor = Color.FromArgb(254, 243, 199);
+            }
+            else
+            {
+                _lblPromoIcon.Text = "🎟️";
+                _lblPromoTitle.Text = "Voucher / Giảm giá";
+                _lblPromoTitle.ForeColor = ThemeManager.Muted;
+                _lblPromoSub.Text = "Nhập mã hoặc chọn";
+                _btnPromoAction.Visible = false;
+                _lnkChangePromo.Text = "Chọn mã ▾";
+                _pnlPromoBox.FillColor = Color.FromArgb(248, 250, 252);
+                _pnlPromoBox.BorderColor = Color.FromArgb(226, 232, 240);
+            }
+            LayoutPromoBox();
+        }
+
         private void FitCartRowWidths()
         {
             if (_cartLines == null) return;
