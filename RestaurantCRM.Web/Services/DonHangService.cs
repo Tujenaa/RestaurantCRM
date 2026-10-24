@@ -11,48 +11,7 @@ public class DonHangService
     private readonly MonAnService _monAnService;
 
     // Fallback demo storage in case API is offline
-    private readonly List<DonHangViewModel> _fallbackOrders = new()
-    {
-        new()
-        {
-            MaDonHang = "DH00231",
-            MaKhachHang = "KH01",
-            NgayDat = DateTime.Today.AddHours(-2),
-            TongTienHang = 507000,
-            TienGiamVoucher = 20000,
-            TongThanhToan = 487000,
-            TrangThai = "Pending",
-            TrangThaiLoc = "active",
-            DiaChiGiao = "12 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-            BuocHienTai = 1,
-            TienTrinh = Steps(),
-            ChiTiet = new()
-            {
-                new() { MaMon = "M01", TenMon = "Lẩu Thái chua cay", DuongDanAnh = "https://images.unsplash.com/photo-1547928576-a4a33237cbc3?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 180000, DonGiaSauGiam = 180000, ThanhTien = 180000 },
-                new() { MaMon = "M05", TenMon = "Bò Mỹ thái lát", DuongDanAnh = "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80", SoLuong = 2, DonGiaGoc = 120000, DonGiaSauGiam = 120000, ThanhTien = 240000 },
-                new() { MaMon = "M09", TenMon = "Rau lẩu thập cẩm", DuongDanAnh = "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 50000, DonGiaSauGiam = 50000, ThanhTien = 50000 }
-            }
-        },
-        new()
-        {
-            MaDonHang = "DH00198",
-            MaKhachHang = "KH01",
-            NgayDat = DateTime.Today.AddDays(-6),
-            TongTienHang = 310000,
-            TienGiamVoucher = 0,
-            TongThanhToan = 310000,
-            TrangThai = "Completed",
-            TrangThaiLoc = "done",
-            DiaChiGiao = "45 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh",
-            BuocHienTai = 5,
-            TienTrinh = Steps(),
-            ChiTiet = new()
-            {
-                new() { MaMon = "M03", TenMon = "Lẩu nấm thanh đạm", DuongDanAnh = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 170000, DonGiaSauGiam = 170000, ThanhTien = 170000 },
-                new() { MaMon = "M06", TenMon = "Tôm sú tươi", DuongDanAnh = "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=800&q=80", SoLuong = 1, DonGiaGoc = 140000, DonGiaSauGiam = 140000, ThanhTien = 140000 }
-            }
-        }
-    };
+    private readonly List<DonHangViewModel> _fallbackOrders = MockData.FallbackData.CreateFallbackOrders();
 
     public DonHangService(IHttpClientFactory httpClientFactory, ILogger<DonHangService> logger, MonAnService monAnService)
     {
