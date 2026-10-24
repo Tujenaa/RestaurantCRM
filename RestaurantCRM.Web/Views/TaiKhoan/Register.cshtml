@@ -38,6 +38,22 @@
             </div>
         </div>
 
+        <div class="two">
+            <div class="field">
+                <label for="regDob">Ngày sinh (Tùy chọn)</label>
+                <input id="regDob" name="ngaySinh" type="date" />
+            </div>
+            <div class="field">
+                <label for="regGender">Giới tính (Tùy chọn)</label>
+                <select id="regGender" name="gioiTinh">
+                    <option value="">-- Chọn giới tính --</option>
+                    <option value="Nam">Nam</option>
+                    <option value="Nữ">Nữ</option>
+                    <option value="Khác">Khác</option>
+                </select>
+            </div>
+        </div>
+
         <div class="field">
             <label for="regPassword">Mật khẩu đăng nhập *</label>
             <input id="regPassword" name="matKhau" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự"

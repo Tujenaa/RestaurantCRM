@@ -1,3 +1,5 @@
+using System;
+
 namespace RestaurantCRM.API.DTOs
 {
     public class RegisterRequest
@@ -6,5 +8,7 @@ namespace RestaurantCRM.API.DTOs
         public string? SoDienThoai { get; set; }
         public string? Email { get; set; }
         public string MatKhau { get; set; } = null!;
+        public DateOnly? NgaySinh { get; set; }
+        public string? GioiTinh { get; set; }
     }
 }

@@ -43,6 +43,8 @@ namespace RestaurantCRM.API.Controllers
                 HoTen = request.HoTen,
                 SoDienThoai = request.SoDienThoai,
                 Email = request.Email,
+                NgaySinh = request.NgaySinh,
+                GioiTinh = string.IsNullOrWhiteSpace(request.GioiTinh) ? null : (request.GioiTinh.Trim().Length > 10 ? request.GioiTinh.Trim().Substring(0, 10) : request.GioiTinh.Trim()),
                 MatKhau = BCrypt.Net.BCrypt.HashPassword(request.MatKhau),
                 TrangThai = "Active"
             };

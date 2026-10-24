@@ -177,7 +177,7 @@ public class TaiKhoanController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DangKy(string hoTen, string soDienThoai, string? email, string matKhau)
+    public async Task<IActionResult> DangKy(string hoTen, string soDienThoai, string? email, string matKhau, DateTime? ngaySinh, string? gioiTinh)
     {
         if (String.IsNullOrWhiteSpace(hoTen) || String.IsNullOrWhiteSpace(soDienThoai) || String.IsNullOrWhiteSpace(matKhau))
         {
@@ -186,7 +186,16 @@ public class TaiKhoanController : Controller
         }
 
         var client = _httpClientFactory.CreateClient("ApiClient");
-        var payload = new { HoTen = hoTen.Trim(), SoDienThoai = soDienThoai.Trim(), Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(), MatKhau = matKhau };
+        DateOnly? ns = ngaySinh.HasValue ? DateOnly.FromDateTime(ngaySinh.Value) : null;
+        var payload = new
+        {
+            HoTen = hoTen.Trim(),
+            SoDienThoai = soDienThoai.Trim(),
+            Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+            MatKhau = matKhau,
+            NgaySinh = ns,
+            GioiTinh = string.IsNullOrWhiteSpace(gioiTinh) ? null : gioiTinh.Trim()
+        };
         var json = JsonSerializer.Serialize(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
