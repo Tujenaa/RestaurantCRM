@@ -24,7 +24,6 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         private TextBox _txtSearch;
         private ComboBox _cboCategory;
         private CheckBox _chkOnlyInStock;
-        private FlowLayoutPanel _categoryTabsPanel;
 
         public event Action<MonAnDto> DishSelected;
         public event Action FilterChanged;
@@ -51,7 +50,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 118,
+                Height = 84,
                 BackColor = ThemeManager.Bg
             };
 
@@ -71,21 +70,12 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 lblNhanVien.Location = new Point(190, 8);
                 header.Controls.Add(lblNhanVien);
             }
+
+            var filterBar = BuildFilterBar();
+
+            topPanel.Controls.Add(filterBar);
             topPanel.Controls.Add(header);
-
-            topPanel.Controls.Add(BuildFilterBar());
-
-            _categoryTabsPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                Height = 36,
-                WrapContents = false,
-                AutoScroll = true,
-                BackColor = ThemeManager.Bg,
-                Margin = Padding.Empty,
-                Padding = new Padding(0, 2, 0, 0)
-            };
-            topPanel.Controls.Add(_categoryTabsPanel);
+            header.BringToFront();
 
             menuPanel.Controls.Add(topPanel);
 
@@ -204,60 +194,6 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 _cboCategory.SelectedItem = prev;
             else
                 _cboCategory.SelectedIndex = 0;
-
-            RenderCategoryTabs(categories);
-        }
-
-        private void RenderCategoryTabs(IEnumerable<LoaiMonDto> categories)
-        {
-            if (_categoryTabsPanel == null) return;
-            _categoryTabsPanel.SuspendLayout();
-            _categoryTabsPanel.Controls.Clear();
-
-            string current = _cboCategory?.SelectedItem?.ToString() ?? "Tất cả loại món";
-
-            var btnAll = CreateCategoryChip("Tất cả", current == "Tất cả loại món");
-            btnAll.Click += (s, e) =>
-            {
-                if (_cboCategory != null) _cboCategory.SelectedIndex = 0;
-            };
-            _categoryTabsPanel.Controls.Add(btnAll);
-
-            if (categories != null)
-            {
-                foreach (var lm in categories)
-                {
-                    bool isSelected = lm.TenLoaiMon == current;
-                    var chip = CreateCategoryChip(lm.TenLoaiMon, isSelected);
-                    chip.Click += (s, e) =>
-                    {
-                        if (_cboCategory != null) _cboCategory.SelectedItem = lm.TenLoaiMon;
-                    };
-                    _categoryTabsPanel.Controls.Add(chip);
-                }
-            }
-
-            _categoryTabsPanel.ResumeLayout(true);
-        }
-
-        private Control CreateCategoryChip(string title, bool active)
-        {
-            var btn = new Button
-            {
-                Text = title,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(10, 4, 10, 4),
-                Margin = new Padding(0, 2, 6, 2),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.5F, active ? FontStyle.Bold : FontStyle.Regular),
-                BackColor = active ? _accent : Color.White,
-                ForeColor = active ? Color.White : ThemeManager.Ink,
-                Cursor = Cursors.Hand
-            };
-            btn.FlatAppearance.BorderSize = active ? 0 : 1;
-            btn.FlatAppearance.BorderColor = ThemeManager.Line;
-            return btn;
         }
 
         public void RenderProducts(

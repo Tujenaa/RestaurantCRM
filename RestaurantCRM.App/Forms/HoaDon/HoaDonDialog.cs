@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
@@ -133,6 +135,10 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
                 lblNhanVien.Text = string.IsNullOrEmpty(_detail.NhanVienPhuTrach)
                     ? "Nhân viên: Chưa phân công"
                     : $"Nhân viên: {_detail.NhanVienPhuTrach}";
+
+                var pttt = _detail.ThanhToan?.FirstOrDefault()?.PhuongThuc;
+                if (string.IsNullOrWhiteSpace(pttt)) pttt = "Tiền mặt (Tại quầy)";
+                lblPhuongThuc.Text = $"Thanh toán: {pttt}";
 
                 lblKhuyenMai.Text = string.IsNullOrEmpty(_detail.KhuyenMai)
                     ? "Khuyến mãi: Không áp dụng"

@@ -23,7 +23,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             decimal subTotal,
             VoucherDto appliedVoucher,
             decimal voucherDiscount,
-            decimal finalTotal)
+            decimal finalTotal,
+            string phuongThuc = "Tiền mặt (Tại quầy)")
         {
             Text = "Xác nhận & Kiểm tra chi tiết đơn hàng";
             StartPosition = FormStartPosition.CenterParent;
@@ -83,7 +84,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
             var lblStaff = new Label
             {
-                Text = $"Nhân viên lập: {staffName}  •  Phương thức: Tiền mặt (Tại quầy)",
+                Text = $"Nhân viên lập: {staffName}  •  Phương thức: {phuongThuc}",
                 Location = new Point(12, 30),
                 Size = new Size(500, 18),
                 Font = new Font("Segoe UI", 8.5F),

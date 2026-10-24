@@ -51,6 +51,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
         private TextBox _txtTenKhach;
         private TextBox _txtSdt;
+        private ComboBox _cboPaymentMethod;
         private TextBox _txtGhiChu;
         private Button _btnPay;
 
@@ -65,6 +66,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
         public string CustomerName => _txtTenKhach?.Text?.Trim() ?? "";
         public string CustomerPhone => _txtSdt?.Text?.Trim() ?? "";
+        public string PaymentMethod => _cboPaymentMethod?.SelectedItem?.ToString() ?? "Tiền mặt (Tại quầy)";
         public string Note => _txtGhiChu?.Text?.Trim() ?? "";
 
         public CartPanelBuilder(Font baseFont)
@@ -84,7 +86,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 Padding = Padding.Empty
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 118F));   // thông tin khách
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 136F));   // thông tin đơn hàng
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));    // header giỏ hàng
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));    // danh sách món cuộn
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // footer cố định
@@ -123,13 +125,13 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             t.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
             t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
             t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
 
             var title = new Label
             {
-                Text = "Thông tin đơn mang đi",
+                Text = "Thông tin đơn hàng",
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
@@ -158,19 +160,34 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             t.Controls.Add(_txtTenKhach, 0, 2);
             t.Controls.Add(_txtSdt, 1, 2);
 
-            var lblGhiChu = MakeCaption("Ghi chú đơn hàng", new Padding(0, 0, 0, 1));
-            t.Controls.Add(lblGhiChu, 0, 3);
-            t.SetColumnSpan(lblGhiChu, 2);
+            t.Controls.Add(MakeCaption("Phương thức thanh toán", new Padding(0, 0, 6, 1)), 0, 3);
+            t.Controls.Add(MakeCaption("Ghi chú đơn hàng", new Padding(6, 0, 0, 1)), 1, 3);
+
+            _cboPaymentMethod = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = _baseFont,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right,
+                Margin = new Padding(0, 0, 6, 0)
+            };
+            _cboPaymentMethod.Items.AddRange(new object[]
+            {
+                "Tiền mặt (Tại quầy)",
+                "Chuyển khoản (QR / Ngân hàng)",
+                "Thẻ ngân hàng (POS)",
+                "Ví điện tử (Momo / VNPay)"
+            });
+            _cboPaymentMethod.SelectedIndex = 0;
 
             _txtGhiChu = new TextBox
             {
                 Text = "Bán mang đi tại quầy",
                 Font = _baseFont,
                 Anchor = AnchorStyles.Left | AnchorStyles.Right,
-                Margin = Padding.Empty
+                Margin = new Padding(6, 0, 0, 0)
             };
-            t.Controls.Add(_txtGhiChu, 0, 4);
-            t.SetColumnSpan(_txtGhiChu, 2);
+            t.Controls.Add(_cboPaymentMethod, 0, 4);
+            t.Controls.Add(_txtGhiChu, 1, 4);
             return t;
         }
 

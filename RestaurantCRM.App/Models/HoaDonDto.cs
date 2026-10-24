@@ -28,6 +28,9 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("tenNhanVien")]
         public string TenNhanVien { get; set; }
 
+        [JsonPropertyName("phuongThucThanhToan")]
+        public string PhuongThucThanhToan { get; set; } = "Tiền mặt (Tại quầy)";
+
         // Helper cho hiển thị DataGridView
         public string NgayDatHienThi => NgayDat?.ToString("dd/MM/yyyy HH:mm") ?? "-";
         public string TongTienHienThi => (TongThanhToan ?? 0).ToString("N0") + " đ";

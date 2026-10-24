@@ -95,6 +95,15 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 MinimumWidth = 140
             });
 
+            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PhuongThucThanhToan",
+                DataPropertyName = "PhuongThucThanhToan",
+                HeaderText = "Phương Thức TT",
+                Width = 160,
+                MinimumWidth = 130
+            });
+
             var colTongTien = new DataGridViewTextBoxColumn
             {
                 Name = "TongTienHienThi",

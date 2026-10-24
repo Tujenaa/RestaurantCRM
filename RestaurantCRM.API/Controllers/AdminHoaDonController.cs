@@ -24,6 +24,7 @@ namespace RestaurantCRM.API.Controllers
             var hoaDons = await _service.Query<HoaDon>()
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaNhanVienNavigation)
+                .Include(d => d.ThanhToan)
                 .OrderByDescending(d => d.NgayDat)
                 .AsNoTracking()
                 .Select(d => new
@@ -35,7 +36,8 @@ namespace RestaurantCRM.API.Controllers
                     d.TongTienHang,
                     d.TongThanhToan,
                     d.MaNhanVien,
-                    TenNhanVien = d.MaNhanVienNavigation != null ? d.MaNhanVienNavigation.HoTen : null
+                    TenNhanVien = d.MaNhanVienNavigation != null ? d.MaNhanVienNavigation.HoTen : null,
+                    PhuongThucThanhToan = d.ThanhToan.OrderByDescending(t => t.NgayThanhToan).Select(t => t.PhuongThuc).FirstOrDefault() ?? "Tiền mặt (Tại quầy)"
                 })
                 .ToListAsync();
 

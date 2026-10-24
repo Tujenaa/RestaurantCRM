@@ -130,6 +130,9 @@
     <Compile Include="Controls\UcCurrentMembersTable.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\UcCustomerDemographics.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DTOs\KhachHang\KhachHangDto.cs" />
     <Compile Include="DTOs\KhaoSat\KhaoSatDto.cs" />
     <Compile Include="DTOs\PhanHoi\PhanHoi.cs" />
@@ -284,6 +287,7 @@
     <Compile Include="Models\MonAnDto.cs" />
     <Compile Include="Models\NguyenLieuDto.cs" />
     <Compile Include="Models\DashboardMetricsDto.cs" />
+    <Compile Include="Models\PhanTichKhachHangDto.cs" />
     <Compile Include="Services\LoaiMonService.cs" />
     <Compile Include="Services\NguyenLieuService.cs" />
     <Compile Include="Services\PhieuNhapService.cs" />

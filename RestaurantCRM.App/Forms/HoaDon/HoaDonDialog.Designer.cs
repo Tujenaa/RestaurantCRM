@@ -12,6 +12,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
         private System.Windows.Forms.Label lblTienHang;
         private System.Windows.Forms.Label lblTienGiam;
         private System.Windows.Forms.Label lblTongThanhToan;
+        private System.Windows.Forms.Label lblPhuongThuc;
         private System.Windows.Forms.TabControl tabControl;
         private System.Windows.Forms.TabPage tabMonAn;
         private System.Windows.Forms.TabPage tabLichSu;
@@ -42,6 +43,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             this.lblTienGiam = new System.Windows.Forms.Label();
             this.lblTienHang = new System.Windows.Forms.Label();
             this.lblKhuyenMai = new System.Windows.Forms.Label();
+            this.lblPhuongThuc = new System.Windows.Forms.Label();
             this.lblNhanVien = new System.Windows.Forms.Label();
             this.lblNgayDat = new System.Windows.Forms.Label();
             this.lblDiaChi = new System.Windows.Forms.Label();
@@ -103,6 +105,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             this.pnlThongTin.Controls.Add(this.lblTienGiam);
             this.pnlThongTin.Controls.Add(this.lblTienHang);
             this.pnlThongTin.Controls.Add(this.lblKhuyenMai);
+            this.pnlThongTin.Controls.Add(this.lblPhuongThuc);
             this.pnlThongTin.Controls.Add(this.lblNhanVien);
             this.pnlThongTin.Controls.Add(this.lblNgayDat);
             this.pnlThongTin.Controls.Add(this.lblDiaChi);
@@ -158,6 +161,17 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             this.lblKhuyenMai.Size = new System.Drawing.Size(125, 17);
             this.lblKhuyenMai.TabIndex = 4;
             this.lblKhuyenMai.Text = "Khuyến mãi: Không";
+            // 
+            // lblPhuongThuc
+            // 
+            this.lblPhuongThuc.AutoSize = true;
+            this.lblPhuongThuc.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.lblPhuongThuc.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(71)))), ((int)(((byte)(85)))), ((int)(((byte)(105)))));
+            this.lblPhuongThuc.Location = new System.Drawing.Point(340, 50);
+            this.lblPhuongThuc.Name = "lblPhuongThuc";
+            this.lblPhuongThuc.Size = new System.Drawing.Size(180, 17);
+            this.lblPhuongThuc.TabIndex = 8;
+            this.lblPhuongThuc.Text = "Thanh toán: Tiền mặt (Tại quầy)";
             // 
             // lblNhanVien
             // 

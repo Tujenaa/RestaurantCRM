@@ -232,11 +232,15 @@ namespace RestaurantCRM.API.Controllers
                 // Lưu lại thanh toán nếu online hoặc nhân viên bán mang đi tại quầy
                 if (isOnline || !string.IsNullOrEmpty(resolvedMaNhanVien))
                 {
+                    string phuongThuc = !string.IsNullOrWhiteSpace(request.PhuongThucThanhToan)
+                        ? request.PhuongThucThanhToan
+                        : (isOnline ? "Online" : "Tiền mặt (Tại quầy)");
+
                     var thanhToan = new ThanhToan
                     {
                         MaThanhToan = "TT" + DateTime.Now.Ticks.ToString().Substring(8, 6),
                         MaHoaDon = maHoaDon,
-                        PhuongThuc = isOnline ? "Online" : "Tiền mặt (Tại quầy)",
+                        PhuongThuc = phuongThuc,
                         TrangThai = "Paid",
                         NgayThanhToan = DateTime.Now,
                         SoTien = hoaDon.TongThanhToan

@@ -427,6 +427,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             string tenKhach = string.IsNullOrWhiteSpace(_cartBuilder.CustomerName) ? "Khách mua mang đi" : _cartBuilder.CustomerName;
             string sdt = _cartBuilder.CustomerPhone;
             string ghiChu = string.IsNullOrWhiteSpace(_cartBuilder.Note) ? "Bán mang đi tại quầy" : _cartBuilder.Note;
+            string paymentMethod = _cartBuilder.PaymentMethod;
 
             var cartSnapshot = _cartService.Items.Select(x => new TaoDonHangForm.CartItem
             {
@@ -448,7 +449,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 subTotal: subTotal,
                 appliedVoucher: _appliedVoucher,
                 voucherDiscount: voucherDiscount,
-                finalTotal: finalTotal))
+                finalTotal: finalTotal,
+                phuongThuc: paymentMethod))
             {
                 if (previewDlg.ShowDialog(this) != DialogResult.OK)
                 {
@@ -461,7 +463,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 TenKhachHang = tenKhach,
                 SoDienThoai = sdt,
                 DiaChiGiao = ghiChu,
-                PhuongThucThanhToan = "Tiền mặt (Tại quầy)",
+                PhuongThucThanhToan = paymentMethod,
                 MaNhanVien = staffId,
                 MaKmvoucher = _appliedVoucher?.MaVoucher ?? _appliedVoucher?.MaKmvoucher,
                 Items = _cartService.Items.Select(x => new CreateOrderItemDto
@@ -482,6 +484,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                         $"🎉 Tạo hóa đơn mang đi thành công!\n\n" +
                         $"Mã hóa đơn: #{maHoaDon}\n" +
                         $"Nhân viên lập đơn: {staffName}\n" +
+                        $"Phương thức thanh toán: {paymentMethod}\n" +
                         $"Tiền món: {subTotal:N0} đ\n" +
                         voucherMsg +
                         $"Tổng thanh toán: {finalTotal:N0} đ\n\n" +
