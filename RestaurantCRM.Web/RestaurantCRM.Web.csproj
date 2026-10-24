@@ -7,16 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="bin\Debug\net8.0\appsettings.Development.json" />
-    <Content Include="bin\Debug\net8.0\appsettings.json" />
-    <Content Include="bin\Debug\net8.0\RestaurantCRM.Web.deps.json" />
-    <Content Include="bin\Debug\net8.0\RestaurantCRM.Web.runtimeconfig.json" />
-    <Content Include="bin\Debug\net8.0\RestaurantCRM.Web.staticwebassets.endpoints.json" />
-    <Content Include="bin\Debug\net8.0\RestaurantCRM.Web.staticwebassets.runtime.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="bin\Release\net8.0\" />
     <Folder Include="DTOs\" />
     <Folder Include="Config\" />
     <Folder Include="Shared\" />
@@ -26,12 +16,6 @@
     <Folder Include="Views\PhanHoi\" />
     <Folder Include="Views\TaiKhoan\" />
     <Folder Include="Views\TrangChu\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="bin\Debug\net8.0\RestaurantCRM.Web.dll" />
-    <None Include="bin\Debug\net8.0\RestaurantCRM.Web.exe" />
-    <None Include="bin\Debug\net8.0\RestaurantCRM.Web.pdb" />
   </ItemGroup>
 
 </Project>

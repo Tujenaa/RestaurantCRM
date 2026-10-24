@@ -114,13 +114,8 @@
     <Compile Include="Controls\UcCurrentMembersTable.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="DTOs\Auth\LoginRequest.cs" />
-    <Compile Include="DTOs\Auth\LoginResponse.cs" />
-    <Compile Include="DTOs\DonHang\DonHangDto.cs" />
     <Compile Include="DTOs\KhachHang\KhachHangDto.cs" />
     <Compile Include="DTOs\KhaoSat\KhaoSatDto.cs" />
-    <Compile Include="DTOs\MonAn\MonAnDto.cs" />
-    <Compile Include="DTOs\MonAn\MonAnRequest.cs" />
     <Compile Include="DTOs\PhanHoi\PhanHoi.cs" />
     <Compile Include="Forms\Auth\LoginForm.cs">
       <SubType>Form</SubType>
@@ -240,12 +235,10 @@
     <Compile Include="Helpers\ThemeManager.cs" />
     <Compile Include="Helpers\UiStyler.cs" />
     <Compile Include="Helpers\TokenHelper.cs" />
-    <Compile Include="Helpers\ValidationHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\ApiService.cs" />
     <Compile Include="Services\AuthService.cs" />
-    <Compile Include="Services\DonHangService.cs" />
     <Compile Include="Services\KhachHangService.cs" />
     <Compile Include="Services\KhaoSatService.cs" />
     <Compile Include="Services\MonAnService.cs" />
@@ -369,9 +362,6 @@
     </Compile>
     <Compile Include="Models\BaoCaoDoanhThuDto.cs" />
     <Compile Include="Services\BaoCaoService.cs" />
-    <Compile Include="Forms\BaoCao\BaoCaoBanHangForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
