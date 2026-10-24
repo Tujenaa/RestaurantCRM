@@ -91,12 +91,22 @@
     <Compile Include="Controls\Skins\ButtonSkin.cs" />
     <Compile Include="Controls\Skins\FieldSkin.cs" />
     <Compile Include="Controls\Skins\ContainerSkins.cs" />
-    <Compile Include="Controls\Common\PillSearch.cs" />
-    <Compile Include="Controls\Common\ComboChip.cs" />
-    <Compile Include="Controls\Common\KpiTile.cs" />
-    <Compile Include="Controls\BaoCao\BaoCaoKpiTile.cs" />
+    <Compile Include="Controls\Common\PillSearch.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\Common\ComboChip.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\Common\KpiTile.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\BaoCao\BaoCaoKpiTile.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Controls\BaoCao\SalesLineChartRenderer.cs" />
-    <Compile Include="Controls\PhanHoi\ChatBubble.cs" />
+    <Compile Include="Controls\PhanHoi\ChatBubble.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Controls\Pagekit.cs" />
     <Compile Include="Controls\UcDataGridView.cs">
       <SubType>Component</SubType>
