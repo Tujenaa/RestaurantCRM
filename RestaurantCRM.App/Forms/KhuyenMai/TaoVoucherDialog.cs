@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
+using RestaurantCRM.AdminApp.Services.KhuyenMai;
 
 namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
     public class TaoVoucherDialog : Form {
@@ -425,78 +426,61 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
         private void UpdatePreviewPrice() {
             var selectedDish = _cboMonAn.SelectedItem as MonAnSelectDto;
             if (selectedDish == null || !selectedDish.DonGia.HasValue) {
+                var empty = VoucherMarginResult.CreateEmpty();
                 _lblGiaGocVal.Text = "0 đ";
                 _lblGiaVonVal.Text = "0 đ";
                 _lblGiaSauGiamVal.Text = "0 đ";
                 _lblTietKiemVal.Text = "0 đ";
-                _lblLaiGopVal.Text = "0 đ";
-                _lblWarningText.Text = "Vui lòng chọn món ăn để xem dự tính giá sau giảm.";
+                _lblLaiGopVal.Text = empty.LaiGopDisplayText;
+                _lblWarningText.Text = empty.WarningText;
                 return;
             }
 
             double goc = selectedDish.DonGia.Value;
             double giaVon = selectedDish.GiaVonUocTinh ?? 0;
             double giam = (double)_nudGiaTriGiamMon.Value;
-            double sauGiam = goc;
+            int loaiGiam = _cboLoaiGiamMon.SelectedIndex;
 
-            if (_cboLoaiGiamMon.SelectedIndex == 0) {
-                sauGiam = goc * (1 - giam / 100.0);
-            } else {
-                sauGiam = Math.Max(0, goc - giam);
-            }
+            var result = VoucherMarginCalculator.Calculate(goc, giaVon, loaiGiam, giam);
 
-            double tietKiem = goc - sauGiam;
-            double laiGop = sauGiam - giaVon;
-            double tyLeLai = sauGiam > 0 ? (laiGop / sauGiam) * 100.0 : 0;
-            double tyLeFoodCost = goc > 0 ? (giaVon / goc) * 100.0 : 0;
+            _lblGiaGocVal.Text = $"{result.DonGiaGoc:N0} đ";
+            _lblGiaSauGiamVal.Text = $"{result.GiaSauGiam:N0} đ";
+            _lblTietKiemVal.Text = $"-{result.TietKiem:N0} đ";
 
-            _lblGiaGocVal.Text = $"{goc:N0} đ";
-            _lblGiaSauGiamVal.Text = $"{sauGiam:N0} đ";
-            _lblTietKiemVal.Text = $"-{tietKiem:N0} đ";
-
-            if (giaVon > 0) {
-                _lblGiaVonVal.Text = $"{giaVon:N0} đ ({tyLeFoodCost:N1}% giá gốc)";
+            if (result.GiaVon > 0) {
+                _lblGiaVonVal.Text = $"{result.GiaVon:N0} đ ({result.TyLeFoodCost:N1}% giá gốc)";
             } else {
                 _lblGiaVonVal.Text = "Chưa có định lượng";
             }
 
-            // Đánh giá biên lợi nhuận và hiển thị cảnh báo rõ ràng
-            if (giaVon <= 0) {
-                _lblLaiGopVal.Text = "Chưa xác định";
-                _lblLaiGopVal.ForeColor = ThemeManager.Muted;
+            _lblLaiGopVal.Text = result.LaiGopDisplayText;
+            _lblWarningText.Text = result.WarningText;
 
-                _pnlWarningBanner.BackColor = ThemeManager.AmberSoft;
-                _lblWarningText.ForeColor = ThemeManager.Amber;
-                _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
-                _lblWarningText.Text = "[CHƯA THIẾT LẬP ĐỊNH LƯỢNG]: Món này chưa có công thức định lượng nguyên liệu.\nHãy cập nhật định lượng trong Thực đơn để kiểm soát giá vốn chính xác.";
-            } else if (sauGiam < giaVon) {
-                // Lỗ vốn trực tiếp (Nguy hiểm cấp độ đỏ)
-                double tienLo = giaVon - sauGiam;
-                _lblLaiGopVal.Text = $"-{tienLo:N0} đ (ÂM VỐN {tyLeLai:N1}%)";
-                _lblLaiGopVal.ForeColor = ThemeManager.Red;
-
-                _pnlWarningBanner.BackColor = ThemeManager.RedSoft;
-                _lblWarningText.ForeColor = ThemeManager.Red;
-                _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                _lblWarningText.Text = $"[BÁN LỖ TRỰC TIẾP]: Giá sau ưu đãi ({sauGiam:N0} đ) THẤP HƠN Giá vốn ({giaVon:N0} đ)!\nNhà hàng sẽ chịu lỗ {tienLo:N0} đ trên mỗi đĩa bán ra. Hệ thống sẽ chặn lưu ưu đãi này.";
-            } else if (tyLeLai < 25.0) {
-                // Lãi mỏng (Cảnh báo vàng cam)
-                _lblLaiGopVal.Text = $"+{laiGop:N0} đ (Lãi mỏng {tyLeLai:N1}%)";
-                _lblLaiGopVal.ForeColor = ThemeManager.Amber;
-
-                _pnlWarningBanner.BackColor = ThemeManager.AmberSoft;
-                _lblWarningText.ForeColor = ThemeManager.Amber;
-                _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                _lblWarningText.Text = $"[CẢNH BÁO BIÊN LÃI MỎNG]: Tỷ suất lãi gộp chỉ đạt {tyLeLai:N1}% (+{laiGop:N0} đ/đĩa).\nKhoản lời này khó bù đủ chi phí vận hành. Nên giới hạn số lượng hoặc giờ áp dụng.";
-            } else {
-                // An toàn (Xanh lá)
-                _lblLaiGopVal.Text = $"+{laiGop:N0} đ (Tỷ suất lãi {tyLeLai:N1}%)";
-                _lblLaiGopVal.ForeColor = ThemeManager.Green;
-
-                _pnlWarningBanner.BackColor = ThemeManager.GreenSoft;
-                _lblWarningText.ForeColor = ThemeManager.Green;
-                _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                _lblWarningText.Text = $"[AN TOÀN DOANH THU]: Biên lợi nhuận gộp đạt {tyLeLai:N1}% (+{laiGop:N0} đ/đĩa).\nĐảm bảo bù đắp chi phí vận hành và giữ mức doanh thu có lời ổn định.";
+            switch (result.Health) {
+                case MarginHealth.NoRecipe:
+                    _lblLaiGopVal.ForeColor = ThemeManager.Muted;
+                    _pnlWarningBanner.BackColor = ThemeManager.AmberSoft;
+                    _lblWarningText.ForeColor = ThemeManager.Amber;
+                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+                    break;
+                case MarginHealth.NegativeMargin:
+                    _lblLaiGopVal.ForeColor = ThemeManager.Red;
+                    _pnlWarningBanner.BackColor = ThemeManager.RedSoft;
+                    _lblWarningText.ForeColor = ThemeManager.Red;
+                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    break;
+                case MarginHealth.ThinMargin:
+                    _lblLaiGopVal.ForeColor = ThemeManager.Amber;
+                    _pnlWarningBanner.BackColor = ThemeManager.AmberSoft;
+                    _lblWarningText.ForeColor = ThemeManager.Amber;
+                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    break;
+                case MarginHealth.SafeMargin:
+                    _lblLaiGopVal.ForeColor = ThemeManager.Green;
+                    _pnlWarningBanner.BackColor = ThemeManager.GreenSoft;
+                    _lblWarningText.ForeColor = ThemeManager.Green;
+                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    break;
             }
         }
 
