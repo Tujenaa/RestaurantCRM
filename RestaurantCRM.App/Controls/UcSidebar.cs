@@ -82,7 +82,7 @@ namespace RestaurantCRM.AdminApp.Controls
             AddMenuItem(menuPanel, "Dashboard", "Tổng quan", ThemeManager.Glyph.Home, ref y);
             y += 10;
 
-            if (_role == "Admin")
+            if (_role == "Hệ thống" || _role == "Admin")
             {
                 AddSectionHeader(menuPanel, "Quản trị hệ thống", ref y);
                 if (UserSession.HasPermission("ADMIN_ACCOUNT"))
@@ -92,28 +92,40 @@ namespace RestaurantCRM.AdminApp.Controls
                 if (UserSession.HasPermission("ADMIN_BACKUP"))
                     AddMenuItem(menuPanel, "Sao lưu dữ liệu", "Sao lưu dữ liệu", ThemeManager.Glyph.Save, ref y);
             }
-            else if (_role == "Bán hàng")
+            else if (_role == "Vận Hành" || _role == "Bán hàng")
             {
-                AddSectionHeader(menuPanel, "Vận hành bán hàng", ref y);
-                if (UserSession.HasPermission("ORDER_CREATE"))
-                    AddMenuItem(menuPanel, "Tạo đơn hàng", "Tạo đơn hàng", ThemeManager.Glyph.Cart, ref y);
-                if (UserSession.HasPermission("ORDER_VIEW"))
-                    AddMenuItem(menuPanel, "Đơn hàng", "Đơn hàng", ThemeManager.Glyph.List, ref y);
-                if (UserSession.HasPermission("MENU_VIEW"))
-                    AddMenuItem(menuPanel, "Thực đơn", "Thực đơn", ThemeManager.Glyph.Book, ref y);
-                if (UserSession.HasPermission("PROMO_VIEW"))
-                    AddMenuItem(menuPanel, "Khuyến mãi", "Khuyến mãi", ThemeManager.Glyph.Tag, ref y);
-                y += 10;
-                AddSectionHeader(menuPanel, "Kho & nhập hàng", ref y);
-                if (UserSession.HasPermission("INVENTORY_VIEW"))
-                    AddMenuItem(menuPanel, "Kho hàng", "Kiểm tra kho", ThemeManager.Glyph.Package, ref y);
-                if (UserSession.HasPermission("IMPORT_VIEW"))
-                    AddMenuItem(menuPanel, "Phiếu nhập hàng", "Phiếu nhập", ThemeManager.Glyph.Download, ref y);
-                if (UserSession.HasPermission("INGREDIENT_VIEW"))
-                    AddMenuItem(menuPanel, "Nguyên vật liệu", "Nguyên vật liệu", ThemeManager.Glyph.Folder, ref y);
+                bool hasSaleGroup = UserSession.HasAnyPermission("ORDER_CREATE", "ORDER_VIEW", "MENU_VIEW", "PROMO_VIEW");
+                if (hasSaleGroup)
+                {
+                    AddSectionHeader(menuPanel, "Vận hành bán hàng", ref y);
+                    if (UserSession.HasPermission("ORDER_CREATE"))
+                        AddMenuItem(menuPanel, "Tạo đơn hàng", "Tạo đơn hàng", ThemeManager.Glyph.Cart, ref y);
+                    if (UserSession.HasPermission("ORDER_VIEW"))
+                        AddMenuItem(menuPanel, "Đơn hàng", "Đơn hàng", ThemeManager.Glyph.List, ref y);
+                    if (UserSession.HasPermission("MENU_VIEW"))
+                        AddMenuItem(menuPanel, "Thực đơn", "Thực đơn", ThemeManager.Glyph.Book, ref y);
+                    if (UserSession.HasPermission("PROMO_VIEW"))
+                        AddMenuItem(menuPanel, "Khuyến mãi", "Khuyến mãi", ThemeManager.Glyph.Tag, ref y);
+                }
+
+                bool hasKhoGroup = UserSession.HasAnyPermission("INVENTORY_VIEW", "IMPORT_VIEW", "INGREDIENT_VIEW");
+                if (hasKhoGroup)
+                {
+                    if (hasSaleGroup) y += 10;
+                    AddSectionHeader(menuPanel, "Kho & nhập hàng", ref y);
+                    if (UserSession.HasPermission("INVENTORY_VIEW"))
+                        AddMenuItem(menuPanel, "Kho hàng", "Kiểm tra kho", ThemeManager.Glyph.Package, ref y);
+                    if (UserSession.HasPermission("IMPORT_VIEW"))
+                        AddMenuItem(menuPanel, "Phiếu nhập hàng", "Phiếu nhập", ThemeManager.Glyph.Download, ref y);
+                    if (UserSession.HasPermission("INGREDIENT_VIEW"))
+                        AddMenuItem(menuPanel, "Nguyên vật liệu", "Nguyên vật liệu", ThemeManager.Glyph.Folder, ref y);
+                    if (UserSession.HasPermission("INGREDIENT_VIEW"))
+                        AddMenuItem(menuPanel, "Nhà cung cấp", "Nhà cung cấp", ThemeManager.Glyph.Contact, ref y);
+                }
+
                 if (UserSession.HasPermission("REPORT_VIEW"))
                 {
-                    y += 10;
+                    if (hasSaleGroup || hasKhoGroup) y += 10;
                     AddSectionHeader(menuPanel, "Báo cáo", ref y);
                     AddMenuItem(menuPanel, "Báo cáo bán hàng", "Doanh thu", ThemeManager.Glyph.Chart, ref y);
                 }
@@ -156,11 +168,12 @@ namespace RestaurantCRM.AdminApp.Controls
                 }
                 var dot = new Rectangle(10, 11, 22, 22);
                 using (var br = new SolidBrush(ThemeManager.Primary)) g.FillEllipse(br, dot);
+                string displayRole = ThemeManager.DisplayWorkspaceName(_role);
                 using (var f = new Font("Segoe UI", 8F, FontStyle.Bold))
-                    TextRenderer.DrawText(g, string.IsNullOrEmpty(_role) ? "?" : _role.Substring(0, 1).ToUpper(), f, dot, Color.White,
+                    TextRenderer.DrawText(g, string.IsNullOrEmpty(displayRole) ? "?" : displayRole.Substring(0, 1).ToUpper(), f, dot, Color.White,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                 using (var f = new Font("Segoe UI", 9F, FontStyle.Bold))
-                    TextRenderer.DrawText(g, "Phân hệ " + _role, f, new Rectangle(40, 0, workspace.Width - 64, workspace.Height),
+                    TextRenderer.DrawText(g, "Phân hệ " + displayRole, f, new Rectangle(40, 0, workspace.Width - 64, workspace.Height),
                         ThemeManager.Primary, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                 if (_roles != null && _roles.Count > 1)
                     using (var f = ThemeManager.Icon(7.5F))
@@ -170,10 +183,14 @@ namespace RestaurantCRM.AdminApp.Controls
             if (_roles != null && _roles.Count > 1)
             {
                 var menu = new ContextMenuStrip { ShowImageMargin = false, Font = new Font("Segoe UI", 9.5F), BackColor = Color.White };
+                string currentDisplay = ThemeManager.DisplayWorkspaceName(_role);
                 foreach (string r in _roles)
                 {
                     string target = r;
-                    var item = new ToolStripMenuItem((r == _role ? "✓  " : "     ") + "Phân hệ " + r) { ForeColor = r == _role ? ThemeManager.Primary : ThemeManager.Ink2 };
+                    string rDisplay = ThemeManager.DisplayWorkspaceName(r);
+                    bool isCurrent = string.Equals(r, _role, StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(rDisplay, currentDisplay, StringComparison.OrdinalIgnoreCase);
+                    var item = new ToolStripMenuItem((isCurrent ? "✓  " : "     ") + "Phân hệ " + rDisplay) { ForeColor = isCurrent ? ThemeManager.Primary : ThemeManager.Ink2 };
                     item.Click += (s, e) => WorkspaceSelected?.Invoke(target);
                     menu.Items.Add(item);
                 }

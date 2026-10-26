@@ -66,6 +66,24 @@ namespace RestaurantCRM.AdminApp.Helpers
             return Primary;
         }
 
+        /// <summary>Tên hiển thị chuẩn cho các phân hệ.</summary>
+        public static string DisplayWorkspaceName(string role)
+        {
+            if (string.IsNullOrEmpty(role)) return "";
+            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(role, "Hệ thống", StringComparison.OrdinalIgnoreCase))
+                return "Hệ thống";
+            if (string.Equals(role, "Bán hàng", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(role, "Vận Hành", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(role, "Vận hành", StringComparison.OrdinalIgnoreCase))
+                return "Vận Hành";
+            if (string.Equals(role, "CRM", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(role, "Khách hàng", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(role, "khách hàng", StringComparison.OrdinalIgnoreCase))
+                return "Khách hàng";
+            return role;
+        }
+
         // ===== Icon font (Segoe Fluent Icons trên Win11, Segoe MDL2 Assets trên Win10) =====
         private static string _iconFamily;
         public static string IconFamily

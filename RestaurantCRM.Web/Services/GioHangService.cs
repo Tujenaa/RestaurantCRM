@@ -32,7 +32,7 @@ public class GioHangService
     public void Add(ISession session, string maMon, int quantity)
     {
         var dish = _monAnService.Find(maMon);
-        if (dish is null) return;
+        if (dish is null || !dish.ConHang) return;
         var cart = Get(session).Items;
         var item = cart.FirstOrDefault(x => x.MaMon == maMon);
         if (item is null) cart.Add(new GioHangItemViewModel { MaMon = dish.MaMon, TenMon = dish.TenMon, DuongDanAnh = dish.DuongDanAnh, BieuTuong = dish.BieuTuong, DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia, SoLuong = Math.Clamp(quantity, 1, 99) });

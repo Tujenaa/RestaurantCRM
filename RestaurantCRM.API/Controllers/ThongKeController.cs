@@ -108,14 +108,14 @@ namespace RestaurantCRM.API.Controllers
             var endOfDay = startOfDay.AddDays(1);
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
 
-            // 1. Phân hệ Admin
+            // 1. Phân hệ Hệ thống
             var soMonAn = await _service.Query<MonAn>().CountAsync();
             var soNhaCungCap = await _service.Query<NhaCungCap>().CountAsync();
             var soPhieuNhapThangNay = await _service.Query<PhieuNhapHang>()
                 .CountAsync(p => p.NgayNhap >= startOfMonth);
             var soTaiKhoan = await _service.Query<NhanVien>().CountAsync();
 
-            // 2. Phân hệ Bán hàng
+            // 2. Phân hệ Vận Hành
             var hoaDonsHomNay = await _service.Query<HoaDon>()
                 .Where(d => d.NgayDat >= startOfDay && d.NgayDat < endOfDay)
                 .ToListAsync();
@@ -134,7 +134,7 @@ namespace RestaurantCRM.API.Controllers
             var donHoanThanhHomNay = hoaDonsHomNay
                 .Count(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành");
 
-            // 3. Phân hệ CRM
+            // 3. Phân hệ Khách hàng
             var tongKhachHang = await _service.Query<KhachHang>().CountAsync();
             var danhGiaHienThi = _service.Query<DanhGia>().Where(d => d.TrangThai);
             var diemDanhGiaTb = await danhGiaHienThi.AnyAsync()
@@ -146,19 +146,19 @@ namespace RestaurantCRM.API.Controllers
 
             return Ok(new
             {
-                // Admin
+                // Hệ thống
                 SoMonAn = soMonAn,
                 SoNhaCungCap = soNhaCungCap,
                 SoPhieuNhapThangNay = soPhieuNhapThangNay,
                 SoTaiKhoan = soTaiKhoan,
 
-                // Bán hàng
+                // Vận Hành
                 DoanhThuHomNay = doanhThuHomNay,
                 DonChoXuLy = donChoXuLy,
                 DonDangGiao = donDangGiao,
                 DonHoanThanhHomNay = donHoanThanhHomNay,
 
-                // CRM
+                // Khách hàng
                 TongKhachHang = tongKhachHang,
                 DiemDanhGiaTb = Math.Round(diemDanhGiaTb, 1),
                 TongDanhGia = tongDanhGia,

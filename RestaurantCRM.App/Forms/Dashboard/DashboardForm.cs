@@ -38,12 +38,12 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
         private Panel _host;
         private Form _current;
 
-        public DashboardForm() : this("admin", "Trần An", new List<string> { "Admin" }) { }
+        public DashboardForm() : this("admin", "Trần An", new List<string> { "Hệ thống" }) { }
         public DashboardForm(string role) : this("admin", "Trần An", new List<string> { role }) { }
         public bool IsLoggedOut { get; private set; } = false;
 
         public DashboardForm(string username, string displayName, List<string> roles)
-            : this(username, displayName, roles, roles != null && roles.Count > 0 ? roles[0] : "Admin") { }
+            : this(username, displayName, roles, roles != null && roles.Count > 0 ? roles[0] : "Hệ thống") { }
 
         public DashboardForm(string username, string displayName, List<string> roles, string activeRole)
         {
@@ -54,7 +54,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             _role = !string.IsNullOrEmpty(activeRole) && _roles.Contains(activeRole) ? activeRole : _roles[0];
             _accent = ThemeManager.AccentFor(_role);
 
-            Text = _role + " Workspace | RestaurantCRM";
+            Text = ThemeManager.DisplayWorkspaceName(_role) + " Workspace | RestaurantCRM";
             var wa = Screen.PrimaryScreen.WorkingArea;
             Size = new Size(Math.Min(1320, wa.Width), Math.Min(820, wa.Height));
             MinimumSize = new Size(980, 640);
@@ -102,15 +102,15 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             if (role == _role || !_roles.Contains(role)) return;
 
             Form workspace = null;
-            if (role == "Admin")
+            if (role == "Hệ thống" || role == "Admin")
             {
                 workspace = new AdminShellForm(_username, _displayName, _roles);
             }
-            else if (role == "Bán hàng")
+            else if (role == "Vận Hành" || role == "Bán hàng")
             {
                 workspace = new BanHangKhoShellForm(_username, _displayName, _roles);
             }
-            else if (role == "CRM")
+            else if (role == "Khách hàng" || role == "CRM")
             {
                 workspace = new CrmShellForm(_username, _displayName, _roles);
             }
@@ -263,14 +263,14 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
 
             // 1. Thẻ số liệu
             UcThongKe kpi1, kpi2, kpi3, kpi4;
-            if (_role == "Admin")
+            if (_role == "Hệ thống" || _role == "Admin")
             {
                 kpi1 = new UcThongKe("Món ăn", "...", "Trong thực đơn", "🍲", ThemeManager.Primary);
                 kpi2 = new UcThongKe("Nhà cung cấp", "...", "Đối tác cung ứng", "🏢", ThemeManager.Teal);
                 kpi3 = new UcThongKe("Phiếu nhập", "...", "Tháng này", "📥", ThemeManager.Violet);
                 kpi4 = new UcThongKe("Tài khoản", "...", "Nhân viên", "👤", ThemeManager.Sky);
             }
-            else if (_role == "Bán hàng")
+            else if (_role == "Vận Hành" || _role == "Bán hàng")
             {
                 kpi1 = new UcThongKe("Doanh thu hôm nay", "...", "Đơn hoàn thành", "💰", ThemeManager.Green);
                 kpi2 = new UcThongKe("Chờ xử lý", "...", "Đơn hàng mới", "⏳", ThemeManager.Amber);
@@ -305,7 +305,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             _body.Controls.Add(top);
 
             // 4. Hoạt động gần đây (cột phải)
-            var feed = new UcActivityFeed { Title = _role == "CRM" ? "Đánh giá mới nhất" : "Hoạt động gần đây" };
+            var feed = new UcActivityFeed { Title = (_role == "Khách hàng" || _role == "CRM") ? "Đánh giá mới nhất" : "Hoạt động gần đây" };
             _body.Controls.Add(feed);
 
             // Khoảng trống cuối trang để cuộn không sát mép
@@ -373,13 +373,13 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             };
 
             (string Title, string Cmd, string Glyph)[] actions;
-            if (_role == "Admin")
+            if (_role == "Hệ thống" || _role == "Admin")
                 actions = new[] {
                     ("Tài khoản", "Tài khoản", ThemeManager.Glyph.Contact),
                     ("Phân quyền", "Vai trò & phân quyền", ThemeManager.Glyph.Shield),
                     ("Sao lưu", "Sao lưu dữ liệu", ThemeManager.Glyph.Save),
                 };
-            else if (_role == "Bán hàng")
+            else if (_role == "Vận Hành" || _role == "Bán hàng")
                 actions = new[] {
                     ("Tạo đơn hàng", "Tạo đơn hàng", ThemeManager.Glyph.Cart),
                     ("Đơn hàng", "Đơn hàng", ThemeManager.Glyph.List),
@@ -534,7 +534,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             {
                 using (var http = NewHttp())
                 {
-                    if (_role == "CRM")
+                    if (_role == "Khách hàng" || _role == "CRM")
                     {
                         var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<DanhGiaFeedDto>>(http, "api/AdminDanhGia");
                         if (data != null)
@@ -587,14 +587,14 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
 
                     OnUi(() =>
                     {
-                        if (_role == "Admin")
+                        if (_role == "Hệ thống" || _role == "Admin")
                         {
                             c1?.SetValue(metrics.SoMonAn.ToString("N0"));
                             c2?.SetValue(metrics.SoNhaCungCap.ToString("N0"));
                             c3?.SetValue(metrics.SoPhieuNhapThangNay.ToString("N0"));
                             c4?.SetValue(metrics.SoTaiKhoan.ToString("N0"));
                         }
-                        else if (_role == "Bán hàng")
+                        else if (_role == "Vận Hành" || _role == "Bán hàng")
                         {
                             c1?.SetValue(metrics.DoanhThuHomNay.ToString("N0") + " đ");
                             c2?.SetValue(metrics.DonChoXuLy.ToString("N0"));

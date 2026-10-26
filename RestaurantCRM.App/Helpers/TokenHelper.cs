@@ -13,7 +13,9 @@ namespace RestaurantCRM.AdminApp.Helpers {
         public static HashSet<string> Permissions { get; set; } = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
 
         public static bool HasPermission(string code) {
-            if (CurrentRoles != null && CurrentRoles.Exists(r => string.Equals(r, "Admin", System.StringComparison.OrdinalIgnoreCase))) {
+            if (CurrentRoles != null && CurrentRoles.Exists(r => 
+                string.Equals(r, "Admin", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(r, "Hệ thống", System.StringComparison.OrdinalIgnoreCase))) {
                 return true;
             }
             if (Permissions == null || Permissions.Count == 0) return false;

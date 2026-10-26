@@ -24,6 +24,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var nhanVien = await _service.Query<NhanVien>()
                 .Include(n => n.MaVaiTroNavigation)
+                    .ThenInclude(v => v.VaiTroQuyen)
                 .FirstOrDefaultAsync(n => n.TenDangNhap == request.TenDangNhap);
 
             if (nhanVien != null && PasswordVerifier.Verify(request.MatKhau, nhanVien.MatKhau))
@@ -31,6 +32,16 @@ namespace RestaurantCRM.API.Controllers
                 if (nhanVien.TrangThai != "Active")
                 {
                     return BadRequest("Tài khoản đã bị khóa hoặc ngừng hoạt động.");
+                }
+
+                List<string> perms;
+                if (nhanVien.MaVaiTroNavigation?.VaiTroQuyen != null && nhanVien.MaVaiTroNavigation.VaiTroQuyen.Count > 0)
+                {
+                    perms = nhanVien.MaVaiTroNavigation.VaiTroQuyen.Select(q => q.MaQuyen).Distinct().ToList();
+                }
+                else
+                {
+                    perms = PermissionCatalog.ParsePermissions(nhanVien.MaVaiTroNavigation?.MoTa, nhanVien.MaVaiTroNavigation?.TenVaiTro);
                 }
 
                 return Ok(new
@@ -45,7 +56,7 @@ namespace RestaurantCRM.API.Controllers
                         HoTen = nhanVien.HoTen,
                         Username = nhanVien.TenDangNhap
                     },
-                    permissions = PermissionCatalog.ParsePermissions(nhanVien.MaVaiTroNavigation?.MoTa, nhanVien.MaVaiTroNavigation?.TenVaiTro)
+                    permissions = perms
                 });
             }
 

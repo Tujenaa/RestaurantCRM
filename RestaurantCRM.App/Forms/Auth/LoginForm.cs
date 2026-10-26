@@ -320,27 +320,32 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             bool isAdmin = String.Equals(result.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
                            String.Equals(result.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
                            String.Equals(result.Role, "Quản lý", StringComparison.OrdinalIgnoreCase) ||
+                           String.Equals(result.Role, "Hệ thống", StringComparison.OrdinalIgnoreCase) ||
                            perms.Contains("ADMIN_ACCOUNT") || perms.Contains("ADMIN_ROLE") ||
                            perms.Contains("*") || perms.Contains("ALL");
 
             bool hasSale = isAdmin ||
                            String.Equals(result.Role, "sale", StringComparison.OrdinalIgnoreCase) ||
                            String.Equals(result.Role, "Bán hàng", StringComparison.OrdinalIgnoreCase) ||
+                           String.Equals(result.Role, "Vận Hành", StringComparison.OrdinalIgnoreCase) ||
+                           String.Equals(result.Role, "Vận hành", StringComparison.OrdinalIgnoreCase) ||
                            perms.Exists(p => p.StartsWith("ORDER_") || p.StartsWith("MENU_") || p.StartsWith("PROMO_") || p.StartsWith("INVENTORY_") || p.StartsWith("IMPORT_") || p.StartsWith("INGREDIENT_") || p.StartsWith("REPORT_"));
 
             bool hasCrm = isAdmin ||
                           String.Equals(result.Role, "crm", StringComparison.OrdinalIgnoreCase) ||
                           String.Equals(result.Role, "CRM", StringComparison.OrdinalIgnoreCase) ||
+                          String.Equals(result.Role, "Khách hàng", StringComparison.OrdinalIgnoreCase) ||
+                          String.Equals(result.Role, "khách hàng", StringComparison.OrdinalIgnoreCase) ||
                           String.Equals(result.Role, "Nhân viên CSKH", StringComparison.OrdinalIgnoreCase) ||
                           perms.Exists(p => p.StartsWith("CRM_"));
 
-            if (isAdmin) roles.Add("Admin");
-            if (hasSale) roles.Add("Bán hàng");
-            if (hasCrm) roles.Add("CRM");
+            if (isAdmin) roles.Add("Hệ thống");
+            if (hasSale) roles.Add("Vận Hành");
+            if (hasCrm) roles.Add("Khách hàng");
 
             if (roles.Count == 0)
             {
-                roles.Add(!string.IsNullOrWhiteSpace(result.Role) ? result.Role : "Bán hàng");
+                roles.Add(!string.IsNullOrWhiteSpace(result.Role) ? ThemeManager.DisplayWorkspaceName(result.Role) : "Vận Hành");
             }
 
             Username = result.UserInfo.Username;

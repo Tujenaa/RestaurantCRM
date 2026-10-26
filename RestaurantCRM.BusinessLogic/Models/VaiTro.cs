@@ -12,4 +12,6 @@ public partial class VaiTro
     public string? MoTa { get; set; }
 
     public virtual ICollection<NhanVien> NhanVien { get; set; } = new List<NhanVien>();
+
+    public virtual ICollection<VaiTroQuyen> VaiTroQuyen { get; set; } = new List<VaiTroQuyen>();
 }

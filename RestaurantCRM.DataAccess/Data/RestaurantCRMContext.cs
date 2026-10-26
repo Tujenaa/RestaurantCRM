@@ -67,6 +67,10 @@ public partial class RestaurantCrmContext : DbContext
 
     public virtual DbSet<VaiTro> VaiTro { get; set; }
 
+    public virtual DbSet<Quyen> Quyen { get; set; }
+
+    public virtual DbSet<VaiTroQuyen> VaiTroQuyen { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -839,6 +843,56 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.TenVaiTro)
                 .HasMaxLength(100)
                 .HasColumnName("tenVaiTro");
+        });
+
+        modelBuilder.Entity<Quyen>(entity =>
+        {
+            entity.HasKey(e => e.MaQuyen);
+
+            entity.ToTable("QUYEN");
+
+            entity.Property(e => e.MaQuyen)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("maQuyen");
+            entity.Property(e => e.TenQuyen)
+                .HasMaxLength(100)
+                .HasColumnName("tenQuyen");
+            entity.Property(e => e.NhomQuyen)
+                .HasMaxLength(50)
+                .HasColumnName("nhomQuyen");
+            entity.Property(e => e.MoTa)
+                .HasMaxLength(255)
+                .HasColumnName("moTa");
+        });
+
+        modelBuilder.Entity<VaiTroQuyen>(entity =>
+        {
+            entity.HasKey(e => new { e.MaVaiTro, e.MaQuyen });
+
+            entity.ToTable("VAI_TRO_QUYEN");
+
+            entity.Property(e => e.MaVaiTro)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maVaiTro");
+            entity.Property(e => e.MaQuyen)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("maQuyen");
+            entity.Property(e => e.NgayTao)
+                .HasColumnType("datetime")
+                .HasColumnName("ngayTao");
+
+            entity.HasOne(d => d.MaVaiTroNavigation).WithMany(p => p.VaiTroQuyen)
+                .HasForeignKey(d => d.MaVaiTro)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_VTQ_VAITRO");
+
+            entity.HasOne(d => d.MaQuyenNavigation).WithMany(p => p.VaiTroQuyen)
+                .HasForeignKey(d => d.MaQuyen)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_VTQ_QUYEN");
         });
 
         OnModelCreatingPartial(modelBuilder);

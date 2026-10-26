@@ -20,8 +20,31 @@ namespace RestaurantCRM.API.Controllers
 
         // GET: api/AdminVaiTro/Permissions - Danh mục tất cả quyền có thể cấp
         [HttpGet("Permissions")]
-        public IActionResult GetAvailablePermissions()
+        public async Task<IActionResult> GetAvailablePermissions()
         {
+            try
+            {
+                var dbPermissions = await _service.Query<Quyen>()
+                    .OrderBy(q => q.NhomQuyen)
+                    .ThenBy(q => q.MaQuyen)
+                    .ToListAsync();
+
+                if (dbPermissions != null && dbPermissions.Count > 0)
+                {
+                    return Ok(dbPermissions.Select(p => new PermissionDefinitionDto
+                    {
+                        Code = p.MaQuyen,
+                        Name = p.TenQuyen,
+                        Group = p.NhomQuyen,
+                        Description = p.MoTa ?? ""
+                    }).ToList());
+                }
+            }
+            catch
+            {
+                // Fallback nếu bảng QUYEN chưa được khởi tạo
+            }
+
             var result = PermissionCatalog.AllPermissions.Select(p => new PermissionDefinitionDto
             {
                 Code = p.Code,
@@ -39,16 +62,30 @@ namespace RestaurantCRM.API.Controllers
         {
             var vaiTros = await _service.Query<VaiTro>()
                 .Include(v => v.NhanVien)
+                .Include(v => v.VaiTroQuyen)
                 .OrderBy(v => v.MaVaiTro)
                 .ToListAsync();
 
-            var result = vaiTros.Select(v => new VaiTroDto
+            var result = vaiTros.Select(v =>
             {
-                MaVaiTro = v.MaVaiTro,
-                TenVaiTro = v.TenVaiTro,
-                MoTa = v.MoTa,
-                SoLuongNhanVien = v.NhanVien.Count,
-                Permissions = PermissionCatalog.ParsePermissions(v.MoTa, v.TenVaiTro)
+                List<string> perms;
+                if (v.VaiTroQuyen != null && v.VaiTroQuyen.Count > 0)
+                {
+                    perms = v.VaiTroQuyen.Select(x => x.MaQuyen).Distinct().ToList();
+                }
+                else
+                {
+                    perms = PermissionCatalog.ParsePermissions(v.MoTa, v.TenVaiTro);
+                }
+
+                return new VaiTroDto
+                {
+                    MaVaiTro = v.MaVaiTro,
+                    TenVaiTro = v.TenVaiTro,
+                    MoTa = v.MoTa,
+                    SoLuongNhanVien = v.NhanVien.Count,
+                    Permissions = perms
+                };
             }).ToList();
 
             return Ok(result);
@@ -60,9 +97,20 @@ namespace RestaurantCRM.API.Controllers
         {
             var v = await _service.Query<VaiTro>()
                 .Include(x => x.NhanVien)
+                .Include(x => x.VaiTroQuyen)
                 .FirstOrDefaultAsync(x => x.MaVaiTro == id);
 
             if (v == null) return NotFound("Không tìm thấy vai trò.");
+
+            List<string> perms;
+            if (v.VaiTroQuyen != null && v.VaiTroQuyen.Count > 0)
+            {
+                perms = v.VaiTroQuyen.Select(x => x.MaQuyen).Distinct().ToList();
+            }
+            else
+            {
+                perms = PermissionCatalog.ParsePermissions(v.MoTa, v.TenVaiTro);
+            }
 
             return Ok(new VaiTroDto
             {
@@ -70,7 +118,7 @@ namespace RestaurantCRM.API.Controllers
                 TenVaiTro = v.TenVaiTro,
                 MoTa = v.MoTa,
                 SoLuongNhanVien = v.NhanVien.Count,
-                Permissions = PermissionCatalog.ParsePermissions(v.MoTa, v.TenVaiTro)
+                Permissions = perms
             });
         }
 
@@ -98,6 +146,21 @@ namespace RestaurantCRM.API.Controllers
             };
 
             _service.Add(entity);
+
+            // Thêm các quyền vào bảng VAI_TRO_QUYEN
+            if (request.Permissions != null && request.Permissions.Count > 0)
+            {
+                foreach (var p in request.Permissions.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
+                {
+                    _service.Add(new VaiTroQuyen
+                    {
+                        MaVaiTro = ma,
+                        MaQuyen = p.Trim().ToUpperInvariant(),
+                        NgayTao = DateTime.Now
+                    });
+                }
+            }
+
             await _service.SaveChangesAsync();
             return Ok(new { message = "Tạo vai trò thành công", maVaiTro = entity.MaVaiTro });
         }
@@ -106,11 +169,47 @@ namespace RestaurantCRM.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateVaiTro(string id, [FromBody] SaveVaiTroRequest request)
         {
-            var entity = await _service.Query<VaiTro>().FirstOrDefaultAsync(v => v.MaVaiTro == id);
+            var entity = await _service.Query<VaiTro>()
+                .Include(v => v.VaiTroQuyen)
+                .FirstOrDefaultAsync(v => v.MaVaiTro == id);
+
             if (entity == null) return NotFound("Không tìm thấy vai trò cần cập nhật.");
 
             entity.TenVaiTro = request.TenVaiTro.Trim();
             entity.MoTa = PermissionCatalog.FormatPermissions(request.Permissions);
+
+            // Đồng bộ quan hệ trong bảng VAI_TRO_QUYEN
+            var existingPerms = entity.VaiTroQuyen.ToList();
+            var newPermCodes = new HashSet<string>(
+                (request.Permissions ?? new List<string>())
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Select(p => p.Trim().ToUpperInvariant()),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            // 1. Xóa những quyền bị bỏ chọn
+            foreach (var ep in existingPerms)
+            {
+                if (!newPermCodes.Contains(ep.MaQuyen))
+                {
+                    _service.Remove(ep);
+                }
+            }
+
+            // 2. Thêm những quyền mới được chọn
+            var existingCodes = new HashSet<string>(existingPerms.Select(p => p.MaQuyen), StringComparer.OrdinalIgnoreCase);
+            foreach (var np in newPermCodes)
+            {
+                if (!existingCodes.Contains(np))
+                {
+                    _service.Add(new VaiTroQuyen
+                    {
+                        MaVaiTro = entity.MaVaiTro,
+                        MaQuyen = np,
+                        NgayTao = DateTime.Now
+                    });
+                }
+            }
 
             _service.Update(entity);
             await _service.SaveChangesAsync();
@@ -123,6 +222,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var entity = await _service.Query<VaiTro>()
                 .Include(v => v.NhanVien)
+                .Include(v => v.VaiTroQuyen)
                 .FirstOrDefaultAsync(v => v.MaVaiTro == id);
 
             if (entity == null) return NotFound("Không tìm thấy vai trò.");
@@ -132,9 +232,9 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest($"Không thể xóa vai trò này vì đang có {entity.NhanVien.Count} nhân viên được gán.");
             }
 
-            if (entity.MaVaiTro == "VT01" || entity.TenVaiTro?.ToLower() == "admin")
+            if (entity.MaVaiTro == "VT01" || string.Equals(entity.TenVaiTro, "admin", StringComparison.OrdinalIgnoreCase) || string.Equals(entity.TenVaiTro, "Hệ thống", StringComparison.OrdinalIgnoreCase))
             {
-                return BadRequest("Không thể xóa vai trò Quản trị viên (Admin) mặc định của hệ thống.");
+                return BadRequest("Không thể xóa vai trò Quản trị viên (Hệ thống) mặc định của hệ thống.");
             }
 
             _service.Remove(entity);

@@ -22,9 +22,10 @@ public class MenuController : Controller
     {
         var categories = await _monAnService.GetCategoriesAsync();
         var dishes = await _monAnService.GetAllAsync(loai, q, sort);
+        var availableDishes = dishes.Where(d => d.ConHang).ToList();
 
         // Cập nhật số sao trung bình thực tế cho từng món ăn
-        foreach (var d in dishes)
+        foreach (var d in availableDishes)
         {
             var summary = await _phanHoiService.GetDishRatingSummaryAsync(d.MaMon);
             d.DiemDanhGiaTrungBinh = summary.AverageRating;
@@ -33,8 +34,8 @@ public class MenuController : Controller
 
         var viewModel = new MonAnDanhSachViewModel
         {
-            MonAns = dishes,
-            MonNoiBat = dishes.Where(d => d.ConHang).Take(4).ToList(),
+            MonAns = availableDishes,
+            MonNoiBat = availableDishes.Take(4).ToList(),
             DanhSachLoaiMon = categories,
             LoaiMons = categories.Select(c => c.TenLoaiMon).ToList(),
             LoaiDangChon = loai,
@@ -55,9 +56,9 @@ public class MenuController : Controller
         }
 
         var dish = await _monAnService.GetByIdAsync(id);
-        if (dish == null)
+        if (dish == null || !dish.ConHang)
         {
-            TempData["ThongBao"] = "Không tìm thấy món ăn yêu cầu.";
+            TempData["ThongBao"] = "Món ăn yêu cầu hiện đang tạm hết hàng hoặc ngừng kinh doanh.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -69,7 +70,7 @@ public class MenuController : Controller
 
         // Get related dishes in the same category
         var related = await _monAnService.GetAllAsync(dish.MaLoaiMon);
-        var filteredRelated = related.Where(d => !string.Equals(d.MaMon, id, StringComparison.OrdinalIgnoreCase)).Take(4).ToList();
+        var filteredRelated = related.Where(d => d.ConHang && !string.Equals(d.MaMon, id, StringComparison.OrdinalIgnoreCase)).Take(4).ToList();
 
         var viewModel = new MonAnChiTietViewModel
         {
@@ -90,7 +91,7 @@ public class MenuController : Controller
         }
 
         var dish = await _monAnService.GetByIdAsync(id);
-        if (dish == null)
+        if (dish == null || !dish.ConHang)
         {
             return NotFound();
         }

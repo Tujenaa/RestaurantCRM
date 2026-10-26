@@ -97,14 +97,14 @@ namespace RestaurantCRM.AdminApp.Controls
         public void SetUserInfo(string displayName, string role)
         {
             _userName = displayName ?? "";
-            _userRole = role == null ? "" : "Phân hệ " + role;
+            _userRole = role == null ? "" : "Phân hệ " + ThemeManager.DisplayWorkspaceName(role);
             Invalidate();
         }
 
         public void SetTitle(string title, string section = "Hệ thống")
         {
             TitleLabel.Text = title;
-            BreadcrumbLabel.Text = "Phân hệ " + section + "  /  " + title;
+            BreadcrumbLabel.Text = "Phân hệ " + ThemeManager.DisplayWorkspaceName(section) + "  /  " + title;
             Invalidate();
         }
     }

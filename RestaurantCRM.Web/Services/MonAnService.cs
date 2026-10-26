@@ -109,7 +109,10 @@ public class MonAnService
                 var apiDishes = await response.Content.ReadFromJsonAsync<List<ApiMonAnDto>>();
                 if (apiDishes != null && apiDishes.Count > 0)
                 {
-                    var viewModels = apiDishes.Select(dto => MapToViewModel(dto, categoryMap)).ToList();
+                    var viewModels = apiDishes
+                        .Select(dto => MapToViewModel(dto, categoryMap))
+                        .Where(d => d.ConHang)
+                        .ToList();
                     _cachedDishes = viewModels;
                     return viewModels;
                 }
@@ -138,7 +141,7 @@ public class MonAnService
                 d.MoTa.Contains(clean, StringComparison.OrdinalIgnoreCase));
         }
 
-        var result = filtered.Where(d => d.TrangThai != "OutOfStock").ToList();
+        var result = filtered.Where(d => d.ConHang).ToList();
         
         if (sort == "asc") result = result.OrderBy(x => x.DonGiaSauGiam).ToList();
         else if (sort == "desc") result = result.OrderByDescending(x => x.DonGiaSauGiam).ToList();
@@ -160,7 +163,8 @@ public class MonAnService
                 var apiDish = await response.Content.ReadFromJsonAsync<ApiMonAnDto>();
                 if (apiDish != null)
                 {
-                    return MapToViewModel(apiDish, categoryMap);
+                    var vm = MapToViewModel(apiDish, categoryMap);
+                    return vm.ConHang ? vm : null;
                 }
             }
         }
@@ -169,7 +173,8 @@ public class MonAnService
             _logger.LogWarning(ex, "Lỗi khi lấy chi tiết món từ API, tìm trong bộ nhớ cục bộ.");
         }
 
-        return FallbackMenu.FirstOrDefault(d => string.Equals(d.MaMon, id, StringComparison.OrdinalIgnoreCase));
+        var fallback = FallbackMenu.FirstOrDefault(d => string.Equals(d.MaMon, id, StringComparison.OrdinalIgnoreCase));
+        return fallback != null && fallback.ConHang ? fallback : null;
     }
 
     private async Task<Dictionary<string, string>> EnsureCategoriesLoadedAsync()
@@ -270,12 +275,13 @@ public class MonAnService
     }
 
     // Synchronous helpers for compatibility with GioHangService and legacy calls
-    public IReadOnlyList<MonAnViewModel> GetAll() => _cachedDishes.Count > 0 ? _cachedDishes : FallbackMenu;
+    public IReadOnlyList<MonAnViewModel> GetAll() => (_cachedDishes.Count > 0 ? _cachedDishes : FallbackMenu).Where(d => d.ConHang).ToList();
     public IReadOnlyList<string> GetCategories() => new[] { "Tất cả", "Nước lẩu", "Thịt & Hải sản nhúng lẩu", "Rau & Nấm", "Mì, Bún ăn kèm", "Đồ uống & Tráng miệng" };
     public MonAnViewModel? Find(string id)
     {
-        return _cachedDishes.FirstOrDefault(x => string.Equals(x.MaMon, id, StringComparison.OrdinalIgnoreCase))
+        var item = _cachedDishes.FirstOrDefault(x => string.Equals(x.MaMon, id, StringComparison.OrdinalIgnoreCase))
             ?? FallbackMenu.FirstOrDefault(x => string.Equals(x.MaMon, id, StringComparison.OrdinalIgnoreCase));
+        return item != null && item.ConHang ? item : null;
     }
 }
 

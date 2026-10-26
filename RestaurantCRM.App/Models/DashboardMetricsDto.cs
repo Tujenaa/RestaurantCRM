@@ -1,18 +1,18 @@
 namespace RestaurantCRM.AdminApp.Models {
     public class DashboardMetricsDto {
-        // Phân hệ Admin
+        // Phân hệ Hệ thống
         public int SoMonAn { get; set; }
         public int SoNhaCungCap { get; set; }
         public int SoPhieuNhapThangNay { get; set; }
         public int SoTaiKhoan { get; set; }
 
-        // Phân hệ Bán hàng
+        // Phân hệ Vận Hành
         public double DoanhThuHomNay { get; set; }
         public int DonChoXuLy { get; set; }
         public int DonDangGiao { get; set; }
         public int DonHoanThanhHomNay { get; set; }
 
-        // Phân hệ CRM
+        // Phân hệ Khách hàng
         public int TongKhachHang { get; set; }
         public double DiemDanhGiaTb { get; set; }
         public int TongDanhGia { get; set; }
