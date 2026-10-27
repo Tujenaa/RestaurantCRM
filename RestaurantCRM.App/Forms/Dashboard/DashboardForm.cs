@@ -100,35 +100,30 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
         private void OpenWorkspace(string role)
         {
             if (role == _role || !_roles.Contains(role)) return;
+            if (InvokeRequired)
+            {
+                BeginInvoke((Action)(() => SwitchWorkspace(role)));
+            }
+            else
+            {
+                SwitchWorkspace(role);
+            }
+        }
 
-            Form workspace = null;
-            if (role == "Hệ thống" || role == "Admin")
-            {
-                workspace = new AdminShellForm(_username, _displayName, _roles);
-            }
-            else if (role == "Vận Hành" || role == "Bán hàng")
-            {
-                workspace = new BanHangKhoShellForm(_username, _displayName, _roles);
-            }
-            else if (role == "Khách hàng" || role == "CRM")
-            {
-                workspace = new CrmShellForm(_username, _displayName, _roles);
-            }
+        public void SwitchWorkspace(string role)
+        {
+            if (role == _role || !_roles.Contains(role)) return;
 
-            if (workspace != null)
-            {
-                this.Hide();
-                workspace.ShowDialog();
-                if ((workspace as DashboardForm)?.IsLoggedOut == true)
-                {
-                    this.IsLoggedOut = true;
-                    this.Close();
-                }
-                else
-                {
-                    this.Show();
-                }
-            }
+            CloseModule();
+            _role = role;
+            _accent = ThemeManager.AccentFor(_role);
+            Text = ThemeManager.DisplayWorkspaceName(_role) + " Workspace | RestaurantCRM";
+
+            _header.SetTitle("Dashboard", _role);
+            _header.SetUserInfo(_displayName, _role);
+
+            _sidebar?.UpdateRole(_role);
+            ShowDashboard();
         }
 
         private void OnMenuSelected(string item)

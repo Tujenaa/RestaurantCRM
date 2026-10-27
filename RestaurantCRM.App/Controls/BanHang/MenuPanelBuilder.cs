@@ -29,7 +29,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         public event Action FilterChanged;
 
         public bool IsSearchFocused => _txtSearch?.Focused ?? false;
-        public string SearchQuery => (_txtSearch?.Text == "Tìm món..." ? "" : _txtSearch?.Text)?.Trim()?.ToLowerInvariant() ?? "";
+        public string SearchQuery => _txtSearch?.Text?.Trim()?.ToLowerInvariant() ?? "";
         public string SelectedCategory => _cboCategory?.SelectedItem?.ToString() ?? "Tất cả loại món";
         public bool OnlyInStock => _chkOnlyInStock?.Checked ?? false;
 
@@ -120,30 +120,14 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             _txtSearch = new TextBox
             {
-                Text = "Tìm món...",
-                ForeColor = ThemeManager.Muted,
+                ForeColor = ThemeManager.Ink,
                 Font = _baseFont,
                 Location = new Point(32, 8),
                 Width = 200,
                 BorderStyle = BorderStyle.None,
                 BackColor = Color.White
             };
-            _txtSearch.GotFocus += (s, e) =>
-            {
-                if (_txtSearch.Text == "Tìm món...")
-                {
-                    _txtSearch.Text = "";
-                    _txtSearch.ForeColor = ThemeManager.Ink;
-                }
-            };
-            _txtSearch.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
-                {
-                    _txtSearch.Text = "Tìm món...";
-                    _txtSearch.ForeColor = ThemeManager.Muted;
-                }
-            };
+            UiStyler.SetPlaceholder(_txtSearch, "Tìm món...");
             _txtSearch.TextChanged += (s, e) => FilterChanged?.Invoke();
             pnlSearch.Controls.Add(_txtSearch);
             bar.Controls.Add(pnlSearch);

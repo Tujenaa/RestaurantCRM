@@ -253,7 +253,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             _btnClearCart.FlatAppearance.MouseDownBackColor = Rose50;
             _btnClearCart.MouseEnter += (s, e) => _btnClearCart.ForeColor = Rose600;
             _btnClearCart.MouseLeave += (s, e) => _btnClearCart.ForeColor = Rose500;
-            _btnClearCart.Click += (s, e) => ClearCartRequested?.Invoke();
+            _btnClearCart.Click += (s, e) => _cartLines.BeginInvoke((Action)(() => ClearCartRequested?.Invoke()));
 
             t.Controls.Add(_lblCartCount, 0, 0);
             t.Controls.Add(_btnClearCart, 1, 0);
@@ -389,24 +389,10 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             _txtQuickVoucher = new TextBox
             {
                 Font = new Font("Segoe UI", 8.5F),
-                ForeColor = ThemeManager.Muted,
-                Text = "Mã voucher...",
+                ForeColor = ThemeManager.Ink,
                 Height = 24
             };
-            _txtQuickVoucher.GotFocus += (s, e) => {
-                if (_txtQuickVoucher.Text == "Mã voucher...")
-                {
-                    _txtQuickVoucher.Text = "";
-                    _txtQuickVoucher.ForeColor = ThemeManager.Ink;
-                }
-            };
-            _txtQuickVoucher.LostFocus += (s, e) => {
-                if (string.IsNullOrWhiteSpace(_txtQuickVoucher.Text))
-                {
-                    _txtQuickVoucher.Text = "Mã voucher...";
-                    _txtQuickVoucher.ForeColor = ThemeManager.Muted;
-                }
-            };
+            UiStyler.SetPlaceholder(_txtQuickVoucher, "Mã voucher...");
             _txtQuickVoucher.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Enter)
                 {
@@ -635,7 +621,10 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             btnDelete.FlatAppearance.MouseOverBackColor = ThemeManager.RedSoft;
             btnDelete.MouseEnter += (s, e) => btnDelete.ForeColor = ThemeManager.Red;
             btnDelete.MouseLeave += (s, e) => btnDelete.ForeColor = ThemeManager.Muted;
-            btnDelete.Click += (s, e) => ItemRemoved?.Invoke(item);
+            btnDelete.Click += (s, e) => {
+                btnDelete.Enabled = false;
+                _cartLines.BeginInvoke((Action)(() => ItemRemoved?.Invoke(item)));
+            };
             card.Controls.Add(btnDelete);
 
             var qtyEditor = CreateInlineQuantityEditor(item);
@@ -813,7 +802,10 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 lblView.ForeColor = ThemeManager.Ink2;
             };
 
-            btnOk.Click += (s, e) => saveQuantity();
+            btnOk.Click += (s, e) => {
+                btnOk.Enabled = false;
+                _cartLines.BeginInvoke((Action)(() => saveQuantity()));
+            };
             btnCancel.Click += (s, e) => switchToView();
 
             numInput.KeyDown += (s, e) =>

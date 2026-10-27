@@ -16,13 +16,29 @@ namespace RestaurantCRM.AdminApp.Controls
         public event Action<string> MenuSelected;
         public event Action<string> WorkspaceSelected;
 
-        private readonly string _role;
+        private string _role;
         private readonly IList<string> _roles;
         private readonly string _displayName;
         private readonly Color _textNormal = ColorTranslator.FromHtml("#9097AE");
         private readonly Color _textHeader = ColorTranslator.FromHtml("#B8BDCC");
         private readonly Color _hoverBg = ColorTranslator.FromHtml("#F7F8FC");
         private MenuItemControl _active;
+
+        public void UpdateRole(string role)
+        {
+            if (_role == role) return;
+            _role = role;
+            _active = null;
+            var oldControls = new Control[Controls.Count];
+            Controls.CopyTo(oldControls, 0);
+            Controls.Clear();
+            foreach (var c in oldControls)
+            {
+                try { c.Dispose(); } catch { }
+            }
+            BuildLayout();
+            Invalidate();
+        }
 
         public UcSidebar(string role, IList<string> roles, string displayName)
         {
@@ -191,7 +207,11 @@ namespace RestaurantCRM.AdminApp.Controls
                     bool isCurrent = string.Equals(r, _role, StringComparison.OrdinalIgnoreCase) ||
                                      string.Equals(rDisplay, currentDisplay, StringComparison.OrdinalIgnoreCase);
                     var item = new ToolStripMenuItem((isCurrent ? "✓  " : "     ") + "Phân hệ " + rDisplay) { ForeColor = isCurrent ? ThemeManager.Primary : ThemeManager.Ink2 };
-                    item.Click += (s, e) => WorkspaceSelected?.Invoke(target);
+                    item.Click += (s, e) =>
+                    {
+                        string selected = target;
+                        BeginInvoke((Action)(() => WorkspaceSelected?.Invoke(selected)));
+                    };
                     menu.Items.Add(item);
                 }
                 workspace.MouseEnter += (s, e) => { hover = true; workspace.Invalidate(); };
@@ -238,7 +258,10 @@ namespace RestaurantCRM.AdminApp.Controls
             btnLogout.MouseEnter += (s, e) => btnLogout.ForeColor = ThemeManager.Red;
             btnLogout.MouseLeave += (s, e) => btnLogout.ForeColor = ThemeManager.Muted;
             new ToolTip().SetToolTip(btnLogout, "Đăng xuất");
-            btnLogout.Click += (s, e) => MenuSelected?.Invoke("Đăng xuất");
+            btnLogout.Click += (s, e) => {
+                btnLogout.Enabled = false;
+                BeginInvoke((Action)(() => MenuSelected?.Invoke("Đăng xuất")));
+            };
             user.Controls.Add(btnLogout);
         }
 
