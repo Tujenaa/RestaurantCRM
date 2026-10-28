@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Config;
@@ -12,137 +14,167 @@ using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
 using RestaurantCRM.AdminApp.Services;
 
-namespace RestaurantCRM.AdminApp.Forms.BaoCao {
-    public class BaoCaoBanHangForm : Form {
+namespace RestaurantCRM.AdminApp.Forms.BaoCao
+{
+    /// <summary>
+    /// Giao diện Thống kê Báo cáo Doanh thu Chuyên sâu (Theo Quý, Nhân viên, Sản phẩm)
+    /// Đáp ứng trọn vẹn yêu cầu đồ án quản trị nhà hàng với 3 Tab ma trận & xuất Excel.
+    /// </summary>
+    public class BaoCaoBanHangForm : Form
+    {
         private readonly BaoCaoService _service;
+        private readonly ToolTip _toolTip;
 
-        private ComboBox _cboQuickFilter;
-        private DateTimePicker _dtpTuNgay;
-        private DateTimePicker _dtpDenNgay;
-        private Button _btnLoc;
+        // Bộ lọc trên cùng
+        private ComboBox _cboNam;
+        private Button _btnXem;
         private Button _btnRefresh;
-
-        private BaoCaoKpiTile _cardDoanhThu;
-        private BaoCaoKpiTile _cardLoiNhuan;
-        private BaoCaoKpiTile _cardGiaVon;
-        private BaoCaoKpiTile _cardGiamGia;
-        private BaoCaoKpiTile _cardDonHang;
-
-        private Panel _pnlChartCard;
-        private Panel _pnlChartArea;
-        private Label _lblChartTitle;
-        private SalesLineChartRenderer _chartRenderer;
-
-        private DataGridView _dgvTopMon;
         private Label _lblStatus;
 
-        private BaoCaoDoanhThuDto _currentData;
-        private readonly ToolTip _chartToolTip;
-        private bool _isUpdatingFilter = false;
+        // 4 Thẻ KPI Tổng quan
+        private BaoCaoKpiTile _cardTongThu;
+        private BaoCaoKpiTile _cardTongChi;
+        private BaoCaoKpiTile _cardLoiNhuan;
+        private BaoCaoKpiTile _cardTop;
 
-        public BaoCaoBanHangForm() {
+        // Thanh Tab hiện đại
+        private Panel _pnlTabBar;
+        private Button _btnTabTaiChinh;
+        private Button _btnTabNhanVien;
+        private Button _btnTabMonAn;
+        private int _currentTabIndex = 0; // 0: Tài chính, 1: Nhân viên, 2: Món ăn
+
+        // Container các Tab
+        private Panel _pnlTabContainer;
+        private Panel _pnlTabTaiChinh;
+        private Panel _pnlTabNhanVien;
+        private Panel _pnlTabMonAn;
+
+        // Tab 1: Tài chính Quý
+        private Panel _pnlGridCard;
+        private UcDataGridView _dgvTaiChinhQuy;
+        private Panel _pnlChartCard;
+        private Panel _pnlChartArea;
+        private QuarterComparisonChartRenderer _chartRenderer;
+
+        // Tab 2: Nhân viên
+        private UcDataGridView _dgvNhanVien;
+
+        // Tab 3: Món ăn
+        private TextBox _txtSearchMon;
+        private RadioButton _radMonTheoQuy;
+        private RadioButton _radMonTheoNam;
+        private UcDataGridView _dgvMonAn;
+
+        // Dữ liệu báo cáo hiện tại
+        private BaoCaoDoanhThuTheoQuyDto _currentData;
+        private bool _isDataLoaded = false;
+
+        public BaoCaoBanHangForm()
+        {
             _service = new BaoCaoService();
 
-            _chartToolTip = new ToolTip {
-                InitialDelay = 50,
-                AutoPopDelay = 5000,
-                ReshowDelay = 50,
+            _toolTip = new ToolTip
+            {
+                InitialDelay = 100,
+                AutoPopDelay = 6000,
+                ReshowDelay = 100,
                 IsBalloon = false
             };
 
-            Text = "Báo cáo bán hàng | RestaurantCRM";
+            Text = "Thống kê Doanh thu & Báo cáo Tài chính | RestaurantCRM";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(1180, 840);
-            MinimumSize = new Size(950, 680);
+            Size = new Size(1220, 860);
+            MinimumSize = new Size(1000, 700);
             BackColor = ThemeManager.Bg;
             Font = new Font("Segoe UI", 9.5F);
 
             BuildUI();
 
-            // Mặc định chọn 7 ngày qua
-            _cboQuickFilter.SelectedIndex = 2; // 7 ngày qua
-        }
-
-        private void BuildUI() {
-            var scrollPanel = new Panel {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = ThemeManager.Bg,
-                Padding = new Padding(20, 10, 20, 20)
-            };
-            Controls.Add(scrollPanel);
-
-            int y = 10;
-            int fullWidth = 1100;
-
-            // 1. THANH BỘ LỌC THỜI GIAN (Gọn gàng, tích hợp nút Làm mới & Xem báo cáo trên 1 hàng)
-            var pnlFilter = new Panel {
-                Location = new Point(20, y),
-                Size = new Size(fullWidth, 52),
-                BackColor = ThemeManager.Paper,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            pnlFilter.Paint += (s, e) => {
-                using (var pen = new Pen(ThemeManager.Line, 1.2f)) {
-                    e.Graphics.DrawRectangle(pen, 0, 0, pnlFilter.Width - 1, pnlFilter.Height - 1);
+            Resize += (s, e) =>
+            {
+                if (_pnlTabContainer != null && ClientSize.Height > 700)
+                {
+                    int newHeight = Math.Max(540, ClientSize.Height - _pnlTabContainer.Top - 36);
+                    _pnlTabContainer.Height = newHeight;
                 }
             };
 
-            var lblQuick = new Label { 
-                Text = "Mốc thời gian:", 
-                Location = new Point(14, 16), 
-                AutoSize = true, 
-                ForeColor = ThemeManager.Ink, 
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold), 
-                UseMnemonic = false 
+            // Khởi tạo tải năm hiện tại
+            Shown += async (s, e) =>
+            {
+                InitYears();
+                await LoadDataAsync();
             };
-            pnlFilter.Controls.Add(lblQuick);
+        }
 
-            _cboQuickFilter = new ComboBox {
-                Location = new Point(110, 13),
-                Width = 135,
+        private void InitYears()
+        {
+            int currentYear = DateTime.Now.Year;
+            _cboNam.Items.Clear();
+            _cboNam.Items.Add(currentYear.ToString());
+            _cboNam.Items.Add((currentYear - 1).ToString());
+            _cboNam.Items.Add((currentYear - 2).ToString());
+            _cboNam.SelectedIndex = 0;
+        }
+
+        private void BuildUI()
+        {
+            // Panel cuộn chính
+            var scrollPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = ThemeManager.Bg,
+                Padding = new Padding(24, 16, 24, 24)
+            };
+            Controls.Add(scrollPanel);
+
+            int y = 14;
+            int fullWidth = 1140;
+
+            // 1. THANH BỘ LỌC NĂM VÀ NÚT CHỨC NĂNG
+            var pnlFilter = new Panel
+            {
+                Location = new Point(24, y),
+                Size = new Size(fullWidth, 54),
+                BackColor = ThemeManager.Paper,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            pnlFilter.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(ThemeManager.Line, 1.2f))
+                    e.Graphics.DrawRectangle(pen, 0, 0, pnlFilter.Width - 1, pnlFilter.Height - 1);
+            };
+
+            var lblNam = new Label
+            {
+                Text = "📅 Năm tài chính:",
+                Location = new Point(16, 17),
+                AutoSize = true,
+                ForeColor = ThemeManager.Ink,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold)
+            };
+            pnlFilter.Controls.Add(lblNam);
+
+            _cboNam = new ComboBox
+            {
+                Location = new Point(140, 13),
+                Width = 120,
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Regular)
-            };
-            _cboQuickFilter.Items.AddRange(new object[] { "Hôm nay", "Hôm qua", "7 ngày qua", "30 ngày qua", "Tháng này", "Tháng trước", "Tùy chọn" });
-            _cboQuickFilter.SelectedIndexChanged += OnQuickFilterChanged;
-            pnlFilter.Controls.Add(_cboQuickFilter);
-
-            var lblTu = new Label { Text = "Từ ngày:", Location = new Point(265, 16), AutoSize = true, ForeColor = ThemeManager.Ink2, UseMnemonic = false };
-            pnlFilter.Controls.Add(lblTu);
-
-            _dtpTuNgay = new DateTimePicker {
-                Location = new Point(325, 13),
-                Width = 125,
-                Format = DateTimePickerFormat.Custom,
-                CustomFormat = "dd/MM/yyyy",
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Regular),
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 Tag = UiStyler.NoStyleTag
             };
-            _dtpTuNgay.ValueChanged += (s, e) => {
-                if (!_isUpdatingFilter) _cboQuickFilter.SelectedIndex = 6;
+            _cboNam.SelectedIndexChanged += async (s, e) =>
+            {
+                if (_isDataLoaded) await LoadDataAsync();
             };
-            pnlFilter.Controls.Add(_dtpTuNgay);
+            pnlFilter.Controls.Add(_cboNam);
 
-            var lblDen = new Label { Text = "Đến ngày:", Location = new Point(460, 16), AutoSize = true, ForeColor = ThemeManager.Ink2, UseMnemonic = false };
-            pnlFilter.Controls.Add(lblDen);
-
-            _dtpDenNgay = new DateTimePicker {
-                Location = new Point(530, 13),
-                Width = 125,
-                Format = DateTimePickerFormat.Custom,
-                CustomFormat = "dd/MM/yyyy",
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Regular),
-                Tag = UiStyler.NoStyleTag
-            };
-            _dtpDenNgay.ValueChanged += (s, e) => {
-                if (!_isUpdatingFilter) _cboQuickFilter.SelectedIndex = 6;
-            };
-            pnlFilter.Controls.Add(_dtpDenNgay);
-
-            _btnLoc = new Button {
+            _btnXem = new Button
+            {
                 Text = "⚡ Xem báo cáo",
-                Location = new Point(668, 10),
+                Location = new Point(275, 11),
                 Size = new Size(130, 32),
                 BackColor = ThemeManager.Primary,
                 ForeColor = Color.White,
@@ -150,287 +182,733 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao {
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            _btnLoc.FlatAppearance.BorderSize = 0;
-            _btnLoc.Click += async (s, e) => await LoadDataAsync();
-            pnlFilter.Controls.Add(_btnLoc);
+            _btnXem.FlatAppearance.BorderSize = 0;
+            _btnXem.Click += async (s, e) => await LoadDataAsync();
+            pnlFilter.Controls.Add(_btnXem);
 
-            _btnRefresh = new Button {
+            _btnRefresh = new Button
+            {
                 Text = "🔄 Làm mới",
-                Location = new Point(808, 10),
+                Location = new Point(415, 11),
                 Size = new Size(105, 32),
-                BackColor = Color.FromArgb(241, 245, 249),
-                ForeColor = ThemeManager.Ink,
+                BackColor = ThemeManager.Surface2,
+                ForeColor = ThemeManager.Ink2,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            _btnRefresh.FlatAppearance.BorderSize = 0;
+            _btnRefresh.FlatAppearance.BorderColor = ThemeManager.Line;
             _btnRefresh.Click += async (s, e) => await LoadDataAsync();
             pnlFilter.Controls.Add(_btnRefresh);
 
-            scrollPanel.Controls.Add(pnlFilter);
-            y += 62;
+            _lblStatus = new Label
+            {
+                Text = "",
+                Location = new Point(530, 18),
+                AutoSize = true,
+                ForeColor = ThemeManager.Muted,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Italic)
+            };
+            pnlFilter.Controls.Add(_lblStatus);
 
-            // 2. HÀNG 5 THẺ KPI TỰ CO GIÃN THEO TỶ LỆ (TABLELAYOUTPANEL 5 CỘT 20%)
-            var pnlCardsTable = new TableLayoutPanel {
-                Location = new Point(20, y),
-                Size = new Size(fullWidth, 122),
+            scrollPanel.Controls.Add(pnlFilter);
+            y += 66;
+
+            // 2. HÀNG 4 THẺ KPI TỔNG QUAN NĂM
+            var pnlCardsTable = new TableLayoutPanel
+            {
+                Location = new Point(24, y),
+                Size = new Size(fullWidth, 118),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                ColumnCount = 5,
+                ColumnCount = 4,
                 RowCount = 1,
                 BackColor = ThemeManager.Bg,
                 Margin = new Padding(0)
             };
             pnlCardsTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-            for (int i = 0; i < 5; i++) {
-                pnlCardsTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20f));
-            }
+            for (int i = 0; i < 4; i++)
+                pnlCardsTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 
-            _cardDoanhThu = new BaoCaoKpiTile("DOANH THU THỰC THU", "0 đ", "Đang tải...", "💰", ThemeManager.Primary);
-            _cardLoiNhuan = new BaoCaoKpiTile("LỢI NHUẬN GỘP", "0 đ", "Biên lãi 0%", "📈", ThemeManager.Green);
-            _cardGiaVon = new BaoCaoKpiTile("GIÁ VỐN NGUYÊN LIỆU", "0 đ", "Chi phí COGS", "📦", ThemeManager.Amber);
-            _cardGiamGia = new BaoCaoKpiTile("CHIẾT KHẤU ƯU ĐÃI", "0 đ", "Sale & Voucher", "🏷️", ThemeManager.Red);
-            _cardDonHang = new BaoCaoKpiTile("ĐƠN HOÀN TẤT", "0", "0 đ/đơn", "✅", ThemeManager.Teal);
-            _cardDonHang.Margin = new Padding(0);
+            _cardTongThu = new BaoCaoKpiTile("TỔNG DOANH THU", "0 đ", "Đang tải...", "💰", ThemeManager.Primary);
+            _cardTongChi = new BaoCaoKpiTile("TỔNG CHI PHÍ", "0 đ", "Chi nhập kho", "📦", ThemeManager.Amber);
+            _cardLoiNhuan = new BaoCaoKpiTile("LỢI NHUẬN RÒNG", "0 đ", "Biên lãi 0%", "📈", ThemeManager.Green);
+            _cardTop = new BaoCaoKpiTile("TOP NỔI BẬT", "Chưa có", "Doanh thu cao nhất", "👑", ThemeManager.Violet);
+            _cardTop.Margin = new Padding(0);
 
-            pnlCardsTable.Controls.Add(_cardDoanhThu, 0, 0);
-            pnlCardsTable.Controls.Add(_cardLoiNhuan, 1, 0);
-            pnlCardsTable.Controls.Add(_cardGiaVon, 2, 0);
-            pnlCardsTable.Controls.Add(_cardGiamGia, 3, 0);
-            pnlCardsTable.Controls.Add(_cardDonHang, 4, 0);
+            pnlCardsTable.Controls.Add(_cardTongThu, 0, 0);
+            pnlCardsTable.Controls.Add(_cardTongChi, 1, 0);
+            pnlCardsTable.Controls.Add(_cardLoiNhuan, 2, 0);
+            pnlCardsTable.Controls.Add(_cardTop, 3, 0);
 
             scrollPanel.Controls.Add(pnlCardsTable);
-            y += 140;
+            y += 132;
 
-            // 3. KHỐI BIỂU ĐỒ DOANH THU THEO NGÀY (Tăng chiều cao đáy để không bao giờ bị cắt ngày tháng)
-            _pnlChartCard = new Panel {
-                Location = new Point(20, y),
-                Size = new Size(fullWidth, 335),
+            // 3. THANH TAB BAR CHỌN BÁO CÁO (SEGMENTED TABS)
+            _pnlTabBar = new Panel
+            {
+                Location = new Point(24, y),
+                Size = new Size(fullWidth, 46),
+                BackColor = ThemeManager.Paper,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            _pnlTabBar.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(ThemeManager.Line, 1.2f))
+                    e.Graphics.DrawRectangle(pen, 0, 0, _pnlTabBar.Width - 1, _pnlTabBar.Height - 1);
+            };
+
+            _btnTabTaiChinh = CreateTabButton("📊  1. Báo cáo Tài chính theo Quý", 0, 10);
+            _btnTabNhanVien = CreateTabButton("👤  2. Doanh thu theo Nhân viên", 1, 260);
+            _btnTabMonAn = CreateTabButton("🍲  3. Doanh thu theo Món ăn", 2, 510);
+
+            _pnlTabBar.Controls.Add(_btnTabTaiChinh);
+            _pnlTabBar.Controls.Add(_btnTabNhanVien);
+            _pnlTabBar.Controls.Add(_btnTabMonAn);
+
+            scrollPanel.Controls.Add(_pnlTabBar);
+            y += 56;
+
+            // 4. KHỐI CONTAINER CHỨA NỘI DUNG 3 TAB
+            _pnlTabContainer = new Panel
+            {
+                Location = new Point(24, y),
+                Size = new Size(fullWidth, 540),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = Color.Transparent
+            };
+            scrollPanel.Controls.Add(_pnlTabContainer);
+
+            // Xây dựng 3 nội dung Tab
+            BuildTabTaiChinh();
+            BuildTabNhanVien();
+            BuildTabMonAn();
+
+            SwitchTab(0);
+        }
+
+        private Button CreateTabButton(string text, int index, int x)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Location = new Point(x, 6),
+                Size = new Size(240, 34),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Click += (s, e) => SwitchTab(index);
+            return btn;
+        }
+
+        private void SwitchTab(int index)
+        {
+            _currentTabIndex = index;
+
+            // Cập nhật giao diện nút Tab
+            UpdateButtonTabState(_btnTabTaiChinh, index == 0);
+            UpdateButtonTabState(_btnTabNhanVien, index == 1);
+            UpdateButtonTabState(_btnTabMonAn, index == 2);
+
+            // Hiện/Ẩn các Panel tương ứng
+            _pnlTabTaiChinh.Visible = (index == 0);
+            _pnlTabNhanVien.Visible = (index == 1);
+            _pnlTabMonAn.Visible = (index == 2);
+
+            if (index == 0 && _pnlChartCard != null && _pnlTabContainer != null)
+            {
+                int req = _pnlChartCard.Bottom + 20;
+                if (_pnlTabContainer.Height < req) _pnlTabContainer.Height = req;
+            }
+        }
+
+        private void UpdateButtonTabState(Button btn, bool active)
+        {
+            if (active)
+            {
+                btn.BackColor = ThemeManager.PrimarySoft;
+                btn.ForeColor = ThemeManager.Primary;
+            }
+            else
+            {
+                btn.BackColor = Color.Transparent;
+                btn.ForeColor = ThemeManager.Ink2;
+            }
+        }
+
+        // ================= TAB 1: TÀI CHÍNH THEO QUÝ =================
+        private void BuildTabTaiChinh()
+        {
+            _pnlTabTaiChinh = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+
+            // Bảng Ma trận Quý (Ở trên - hiển thị trọn vẹn 3 chỉ tiêu, 1 khung không cuộn)
+            _pnlGridCard = new Panel
+            {
+                Location = new Point(0, 0),
+                Size = new Size(_pnlTabContainer.Width, 218),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = ThemeManager.Paper,
-                Padding = new Padding(16, 12, 16, 12)
+                Padding = new Padding(16, 10, 16, 10)
             };
-            _pnlChartCard.Paint += (s, e) => {
-                using (var pen = new Pen(ThemeManager.Line, 1.2f)) {
-                    e.Graphics.DrawRectangle(pen, 0, 0, _pnlChartCard.Width - 1, _pnlChartCard.Height - 1);
-                }
+            _pnlGridCard.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(ThemeManager.Line, 1.2f))
+                    e.Graphics.DrawRectangle(pen, 0, 0, _pnlGridCard.Width - 1, _pnlGridCard.Height - 1);
             };
 
-            _lblChartTitle = new Label {
-                Text = "Doanh thu theo ngày (Thực thu)",
-                Location = new Point(16, 12),
+            var lblGridTitle = new Label
+            {
+                Text = "Bảng ma trận tài chính (Tổng thu, Tổng chi, Lợi nhuận qua 4 Quý)",
+                Location = new Point(16, 8),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                UseMnemonic = false
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink
             };
-            _pnlChartCard.Controls.Add(_lblChartTitle);
+            _pnlGridCard.Controls.Add(lblGridTitle);
 
-            _pnlChartArea = new Panel {
-                Location = new Point(16, 42),
-                Size = new Size(_pnlChartCard.Width - 32, 275),
+            _dgvTaiChinhQuy = new UcDataGridView
+            {
+                Location = new Point(16, 34),
+                Size = new Size(_pnlGridCard.Width - 32, 170),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                ScrollBars = ScrollBars.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            SetupGridTaiChinh();
+            _pnlGridCard.Controls.Add(_dgvTaiChinhQuy);
+            _pnlTabTaiChinh.Controls.Add(_pnlGridCard);
+
+            // Biểu đồ so sánh cột Quý (Ở dưới - thu nhỏ gọn gàng, hiển thị trọn vẹn 4 Quý)
+            _pnlChartCard = new Panel
+            {
+                Location = new Point(0, 232),
+                Size = new Size(_pnlTabContainer.Width, 230),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = ThemeManager.Paper,
+                Padding = new Padding(16, 10, 16, 10)
+            };
+            _pnlChartCard.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(ThemeManager.Line, 1.2f))
+                    e.Graphics.DrawRectangle(pen, 0, 0, _pnlChartCard.Width - 1, _pnlChartCard.Height - 1);
+            };
+
+            var lblChartTitle = new Label
+            {
+                Text = "Biểu đồ trực quan: So sánh Thu vs Chi và Xu hướng Lợi nhuận 4 Quý",
+                Location = new Point(16, 8),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink
+            };
+            _pnlChartCard.Controls.Add(lblChartTitle);
+
+            _pnlChartArea = new Panel
+            {
+                Location = new Point(16, 30),
+                Size = new Size(_pnlChartCard.Width - 32, 190),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
-            _chartRenderer = new SalesLineChartRenderer(_pnlChartArea, _chartToolTip);
+            _chartRenderer = new QuarterComparisonChartRenderer(_pnlChartArea, _toolTip);
             _pnlChartCard.Controls.Add(_pnlChartArea);
 
-            scrollPanel.Controls.Add(_pnlChartCard);
-            y += 345;
+            _pnlTabTaiChinh.Controls.Add(_pnlChartCard);
+            _pnlTabContainer.Controls.Add(_pnlTabTaiChinh);
 
-            // 4. BẢNG CƠ CẤU DOANH THU & LỢI NHUẬN THEO MÓN ĂN
-            var pnlGridCard = new Panel {
-                Location = new Point(20, y),
-                Size = new Size(fullWidth, 270),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            _pnlTabTaiChinh.Resize += (s, e) =>
+            {
+                int w = _pnlTabTaiChinh.ClientSize.Width;
+                if (_pnlGridCard != null) _pnlGridCard.Width = w;
+                if (_pnlChartCard != null) _pnlChartCard.Width = w;
+            };
+        }
+
+        private void SetupGridTaiChinh()
+        {
+            _dgvTaiChinhQuy.ScrollBars = ScrollBars.None;
+            _dgvTaiChinhQuy.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _dgvTaiChinhQuy.RowHeadersVisible = false;
+            _dgvTaiChinhQuy.AllowUserToAddRows = false;
+            _dgvTaiChinhQuy.AllowUserToResizeRows = false;
+            _dgvTaiChinhQuy.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            _dgvTaiChinhQuy.ColumnHeadersHeight = 38;
+            _dgvTaiChinhQuy.RowTemplate.Height = 42;
+            _dgvTaiChinhQuy.DefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
+            _dgvTaiChinhQuy.Columns.Clear();
+
+            var colChiTieu = new DataGridViewTextBoxColumn
+            {
+                Name = "ChiTieu",
+                HeaderText = "CHỈ TIÊU TÀI CHÍNH",
+                FillWeight = 28,
+                MinimumWidth = 160
+            };
+            colChiTieu.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            _dgvTaiChinhQuy.Columns.Add(colChiTieu);
+
+            _dgvTaiChinhQuy.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy1", HeaderText = "QUÝ 1", FillWeight = 14, MinimumWidth = 80 });
+            _dgvTaiChinhQuy.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy2", HeaderText = "QUÝ 2", FillWeight = 14, MinimumWidth = 80 });
+            _dgvTaiChinhQuy.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy3", HeaderText = "QUÝ 3", FillWeight = 14, MinimumWidth = 80 });
+            _dgvTaiChinhQuy.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy4", HeaderText = "QUÝ 4", FillWeight = 14, MinimumWidth = 80 });
+
+            var colTong = new DataGridViewTextBoxColumn
+            {
+                Name = "TongNam",
+                HeaderText = "TỔNG NĂM",
+                FillWeight = 16,
+                MinimumWidth = 100
+            };
+            colTong.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            _dgvTaiChinhQuy.Columns.Add(colTong);
+
+            for (int i = 1; i < _dgvTaiChinhQuy.Columns.Count; i++)
+            {
+                _dgvTaiChinhQuy.Columns[i].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                _dgvTaiChinhQuy.Columns[i].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            }
+        }
+
+        // ================= TAB 2: DOANH THU THEO NHÂN VIÊN =================
+        private void BuildTabNhanVien()
+        {
+            _pnlTabNhanVien = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Visible = false
+            };
+
+            var pnlCard = new Panel
+            {
+                Dock = DockStyle.Fill,
                 BackColor = ThemeManager.Paper,
                 Padding = new Padding(16, 12, 16, 12)
             };
-            pnlGridCard.Paint += (s, e) => {
-                using (var pen = new Pen(ThemeManager.Line, 1.2f)) {
-                    e.Graphics.DrawRectangle(pen, 0, 0, pnlGridCard.Width - 1, pnlGridCard.Height - 1);
-                }
+            pnlCard.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(ThemeManager.Line, 1.2f))
+                    e.Graphics.DrawRectangle(pen, 0, 0, pnlCard.Width - 1, pnlCard.Height - 1);
             };
 
-            var lblGridTitle = new Label {
-                Text = "⭐ Cơ cấu doanh thu & Lợi nhuận theo món ăn (Top bán chạy)",
-                Location = new Point(16, 10),
+            var lblTitle = new Label
+            {
+                Text = "Bảng thống kê doanh thu theo Nhân viên phục vụ qua 4 Quý (Xếp hạng doanh số)",
+                Location = new Point(16, 12),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
-                ForeColor = ThemeManager.Ink,
-                UseMnemonic = false
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink
             };
-            pnlGridCard.Controls.Add(lblGridTitle);
+            pnlCard.Controls.Add(lblTitle);
 
-            _dgvTopMon = new DataGridView {
-                Location = new Point(16, 38),
-                Size = new Size(pnlGridCard.Width - 32, 216),
+            _dgvNhanVien = new UcDataGridView
+            {
+                Location = new Point(16, 42),
+                Size = new Size(pnlCard.Width - 32, pnlCard.Height - 56),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                RowHeadersVisible = false,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                EnableHeadersVisualStyles = false
+                ScrollBars = ScrollBars.Vertical,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            SetupGridNhanVien();
+            pnlCard.Controls.Add(_dgvNhanVien);
+
+            _pnlTabNhanVien.Controls.Add(pnlCard);
+            _pnlTabContainer.Controls.Add(_pnlTabNhanVien);
+        }
+
+        private void SetupGridNhanVien()
+        {
+            _dgvNhanVien.ScrollBars = ScrollBars.Vertical;
+            _dgvNhanVien.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _dgvNhanVien.Font = new Font("Segoe UI", 8.5F);
+            _dgvNhanVien.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            _dgvNhanVien.DefaultCellStyle.Padding = new Padding(4, 0, 4, 0);
+            _dgvNhanVien.RowTemplate.Height = 36;
+            _dgvNhanVien.ColumnHeadersHeight = 36;
+            _dgvNhanVien.Columns.Clear();
+
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "Stt", HeaderText = "STT", FillWeight = 4, MinimumWidth = 30 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "MaNV", HeaderText = "MÃ NV", FillWeight = 8, MinimumWidth = 55 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "TenNV", HeaderText = "HỌ TÊN NHÂN VIÊN", FillWeight = 19, MinimumWidth = 110 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "ChucVu", HeaderText = "CHỨC VỤ", FillWeight = 11, MinimumWidth = 70 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy1", HeaderText = "QUÝ 1 (VNĐ)", FillWeight = 11, MinimumWidth = 65 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy2", HeaderText = "QUÝ 2 (VNĐ)", FillWeight = 11, MinimumWidth = 65 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy3", HeaderText = "QUÝ 3 (VNĐ)", FillWeight = 11, MinimumWidth = 65 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy4", HeaderText = "QUÝ 4 (VNĐ)", FillWeight = 11, MinimumWidth = 65 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "TongNam", HeaderText = "TỔNG NĂM (VNĐ)", FillWeight = 13, MinimumWidth = 80 });
+            _dgvNhanVien.Columns.Add(new DataGridViewTextBoxColumn { Name = "TyLe", HeaderText = "TỶ LỆ (%)", FillWeight = 7, MinimumWidth = 50 });
+
+            _dgvNhanVien.Columns["TongNam"].DefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+
+            for (int i = 4; i <= 9; i++)
+            {
+                _dgvNhanVien.Columns[i].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                _dgvNhanVien.Columns[i].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            }
+        }
+
+        // ================= TAB 3: DOANH THU THEO MÓN ĂN =================
+        private void BuildTabMonAn()
+        {
+            _pnlTabMonAn = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Visible = false
             };
 
-            _dgvTopMon.ColumnHeadersDefaultCellStyle.BackColor = ThemeManager.Surface2;
-            _dgvTopMon.ColumnHeadersDefaultCellStyle.ForeColor = ThemeManager.Ink;
-            _dgvTopMon.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            _dgvTopMon.ColumnHeadersHeight = 34;
-            _dgvTopMon.RowTemplate.Height = 30;
+            var pnlCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = ThemeManager.Paper,
+                Padding = new Padding(16, 12, 16, 12)
+            };
+            pnlCard.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(ThemeManager.Line, 1.2f))
+                    e.Graphics.DrawRectangle(pen, 0, 0, pnlCard.Width - 1, pnlCard.Height - 1);
+            };
 
-            _dgvTopMon.Columns.Add("TenMon", "Tên món ăn");
-            _dgvTopMon.Columns.Add("SoLuong", "Số lượng bán");
-            _dgvTopMon.Columns.Add("DoanhThu", "Doanh thu (VNĐ)");
-            _dgvTopMon.Columns.Add("GiaVon", "Giá vốn (VNĐ)");
-            _dgvTopMon.Columns.Add("LoiNhuan", "Lợi nhuận gộp (VNĐ)");
-            _dgvTopMon.Columns.Add("TyLeLai", "Biên lãi (%)");
-
-            _dgvTopMon.Columns["SoLuong"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            _dgvTopMon.Columns["DoanhThu"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-            _dgvTopMon.Columns["GiaVon"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-            _dgvTopMon.Columns["LoiNhuan"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-            _dgvTopMon.Columns["TyLeLai"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-
-            _dgvTopMon.Columns["TenMon"].FillWeight = 110;
-            _dgvTopMon.Columns["SoLuong"].FillWeight = 45;
-            _dgvTopMon.Columns["DoanhThu"].FillWeight = 75;
-            _dgvTopMon.Columns["GiaVon"].FillWeight = 75;
-            _dgvTopMon.Columns["LoiNhuan"].FillWeight = 75;
-            _dgvTopMon.Columns["TyLeLai"].FillWeight = 50;
-
-            pnlGridCard.Controls.Add(_dgvTopMon);
-            scrollPanel.Controls.Add(pnlGridCard);
-            y += 280;
-
-            // 5. DÒNG TRẠNG THÁI CUỐI TRANG
-            _lblStatus = new Label {
-                Text = "Dữ liệu được cập nhật từ hệ thống quản lý bán hàng RestaurantCRM.",
-                Location = new Point(22, y),
+            var lblTitle = new Label
+            {
+                Text = "Bảng thống kê doanh thu theo Sản phẩm / Món ăn",
+                Location = new Point(16, 12),
                 AutoSize = true,
-                ForeColor = ThemeManager.Muted,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Italic),
-                UseMnemonic = false
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink
             };
-            scrollPanel.Controls.Add(_lblStatus);
+            pnlCard.Controls.Add(lblTitle);
+
+            // Bộ lọc phụ món ăn (Tìm kiếm & Chế độ xem Quý vs Nhiều năm)
+            var lblSearch = new Label { Text = "🔍 Tìm món:", Location = new Point(16, 46), AutoSize = true, ForeColor = ThemeManager.Ink2 };
+            pnlCard.Controls.Add(lblSearch);
+
+            _txtSearchMon = new TextBox
+            {
+                Location = new Point(95, 43),
+                Width = 200,
+                Font = new Font("Segoe UI", 9F)
+            };
+            _txtSearchMon.TextChanged += (s, e) => RenderMonAnGrid();
+            pnlCard.Controls.Add(_txtSearchMon);
+
+            _radMonTheoQuy = new RadioButton
+            {
+                Text = "Xem theo 4 Quý của năm",
+                Location = new Point(320, 44),
+                AutoSize = true,
+                Checked = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = ThemeManager.Primary
+            };
+            _radMonTheoQuy.CheckedChanged += (s, e) => { if (_radMonTheoQuy.Checked) RenderMonAnGrid(); };
+            pnlCard.Controls.Add(_radMonTheoQuy);
+
+            _radMonTheoNam = new RadioButton
+            {
+                Text = "Xem so sánh 3 Năm liên tiếp",
+                Location = new Point(510, 44),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = ThemeManager.Teal
+            };
+            _radMonTheoNam.CheckedChanged += (s, e) => { if (_radMonTheoNam.Checked) RenderMonAnGrid(); };
+            pnlCard.Controls.Add(_radMonTheoNam);
+
+            _dgvMonAn = new UcDataGridView
+            {
+                Location = new Point(16, 76),
+                Size = new Size(pnlCard.Width - 32, pnlCard.Height - 90),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                ScrollBars = ScrollBars.Vertical,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            pnlCard.Controls.Add(_dgvMonAn);
+
+            _pnlTabMonAn.Controls.Add(pnlCard);
+            _pnlTabContainer.Controls.Add(_pnlTabMonAn);
         }
 
-        private void OnQuickFilterChanged(object sender, EventArgs e) {
-            if (_isUpdatingFilter) return;
-            _isUpdatingFilter = true;
-            try {
-                var today = DateTime.Today;
-                switch (_cboQuickFilter.SelectedIndex) {
-                    case 0: // Hôm nay
-                        _dtpTuNgay.Value = today;
-                        _dtpDenNgay.Value = today;
-                        break;
-                    case 1: // Hôm qua
-                        _dtpTuNgay.Value = today.AddDays(-1);
-                        _dtpDenNgay.Value = today.AddDays(-1);
-                        break;
-                    case 2: // 7 ngày qua
-                        _dtpTuNgay.Value = today.AddDays(-6);
-                        _dtpDenNgay.Value = today;
-                        break;
-                    case 3: // 30 ngày qua
-                        _dtpTuNgay.Value = today.AddDays(-29);
-                        _dtpDenNgay.Value = today;
-                        break;
-                    case 4: // Tháng này
-                        _dtpTuNgay.Value = new DateTime(today.Year, today.Month, 1);
-                        _dtpDenNgay.Value = today;
-                        break;
-                    case 5: // Tháng trước
-                        var lastMonth = today.AddMonths(-1);
-                        _dtpTuNgay.Value = new DateTime(lastMonth.Year, lastMonth.Month, 1);
-                        _dtpDenNgay.Value = new DateTime(today.Year, today.Month, 1).AddDays(-1);
-                        break;
-                    case 6: // Tùy chọn (giữ nguyên ngày đang chọn)
-                        return;
+        // ================= TẢI DỮ LIỆU TỪ API =================
+        private async Task LoadDataAsync()
+        {
+            int selectedYear = DateTime.Now.Year;
+            if (_cboNam.SelectedItem != null && int.TryParse(_cboNam.SelectedItem.ToString(), out int y))
+            {
+                selectedYear = y;
+            }
+
+            _lblStatus.Text = $"⏳ Đang tổng hợp dữ liệu năm {selectedYear}...";
+            _btnXem.Enabled = false;
+            _btnRefresh.Enabled = false;
+
+            try
+            {
+                var data = await _service.GetBaoCaoDoanhThuTheoQuyAsync(selectedYear);
+                if (data != null)
+                {
+                    _currentData = data;
+                    _isDataLoaded = true;
+
+                    // Đồng bộ lại danh sách năm có dữ liệu
+                    if (data.DanhSachNam != null && data.DanhSachNam.Count > 0)
+                    {
+                        var curYears = _cboNam.Items.Cast<string>().ToList();
+                        foreach (var yItem in data.DanhSachNam)
+                        {
+                            string yStr = yItem.ToString();
+                            if (!curYears.Contains(yStr))
+                                _cboNam.Items.Add(yStr);
+                        }
+                    }
+
+                    RenderData();
+                    _lblStatus.Text = $"✅ Dữ liệu năm {selectedYear} cập nhật lúc {DateTime.Now:HH:mm:ss}";
                 }
-            } finally {
-                _isUpdatingFilter = false;
-            }
-
-            _ = LoadDataAsync();
-        }
-
-        private async Task LoadDataAsync() {
-            var tuNgay = _dtpTuNgay.Value.Date;
-            var denNgay = _dtpDenNgay.Value.Date;
-
-            if (tuNgay > denNgay) {
-                MessageBox.Show(this, "Ngày bắt đầu không được lớn hơn ngày kết thúc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            _btnLoc.Enabled = false;
-            _btnLoc.Text = "⏳ Đang tải...";
-
-            try {
-                _currentData = await _service.GetBaoCaoDoanhThuAsync(tuNgay, denNgay);
-                if (_currentData != null) {
-                    RenderData(_currentData);
-                    _lblStatus.Text = $"Dữ liệu từ {tuNgay:dd/MM/yyyy} đến {denNgay:dd/MM/yyyy} | Cập nhật lúc: {DateTime.Now:HH:mm:ss}";
-                } else {
-                    _lblStatus.Text = "Không thể tải dữ liệu báo cáo từ máy chủ.";
+                else
+                {
+                    _lblStatus.Text = "⚠️ Không thể kết nối hoặc không có dữ liệu.";
                 }
-            } catch (Exception ex) {
-                MessageBox.Show(this, "Lỗi khi lấy báo cáo doanh thu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            } finally {
-                _btnLoc.Enabled = true;
-                _btnLoc.Text = "⚡ Xem báo cáo";
+            }
+            catch (Exception ex)
+            {
+                _lblStatus.Text = "❌ Lỗi: " + ex.Message;
+            }
+            finally
+            {
+                _btnXem.Enabled = true;
+                _btnRefresh.Enabled = true;
             }
         }
 
-        private void RenderData(BaoCaoDoanhThuDto d) {
-            // Cập nhật 5 thẻ KPI
-            _cardDoanhThu.SetValue($"{d.TongDoanhThu:N0} đ", $"{d.DonHoanThanh} đơn hoàn tất");
-            _cardLoiNhuan.SetValue($"{d.LoiNhuanGop:N0} đ", $"Biên lãi {d.TyLeLoiNhuan:N1}%");
-            _cardGiaVon.SetValue($"{d.TongGiaVon:N0} đ", "Giá vốn COGS");
-            _cardGiamGia.SetValue($"{d.TongGiamGia:N0} đ", "Giảm món & Voucher");
-            _cardDonHang.SetValue($"{d.DonHoanThanh:N0}", $"Đơn TB: {d.GiaTriDonTb:N0} đ");
+        private void RenderData()
+        {
+            if (_currentData == null) return;
 
-            _lblChartTitle.Text = $"Doanh thu theo ngày (Tổng: {d.TongDoanhThu:N0} đ / {d.DonHoanThanh} đơn)";
+            // 1. Cập nhật 4 thẻ KPI
+            _cardTongThu.SetValue($"{_currentData.TongThuNam:N0} đ", $"{_currentData.TongDonNam} đơn hoàn tất");
+            _cardTongChi.SetValue($"{_currentData.TongChiNam:N0} đ", "Chi nhập kho & giá vốn");
+            _cardLoiNhuan.SetValue($"{_currentData.LoiNhuanNam:N0} đ", $"Biên lãi {_currentData.TyLeLoiNhuanNam:N1}%");
+            _cardTop.SetValue(_currentData.NhanVienXuatSac, $"Món hot: {_currentData.MonBanChayNhat}");
 
-            // Vẽ lại biểu đồ
-            _chartRenderer?.SetData(d.DoanhThuTheoNgay);
+            // 2. Render Tab 1: Tài chính Quý
+            RenderTaiChinhGrid();
+            _chartRenderer.SetData(_currentData.BangTaiChinhQuy);
 
-            // Đổ dữ liệu vào bảng Top Món
-            _dgvTopMon.Rows.Clear();
-            if (d.TopMonBanChay != null && d.TopMonBanChay.Count > 0) {
-                foreach (var m in d.TopMonBanChay) {
-                    int rowIdx = _dgvTopMon.Rows.Add(
-                        m.TenMon,
-                        $"{m.SoLuong:N0}",
-                        $"{m.DoanhThu:N0}",
-                        $"{m.GiaVon:N0}",
-                        $"{m.LoiNhuan:N0}",
-                        $"{m.TyLeLai:N1}%"
-                    );
+            // 3. Render Tab 2: Nhân viên
+            RenderNhanVienGrid();
 
-                    var cellLai = _dgvTopMon.Rows[rowIdx].Cells["TyLeLai"];
-                    if (m.TyLeLai >= 30.0) {
-                        cellLai.Style.ForeColor = ThemeManager.Green;
-                        cellLai.Style.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                    } else if (m.TyLeLai < 20.0) {
-                        cellLai.Style.ForeColor = ThemeManager.Red;
-                        cellLai.Style.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            // 4. Render Tab 3: Món ăn
+            RenderMonAnGrid();
+        }
+
+        private void RenderTaiChinhGrid()
+        {
+            _dgvTaiChinhQuy.Rows.Clear();
+            if (_currentData?.BangTaiChinhQuy == null) return;
+
+            // Chỉ nạp đúng 3 chỉ tiêu: Tổng thu, Tổng chi, Lợi nhuận thuần
+            foreach (var r in _currentData.BangTaiChinhQuy.Where(x => x.DinhDang != "PhanTram").Take(3))
+            {
+                int idx = _dgvTaiChinhQuy.Rows.Add(r.ChiTieu, $"{r.Quy1:N0} đ", $"{r.Quy2:N0} đ", $"{r.Quy3:N0} đ", $"{r.Quy4:N0} đ", $"{r.TongNam:N0} đ");
+                _dgvTaiChinhQuy.Rows[idx].Height = 42;
+            }
+
+            // Highlight dòng Lợi nhuận
+            if (_dgvTaiChinhQuy.Rows.Count >= 3)
+            {
+                var rowLn = _dgvTaiChinhQuy.Rows[2];
+                rowLn.DefaultCellStyle.BackColor = ThemeManager.GreenSoft;
+                rowLn.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+                rowLn.DefaultCellStyle.ForeColor = ThemeManager.Green;
+            }
+
+            // Tính toán và định kích thước vừa khít tuyệt đối cho 3 dòng trong 1 khung không cuộn
+            int totalGridHeight = _dgvTaiChinhQuy.ColumnHeadersHeight;
+            foreach (DataGridViewRow row in _dgvTaiChinhQuy.Rows)
+            {
+                totalGridHeight += row.Height;
+            }
+            _dgvTaiChinhQuy.Height = totalGridHeight + 6;
+
+            if (_pnlGridCard != null)
+            {
+                _pnlGridCard.Height = _dgvTaiChinhQuy.Top + _dgvTaiChinhQuy.Height + 14;
+                if (_pnlChartCard != null)
+                {
+                    _pnlChartCard.Top = _pnlGridCard.Bottom + 14;
+                    if (_pnlTabContainer != null)
+                    {
+                        int reqHeight = _pnlChartCard.Bottom + 20;
+                        if (_pnlTabContainer.Height < reqHeight)
+                        {
+                            _pnlTabContainer.Height = reqHeight;
+                        }
                     }
                 }
             }
         }
 
-        // Tương thích ngược: Cho phép các tham chiếu kiểu cũ (nếu có)
-        public class BaoCaoKpiTile : RestaurantCRM.AdminApp.Controls.BaoCao.BaoCaoKpiTile {
-            public BaoCaoKpiTile(string title, string value, string sub, string icon, Color accent)
-                : base(title, value, sub, icon, accent) { }
+        private void RenderNhanVienGrid()
+        {
+            _dgvNhanVien.Rows.Clear();
+            if (_currentData?.BangNhanVien == null) return;
+
+            foreach (var nv in _currentData.BangNhanVien)
+            {
+                string tenNv = nv.TenNhanVien;
+                if (nv.Stt == 1 && nv.TongNam > 0) tenNv = "🥇 " + tenNv;
+
+                _dgvNhanVien.Rows.Add(
+                    nv.Stt,
+                    nv.MaNhanVien,
+                    tenNv,
+                    nv.ChucVu,
+                    $"{nv.Quy1:N0} đ",
+                    $"{nv.Quy2:N0} đ",
+                    $"{nv.Quy3:N0} đ",
+                    $"{nv.Quy4:N0} đ",
+                    $"{nv.TongNam:N0} đ",
+                    $"{nv.TyLeDongGop:N1}%"
+                );
+            }
+
+            // Dòng tổng cộng
+            double tongQ1 = _currentData.BangNhanVien.Sum(x => x.Quy1);
+            double tongQ2 = _currentData.BangNhanVien.Sum(x => x.Quy2);
+            double tongQ3 = _currentData.BangNhanVien.Sum(x => x.Quy3);
+            double tongQ4 = _currentData.BangNhanVien.Sum(x => x.Quy4);
+            double tongNam = _currentData.BangNhanVien.Sum(x => x.TongNam);
+
+            int totalRowIdx = _dgvNhanVien.Rows.Add(
+                "",
+                "TỔNG",
+                "TỔNG CỘNG TOÀN HỆ THỐNG",
+                "",
+                $"{tongQ1:N0} đ",
+                $"{tongQ2:N0} đ",
+                $"{tongQ3:N0} đ",
+                $"{tongQ4:N0} đ",
+                $"{tongNam:N0} đ",
+                "100.0%"
+            );
+
+            var rTotal = _dgvNhanVien.Rows[totalRowIdx];
+            rTotal.DefaultCellStyle.BackColor = ThemeManager.PrimarySoft;
+            rTotal.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            rTotal.DefaultCellStyle.ForeColor = ThemeManager.PrimaryDark;
+        }
+
+        private void RenderMonAnGrid()
+        {
+            _dgvMonAn.ScrollBars = ScrollBars.Vertical;
+            _dgvMonAn.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _dgvMonAn.Font = new Font("Segoe UI", 8.5F);
+            _dgvMonAn.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            _dgvMonAn.DefaultCellStyle.Padding = new Padding(3, 0, 3, 0);
+            _dgvMonAn.RowTemplate.Height = 36;
+            _dgvMonAn.ColumnHeadersHeight = 36;
+            _dgvMonAn.Columns.Clear();
+            _dgvMonAn.Rows.Clear();
+            if (_currentData?.BangMonAn == null) return;
+
+            string keyword = _txtSearchMon.Text?.Trim().ToLower() ?? "";
+            var list = _currentData.BangMonAn
+                .Where(m => string.IsNullOrEmpty(keyword)
+                         || m.TenMon.ToLower().Contains(keyword)
+                         || m.DanhMuc.ToLower().Contains(keyword)
+                         || m.MaMon.ToLower().Contains(keyword))
+                .ToList();
+
+            bool isTheoQuy = _radMonTheoQuy.Checked;
+
+            if (isTheoQuy)
+            {
+                // Cột theo Quý của năm chọn (11 cột vừa khít 100% chiều ngang, không cuộn ngang)
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Stt", HeaderText = "STT", FillWeight = 4, MinimumWidth = 28 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "MaMon", HeaderText = "MÃ MÓN", FillWeight = 7, MinimumWidth = 50 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "TenMon", HeaderText = "TÊN MÓN ĂN", FillWeight = 19, MinimumWidth = 100 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "DanhMuc", HeaderText = "DANH MỤC", FillWeight = 9, MinimumWidth = 60 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "SoLuong", HeaderText = "SỐ LƯỢNG", FillWeight = 6, MinimumWidth = 40 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy1", HeaderText = "QUÝ 1 (VNĐ)", FillWeight = 10, MinimumWidth = 60 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy2", HeaderText = "QUÝ 2 (VNĐ)", FillWeight = 10, MinimumWidth = 60 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy3", HeaderText = "QUÝ 3 (VNĐ)", FillWeight = 10, MinimumWidth = 60 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quy4", HeaderText = "QUÝ 4 (VNĐ)", FillWeight = 10, MinimumWidth = 60 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "TongTien", HeaderText = "TỔNG NĂM (VNĐ)", FillWeight = 12, MinimumWidth = 75 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "TyLe", HeaderText = "TỶ LỆ (%)", FillWeight = 6, MinimumWidth = 40 });
+
+                _dgvMonAn.Columns["TongTien"].DefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+
+                for (int i = 4; i <= 10; i++)
+                {
+                    _dgvMonAn.Columns[i].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    _dgvMonAn.Columns[i].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+
+                foreach (var m in list)
+                {
+                    _dgvMonAn.Rows.Add(
+                        m.Stt,
+                        m.MaMon,
+                        m.TenMon,
+                        m.DanhMuc,
+                        m.TongSoLuongBan,
+                        $"{m.Quy1:N0} đ",
+                        $"{m.Quy2:N0} đ",
+                        $"{m.Quy3:N0} đ",
+                        $"{m.Quy4:N0} đ",
+                        $"{m.TongDoanhThu:N0} đ",
+                        $"{m.TyLeDongGop:N1}%"
+                    );
+                }
+            }
+            else
+            {
+                // Cột so sánh 3 Năm liên tiếp (9 cột vừa khít 100% chiều ngang, không cuộn ngang)
+                int n1 = _currentData.CacNamSoSanhMonAn.Count > 0 ? _currentData.CacNamSoSanhMonAn[0] : _currentData.Nam - 2;
+                int n2 = _currentData.CacNamSoSanhMonAn.Count > 1 ? _currentData.CacNamSoSanhMonAn[1] : _currentData.Nam - 1;
+                int n3 = _currentData.CacNamSoSanhMonAn.Count > 2 ? _currentData.CacNamSoSanhMonAn[2] : _currentData.Nam;
+
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Stt", HeaderText = "STT", FillWeight = 4, MinimumWidth = 28 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "MaMon", HeaderText = "MÃ MÓN", FillWeight = 8, MinimumWidth = 55 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "TenMon", HeaderText = "TÊN MÓN ĂN", FillWeight = 22, MinimumWidth = 120 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "DanhMuc", HeaderText = "DANH MỤC", FillWeight = 11, MinimumWidth = 70 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "SoLuong", HeaderText = "TỔNG SL", FillWeight = 7, MinimumWidth = 45 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Nam1", HeaderText = $"NĂM {n1} (VNĐ)", FillWeight = 14, MinimumWidth = 70 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Nam2", HeaderText = $"NĂM {n2} (VNĐ)", FillWeight = 14, MinimumWidth = 70 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "Nam3", HeaderText = $"NĂM {n3} (VNĐ)", FillWeight = 14, MinimumWidth = 70 });
+                _dgvMonAn.Columns.Add(new DataGridViewTextBoxColumn { Name = "TongTien", HeaderText = "TỔNG TÍCH LŨY", FillWeight = 16, MinimumWidth = 80 });
+
+                _dgvMonAn.Columns["TongTien"].DefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+
+                for (int i = 4; i <= 8; i++)
+                {
+                    _dgvMonAn.Columns[i].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    _dgvMonAn.Columns[i].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+
+                foreach (var m in list)
+                {
+                    double tong3Nam = m.DoanhThuNam1 + m.DoanhThuNam2 + m.DoanhThuNam3;
+                    _dgvMonAn.Rows.Add(
+                        m.Stt,
+                        m.MaMon,
+                        m.TenMon,
+                        m.DanhMuc,
+                        m.TongSoLuongBan,
+                        $"{m.DoanhThuNam1:N0} đ",
+                        $"{m.DoanhThuNam2:N0} đ",
+                        $"{m.DoanhThuNam3:N0} đ",
+                        $"{tong3Nam:N0} đ"
+                    );
+                }
+            }
         }
     }
 }

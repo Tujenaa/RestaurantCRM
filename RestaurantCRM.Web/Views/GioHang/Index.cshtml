@@ -98,7 +98,7 @@ else
                 <form asp-action="Voucher" method="post" id="cartVoucherForm" class="field" style="margin-bottom: 8px;">
                     @Html.AntiForgeryToken()
                     <div class="voucher-entry" style="display:flex; flex-direction:column; gap:8px;">
-                        <input id="cartVoucherInput" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã (VD: LAUPHO20)" style="width:100%;" />
+                        <input id="cartVoucherInput" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã ưu đãi" style="width:100%;" />
                         <div style="display:flex; gap:6px;">
                             <button class="btn secondary small" type="submit" style="flex:1; width:auto; margin-top:0;">Áp dụng ưu đãi</button>
                             @if (!string.IsNullOrWhiteSpace(Model.GioHang.MaVoucher))
@@ -113,35 +113,36 @@ else
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                     @{
                         var subtotal = Model.GioHang.TamTinh;
-                        var customerId = Context.Session.GetString("MaKhachHang");
-                        var usedVouchers = RestaurantCRM.Web.Services.GioHangService.GetUsedVouchersStatic(Context.Session, customerId);
-
-                        var available = RestaurantCRM.Web.Services.GioHangService.AllVouchers
-                            .Where(v => !usedVouchers.Contains(v.Code))
-                            .ToList();
-
-                        var validVouchers = available
-                            .Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) > 0)
-                            .OrderByDescending(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal))
-                            .ToList();
-
-                        var invalidVouchers = available
-                            .Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) == 0)
-                            .ToList();
+                        var vouchers = Model.AvailableVouchers ?? new List<RestaurantCRM.Web.Models.VoucherViewModel>();
                     }
-                    @if (available.Count == 0)
+                    @if (!vouchers.Any())
                     {
-                        <div style="font-size: 11.5px; color: var(--muted); font-style: italic;">Bạn đã sử dụng hết các mã ưu đãi khả dụng.</div>
+                        <div style="font-size: 11.5px; color: var(--muted); font-style: italic; padding: 4px 0;">
+                            Hiện chưa có mã ưu đãi nào trong hệ thống.
+                        </div>
                     }
-                    @foreach (var v in validVouchers)
+                    else
                     {
-                        var d = RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal);
-                        var isCurrent = string.Equals(Model.GioHang.MaVoucher, v.Code, StringComparison.OrdinalIgnoreCase);
-                        <button type="button" class="chip-voucher" onclick="quickApplyVoucher('@v.Code')" style="width:100%; box-sizing:border-box; background:@(isCurrent ? "#dcfce7" : "#e8f5e9"); border:@(isCurrent ? "1.5px solid #16a34a" : "1px solid #c8e6c9"); color:#166534; font-size:11px; padding:6px 4px; border-radius:999px; cursor:pointer; font-weight:700; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; justify-content:center; gap:3px;" title="Áp dụng mã @v.Code (giảm @d.ToString("N0")đ)">@(isCurrent ? "✓" : "🎟️") @v.Code (@v.Label)</button>
-                    }
-                    @foreach (var v in invalidVouchers)
-                    {
-                        <button type="button" class="chip-voucher" onclick="quickApplyVoucher('@v.Code')" style="width:100%; box-sizing:border-box; background:#f5f5f5; border:1px solid #e0e0e0; color:#9e9e9e; font-size:11px; padding:6px 4px; border-radius:999px; cursor:pointer; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; justify-content:center; gap:3px;" title="@v.Description">🎟️ @v.Code (@v.Label)</button>
+                        @foreach (var v in vouchers)
+                        {
+                            var eligible = v.IsEligible(subtotal);
+                            if (eligible)
+                            {
+                                <button type="button" class="chip-voucher" onclick="quickApplyVoucher('@v.DisplayCode')" 
+                                        title="@v.TenChuongTrinh - @v.ConditionLabel"
+                                        style="background:#e8f5e9; border:1px solid #c8e6c9; color:#2e7d32; font-size:11.5px; padding:4px 9px; border-radius:999px; cursor:pointer; font-weight:650;">
+                                    🎟️ @v.DisplayCode (@v.DiscountLabel)
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="chip-voucher" onclick="quickApplyVoucher('@v.DisplayCode')" 
+                                        title="@v.TenChuongTrinh - Yêu cầu: @v.ConditionLabel"
+                                        style="background:#f5f5f5; border:1px solid #e0e0e0; color:#9e9e9e; font-size:11.5px; padding:4px 9px; border-radius:999px; cursor:pointer;">
+                                    🎟️ @v.DisplayCode (@v.DiscountLabel)
+                                </button>
+                            }
+                        }
                     }
                 </div>
             </div>

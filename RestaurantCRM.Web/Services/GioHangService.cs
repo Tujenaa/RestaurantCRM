@@ -6,25 +6,17 @@ using RestaurantCRM.Web.Models;
 
 namespace RestaurantCRM.Web.Services;
 
-public class VoucherItemInfo
-{
-    public string Code { get; set; } = "";
-    public string Label { get; set; } = "";
-    public decimal MinSpend { get; set; }
-    public string Description { get; set; } = "";
-}
-
 public class GioHangService
 {
     private const string CartKey = "customer-cart-v1";
     private const string VoucherKey = "customer-voucher-v1";
+    private const string VoucherInfoKey = "customer-voucher-info-v1";
+
     private readonly MonAnService _monAnService;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<GioHangService> _logger;
 
-    // Cache các mã voucher đã sử dụng phân tách tuyệt đối theo mã khách hàng: MaKhachHang -> Set<VoucherCode>
-    private static readonly ConcurrentDictionary<string, HashSet<string>> _usedVouchersByCustomer = new(StringComparer.OrdinalIgnoreCase);
-
-    // Lưu trữ giỏ hàng bền vững theo từng tài khoản khách hàng để không bao giờ bị mất khi đăng xuất / đăng nhập lại
+    // Lưu trữ giỏ hàng bền vững theo từng tài khoản khách hàng để không bị mất khi đăng xuất / đăng nhập lại
     private static readonly ConcurrentDictionary<string, List<GioHangItemViewModel>> _persistentCustomerCarts = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object _cartFileLock = new();
     private static readonly string _cartFilePath = Path.Combine(AppContext.BaseDirectory, "customer_saved_carts.json");
@@ -129,117 +121,14 @@ public class GioHangService
         }
     }
 
-    public static readonly IReadOnlyList<VoucherItemInfo> AllVouchers = new List<VoucherItemInfo>
-    {
-        new() { Code = "LAUPHO20", Label = "-20k", MinSpend = 0m, Description = "Giảm 20.000đ cho mọi đơn hàng" },
-        new() { Code = "VOUCHER40K", Label = "-40k", MinSpend = 200000m, Description = "Giảm 40.000đ cho đơn từ 200.000đ" },
-        new() { Code = "VOUCHER10", Label = "-10%", MinSpend = 0m, Description = "Giảm 10% tổng đơn hàng" },
-        new() { Code = "NHOM15", Label = "-15%", MinSpend = 500000m, Description = "Giảm 15% cho đơn từ 500.000đ" }
-    };
-
-    public GioHangService(MonAnService monAnService, IHttpClientFactory httpClientFactory)
+    public GioHangService(
+        MonAnService monAnService,
+        IHttpClientFactory httpClientFactory,
+        ILogger<GioHangService> logger)
     {
         _monAnService = monAnService;
         _httpClientFactory = httpClientFactory;
-    }
-
-    public static string NormalizeVoucherCode(string? code)
-    {
-        if (string.IsNullOrWhiteSpace(code)) return "";
-        var clean = code.Trim().ToUpperInvariant();
-        return clean switch
-        {
-            "LAUPHO20" or "KMV04" or "KM07" or "WELCOME20" => "LAUPHO20",
-            "VOUCHER40K" or "KMV02" or "KM02" => "VOUCHER40K",
-            "VOUCHER10" or "KMV01" or "KM01" => "VOUCHER10",
-            "NHOM15" or "KMV03" or "KM05" => "NHOM15",
-            _ => clean
-        };
-    }
-
-    public static HashSet<string> GetUsedVouchersStatic(ISession session, string? customerId)
-    {
-        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(customerId))
-        {
-            return result;
-        }
-
-        customerId = customerId.Trim();
-
-        // 1. Kiểm tra trong in-memory dictionary theo đúng customerId này
-        if (_usedVouchersByCustomer.TryGetValue(customerId, out var set))
-        {
-            lock (set)
-            {
-                foreach (var v in set) result.Add(NormalizeVoucherCode(v));
-            }
-        }
-
-        // 2. Kiểm tra trong Session riêng của khách hàng này
-        var sessionUsed = session.GetString($"UsedVouchers_{customerId}");
-        if (!string.IsNullOrWhiteSpace(sessionUsed))
-        {
-            foreach (var v in sessionUsed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                result.Add(NormalizeVoucherCode(v));
-            }
-        }
-
-        return result;
-    }
-
-    public async Task SyncUsedVouchersFromApiAsync(ISession session, string? customerId)
-    {
-        if (string.IsNullOrWhiteSpace(customerId)) return;
-        customerId = customerId.Trim();
-
-        try
-        {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var response = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
-            if (response.IsSuccessStatusCode)
-            {
-                var list = await response.Content.ReadFromJsonAsync<List<string>>();
-                if (list != null)
-                {
-                    var set = _usedVouchersByCustomer.GetOrAdd(customerId, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-                    lock (set)
-                    {
-                        foreach (var v in list)
-                        {
-                            set.Add(NormalizeVoucherCode(v));
-                        }
-                    }
-                    session.SetString($"UsedVouchers_{customerId}", string.Join(",", set));
-                }
-            }
-        }
-        catch
-        {
-            // API offline -> giữ nguyên dữ liệu từ memory/session
-        }
-    }
-
-    public void MarkVoucherAsUsed(ISession session, string? customerId, string? voucherCode)
-    {
-        if (string.IsNullOrWhiteSpace(customerId) || string.IsNullOrWhiteSpace(voucherCode)) return;
-        customerId = customerId.Trim();
-        var norm = NormalizeVoucherCode(voucherCode);
-
-        var set = _usedVouchersByCustomer.GetOrAdd(customerId, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-        lock (set)
-        {
-            set.Add(norm);
-        }
-
-        var usedInSession = session.GetString($"UsedVouchers_{customerId}");
-        var currentList = string.IsNullOrWhiteSpace(usedInSession)
-            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            : new HashSet<string>(usedInSession.Split(',', StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase);
-
-        currentList.Add(norm);
-        session.SetString($"UsedVouchers_{customerId}", string.Join(",", currentList));
+        _logger = logger;
     }
 
     public GioHangViewModel Get(ISession session, string? customerId = null)
@@ -275,26 +164,21 @@ public class GioHangService
             if (string.IsNullOrWhiteSpace(it.DuongDanAnh) || it.DuongDanAnh == "/images/default.jpg")
             {
                 var d = _monAnService.Find(it.MaMon);
-                if (d != null && !string.IsNullOrWhiteSpace(d.DuongDanAnh)) it.DuongDanAnh = d.DuongDanAnh;
+                if (d != null && !string.IsNullOrWhiteSpace(d.DuongDanAnh)) 
+                    it.DuongDanAnh = d.DuongDanAnh;
             }
         }
 
-        if (cart.Count > 0)
-        {
-            AutoApplyBestVoucher(session, cart, customerId);
-        }
-
         var voucher = session.GetString(VoucherKey);
-        var usedStr = session.GetString("UsedVouchers");
-        if (!string.IsNullOrWhiteSpace(voucher) && IsVoucherUsed(voucher, usedStr))
-        {
-            session.Remove(VoucherKey);
-            voucher = null;
-        }
-
         var subtotal = cart.Sum(x => x.ThanhTien);
-        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscount(voucher, subtotal);
-        return new GioHangViewModel { Items = cart, MaVoucher = voucher, GiamGia = discount };
+        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, subtotal);
+
+        return new GioHangViewModel 
+        { 
+            Items = cart, 
+            MaVoucher = voucher, 
+            GiamGia = discount 
+        };
     }
 
     public void Add(ISession session, string maMon, int quantity)
@@ -319,12 +203,11 @@ public class GioHangService
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg") item.DuongDanAnh = dish.DuongDanAnh;
+            if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg")
+                item.DuongDanAnh = dish.DuongDanAnh;
             item.SoLuong = Math.Min(maxQty, item.SoLuong + Math.Clamp(quantity, 1, maxQty));
         }
         Save(session, cart);
-        session.Remove("VoucherManuallyRemoved");
-        AutoApplyBestVoucher(session, cart, session.GetString("MaKhachHang"));
     }
 
     public void SetQuantity(ISession session, string maMon, int quantity)
@@ -339,94 +222,153 @@ public class GioHangService
             else item.SoLuong = Math.Min(quantity, maxQty);
         }
         Save(session, cart);
-        session.Remove("VoucherManuallyRemoved");
-        AutoApplyBestVoucher(session, cart, session.GetString("MaKhachHang"));
     }
 
-    public (bool Success, string Message, decimal Discount) ApplyVoucher(ISession session, string? code, string? customerId = null)
+    public async Task<List<VoucherViewModel>> GetAvailableVouchersAsync()
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync("/api/KhuyenMai/Vouchers");
+            if (response.IsSuccessStatusCode)
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var vouchers = await response.Content.ReadFromJsonAsync<List<VoucherViewModel>>(options);
+                return vouchers ?? new List<VoucherViewModel>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể kết nối API /api/KhuyenMai/Vouchers để lấy danh sách voucher.");
+        }
+        return new List<VoucherViewModel>();
+    }
+
+    public async Task<(bool Success, string Message, decimal Discount)> ApplyVoucherAsync(ISession session, string? code, string? customerId = null)
     {
         customerId ??= session.GetString("MaKhachHang");
 
         if (string.IsNullOrWhiteSpace(code))
         {
             session.Remove(VoucherKey);
-            session.SetString("VoucherManuallyRemoved", "true");
+            session.Remove(VoucherInfoKey);
             return (true, "Đã gỡ mã ưu đãi khỏi đơn hàng.", 0m);
         }
 
-        session.Remove("VoucherManuallyRemoved");
-
-        var clean = NormalizeVoucherCode(code);
-        var used = GetUsedVouchersStatic(session, customerId);
-        if (used.Contains(clean))
-        {
-            return (false, $"Bạn đã từng sử dụng mã {code.Trim().ToUpper()} này rồi. Mỗi khách hàng chỉ được áp dụng 1 lần.", 0m);
-        }
-
+        var clean = code.Trim().ToUpperInvariant();
         var cart = Get(session, customerId);
         var subtotal = cart.TamTinh;
 
         if (cart.Items.Count == 0)
         {
             session.SetString(VoucherKey, clean);
-            return (true, $"Đã lưu mã {code.Trim().ToUpper()}. Hãy chọn thêm món ăn vào giỏ để nhận ưu đãi!", 0m);
+            return (true, $"Đã lưu mã {clean}. Hãy chọn thêm món ăn vào giỏ để nhận ưu đãi!", 0m);
         }
 
-        decimal discount = CalculateDiscount(clean, subtotal);
-        if (discount > 0)
+        try
         {
-            session.SetString(VoucherKey, clean);
-            return (true, $"Áp dụng voucher {clean} thành công! Giảm ngay {discount:N0}đ.", discount);
-        }
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/KhuyenMai/KiemTraVoucher?code={Uri.EscapeDataString(clean)}&subtotal={(double)subtotal}");
+            if (response.IsSuccessStatusCode)
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var apiResult = await response.Content.ReadFromJsonAsync<KiemTraVoucherApiResponse>(options);
+                if (apiResult != null && apiResult.Valid)
+                {
+                    var savedCode = !string.IsNullOrWhiteSpace(apiResult.MaVoucher) 
+                        ? apiResult.MaVoucher 
+                        : (!string.IsNullOrWhiteSpace(apiResult.MaKmvoucher) ? apiResult.MaKmvoucher : clean);
 
-        if (clean == "NHOM15")
-        {
-            return (false, $"Mã {code.Trim().ToUpper()} (giảm 15%) áp dụng cho đơn từ 500.000đ trở lên (hiện tại: {subtotal:N0}đ).", 0m);
-        }
+                    session.SetString(VoucherKey, savedCode);
 
-        if (clean == "VOUCHER40K")
+                    var voucherInfo = new AppliedVoucherSessionData
+                    {
+                        Code = savedCode,
+                        MaKmvoucher = apiResult.MaKmvoucher,
+                        TenChuongTrinh = apiResult.TenChuongTrinh,
+                        PhanTramGiam = apiResult.PhanTramGiam,
+                        TienGiam = apiResult.TienGiam,
+                        GiaTriDonToiThieu = apiResult.GiaTriDonToiThieu,
+                        GiamToiDa = apiResult.GiamToiDa,
+                        PhamViApDung = apiResult.PhamViApDung,
+                        MaLoaiMon = apiResult.MaLoaiMon,
+                        MaMon = apiResult.MaMon,
+                        LastCalculatedDiscount = (decimal)apiResult.GiaTriGiamThucTe
+                    };
+                    session.SetString(VoucherInfoKey, JsonSerializer.Serialize(voucherInfo));
+
+                    var msg = !string.IsNullOrWhiteSpace(apiResult.Message) 
+                        ? apiResult.Message 
+                        : $"Áp dụng voucher {savedCode} thành công! Giảm ngay {apiResult.GiaTriGiamThucTe:N0}đ.";
+
+                    return (true, msg, (decimal)apiResult.GiaTriGiamThucTe);
+                }
+                else
+                {
+                    session.Remove(VoucherKey);
+                    session.Remove(VoucherInfoKey);
+                    return (false, apiResult?.Message ?? "Mã ưu đãi không hợp lệ hoặc đã hết hạn.", 0m);
+                }
+            }
+        }
+        catch (Exception ex)
         {
-            return (false, $"Mã {code.Trim().ToUpper()} (giảm 40.000đ) áp dụng cho đơn từ 200.000đ trở lên (hiện tại: {subtotal:N0}đ).", 0m);
+            _logger.LogError(ex, "Lỗi khi gọi API kiểm tra voucher {Code}.", clean);
         }
 
         session.Remove(VoucherKey);
-        return (false, $"Mã {code.Trim().ToUpper()} không hợp lệ hoặc chưa đủ điều kiện áp dụng.", 0m);
+        session.Remove(VoucherInfoKey);
+        return (false, "Không thể kết nối đến hệ thống kiểm tra voucher hoặc mã không hợp lệ.", 0m);
     }
 
-    public static bool IsVoucherUsed(string? code, string? usedVouchersString)
+    public (bool Success, string Message, decimal Discount) ApplyVoucher(ISession session, string? code, string? customerId = null)
     {
-        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(usedVouchersString)) return false;
-        var clean = code.Trim().ToUpperInvariant();
-        var usedList = usedVouchersString.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return usedList.Any(u => string.Equals(u.Trim(), clean, StringComparison.OrdinalIgnoreCase)
-            || (clean == "VOUCHER10" && (u == "KM01" || u == "KMV01"))
-            || ((clean == "KM01" || clean == "KMV01") && u == "VOUCHER10")
-            || (clean == "VOUCHER40K" && (u == "KM02" || u == "KMV02"))
-            || ((clean == "KM02" || clean == "KMV02") && u == "VOUCHER40K")
-            || (clean == "NHOM15" && (u == "KM05" || u == "KMV03"))
-            || ((clean == "KM05" || clean == "KMV03") && u == "NHOM15")
-            || (clean == "LAUPHO20" && u == "KMV04")
-            || (clean == "KMV04" && u == "LAUPHO20"));
+        return ApplyVoucherAsync(session, code, customerId).GetAwaiter().GetResult();
     }
 
-    public static decimal CalculateDiscount(string code, decimal subtotal)
+    private decimal CalculateDiscountForCart(ISession session, decimal subtotal)
     {
-        var clean = NormalizeVoucherCode(code);
-        return clean switch
+        if (subtotal <= 0) return 0m;
+
+        var infoJson = session.GetString(VoucherInfoKey);
+        if (!string.IsNullOrWhiteSpace(infoJson))
         {
-            "LAUPHO20" => Math.Min(subtotal, 20000m),
-            "VOUCHER40K" => subtotal >= 200000m ? 40000m : 0m,
-            "VOUCHER10" => Math.Round(subtotal * 0.10m, 0),
-            "NHOM15" => subtotal >= 500000m ? Math.Round(subtotal * 0.15m, 0) : 0m,
-            _ => 0m
-        };
+            try
+            {
+                var info = JsonSerializer.Deserialize<AppliedVoucherSessionData>(infoJson);
+                if (info != null)
+                {
+                    if (info.GiaTriDonToiThieu.HasValue && subtotal < (decimal)info.GiaTriDonToiThieu.Value)
+                    {
+                        return 0m;
+                    }
+
+                    if (info.PhanTramGiam.HasValue && info.PhanTramGiam.Value > 0)
+                    {
+                        var disc = Math.Round(subtotal * (decimal)info.PhanTramGiam.Value / 100m, 0);
+                        if (info.GiamToiDa.HasValue && info.GiamToiDa.Value > 0 && disc > (decimal)info.GiamToiDa.Value)
+                        {
+                            disc = (decimal)info.GiamToiDa.Value;
+                        }
+                        return disc;
+                    }
+                    else if (info.TienGiam.HasValue && info.TienGiam.Value > 0)
+                    {
+                        return Math.Min(subtotal, (decimal)info.TienGiam.Value);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        return 0m;
     }
 
     public void Clear(ISession session, string? customerId = null)
     {
         session.Remove(CartKey);
         session.Remove(VoucherKey);
-        session.Remove("VoucherManuallyRemoved");
+        session.Remove(VoucherInfoKey);
         customerId ??= session.GetString("MaKhachHang");
         if (!string.IsNullOrWhiteSpace(customerId))
         {
@@ -434,65 +376,13 @@ public class GioHangService
         }
     }
 
-    private void Save(ISession session, List<GioHangItemViewModel> cart)
+    private static void Save(ISession session, List<GioHangItemViewModel> cart)
     {
         session.SetString(CartKey, JsonSerializer.Serialize(cart));
         var customerId = session.GetString("MaKhachHang");
         if (!string.IsNullOrWhiteSpace(customerId))
         {
             SaveCustomerCart(customerId, cart);
-        }
-    }
-
-    public void AutoApplyBestVoucher(ISession session, List<GioHangItemViewModel> cart, string? customerId)
-    {
-        var subtotal = cart.Sum(x => x.ThanhTien);
-        if (subtotal == 0) return;
-
-        if (session.GetString("VoucherManuallyRemoved") == "true") return;
-
-        var usedVouchers = GetUsedVouchersStatic(session, customerId);
-
-        var availableVouchers = AllVouchers
-            .Where(v => !usedVouchers.Contains(v.Code))
-            .ToList();
-
-        var currentVoucher = session.GetString(VoucherKey);
-        if (!string.IsNullOrWhiteSpace(currentVoucher) && usedVouchers.Contains(NormalizeVoucherCode(currentVoucher)))
-        {
-            session.Remove(VoucherKey);
-            currentVoucher = null;
-        }
-
-        var currentDiscount = string.IsNullOrWhiteSpace(currentVoucher) ? 0m : CalculateDiscount(currentVoucher, subtotal);
-
-        // Nếu khách hàng đã chọn một voucher hợp lệ và voucher đó vẫn còn áp dụng được (> 0đ):
-        // Tuyệt đối giữ nguyên lựa chọn của khách hàng, không tự ý ghi đè sang voucher khác!
-        if (!string.IsNullOrWhiteSpace(currentVoucher) && currentDiscount > 0)
-        {
-            return;
-        }
-
-        string? bestVoucher = null;
-        decimal maxDiscount = 0m;
-
-        foreach (var v in availableVouchers)
-        {
-            var d = CalculateDiscount(v.Code, subtotal);
-            if (d > maxDiscount)
-            {
-                maxDiscount = d;
-                bestVoucher = v.Code;
-            }
-        }
-
-        if (maxDiscount > 0 && bestVoucher != null)
-        {
-            session.SetString(VoucherKey, bestVoucher);
-        }
-        else
-        {
-            session.Remove(VoucherKey);
         }
     }
 }

@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -25,6 +26,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
 
         private readonly BindingList<DinhLuongItemDto> _dinhLuongList = new BindingList<DinhLuongItemDto>();
         private List<NguyenLieuDto> _allNguyenLieu = new List<NguyenLieuDto>();
+        private List<MonAnDto> _allMonAn = new List<MonAnDto>();
 
         public MonAnDialog(MonAnDto monAn = null) {
             InitializeComponent();
@@ -200,6 +202,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
 
                 // 1. Tải danh mục loại món
                 await LoadLoaiMonDropdown();
+
+                // Tải danh sách tất cả món ăn để kiểm tra trùng tên và trùng công thức
+                _allMonAn = await _monAnService.GetAllAsync() ?? new List<MonAnDto>();
 
                 // 2. Tải danh sách nguyên vật liệu kho (chỉ lấy các nguyên liệu Active)
                 _allNguyenLieu = await _nguyenLieuService.GetAllAsync("Active") ?? new List<NguyenLieuDto>();
@@ -399,6 +404,70 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
                 MessageBox.Show("Món ăn bắt buộc phải có ít nhất 1 nguyên vật liệu trong công thức định lượng (BOM)!\nVui lòng chọn nguyên liệu và nhấn '+ Thêm vào công thức'.", "Thiếu định lượng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 cboNguyenLieu.Focus();
                 return;
+            }
+
+            // Cập nhật danh sách món ăn mới nhất từ máy chủ
+            try {
+                var freshList = await _monAnService.GetAllAsync();
+                if (freshList != null && freshList.Any()) {
+                    _allMonAn = freshList;
+                }
+            } catch { }
+
+            // 2> Món ăn khi thêm/sửa có tên giống nhau 100% (tính thường hay in hoa)
+            string tenMonMoi = txtTenMon.Text.Trim();
+            bool isDuplicateName = _allMonAn.Any(m =>
+                (!_isEdit || !string.Equals(m.MaMonAn, _monAnCurrent.MaMonAn, StringComparison.OrdinalIgnoreCase)) &&
+                string.Equals(m.TenMonAn?.Trim(), tenMonMoi, StringComparison.OrdinalIgnoreCase));
+
+            if (isDuplicateName) {
+                MessageBox.Show("món đã có, vui lòng nhập tên mới", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtTenMon.Focus();
+                return;
+            }
+
+            // 3> Công thức món ăn phải có sự khác biệt giữa các món, nếu trùng thì phát cảnh báo
+            var currentRecipe = _dinhLuongList
+                .GroupBy(d => d.MaNguyenLieu.Trim())
+                .Select(g => new { MaNguyenLieu = g.Key, SoLuongCan = g.Sum(x => x.SoLuongCan) })
+                .ToList();
+
+            bool isDuplicateRecipe = _allMonAn.Any(m => {
+                if (_isEdit && string.Equals(m.MaMonAn, _monAnCurrent.MaMonAn, StringComparison.OrdinalIgnoreCase)) return false;
+                if (m.DinhLuong == null || !m.DinhLuong.Any()) return false;
+
+                var otherRecipe = m.DinhLuong
+                    .GroupBy(d => d.MaNguyenLieu.Trim())
+                    .Select(g => new { MaNguyenLieu = g.Key, SoLuongCan = g.Sum(x => x.SoLuongCan) })
+                    .ToList();
+
+                if (otherRecipe.Count != currentRecipe.Count) return false;
+
+                return currentRecipe.All(cur => otherRecipe.Any(oth =>
+                    string.Equals(oth.MaNguyenLieu, cur.MaNguyenLieu, StringComparison.OrdinalIgnoreCase) &&
+                    oth.SoLuongCan == cur.SoLuongCan));
+            });
+
+            if (isDuplicateRecipe) {
+                MessageBox.Show("công thức đã tồn tại trong món khác, vui lòng chọn công thức khác", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 1> Tỷ số lợi nhuận gộp nếu âm thì phát cảnh báo và buộc người dùng xác nhận
+            decimal tongGiaVon = _dinhLuongList.Sum(x => x.ThanhTienGiaVon);
+            decimal giaBan = numGia.Value;
+            decimal loiNhuanGop = giaBan - tongGiaVon;
+
+            if (loiNhuanGop < 0) {
+                var confirmResult = MessageBox.Show(
+                    "Món ăn được sửa/thêm sẽ gây thu lỗ cho quán",
+                    "Cảnh báo",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (confirmResult != DialogResult.Yes) {
+                    return;
+                }
             }
 
             var monAnSave = new MonAnDto {

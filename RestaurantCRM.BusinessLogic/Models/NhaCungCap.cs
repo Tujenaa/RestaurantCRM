@@ -15,5 +15,7 @@ public partial class NhaCungCap
 
     public string? Email { get; set; }
 
+    public string? TrangThai { get; set; } = "Active";
+
     public virtual ICollection<PhieuNhapHang> PhieuNhapHang { get; set; } = new List<PhieuNhapHang>();
 }

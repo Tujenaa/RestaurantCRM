@@ -12,6 +12,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         private System.Windows.Forms.TextBox txtEmail;
         private System.Windows.Forms.Label lblDiaChi;
         private System.Windows.Forms.TextBox txtDiaChi;
+        private System.Windows.Forms.Label lblTrangThai;
+        private System.Windows.Forms.ComboBox cboTrangThai;
         private System.Windows.Forms.Button btnLuu;
         private System.Windows.Forms.Button btnHuy;
 
@@ -34,6 +36,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.txtEmail = new System.Windows.Forms.TextBox();
             this.lblDiaChi = new System.Windows.Forms.Label();
             this.txtDiaChi = new System.Windows.Forms.TextBox();
+            this.lblTrangThai = new System.Windows.Forms.Label();
+            this.cboTrangThai = new System.Windows.Forms.ComboBox();
             this.btnLuu = new System.Windows.Forms.Button();
             this.btnHuy = new System.Windows.Forms.Button();
             this.SuspendLayout();
@@ -141,6 +145,29 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.txtDiaChi.Size = new System.Drawing.Size(265, 55);
             this.txtDiaChi.TabIndex = 10;
             // 
+            // lblTrangThai
+            // 
+            this.lblTrangThai.AutoSize = true;
+            this.lblTrangThai.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblTrangThai.Location = new System.Drawing.Point(22, 269);
+            this.lblTrangThai.Name = "lblTrangThai";
+            this.lblTrangThai.Size = new System.Drawing.Size(62, 15);
+            this.lblTrangThai.TabIndex = 11;
+            this.lblTrangThai.Text = "Trạng thái:";
+            // 
+            // cboTrangThai
+            // 
+            this.cboTrangThai.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboTrangThai.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.cboTrangThai.FormattingEnabled = true;
+            this.cboTrangThai.Items.AddRange(new object[] {
+            "Đang hoạt động",
+            "Đã ẩn"});
+            this.cboTrangThai.Location = new System.Drawing.Point(125, 265);
+            this.cboTrangThai.Name = "cboTrangThai";
+            this.cboTrangThai.Size = new System.Drawing.Size(265, 24);
+            this.cboTrangThai.TabIndex = 12;
+            // 
             // btnLuu
             // 
             this.btnLuu.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
@@ -148,10 +175,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.btnLuu.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnLuu.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnLuu.ForeColor = System.Drawing.Color.White;
-            this.btnLuu.Location = new System.Drawing.Point(220, 275);
+            this.btnLuu.Location = new System.Drawing.Point(220, 308);
             this.btnLuu.Name = "btnLuu";
             this.btnLuu.Size = new System.Drawing.Size(85, 30);
-            this.btnLuu.TabIndex = 11;
+            this.btnLuu.TabIndex = 13;
             this.btnLuu.Text = "Lưu";
             this.btnLuu.UseVisualStyleBackColor = false;
             this.btnLuu.Click += new System.EventHandler(this.btnLuu_Click);
@@ -160,10 +187,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.btnHuy.DialogResult = System.Windows.Forms.DialogResult.Cancel;
             this.btnHuy.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.btnHuy.Location = new System.Drawing.Point(315, 275);
+            this.btnHuy.Location = new System.Drawing.Point(315, 308);
             this.btnHuy.Name = "btnHuy";
             this.btnHuy.Size = new System.Drawing.Size(75, 30);
-            this.btnHuy.TabIndex = 12;
+            this.btnHuy.TabIndex = 14;
             this.btnHuy.Text = "Hủy";
             this.btnHuy.UseVisualStyleBackColor = true;
             this.btnHuy.Click += new System.EventHandler(this.btnHuy_Click);
@@ -175,7 +202,9 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(248)))), ((int)(((byte)(250)))), ((int)(((byte)(252)))));
             this.CancelButton = this.btnHuy;
-            this.ClientSize = new System.Drawing.Size(414, 325);
+            this.ClientSize = new System.Drawing.Size(414, 355);
+            this.Controls.Add(this.cboTrangThai);
+            this.Controls.Add(this.lblTrangThai);
             this.Controls.Add(this.btnHuy);
             this.Controls.Add(this.btnLuu);
             this.Controls.Add(this.txtDiaChi);

@@ -8,9 +8,6 @@ public class PhanHoiService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PhanHoiService> _logger;
 
-    // Bộ nhớ in-memory fallback khởi tạo sẵn dữ liệu từ FallbackData
-    private readonly List<PhanHoiItemViewModel> _items = MockData.FallbackData.CreateFallbackReviews();
-
     public PhanHoiService(IHttpClientFactory httpClientFactory, ILogger<PhanHoiService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -34,7 +31,7 @@ public class PhanHoiService
             if (response.IsSuccessStatusCode)
             {
                 var apiReviews = await response.Content.ReadFromJsonAsync<List<ApiDanhGiaDto>>();
-                if (apiReviews != null && apiReviews.Count > 0)
+                if (apiReviews != null)
                 {
                     return apiReviews
                         .OrderByDescending(x => x.NgayDanhGia ?? DateTime.MinValue)
@@ -45,26 +42,14 @@ public class PhanHoiService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Không thể tải đánh giá của khách hàng {MaKhachHang} từ API ({Message}), chuyển sang fallback.", maKhachHang, ex.Message);
+            _logger.LogWarning("Không thể tải đánh giá của khách hàng {MaKhachHang} từ API ({Message}).", maKhachHang, ex.Message);
         }
 
-        lock (_items)
-        {
-            return _items
-                .Where(x => string.Equals(x.MaKhachHang, maKhachHang, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(x => x.NgayGui)
-                .Select(x =>
-                {
-                    x.TraLois = x.TraLois.OrderByDescending(t => t.NgayGui).ToList();
-                    return x;
-                })
-                .ToList();
-        }
+        return Array.Empty<PhanHoiItemViewModel>();
     }
 
     /// <summary>
     /// Lấy danh sách đánh giá sắp xếp theo thứ tự mới nhất đến cũ nhất.
-    /// Các câu trả lời trong từng đánh giá cũng được sắp xếp từ mới nhất đến cũ nhất.
     /// </summary>
     public async Task<IReadOnlyList<PhanHoiItemViewModel>> GetRecentAsync()
     {
@@ -75,7 +60,7 @@ public class PhanHoiService
             if (response.IsSuccessStatusCode)
             {
                 var apiReviews = await response.Content.ReadFromJsonAsync<List<ApiDanhGiaDto>>();
-                if (apiReviews != null && apiReviews.Count > 0)
+                if (apiReviews != null)
                 {
                     return apiReviews
                         .OrderByDescending(x => x.NgayDanhGia ?? DateTime.MinValue)
@@ -86,21 +71,10 @@ public class PhanHoiService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Không thể tải danh giá từ API ({Message}), chuyển sang fallback.", ex.Message);
+            _logger.LogWarning("Không thể tải đánh giá từ API ({Message}).", ex.Message);
         }
 
-        lock (_items)
-        {
-            return _items
-                .OrderByDescending(x => x.NgayGui)
-                .Select(x =>
-                {
-                    // Đảm bảo TraLois sắp xếp mới nhất đến cũ nhất
-                    x.TraLois = x.TraLois.OrderByDescending(t => t.NgayGui).ToList();
-                    return x;
-                })
-                .ToList();
-        }
+        return Array.Empty<PhanHoiItemViewModel>();
     }
 
     /// <summary>
@@ -115,7 +89,7 @@ public class PhanHoiService
             if (response.IsSuccessStatusCode)
             {
                 var apiReviews = await response.Content.ReadFromJsonAsync<List<ApiDanhGiaDto>>();
-                if (apiReviews != null && apiReviews.Count > 0)
+                if (apiReviews != null)
                 {
                     return apiReviews
                         .OrderByDescending(x => x.NgayDanhGia ?? DateTime.MinValue)
@@ -126,21 +100,10 @@ public class PhanHoiService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Không thể tải đánh giá món {MaMon} từ API ({Message}), dùng dữ liệu local.", maMon, ex.Message);
+            _logger.LogWarning("Không thể tải đánh giá món {MaMon} từ API ({Message}).", maMon, ex.Message);
         }
 
-        lock (_items)
-        {
-            return _items
-                .Where(x => string.Equals(x.MaMon, maMon, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(x => x.NgayGui)
-                .Select(x =>
-                {
-                    x.TraLois = x.TraLois.OrderByDescending(t => t.NgayGui).ToList();
-                    return x;
-                })
-                .ToList();
-        }
+        return Array.Empty<PhanHoiItemViewModel>();
     }
 
     /// <summary>
@@ -163,21 +126,6 @@ public class PhanHoiService
     /// </summary>
     public async Task<bool> AddReviewAsync(string maMon, string tenMon, int rating, string noiDung, string? maDonHang = null, string? customerName = null, string? customerId = null)
     {
-        var newReview = new PhanHoiItemViewModel
-        {
-            MaDanhGia = "DG" + Guid.NewGuid().ToString("N")[..8].ToUpper(),
-            MaMon = maMon,
-            TenMon = tenMon,
-            MaDonHang = maDonHang,
-            MaKhachHang = customerId ?? "KH01",
-            TenKhachHang = string.IsNullOrWhiteSpace(customerName) ? "Khách hàng thân thiết" : customerName,
-            DanhGia = Math.Clamp(rating, 1, 5),
-            NoiDung = noiDung,
-            NgayGui = DateTime.Now,
-            TraLois = new List<TraLoiDanhGiaViewModel>()
-        };
-
-        // Đồng bộ lên API nếu có thể
         try
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
@@ -186,27 +134,22 @@ public class PhanHoiService
                 MaKhachHang = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId,
                 MaMon = maMon,
                 MaHoaDon = maDonHang,
-                SoSao = rating,
+                SoSao = Math.Clamp(rating, 1, 5),
                 NoiDung = noiDung
             };
             var response = await client.PostAsJsonAsync("/api/DanhGia", payload);
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Đã lưu đánh giá {MaMon} lên API thành công.", maMon);
+                return true;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Không thể gửi đánh giá lên API ({Message}), lưu vào cache cục bộ.", ex.Message);
+            _logger.LogWarning("Không thể gửi đánh giá lên API ({Message}).", ex.Message);
         }
 
-        // Luôn lưu vào danh sách cục bộ để hiển thị ngay lập tức
-        lock (_items)
-        {
-            _items.Insert(0, newReview);
-        }
-
-        return true;
+        return false;
     }
 
     /// <summary>
@@ -214,15 +157,6 @@ public class PhanHoiService
     /// </summary>
     public async Task<bool> AddReplyAsync(string maDanhGia, string noiDung, string senderName = "Khách hàng", string? customerId = null)
     {
-        var newReply = new TraLoiDanhGiaViewModel
-        {
-            MaTraLoi = "TL" + Guid.NewGuid().ToString("N")[..8].ToUpper(),
-            NguoiGui = "KhachHang",
-            NguoiTraLoi = senderName,
-            NoiDung = noiDung,
-            NgayGui = DateTime.Now
-        };
-
         try
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
@@ -231,24 +165,14 @@ public class PhanHoiService
                 NguoiGuiId = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId,
                 NoiDung = noiDung
             };
-            await client.PostAsJsonAsync($"/api/DanhGia/{maDanhGia}/Reply", payload);
+            var response = await client.PostAsJsonAsync($"/api/DanhGia/{maDanhGia}/Reply", payload);
+            return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Lỗi gọi API reply: {Message}", ex.Message);
+            return false;
         }
-
-        lock (_items)
-        {
-            var review = _items.FirstOrDefault(x => x.MaDanhGia == maDanhGia);
-            if (review != null)
-            {
-                // Thêm vào đầu để mới nhất hiển thị trước
-                review.TraLois.Insert(0, newReply);
-            }
-        }
-
-        return true;
     }
 
     private static PhanHoiItemViewModel MapFromApi(ApiDanhGiaDto dto)
@@ -258,12 +182,13 @@ public class PhanHoiService
             MaDanhGia = dto.MaDanhGia ?? "",
             MaMon = dto.MaMon ?? "",
             TenMon = dto.TenMon ?? "Món ngon Lẩu Phố",
+            MaDonHang = dto.MaHoaDon,
             TenKhachHang = dto.TenKhachHang ?? "Khách hàng",
             DanhGia = dto.SoSao ?? 5,
             NoiDung = dto.NoiDung ?? "",
             NgayGui = dto.NgayDanhGia ?? DateTime.Now,
             TraLois = (dto.HoiThoai ?? new List<ApiTraLoiDto>())
-                .OrderByDescending(t => t.NgayGui ?? DateTime.MinValue) // Sắp xếp phản hồi mới -> cũ
+                .OrderByDescending(t => t.NgayGui ?? DateTime.MinValue)
                 .Select(t => new TraLoiDanhGiaViewModel
                 {
                     MaTraLoi = t.MaTraLoi ?? "",
@@ -280,6 +205,7 @@ public class PhanHoiService
         public string? MaDanhGia { get; set; }
         public string? MaMon { get; set; }
         public string? TenMon { get; set; }
+        public string? MaHoaDon { get; set; }
         public int? SoSao { get; set; }
         public string? NoiDung { get; set; }
         public DateTime? NgayDanhGia { get; set; }

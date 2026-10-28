@@ -27,6 +27,11 @@ namespace RestaurantCRM.API.DTOs
         public double GiaTriGiam { get; set; }
         public double? GiaTriDonToiThieu { get; set; }
         public double? GiamToiDa { get; set; } // Giới hạn trần khi giảm %
+        public string? PhamViApDung { get; set; } = "TOAN_DON"; // "TOAN_DON", "THEO_LOAI", "THEO_MON"
+        public string? MaLoaiMon { get; set; } // Nếu phạm vi là THEO_LOAI
+        public string? MaMon { get; set; } // Nếu phạm vi là THEO_MON
+        public int? SoLuongToiThieu { get; set; } = 1; // Số lượng món tối thiểu
+        public bool? ChoPhepCongDon { get; set; } = true;
     }
 
     // ================= DTOs CHO KHUYẾN MÃI MÓN ĂN (TỰ ĐỘNG) =================

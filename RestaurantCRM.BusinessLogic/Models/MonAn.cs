@@ -27,5 +27,7 @@ public partial class MonAn
 
     public virtual ICollection<KmTheoSp> KmTheoSp { get; set; } = new List<KmTheoSp>();
 
+    public virtual ICollection<KmTheoVoucher> KmTheoVoucher { get; set; } = new List<KmTheoVoucher>();
+
     public virtual LoaiMon? MaLoaiMonNavigation { get; set; }
 }

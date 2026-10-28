@@ -166,18 +166,6 @@ public class TaiKhoanController : Controller
                     }
                 }
 
-                // Đồng bộ danh sách voucher khách hàng đã sử dụng vào Session
-                try
-                {
-                    var usedRes = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
-                    if (usedRes.IsSuccessStatusCode)
-                    {
-                        var usedCodes = await usedRes.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
-                        HttpContext.Session.SetString("UsedVouchers", string.Join(",", usedCodes));
-                    }
-                }
-                catch { }
-
                 // Khôi phục và hợp nhất các món trong giỏ hàng đã lưu của khách hàng
                 _gioHangService.RestoreCartOnLogin(HttpContext.Session, customerId);
 

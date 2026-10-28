@@ -14,9 +14,12 @@ namespace RestaurantCRM.AdminApp.Services {
             _httpClient = httpClient ?? new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") };
         }
 
-        public async Task<List<NhaCungCapDto>> GetAllAsync() {
+        public async Task<List<NhaCungCapDto>> GetAllAsync(string trangThai = null) {
             try {
-                return await _httpClient.GetFromJsonAsync<List<NhaCungCapDto>>("api/AdminNhaCungCap") ?? new List<NhaCungCapDto>();
+                var url = string.IsNullOrWhiteSpace(trangThai) 
+                    ? "api/AdminNhaCungCap" 
+                    : $"api/AdminNhaCungCap?trangThai={Uri.EscapeDataString(trangThai)}";
+                return await _httpClient.GetFromJsonAsync<List<NhaCungCapDto>>(url) ?? new List<NhaCungCapDto>();
             } catch {
                 return new List<NhaCungCapDto>();
             }
@@ -52,6 +55,14 @@ namespace RestaurantCRM.AdminApp.Services {
             try {
                 var response = await _httpClient.DeleteAsync($"api/AdminNhaCungCap/{id}");
                 if (response.IsSuccessStatusCode) {
+                    var str = await response.Content.ReadAsStringAsync();
+                    try {
+                        using (var doc = System.Text.Json.JsonDocument.Parse(str)) {
+                            if (doc.RootElement.TryGetProperty("message", out var msgProp)) {
+                                return (true, msgProp.GetString());
+                            }
+                        }
+                    } catch { }
                     return (true, "Xóa nhà cung cấp thành công!");
                 }
                 var err = await response.Content.ReadAsStringAsync();

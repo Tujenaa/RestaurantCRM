@@ -24,6 +24,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
             dgvNhaCungCap.AllowUserToResizeColumns = true;
             dgvNhaCungCap.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
             dgvNhaCungCap.ScrollBars = ScrollBars.Both;
+            dgvNhaCungCap.CellFormatting += dgvNhaCungCap_CellFormatting;
 
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
@@ -72,11 +73,30 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 (!string.IsNullOrEmpty(n.MaNhaCungCap) && n.MaNhaCungCap.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(n.SoDienThoai) && n.SoDienThoai.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(n.Email) && n.Email.ToLower().Contains(keyword)) ||
-                (!string.IsNullOrEmpty(n.DiaChi) && n.DiaChi.ToLower().Contains(keyword))
+                (!string.IsNullOrEmpty(n.DiaChi) && n.DiaChi.ToLower().Contains(keyword)) ||
+                (!string.IsNullOrEmpty(n.TrangThaiHienThi) && n.TrangThaiHienThi.ToLower().Contains(keyword))
             ).ToList();
 
             dgvNhaCungCap.DataSource = null;
             dgvNhaCungCap.DataSource = filtered;
+        }
+
+        private void dgvNhaCungCap_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.RowIndex >= dgvNhaCungCap.Rows.Count) return;
+
+            var row = dgvNhaCungCap.Rows[e.RowIndex];
+            if (row.DataBoundItem is NhaCungCapDto item)
+            {
+                if (!item.IsActive)
+                {
+                    // Chuyển thành màu xám trên danh sách khi đã ẩn
+                    e.CellStyle.BackColor = System.Drawing.Color.FromArgb(245, 245, 245);
+                    e.CellStyle.ForeColor = System.Drawing.Color.FromArgb(140, 140, 140);
+                    e.CellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(220, 224, 230);
+                    e.CellStyle.SelectionForeColor = System.Drawing.Color.FromArgb(90, 90, 90);
+                }
+            }
         }
 
         private void txtTimKiem_TextChanged(object sender, EventArgs e)

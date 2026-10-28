@@ -43,7 +43,9 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                     Price = effPrice,
                     Quantity = 1,
                     MaxStock = mon.SoLuongTon,
-                    PromoInfo = promoText
+                    PromoInfo = promoText,
+                    MaLoaiMon = mon.MaLoaiMon,
+                    GiaVon = mon.GiaVonUocTinh
                 });
                 return (true, null, false);
             }

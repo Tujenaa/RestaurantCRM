@@ -163,7 +163,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
         private void RefreshView()
         {
-            _menuBuilder.RenderProducts(_allMonAn, _allKmMon, _cartService, _calcService);
+            _menuBuilder.RenderProducts(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
             RenderCart();
         }
 
@@ -173,12 +173,12 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
             if (_autoApplyBestDeal)
             {
-                var (bestVoucher, _, _, _) = _calcService.FindBestVoucher(subTotal, _allVouchers);
+                var (bestVoucher, _, _, _) = _calcService.FindBestVoucher(subTotal, _allVouchers, _cartService.Items);
                 _appliedVoucher = bestVoucher;
             }
             else if (_appliedVoucher != null)
             {
-                var (isEligible, _, _) = _calcService.EvaluateVoucher(_appliedVoucher, subTotal);
+                var (isEligible, _, _) = _calcService.EvaluateVoucher(_appliedVoucher, subTotal, _cartService.Items);
                 if (!isEligible) _appliedVoucher = null;
             }
 
@@ -187,7 +187,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
         private void OnDishSelected(MonAnDto mon)
         {
-            var (effPrice, promoText) = _calcService.GetDishPriceInfo(mon, _allKmMon);
+            var (effPrice, promoText, _) = _calcService.GetDishPriceInfo(mon, _allVouchers, _allKmMon);
             var (success, msg, isWarning) = _cartService.AddItem(mon, effPrice, promoText);
             if (!success)
             {
@@ -196,12 +196,12 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             }
 
             RenderCart();
-            _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService);
+            _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
         }
 
         private void OnFilterChanged()
         {
-            _menuBuilder.RenderProducts(_allMonAn, _allKmMon, _cartService, _calcService);
+            _menuBuilder.RenderProducts(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
         }
 
         private void OnCartQuantityChanged(RestaurantCRM.AdminApp.Models.CartItem item, int newQty)
@@ -227,7 +227,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             }
 
             RenderCart();
-            _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService);
+            _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
         }
 
         private void OnCartItemRemoved(RestaurantCRM.AdminApp.Models.CartItem item)
@@ -239,7 +239,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             {
                 _cartService.RemoveItem(item);
                 RenderCart();
-                _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService);
+                _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
             }
         }
 
@@ -255,7 +255,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 _cartService.Clear();
                 _appliedVoucher = null;
                 RenderCart();
-                _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService);
+                _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
             }
         }
 
@@ -283,7 +283,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             }
 
             decimal subTotal = _cartService.SubTotal;
-            var (isEligible, discount, missing) = _calcService.EvaluateVoucher(found, subTotal);
+            var (isEligible, discount, missing) = _calcService.EvaluateVoucher(found, subTotal, _cartService.Items);
             if (!isEligible)
             {
                 decimal minOrder = (decimal)(found.GiaTriDonToiThieu ?? 0);
@@ -306,7 +306,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
         private void OnSelectVoucherClicked()
         {
             decimal subTotal = _cartService.SubTotal;
-            using (var dlg = new ChonVoucherDialog(subTotal, _allVouchers, _appliedVoucher))
+            using (var dlg = new ChonVoucherDialog(subTotal, _allVouchers, _appliedVoucher, _cartService.Items))
             {
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                 {
@@ -328,7 +328,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             }
             else
             {
-                var (best, _, _, _) = _calcService.FindBestVoucher(subTotal, _allVouchers);
+                var (best, _, _, _) = _calcService.FindBestVoucher(subTotal, _allVouchers, _cartService.Items);
                 if (best != null)
                 {
                     _appliedVoucher = best;

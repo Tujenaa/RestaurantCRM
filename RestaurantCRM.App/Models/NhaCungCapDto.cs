@@ -18,6 +18,16 @@ namespace RestaurantCRM.AdminApp.Models {
 
         [JsonPropertyName("email")]
         public string Email { get; set; }
+
+        [JsonPropertyName("trangThai")]
+        public string TrangThai { get; set; }
+
+        [JsonIgnore]
+        public bool IsActive => !string.Equals(TrangThai, "Hidden", StringComparison.OrdinalIgnoreCase)
+                             && !string.Equals(TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase);
+
+        [JsonIgnore]
+        public string TrangThaiHienThi => IsActive ? "🟢 Hoạt động" : "⚪ Đã ẩn";
     }
 
     public class PhieuNhapDto {

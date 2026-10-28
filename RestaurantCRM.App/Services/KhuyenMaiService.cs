@@ -59,7 +59,13 @@ namespace RestaurantCRM.AdminApp.Services {
         public async Task<(bool Success, string Message)> DeleteChuongTrinhAsync(string id) {
             try {
                 var res = await _httpClient.DeleteAsync($"api/AdminKhuyenMai/ChuongTrinh/{id}");
-                if (res.IsSuccessStatusCode) return (true, "Đã xóa chương trình.");
+                if (res.IsSuccessStatusCode) {
+                    try {
+                        var json = await res.Content.ReadFromJsonAsync<JsonElement>();
+                        if (json.TryGetProperty("message", out var m)) return (true, m.GetString());
+                    } catch { }
+                    return (true, "Đã xóa chương trình.");
+                }
                 var err = await res.Content.ReadAsStringAsync();
                 return (false, string.IsNullOrEmpty(err) ? "Không thể xóa chương trình." : err);
             } catch (Exception ex) {
@@ -76,7 +82,18 @@ namespace RestaurantCRM.AdminApp.Services {
             }
         }
 
-        public async Task<(bool Success, string Message)> CreateVoucherAsync(string maCT, string maVoucher, string loaiGiam, double giaTriGiam, double? donToiThieu, double? giamToiDa) {
+        public async Task<(bool Success, string Message)> CreateVoucherAsync(
+            string maCT, 
+            string maVoucher, 
+            string loaiGiam, 
+            double giaTriGiam, 
+            double? donToiThieu, 
+            double? giamToiDa, 
+            string phamViApDung = "TOAN_DON", 
+            string maLoaiMon = null, 
+            string maMon = null,
+            int? soLuongToiThieu = 1,
+            bool choPhepCongDon = true) {
             try {
                 var body = new {
                     maChuongTrinh = maCT,
@@ -84,7 +101,12 @@ namespace RestaurantCRM.AdminApp.Services {
                     loaiGiam = loaiGiam,
                     giaTriGiam = giaTriGiam,
                     giaTriDonToiThieu = donToiThieu,
-                    giamToiDa = giamToiDa
+                    giamToiDa = giamToiDa,
+                    phamViApDung = phamViApDung,
+                    maLoaiMon = maLoaiMon,
+                    maMon = maMon,
+                    soLuongToiThieu = soLuongToiThieu,
+                    choPhepCongDon = choPhepCongDon
                 };
                 var res = await _httpClient.PostAsJsonAsync("api/AdminKhuyenMai/Voucher", body);
                 if (res.IsSuccessStatusCode) return (true, "Tạo voucher thành công.");
@@ -95,10 +117,52 @@ namespace RestaurantCRM.AdminApp.Services {
             }
         }
 
+        public async Task<(bool Success, string Message)> UpdateVoucherAsync(
+            string id,
+            string maCT,
+            string maVoucher,
+            string loaiGiam,
+            double giaTriGiam,
+            double? donToiThieu,
+            double? giamToiDa,
+            int? soLuongVoucher = 20) {
+            try {
+                var body = new {
+                    maChuongTrinh = maCT,
+                    maVoucher = maVoucher,
+                    loaiGiam = loaiGiam,
+                    giaTriGiam = giaTriGiam,
+                    giaTriDonToiThieu = donToiThieu,
+                    giamToiDa = giamToiDa,
+                    soLuongToiThieu = soLuongVoucher
+                };
+                var res = await _httpClient.PutAsJsonAsync($"api/AdminKhuyenMai/Voucher/{id}", body);
+                if (res.IsSuccessStatusCode) return (true, "Cập nhật voucher thành công.");
+                var err = await res.Content.ReadAsStringAsync();
+                return (false, string.IsNullOrEmpty(err) ? "Lỗi khi cập nhật voucher." : err);
+            } catch (Exception ex) {
+                return (false, ex.Message);
+            }
+        }
+
+        public async Task<List<LoaiMonSelectDto>> GetLoaiMonListAsync() {
+            try {
+                return await _httpClient.GetFromJsonAsync<List<LoaiMonSelectDto>>("api/AdminKhuyenMai/LoaiMon") ?? new List<LoaiMonSelectDto>();
+            } catch {
+                return new List<LoaiMonSelectDto>();
+            }
+        }
+
         public async Task<(bool Success, string Message)> DeleteVoucherAsync(string id) {
             try {
                 var res = await _httpClient.DeleteAsync($"api/AdminKhuyenMai/Voucher/{id}");
-                if (res.IsSuccessStatusCode) return (true, "Đã xóa voucher.");
+                if (res.IsSuccessStatusCode) {
+                    try {
+                        var json = await res.Content.ReadFromJsonAsync<JsonElement>();
+                        if (json.TryGetProperty("message", out var m)) return (true, m.GetString());
+                    } catch { }
+                    return (true, "Đã xóa voucher.");
+                }
                 var err = await res.Content.ReadAsStringAsync();
                 return (false, string.IsNullOrEmpty(err) ? "Không thể xóa voucher." : err);
             } catch (Exception ex) {
@@ -135,7 +199,13 @@ namespace RestaurantCRM.AdminApp.Services {
         public async Task<(bool Success, string Message)> DeleteKmMonAsync(string id) {
             try {
                 var res = await _httpClient.DeleteAsync($"api/AdminKhuyenMai/MonAn/{id}");
-                if (res.IsSuccessStatusCode) return (true, "Đã xóa khuyến mãi món.");
+                if (res.IsSuccessStatusCode) {
+                    try {
+                        var json = await res.Content.ReadFromJsonAsync<JsonElement>();
+                        if (json.TryGetProperty("message", out var m)) return (true, m.GetString());
+                    } catch { }
+                    return (true, "Đã xóa khuyến mãi món.");
+                }
                 var err = await res.Content.ReadAsStringAsync();
                 return (false, string.IsNullOrEmpty(err) ? "Không thể xóa khuyến mãi món." : err);
             } catch (Exception ex) {

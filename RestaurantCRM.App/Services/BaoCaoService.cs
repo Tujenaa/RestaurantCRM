@@ -25,5 +25,15 @@ namespace RestaurantCRM.AdminApp.Services {
                 return null;
             }
         }
+
+        public async Task<BaoCaoDoanhThuTheoQuyDto> GetBaoCaoDoanhThuTheoQuyAsync(int nam) {
+            try {
+                var url = $"api/ThongKe/BaoCaoDoanhThuTheoQuy?nam={nam}";
+                return await _httpClient.GetFromJsonAsync<BaoCaoDoanhThuTheoQuyDto>(url);
+            } catch (Exception ex) {
+                System.Diagnostics.Debug.WriteLine("Lỗi gọi API Báo cáo doanh thu theo quý: " + ex.Message);
+                return null;
+            }
+        }
     }
 }

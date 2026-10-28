@@ -5,14 +5,119 @@ namespace RestaurantCRM.BusinessLogic.Services
 {
     public static class CodeGenerator
     {
-        public static async Task<string> GenerateMaLoaiMonAsync(IRestaurantService service)
+        public static string RemoveVietnameseAccents(string text)
         {
-            var codes = await service.ListAsync<LoaiMon, string>(x => x.MaLoaiMon != null && x.MaLoaiMon.StartsWith("LM"), x => x.MaLoaiMon!);
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            string[] vietnameseSigns = new string[]
+            {
+                "aAeEoOuUiIdDyY",
+                "áàạảãâấầậẩẫăắằặẳẵ",
+                "ÁÀẠẢÃÂẤẦẬẨẪĂẮẰẶẲẴ",
+                "éèẹẻẽêếềệểễ",
+                "ÉÈẸẺẼÊẾỀỆỂỄ",
+                "óòọỏõôốồộổỗơớờợởỡ",
+                "ÓÒỌỎÕÔỐỒỘỔỖƠỚỜỢỞỠ",
+                "úùụủũưứừựửữ",
+                "ÚÙỤỦŨƯỨỪỰỬỮ",
+                "íìịỉĩ",
+                "ÍÌỊỈĨ",
+                "đ",
+                "Đ",
+                "ýỳỵỷỹ",
+                "ÝỲỴỶỸ"
+            };
+            for (int i = 1; i < vietnameseSigns.Length; i++)
+            {
+                for (int j = 0; j < vietnameseSigns[i].Length; j++)
+                    text = text.Replace(vietnameseSigns[i][j], vietnameseSigns[0][i - 1]);
+            }
+            return text;
+        }
+
+        public static string GeneratePrefixFromTenLoaiMon(string tenLoaiMon)
+        {
+            if (string.IsNullOrWhiteSpace(tenLoaiMon)) return "LM";
+
+            string unaccented = RemoveVietnameseAccents(tenLoaiMon).Trim().ToUpper();
+            var words = unaccented.Split(new[] { ' ', ',', '-', '_', '&', '+', '/', '\\', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return "LM";
+
+            // Nếu 1 từ (ví dụ "Lẩu" -> "LAU", "Rau" -> "RAU", "Mì" -> "MI")
+            if (words.Length == 1)
+            {
+                return words[0].Length > 6 ? words[0].Substring(0, 6) : words[0];
+            }
+
+            // Nếu có chứa từ "LAU" -> ưu tiên "LAU"
+            if (words.Contains("LAU"))
+            {
+                return "LAU";
+            }
+
+            // Nếu 2 từ ngắn thông dụng: "DO UONG" -> "DU", "TRANG MIENG" -> "TM", "KHAI VI" -> "KV"
+            if (words.Length == 2)
+            {
+                string combined = string.Concat(words);
+                if (combined == "DOUONG") return "DU";
+                if (combined == "TRANGMIENG") return "TM";
+                if (combined == "KHAIVI") return "KV";
+            }
+
+            // Nếu từ đầu tiên có ý nghĩa và độ dài 2-5 ký tự (ví dụ: "THIT", "VIEN", "RAU", "MI")
+            string first = words[0];
+            if (first.Length >= 2 && first.Length <= 5)
+            {
+                return first;
+            }
+
+            // Rút gọn chữ cái đầu
+            string acronym = string.Concat(words.Select(w => w[0]));
+            if (acronym.Length >= 2 && acronym.Length <= 5)
+            {
+                return acronym;
+            }
+
+            return words[0].Length > 5 ? words[0].Substring(0, 5) : words[0];
+        }
+
+        public static async Task<string> GenerateMaLoaiMonAsync(IRestaurantService service, string tenLoaiMon = null)
+        {
+            string prefix = !string.IsNullOrWhiteSpace(tenLoaiMon) 
+                ? GeneratePrefixFromTenLoaiMon(tenLoaiMon) 
+                : "LM";
+
+            // Nếu prefix chưa tồn tại trong bảng LOAI_MON, dùng ngay prefix (ví dụ "LAU", "THIT")
+            if (!await service.AnyAsync<LoaiMon>(x => x.MaLoaiMon == prefix))
+            {
+                return prefix;
+            }
+
+            // Nếu đã tồn tại prefix thì thêm số thứ tự: LAU2, LAU3...
+            int num = 2;
+            while (await service.AnyAsync<LoaiMon>(x => x.MaLoaiMon == $"{prefix}{num}"))
+            {
+                num++;
+            }
+            return $"{prefix}{num}";
+        }
+
+        public static Task<string> GenerateMaLoaiMonAsync(IRestaurantService service)
+        {
+            return GenerateMaLoaiMonAsync(service, null);
+        }
+
+        public static async Task<string> GenerateMaMonAnAsync(IRestaurantService service, string maLoaiMon = null)
+        {
+            string prefix = !string.IsNullOrWhiteSpace(maLoaiMon) ? maLoaiMon.Trim().ToUpper() : "M";
+
+            var codes = await service.ListAsync<MonAn, string>(
+                x => x.MaMon != null && x.MaMon.StartsWith(prefix),
+                x => x.MaMon!);
 
             int maxNum = 0;
             foreach (var code in codes)
             {
-                var numStr = code.Substring(2);
+                var numStr = code.Substring(prefix.Length);
                 if (int.TryParse(numStr, out int val) && val > maxNum)
                 {
                     maxNum = val;
@@ -20,11 +125,16 @@ namespace RestaurantCRM.BusinessLogic.Services
             }
 
             int nextNum = maxNum + 1;
-            while (await service.AnyAsync<LoaiMon>(x => x.MaLoaiMon == $"LM{nextNum:D2}"))
+            while (await service.AnyAsync<MonAn>(x => x.MaMon == $"{prefix}{nextNum:D3}"))
             {
                 nextNum++;
             }
-            return $"LM{nextNum:D2}";
+            return $"{prefix}{nextNum:D3}";
+        }
+
+        public static Task<string> GenerateMaMonAnAsync(IRestaurantService service)
+        {
+            return GenerateMaMonAnAsync(service, null);
         }
 
         public static async Task<string> GenerateMaNhaCungCapAsync(IRestaurantService service)
@@ -47,33 +157,6 @@ namespace RestaurantCRM.BusinessLogic.Services
                 nextNum++;
             }
             return $"NCC{nextNum:D3}";
-        }
-
-        public static async Task<string> GenerateMaMonAnAsync(IRestaurantService service)
-        {
-            var codes = await service.ListAsync<MonAn, string>(x => x.MaMon != null, x => x.MaMon!);
-
-            int maxNum = 0;
-            foreach (var code in codes)
-            {
-                string numStr = code;
-                if (code.StartsWith("MA", StringComparison.OrdinalIgnoreCase))
-                    numStr = code.Substring(2);
-                else if (code.StartsWith("M", StringComparison.OrdinalIgnoreCase))
-                    numStr = code.Substring(1);
-
-                if (int.TryParse(numStr, out int val) && val > maxNum)
-                {
-                    maxNum = val;
-                }
-            }
-
-            int nextNum = maxNum + 1;
-            while (await service.AnyAsync<MonAn>(x => x.MaMon == $"M{nextNum:D2}"))
-            {
-                nextNum++;
-            }
-            return $"M{nextNum:D2}";
         }
 
         public static async Task<string> GenerateMaNguyenLieuAsync(IRestaurantService service)

@@ -10,9 +10,6 @@ public class DonHangService
     private readonly ILogger<DonHangService> _logger;
     private readonly MonAnService _monAnService;
 
-    // Fallback demo storage in case API is offline
-    private readonly List<DonHangViewModel> _fallbackOrders = MockData.FallbackData.CreateFallbackOrders();
-
     public DonHangService(IHttpClientFactory httpClientFactory, ILogger<DonHangService> logger, MonAnService monAnService)
     {
         _httpClientFactory = httpClientFactory;
@@ -64,39 +61,13 @@ public class DonHangService
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning("API HoaDon trả về lỗi đặt hàng: {Error}", errorBody);
-                return (false, null, string.IsNullOrWhiteSpace(errorBody) ? "Đặt hàng không thành công. Vui lòng thử lại." : errorBody);
+                return (false, null, string.IsNullOrWhiteSpace(errorBody) ? "Đặt hàng không thành công. Vui lòng thử lại." : errorBody.Trim('"'));
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi gọi API HoaDon tạo đơn hàng.");
-
-            // Fallback: save to memory
-            var fallbackId = "DH" + DateTime.Now.ToString("yyMMddHHmmss");
-            _fallbackOrders.Insert(0, new DonHangViewModel
-            {
-                MaDonHang = fallbackId,
-                MaKhachHang = customerId,
-                NgayDat = DateTime.Now,
-                TongThanhToan = items.Sum(x => x.ThanhTien),
-                TongTienHang = items.Sum(x => x.ThanhTien),
-                TrangThai = "Pending",
-                TrangThaiLoc = "active",
-                DiaChiGiao = address,
-                BuocHienTai = 1,
-                TienTrinh = Steps(),
-                ChiTiet = items.Select(x => new DonHangChiTietViewModel
-                {
-                    MaMon = x.MaMon,
-                    TenMon = x.TenMon,
-                    SoLuong = x.SoLuong,
-                    DonGiaGoc = x.DonGia,
-                    DonGiaSauGiam = x.DonGia,
-                    ThanhTien = x.ThanhTien
-                }).ToList()
-            });
-
-            return (true, fallbackId, null);
+            return (false, null, "Không thể kết nối đến máy chủ API để tạo đơn hàng. Vui lòng kiểm tra kết nối và thử lại.");
         }
     }
 
@@ -119,7 +90,6 @@ public class DonHangService
                 var list = await response.Content.ReadFromJsonAsync<List<ApiOrderSummaryDto>>();
                 if (list == null || list.Count == 0)
                 {
-                    // Tài khoản chưa có đơn hàng nào -> Trả về danh sách rỗng, không dùng dữ liệu mẫu (mock/fallback)
                     return new List<DonHangViewModel>();
                 }
 
@@ -157,12 +127,6 @@ public class DonHangService
             _logger.LogWarning(ex, "Lỗi khi lấy lịch sử đơn hàng từ API cho khách hàng {CustomerId}.", customerId);
         }
 
-        // Tuyệt đối không trả về mock/fallback cho tài khoản khách hàng thực tế
-        if (customerId.Equals("KH01", StringComparison.OrdinalIgnoreCase))
-        {
-            return FilterOrders(_fallbackOrders, filter);
-        }
-
         return new List<DonHangViewModel>();
     }
 
@@ -194,16 +158,29 @@ public class DonHangService
                         PhuongThucThanhToan = (dto.PhuongThucThanhToan == "Online" ? "Thanh toán Online (Đã thanh toán)" : "Thanh toán tiền mặt khi nhận hàng (COD)"),
                         BuocHienTai = MapStep(dto.TrangThai),
                         TienTrinh = Steps(),
-                        ChiTiet = (dto.ChiTiet ?? new()).Select(c => new DonHangChiTietViewModel
+                        ChiTiet = (dto.ChiTiet ?? new()).Select(c =>
                         {
-                            MaMon = c.MaMon,
-                            TenMon = c.TenMon ?? "Món lẩu",
-                            DuongDanAnh = _monAnService.Find(c.MaMon)?.DuongDanAnh ?? "/images/default.jpg",
-                            SoLuong = c.SoLuong,
-                            DonGiaGoc = (decimal)c.DonGiaGoc,
-                            DonGiaSauGiam = (decimal)c.DonGiaSauGiam,
-                            TienGiamMon = (decimal)c.TienGiamMon,
-                            ThanhTien = (decimal)c.ThanhTien
+                            string img = c.DuongDanAnh ?? "";
+                            if (string.IsNullOrWhiteSpace(img))
+                            {
+                                img = _monAnService.Find(c.MaMon)?.DuongDanAnh ?? "/images/default.jpg";
+                            }
+                            else if (!img.StartsWith("/") && !img.StartsWith("http"))
+                            {
+                                img = "/images/" + img;
+                            }
+
+                            return new DonHangChiTietViewModel
+                            {
+                                MaMon = c.MaMon,
+                                TenMon = c.TenMon ?? "Món lẩu",
+                                DuongDanAnh = img,
+                                SoLuong = c.SoLuong,
+                                DonGiaGoc = (decimal)c.DonGiaGoc,
+                                DonGiaSauGiam = (decimal)c.DonGiaSauGiam,
+                                TienGiamMon = (decimal)c.TienGiamMon,
+                                ThanhTien = (decimal)c.ThanhTien
+                            };
                         }).ToList()
                     };
                 }
@@ -214,7 +191,7 @@ public class DonHangService
             _logger.LogWarning(ex, "Lỗi khi lấy chi tiết đơn hàng #{OrderId} từ API.", orderId);
         }
 
-        return _fallbackOrders.FirstOrDefault(o => o.MaDonHang == orderId);
+        return null;
     }
 
     public async Task<(bool Success, string Message)> CancelOrderAsync(string orderId, string? maKhachHang)
@@ -233,58 +210,15 @@ public class DonHangService
             else
             {
                 var msg = await response.Content.ReadAsStringAsync();
-                return (false, string.IsNullOrWhiteSpace(msg) ? "Không thể hủy đơn hàng này." : msg);
+                return (false, string.IsNullOrWhiteSpace(msg) ? "Không thể hủy đơn hàng này." : msg.Trim('"'));
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi gọi API hủy đơn hàng #{OrderId}", orderId);
-            var local = _fallbackOrders.FirstOrDefault(o => o.MaDonHang == orderId);
-            if (local != null)
-            {
-                local.TrangThai = "Cancelled";
-                local.TrangThaiLoc = "cancel";
-                local.BuocHienTai = 0;
-                return (true, "Hủy đơn hàng thành công (chế độ demo).");
-            }
-            return (false, "Lỗi hệ thống khi hủy đơn.");
+            return (false, "Không thể kết nối đến hệ thống khi hủy đơn.");
         }
     }
-
-    // Synchronous helpers for compatibility
-    public IReadOnlyList<DonHangViewModel> GetForDemoCustomer(string state = "all")
-        => FilterOrders(_fallbackOrders, state);
-
-    public string Create(DatHangViewModel customer, decimal total, IReadOnlyList<GioHangItemViewModel> items)
-    {
-        var id = "DH" + DateTime.Now.ToString("yyMMddHHmmss");
-        _fallbackOrders.Insert(0, new DonHangViewModel
-        {
-            MaDonHang = id,
-            MaKhachHang = "KH01",
-            NgayDat = DateTime.Now,
-            TongThanhToan = total,
-            TongTienHang = total,
-            TrangThai = "Pending",
-            TrangThaiLoc = "active",
-            BuocHienTai = 1,
-            TienTrinh = Steps(),
-            DiaChiGiao = customer.DiaChiGiao,
-            ChiTiet = items.Select(x => new DonHangChiTietViewModel
-            {
-                MaMon = x.MaMon,
-                TenMon = x.TenMon,
-                DuongDanAnh = !string.IsNullOrWhiteSpace(x.DuongDanAnh) ? x.DuongDanAnh : (_monAnService.Find(x.MaMon)?.DuongDanAnh ?? "/images/default.jpg"),
-                SoLuong = x.SoLuong,
-                DonGiaGoc = x.DonGia,
-                DonGiaSauGiam = x.DonGia,
-                ThanhTien = x.ThanhTien
-            }).ToList()
-        });
-        return id;
-    }
-
-    public DonHangViewModel? Find(string id) => _fallbackOrders.FirstOrDefault(x => x.MaDonHang == id);
 
     private static List<DonHangViewModel> FilterOrders(IEnumerable<DonHangViewModel> orders, string filter)
     {
@@ -299,7 +233,7 @@ public class DonHangService
         var s = (status ?? "").ToLowerInvariant();
         if (s == "completed" || s.Contains("hoàn tất") || s == "delivered") return "done";
         if (s == "cancelled" || s.Contains("hủy") || s == "rejected") return "cancel";
-        return "active"; // Pending, Confirmed, Preparing, Shipping
+        return "active";
     }
 
     private static string MapStatusText(string? status)
@@ -329,7 +263,6 @@ public class DonHangService
     private static List<string> Steps() => new() { "Đã đặt", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Hoàn tất" };
 }
 
-// Internal DTOs
 internal class ApiOrderCreateResponse
 {
     public string? Message { get; set; }
@@ -362,6 +295,7 @@ internal class ApiOrderDetailItemDto
 {
     public string MaMon { get; set; } = "";
     public string? TenMon { get; set; }
+    public string? DuongDanAnh { get; set; }
     public int SoLuong { get; set; }
     public double DonGiaGoc { get; set; }
     public double DonGiaSauGiam { get; set; }

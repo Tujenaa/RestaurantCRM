@@ -75,9 +75,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
 
         private async Task LoadDropdowns() {
             try {
-                // 1. Tải nhà cung cấp
-                var dsNCC = await _nccService.GetAllAsync();
-                cboNhaCungCap.DataSource = dsNCC;
+                // 1. Tải nhà cung cấp (chỉ lấy nhà cung cấp đang hoạt động, ẩn nhà cung cấp đã ẩn)
+                var dsNCC = await _nccService.GetAllAsync("Active");
+                var activeNCC = dsNCC.Where(x => x.IsActive).ToList();
+                cboNhaCungCap.DataSource = activeNCC;
                 cboNhaCungCap.DisplayMember = "TenNhaCungCap";
                 cboNhaCungCap.ValueMember = "MaNhaCungCap";
 

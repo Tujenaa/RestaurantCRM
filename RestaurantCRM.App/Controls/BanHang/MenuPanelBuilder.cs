@@ -184,7 +184,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             IEnumerable<MonAnDto> allMonAn,
             IEnumerable<KmMonDto> kmMonList,
             CartService cartService,
-            OrderCalculationService calcService)
+            OrderCalculationService calcService,
+            IEnumerable<VoucherDto> vouchers = null)
         {
             if (_productsPanel == null) return;
 
@@ -236,7 +237,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             foreach (var mon in filtered)
             {
-                var card = CreateDishCard(mon, kmMonList, cartService, calcService);
+                var card = CreateDishCard(mon, kmMonList, cartService, calcService, vouchers);
                 _productsPanel.Controls.Add(card);
             }
 
@@ -249,13 +250,14 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             IEnumerable<MonAnDto> allMonAn,
             IEnumerable<KmMonDto> kmMonList,
             CartService cartService,
-            OrderCalculationService calcService)
+            OrderCalculationService calcService,
+            IEnumerable<VoucherDto> vouchers = null)
         {
             if (_productsPanel == null) return;
             var currentCards = _productsPanel.Controls.OfType<RoundedPanel>().ToList();
             if (!currentCards.Any())
             {
-                RenderProducts(allMonAn, kmMonList, cartService, calcService);
+                RenderProducts(allMonAn, kmMonList, cartService, calcService, vouchers);
                 return;
             }
 
@@ -296,7 +298,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 bool canAddMore = virtualRemaining > 0;
                 bool rawInStock = mon.SoLuongTon > 0;
 
-                var (effPrice, promoText) = calcService.GetDishPriceInfo(mon, kmMonList);
+                var (effPrice, promoText, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
                 bool hasPromo = promoText != null;
 
                 card.BorderColor = rawInStock ? (hasPromo ? Color.FromArgb(254, 202, 202) : ThemeManager.Line) : Color.FromArgb(241, 245, 249);
@@ -359,14 +361,15 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             MonAnDto mon,
             IEnumerable<KmMonDto> kmMonList,
             CartService cartService,
-            OrderCalculationService calcService)
+            OrderCalculationService calcService,
+            IEnumerable<VoucherDto> vouchers = null)
         {
             int inCartQty = cartService.GetQuantityInCart(mon.MaMonAn);
             int virtualRemaining = Math.Max(0, mon.SoLuongTon - inCartQty);
             bool canAddMore = virtualRemaining > 0;
             bool rawInStock = mon.SoLuongTon > 0;
 
-            var (effPrice, promoText) = calcService.GetDishPriceInfo(mon, kmMonList);
+            var (effPrice, promoText, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
             bool hasPromo = promoText != null;
 
             var card = new RoundedPanel

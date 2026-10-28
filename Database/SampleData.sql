@@ -1,4 +1,4 @@
-USE RestaurantCRM;
+﻿USE RestaurantCRM;
 GO
 
 -- ============================================================================
@@ -429,14 +429,17 @@ INSERT INTO KM_THEO_SP (maKMSP, maChuongTrinh, maMon, phanTramGiam, tienGiam) VA
 ('KMSP13', 'KM12', 'M03', 10, NULL);
 GO
 
--- 13. KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa)
-INSERT INTO KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa) VALUES
-('KMV01', 'KM01', 'VOUCHER10', 300000, 10, NULL, NULL),
-('KMV02', 'KM02', 'VOUCHER40K', 250000, NULL, 40000, NULL),
-('KMV03', 'KM05', 'NHOM15', 700000, 15, NULL, NULL),
-('KMV04', 'KM07', 'WELCOME20', 200000, 20, NULL, 60000),
-('KMV05', 'KM08', 'TUUTRUONG10', 200000, 10, NULL, 40000),
-('KMV06', 'KM09', 'THANG10-50K', 500000, NULL, 50000, NULL);
+-- 13. KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa, phamViApDung, maLoaiMon, maMon, soLuongToiThieu, choPhepCongDon)
+INSERT INTO KM_THEO_VOUCHER (maKMVoucher, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa, phamViApDung, maLoaiMon, maMon, soLuongToiThieu, choPhepCongDon) VALUES
+('KMV01', 'KM01', 'VOUCHER10', 300000, 10, NULL, NULL, 'TOAN_DON', NULL, NULL, 1, 1),
+('KMV02', 'KM02', 'VOUCHER40K', 250000, NULL, 40000, NULL, 'TOAN_DON', NULL, NULL, 1, 1),
+('KMV03', 'KM05', 'NHOM15', 700000, 15, NULL, NULL, 'TOAN_DON', NULL, NULL, 1, 0),
+('KMV04', 'KM07', 'WELCOME20', 200000, 20, NULL, 60000, 'TOAN_DON', NULL, NULL, 1, 1),
+('KMV05', 'KM08', 'TUUTRUONG10', 200000, 10, NULL, 40000, 'TOAN_DON', NULL, NULL, 1, 1),
+('KMV06', 'KM09', 'THANG10-50K', 500000, NULL, 50000, NULL, 'TOAN_DON', NULL, NULL, 1, 1),
+('KMV07', 'KM01', 'LAU20', 200000, 20, NULL, 50000, 'THEO_LOAI', 'LM01', NULL, 1, 1),
+('KMV08', 'KM01', 'DOUONG10', 100000, 10, NULL, 30000, 'THEO_LOAI', 'LM05', NULL, 1, 1),
+('KMV09', 'KM06', 'THITBO20', NULL, NULL, 20000, 20000, 'THEO_MON', NULL, 'M05', 1, 1);
 GO
 
 -- 14. HOA_DON (maHoaDon, maKhachHang, maNhanVien, maKMVoucher, tenKhachHang, soDienThoai, diaChiGiao, ngayDat, ngayHoanTat, trangThai, tongTienHang, tienGiamVoucher, tongThanhToan)

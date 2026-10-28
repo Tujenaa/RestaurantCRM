@@ -19,7 +19,21 @@ public partial class KmTheoVoucher
 
     public double? GiamToiDa { get; set; }
 
+    public string? PhamViApDung { get; set; } = "TOAN_DON";
+
+    public string? MaLoaiMon { get; set; }
+
+    public string? MaMon { get; set; }
+
+    public int? SoLuongToiThieu { get; set; } = 1;
+
+    public bool? ChoPhepCongDon { get; set; } = true;
+
     public virtual ICollection<HoaDon> HoaDon { get; set; } = new List<HoaDon>();
 
     public virtual ChuongTrinhKhuyenMai? MaChuongTrinhNavigation { get; set; }
+
+    public virtual LoaiMon? MaLoaiMonNavigation { get; set; }
+
+    public virtual MonAn? MaMonNavigation { get; set; }
 }

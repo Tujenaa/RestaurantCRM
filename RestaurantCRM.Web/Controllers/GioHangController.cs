@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
-using System.Net.Http.Json;
 
 namespace RestaurantCRM.Web.Controllers;
 
@@ -18,30 +17,10 @@ public class GioHangController : Controller
         _httpClientFactory = httpClientFactory;
     }
 
-    private async Task SyncUsedVouchersAsync()
-    {
-        var customerId = HttpContext.Session.GetString("MaKhachHang");
-        if (string.IsNullOrEmpty(customerId)) return;
-
-        try
-        {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var response = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
-            if (response.IsSuccessStatusCode)
-            {
-                var codes = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
-                HttpContext.Session.SetString("UsedVouchers", string.Join(",", codes));
-            }
-        }
-        catch { }
-    }
-
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var customerId = HttpContext.Session.GetString("MaKhachHang");
-        await _gioHangService.SyncUsedVouchersFromApiAsync(HttpContext.Session, customerId);
-        return View(BuildPage());
+        return View(await BuildPageAsync());
     }
 
     [HttpGet]
@@ -55,8 +34,6 @@ public class GioHangController : Controller
         }
 
         var customerId = HttpContext.Session.GetString("MaKhachHang");
-        await _gioHangService.SyncUsedVouchersFromApiAsync(HttpContext.Session, customerId);
-
         var cart = _gioHangService.Get(HttpContext.Session, customerId);
         if (cart.Items.Count == 0) return RedirectToAction(nameof(Index));
 
@@ -101,7 +78,8 @@ public class GioHangController : Controller
             DiaChiGiao = defaultAddress
         };
 
-        return View(new CheckoutPageViewModel { GioHang = cart, DatHang = datHang });
+        var vouchers = await _gioHangService.GetAvailableVouchersAsync();
+        return View(new CheckoutPageViewModel { GioHang = cart, DatHang = datHang, AvailableVouchers = vouchers });
     }
 
     [HttpPost]
@@ -156,13 +134,13 @@ public class GioHangController : Controller
         var customerId = HttpContext.Session.GetString("MaKhachHang");
         if (string.IsNullOrWhiteSpace(model.MaVoucher))
         {
-            _gioHangService.ApplyVoucher(HttpContext.Session, null, customerId);
+            await _gioHangService.ApplyVoucherAsync(HttpContext.Session, null, customerId);
             TempData["ThongBao"] = "Đã gỡ mã ưu đãi khỏi đơn hàng.";
             TempData["IsError"] = false;
         }
         else
         {
-            var result = _gioHangService.ApplyVoucher(HttpContext.Session, model.MaVoucher, customerId);
+            var result = await _gioHangService.ApplyVoucherAsync(HttpContext.Session, model.MaVoucher, customerId);
             TempData["ThongBao"] = result.Message;
             TempData["IsError"] = !result.Success;
         }
@@ -198,7 +176,8 @@ public class GioHangController : Controller
 
         if (!ModelState.IsValid)
         {
-            return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model });
+            var vouchers = await _gioHangService.GetAvailableVouchersAsync();
+            return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model, AvailableVouchers = vouchers });
         }
 
         string orderCustomerId = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId;
@@ -210,13 +189,8 @@ public class GioHangController : Controller
         {
             ModelState.AddModelError("", result.ErrorMessage ?? "Đặt hàng thất bại. Vui lòng kiểm tra lại số lượng hoặc món ăn trong giỏ.");
             ViewBag.ErrorMessage = result.ErrorMessage;
-            return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model });
-        }
-
-        // Đánh dấu mã voucher này đã được sử dụng riêng cho vị khách này
-        if (!string.IsNullOrWhiteSpace(voucherCode) && !string.IsNullOrWhiteSpace(customerId))
-        {
-            _gioHangService.MarkVoucherAsUsed(HttpContext.Session, customerId, voucherCode);
+            var vouchers = await _gioHangService.GetAvailableVouchersAsync();
+            return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model, AvailableVouchers = vouchers });
         }
 
         _gioHangService.Clear(HttpContext.Session, orderCustomerId);
@@ -232,9 +206,15 @@ public class GioHangController : Controller
         return RedirectToAction("Index", "DonHang");
     }
 
-    private GioHangPageViewModel BuildPage()
+    private async Task<GioHangPageViewModel> BuildPageAsync()
     {
         var customerId = HttpContext.Session.GetString("MaKhachHang");
-        return new GioHangPageViewModel { GioHang = _gioHangService.Get(HttpContext.Session, customerId) };
+        var cart = _gioHangService.Get(HttpContext.Session, customerId);
+        var vouchers = await _gioHangService.GetAvailableVouchersAsync();
+        return new GioHangPageViewModel
+        {
+            GioHang = cart,
+            AvailableVouchers = vouchers
+        };
     }
 }

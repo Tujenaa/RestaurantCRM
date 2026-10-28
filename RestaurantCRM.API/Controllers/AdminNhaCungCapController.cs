@@ -18,9 +18,21 @@ namespace RestaurantCRM.API.Controllers
 
         // GET: api/AdminNhaCungCap - Lấy danh sách nhà cung cấp
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] string? trangThai = null)
         {
-            var nhaCungCaps = await _service.Query<NhaCungCap>().ToListAsync();
+            var query = _service.Query<NhaCungCap>();
+            if (!string.IsNullOrWhiteSpace(trangThai))
+            {
+                if (string.Equals(trangThai, "Active", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(n => n.TrangThai == null || n.TrangThai == "" || n.TrangThai == "Active");
+                }
+                else
+                {
+                    query = query.Where(n => n.TrangThai == trangThai);
+                }
+            }
+            var nhaCungCaps = await query.ToListAsync();
             return Ok(nhaCungCaps);
         }
 
@@ -44,6 +56,10 @@ namespace RestaurantCRM.API.Controllers
             {
                 nhaCungCap.MaNhaCungCap = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaNhaCungCapAsync(_service);
             }
+            if (string.IsNullOrWhiteSpace(nhaCungCap.TrangThai))
+            {
+                nhaCungCap.TrangThai = "Active";
+            }
             _service.Add(nhaCungCap);
             await _service.SaveChangesAsync();
 
@@ -59,7 +75,20 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("ID không khớp.");
             }
 
-            _service.Update(nhaCungCap);
+            var existing = await _service.FindAsync<NhaCungCap>(id);
+            if (existing == null)
+            {
+                return NotFound("Không tìm thấy nhà cung cấp.");
+            }
+
+            existing.TenNhaCungCap = nhaCungCap.TenNhaCungCap;
+            existing.SoDienThoai = nhaCungCap.SoDienThoai;
+            existing.DiaChi = nhaCungCap.DiaChi;
+            existing.Email = nhaCungCap.Email;
+            if (!string.IsNullOrWhiteSpace(nhaCungCap.TrangThai))
+            {
+                existing.TrangThai = nhaCungCap.TrangThai;
+            }
 
             try
             {
@@ -87,19 +116,23 @@ namespace RestaurantCRM.API.Controllers
             var nhaCungCap = await _service.FindAsync<NhaCungCap>(id);
             if (nhaCungCap == null)
             {
-                return NotFound();
+                return NotFound("Không tìm thấy nhà cung cấp.");
             }
 
             var hasPhieuNhap = await _service.Query<PhieuNhapHang>().AnyAsync(p => p.MaNhaCungCap == id);
             if (hasPhieuNhap)
             {
-                return BadRequest("Không thể xóa nhà cung cấp này vì đã có lịch sử nhập hàng.");
+                nhaCungCap.TrangThai = "Hidden";
+                _service.Update(nhaCungCap);
+                await _service.SaveChangesAsync();
+
+                return Ok(new { message = "NCC đã có phiếu nhập nên sẽ ẩn NCC", isHidden = true });
             }
 
             _service.Remove(nhaCungCap);
             await _service.SaveChangesAsync();
 
-            return Ok(new { message = "Xóa thành công" });
+            return Ok(new { message = "Xóa thành công", isHidden = false });
         }
 
         private bool NhaCungCapExists(string id)

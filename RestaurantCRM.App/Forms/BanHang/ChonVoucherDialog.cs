@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
+using RestaurantCRM.AdminApp.Services.BanHang;
 
 namespace RestaurantCRM.AdminApp.Forms.BanHang
 {
@@ -16,11 +17,11 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
     {
         public VoucherDto SelectedVoucher { get; private set; }
 
-        public ChonVoucherDialog(decimal currentSubTotal, List<VoucherDto> vouchers, VoucherDto currentApplied)
+        public ChonVoucherDialog(decimal currentSubTotal, List<VoucherDto> vouchers, VoucherDto currentApplied, IEnumerable<CartItem> cartItems = null)
         {
             Text = "Chọn Voucher & Khuyến Mãi Hóa Đơn";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(480, 560);
+            Size = new Size(500, 580);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -28,6 +29,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             Font = new Font("Segoe UI", 9.5F);
 
             SelectedVoucher = currentApplied;
+            var calcService = new OrderCalculationService();
 
             var root = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20), BackColor = ThemeManager.Bg };
             Controls.Add(root);
@@ -44,7 +46,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
             var lblSub = new Label
             {
-                Text = $"Tổng tiền món hiện tại: {currentSubTotal:N0} đ",
+                Text = $"Tổng tiền món tính voucher: {currentSubTotal:N0} đ",
                 Location = new Point(2, 28),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
@@ -56,7 +58,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var pnlInput = new Panel
             {
                 Location = new Point(0, 56),
-                Size = new Size(424, 38),
+                Size = new Size(444, 38),
                 BackColor = Color.White
             };
             root.Controls.Add(pnlInput);
@@ -64,7 +66,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var txtCode = new TextBox
             {
                 Location = new Point(8, 7),
-                Width = 280,
+                Width = 300,
                 Font = new Font("Segoe UI", 10F),
                 ForeColor = ThemeManager.Muted,
                 Text = "Nhập mã voucher (VD: GIAM20K)..."
@@ -88,7 +90,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var btnApplyCode = new Button
             {
                 Text = "Áp dụng",
-                Location = new Point(296, 4),
+                Location = new Point(316, 4),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(14, 124, 134),
                 ForeColor = Color.White,
@@ -116,10 +118,12 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                     MessageBox.Show(this, $"Mã voucher '{found.MaVoucher}' hiện ở trạng thái: {found.TrangThai}.", "Chưa thể áp dụng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
-                decimal minOrder = (decimal)(found.GiaTriDonToiThieu ?? 0);
-                if (currentSubTotal < minOrder)
+
+                var (isEligible, discount, missing) = calcService.EvaluateVoucher(found, currentSubTotal, cartItems);
+                if (!isEligible)
                 {
-                    MessageBox.Show(this, $"Mã '{found.MaVoucher}' yêu cầu đơn tối thiểu {minOrder:N0} đ. Hiện tại giỏ hàng mới đạt {currentSubTotal:N0} đ.", "Chưa đủ điều kiện", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    decimal minOrder = (decimal)(found.GiaTriDonToiThieu ?? 0);
+                    MessageBox.Show(this, $"Mã '{found.MaVoucher}' yêu cầu đơn tối thiểu {minOrder:N0} đ. Hiện tại giỏ hàng mới đạt {currentSubTotal:N0} đ (Cần thêm {missing:N0} đ).", "Chưa đủ điều kiện", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
                 SelectedVoucher = found;
@@ -132,7 +136,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var flow = new FlowLayoutPanel
             {
                 Location = new Point(0, 104),
-                Size = new Size(424, 320),
+                Size = new Size(444, 340),
                 AutoScroll = true,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
@@ -140,7 +144,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             root.Controls.Add(flow);
 
-            var activeList = vouchers.Where(v => v.TrangThai == "Đang áp dụng").ToList();
+            var activeList = (vouchers ?? new List<VoucherDto>()).Where(v => v.TrangThai == "Đang áp dụng").ToList();
             if (!activeList.Any())
             {
                 flow.Controls.Add(new Label
@@ -155,13 +159,12 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             {
                 foreach (var v in activeList)
                 {
-                    decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
-                    bool isEligible = currentSubTotal >= minOrder;
+                    var (isEligible, discount, missing) = calcService.EvaluateVoucher(v, currentSubTotal, cartItems);
                     bool isCurrent = currentApplied != null && (currentApplied.MaVoucher == v.MaVoucher || currentApplied.MaKmvoucher == v.MaKmvoucher);
 
                     var card = new RoundedPanel
                     {
-                        Size = new Size(398, 76),
+                        Size = new Size(418, 80),
                         Margin = new Padding(0, 0, 0, 8),
                         Radius = 8,
                         BorderWidth = 1,
@@ -169,9 +172,13 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                         FillColor = isCurrent ? Color.FromArgb(240, 253, 250) : Color.White
                     };
 
+                    string phamViTag = v.PhamViApDung == "THEO_LOAI" ? $" [Nhóm: {v.TenLoaiMon ?? v.MaLoaiMon}]"
+                                     : v.PhamViApDung == "THEO_MON" ? $" [Món: {v.TenMon ?? v.MaMon}]"
+                                     : " [Toàn đơn]";
+
                     var lblCode = new Label
                     {
-                        Text = $"🎟️ {v.MaVoucher}",
+                        Text = $"🎟️ {v.MaVoucher}{phamViTag}",
                         Location = new Point(10, 8),
                         AutoSize = true,
                         Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
@@ -189,10 +196,11 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                     };
                     card.Controls.Add(lblDiscountDesc);
 
+                    decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
                     var lblCondition = new Label
                     {
                         Text = minOrder > 0 ? $"Đơn tối thiểu: {minOrder:N0} đ" : "Áp dụng cho mọi giá trị đơn",
-                        Location = new Point(10, 50),
+                        Location = new Point(10, 52),
                         AutoSize = true,
                         Font = new Font("Segoe UI", 8F),
                         ForeColor = ThemeManager.Muted
@@ -204,7 +212,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                         var btnSelect = new Button
                         {
                             Text = isCurrent ? "Đang chọn" : "Chọn mã",
-                            Location = new Point(292, 22),
+                            Location = new Point(312, 24),
                             Size = new Size(94, 32),
                             BackColor = isCurrent ? Color.FromArgb(22, 163, 74) : Color.FromArgb(14, 124, 134),
                             ForeColor = Color.White,
@@ -224,8 +232,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                     {
                         var lblMissing = new Label
                         {
-                            Text = $"Thiếu {(minOrder - currentSubTotal):N0} đ",
-                            Location = new Point(280, 28),
+                            Text = $"Thiếu {missing:N0} đ",
+                            Location = new Point(296, 28),
                             Size = new Size(110, 24),
                             TextAlign = ContentAlignment.MiddleRight,
                             Font = new Font("Segoe UI", 8F, FontStyle.Bold),
@@ -242,8 +250,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var btnClearVoucher = new Button
             {
                 Text = "Bỏ dùng voucher",
-                Location = new Point(0, 436),
-                Size = new Size(160, 34),
+                Location = new Point(0, 456),
+                Size = new Size(160, 36),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White,
                 ForeColor = ThemeManager.Red,
@@ -260,8 +268,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var btnClose = new Button
             {
                 Text = "Đóng",
-                Location = new Point(304, 436),
-                Size = new Size(120, 34),
+                Location = new Point(324, 456),
+                Size = new Size(120, 36),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White,
                 ForeColor = ThemeManager.Ink,

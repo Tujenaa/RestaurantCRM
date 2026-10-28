@@ -16,19 +16,24 @@ namespace RestaurantCRM.API.Controllers
             _service = service;
         }
 
-        // GET: api/KhuyenMai/Vouchers?maKhachHang=... - Lấy danh sách Voucher hợp lệ (ẩn voucher đã dùng của khách)
+        // GET: api/KhuyenMai/Vouchers - Lấy danh sách Voucher hợp lệ
         [HttpGet("Vouchers")]
-        public async Task<IActionResult> GetVouchers([FromQuery] string? maKhachHang = null)
+        public async Task<IActionResult> GetVouchers()
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var query = _service.Query<KmTheoVoucher>()
+            var vouchers = await _service.Query<KmTheoVoucher>()
                 .Include(v => v.MaChuongTrinhNavigation)
+                .Include(v => v.MaLoaiMonNavigation)
+                .Include(v => v.MaMonNavigation)
+                .Include(v => v.HoaDon)
                 .Where(v => v.MaChuongTrinhNavigation != null 
+                         && (v.ChoPhepCongDon == null || v.ChoPhepCongDon == true)
+                         && (v.MaVoucher == null || !v.MaVoucher.StartsWith("[DA_HUY]_"))
+                         && ((v.PhanTramGiam.HasValue && v.PhanTramGiam > 0) || (v.TienGiam.HasValue && v.TienGiam > 0))
+                         && (!v.SoLuongToiThieu.HasValue || v.SoLuongToiThieu <= 0 || v.HoaDon.Count(h => h.TrangThai != "Cancelled") < v.SoLuongToiThieu.Value)
                          && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
-                         && (v.MaChuongTrinhNavigation.NgayKetThuc == null || v.MaChuongTrinhNavigation.NgayKetThuc >= today));
-
-            var vouchers = await query
+                         && (v.MaChuongTrinhNavigation.NgayKetThuc == null || v.MaChuongTrinhNavigation.NgayKetThuc >= today))
                 .Select(v => new
                 {
                     v.MaKmvoucher,
@@ -38,61 +43,24 @@ namespace RestaurantCRM.API.Controllers
                     v.TienGiam,
                     v.GiaTriDonToiThieu,
                     v.GiamToiDa,
+                    v.PhamViApDung,
+                    v.MaLoaiMon,
+                    TenLoaiMon = v.MaLoaiMonNavigation != null ? v.MaLoaiMonNavigation.TenLoaiMon : null,
+                    v.MaMon,
+                    TenMon = v.MaMonNavigation != null ? v.MaMonNavigation.TenMon : null,
+                    v.SoLuongToiThieu,
+                    v.ChoPhepCongDon,
                     v.MaChuongTrinhNavigation.NgayBatDau,
                     v.MaChuongTrinhNavigation.NgayKetThuc
                 })
                 .ToListAsync();
 
-            if (!string.IsNullOrWhiteSpace(maKhachHang))
-            {
-                var usedKeys = await _service.Query<HoaDon>()
-                    .Where(h => h.MaKhachHang == maKhachHang && h.TrangThai != "Cancelled" && h.MaKmvoucher != null)
-                    .Select(h => h.MaKmvoucher!)
-                    .Distinct()
-                    .ToListAsync();
-
-                vouchers = vouchers
-                    .Where(v => !usedKeys.Contains(v.MaKmvoucher) && (v.MaVoucher == null || !usedKeys.Contains(v.MaVoucher)))
-                    .ToList();
-            }
-
             return Ok(vouchers);
         }
 
-        // GET: api/KhuyenMai/UsedVouchers/{maKhachHang} - Lấy danh sách voucher khách hàng đã từng sử dụng
-        [HttpGet("UsedVouchers/{maKhachHang}")]
-        public async Task<IActionResult> GetUsedVouchers(string maKhachHang)
-        {
-            if (string.IsNullOrWhiteSpace(maKhachHang))
-            {
-                return Ok(new List<string>());
-            }
-
-            var usedOrders = await _service.Query<HoaDon>()
-                .Where(h => h.MaKhachHang == maKhachHang && !string.IsNullOrEmpty(h.MaKmvoucher) && h.TrangThai != "Cancelled")
-                .Include(h => h.MaKmvoucherNavigation)
-                .Select(h => new
-                {
-                    h.MaKmvoucher,
-                    MaVoucher = h.MaKmvoucherNavigation != null ? h.MaKmvoucherNavigation.MaVoucher : null
-                })
-                .ToListAsync();
-
-            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var item in usedOrders)
-            {
-                if (!string.IsNullOrWhiteSpace(item.MaKmvoucher))
-                    result.Add(item.MaKmvoucher.Trim().ToUpperInvariant());
-                if (!string.IsNullOrWhiteSpace(item.MaVoucher))
-                    result.Add(item.MaVoucher.Trim().ToUpperInvariant());
-            }
-
-            return Ok(result.ToList());
-        }
-
-        // GET: api/KhuyenMai/KiemTraVoucher?code=...&subtotal=...&maKhachHang=...
+        // GET: api/KhuyenMai/KiemTraVoucher?code=...&subtotal=...
         [HttpGet("KiemTraVoucher")]
-        public async Task<IActionResult> KiemTraVoucher([FromQuery] string code, [FromQuery] double subtotal, [FromQuery] string? maKhachHang = null)
+        public async Task<IActionResult> KiemTraVoucher([FromQuery] string code, [FromQuery] double subtotal)
         {
             if (string.IsNullOrWhiteSpace(code))
                 return BadRequest(new { valid = false, message = "Vui lòng nhập mã giảm giá." });
@@ -100,22 +68,28 @@ namespace RestaurantCRM.API.Controllers
             var today = DateOnly.FromDateTime(DateTime.Now);
             var voucher = await _service.Query<KmTheoVoucher>()
                 .Include(v => v.MaChuongTrinhNavigation)
+                .Include(v => v.MaLoaiMonNavigation)
+                .Include(v => v.MaMonNavigation)
+                .Include(v => v.HoaDon)
                 .FirstOrDefaultAsync(v => v.MaVoucher == code.Trim().ToUpper() || v.MaKmvoucher == code.Trim().ToUpper());
 
             if (voucher == null || voucher.MaChuongTrinhNavigation == null)
                 return Ok(new { valid = false, message = "Mã voucher không tồn tại." });
 
-            if (!string.IsNullOrWhiteSpace(maKhachHang))
+            if (voucher.ChoPhepCongDon == false || (voucher.MaVoucher != null && voucher.MaVoucher.StartsWith("[DA_HUY]_")))
+                return Ok(new { valid = false, message = "Mã voucher này đã bị ẩn hoặc hủy áp dụng." });
+
+            if (voucher.SoLuongToiThieu.HasValue && voucher.SoLuongToiThieu.Value > 0)
             {
-                var isUsed = await _service.Query<HoaDon>()
-                    .AnyAsync(h => h.MaKhachHang == maKhachHang 
-                                && (h.MaKmvoucher == voucher.MaKmvoucher || (voucher.MaVoucher != null && h.MaKmvoucher == voucher.MaVoucher)) 
-                                && h.TrangThai != "Cancelled");
-                if (isUsed)
+                int daDung = voucher.HoaDon.Count(h => h.TrangThai != "Cancelled");
+                if (daDung >= voucher.SoLuongToiThieu.Value)
                 {
-                    return Ok(new { valid = false, message = $"Bạn đã từng sử dụng mã {code.Trim().ToUpper()} này rồi. Mỗi khách hàng chỉ được áp dụng 1 lần." });
+                    return Ok(new { valid = false, message = "Mã voucher này đã hết lượt sử dụng." });
                 }
             }
+
+            if ((!voucher.PhanTramGiam.HasValue || voucher.PhanTramGiam <= 0) && (!voucher.TienGiam.HasValue || voucher.TienGiam <= 0))
+                return Ok(new { valid = false, message = "Voucher không còn hiệu lực giảm giá." });
 
             var ct = voucher.MaChuongTrinhNavigation;
             if (ct.NgayBatDau.HasValue && today < ct.NgayBatDau.Value)
@@ -149,7 +123,15 @@ namespace RestaurantCRM.API.Controllers
                 tenChuongTrinh = ct.TenChuongTrinh,
                 phanTramGiam = voucher.PhanTramGiam,
                 tienGiam = voucher.TienGiam,
+                giaTriDonToiThieu = voucher.GiaTriDonToiThieu,
                 giamToiDa = voucher.GiamToiDa,
+                phamViApDung = voucher.PhamViApDung ?? "TOAN_DON",
+                maLoaiMon = voucher.MaLoaiMon,
+                tenLoaiMon = voucher.MaLoaiMonNavigation?.TenLoaiMon,
+                maMon = voucher.MaMon,
+                tenMon = voucher.MaMonNavigation?.TenMon,
+                soLuongToiThieu = voucher.SoLuongToiThieu ?? 1,
+                choPhepCongDon = voucher.ChoPhepCongDon ?? true,
                 giaTriGiamThucTe = discount,
                 tongTienSauGiam = Math.Max(0, subtotal - discount),
                 message = $"Áp dụng thành công! Giảm {discount:N0} đ."
@@ -165,6 +147,7 @@ namespace RestaurantCRM.API.Controllers
             var giamGiaMons = await _service.Query<KmTheoSp>()
                 .Include(k => k.MaChuongTrinhNavigation)
                 .Where(k => k.MaChuongTrinhNavigation != null 
+                         && ((k.PhanTramGiam.HasValue && k.PhanTramGiam > 0) || (k.TienGiam.HasValue && k.TienGiam > 0))
                          && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today)
                          && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today))
                 .Select(k => new

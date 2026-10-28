@@ -23,6 +23,8 @@ namespace RestaurantCRM.API.Controllers
             var query = _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.DinhLuong)
+                    .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock"))
                 .AsNoTracking();
 
