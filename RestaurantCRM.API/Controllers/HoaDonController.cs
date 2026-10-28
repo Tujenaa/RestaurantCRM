@@ -146,8 +146,7 @@ namespace RestaurantCRM.API.Controllers
                         if (promo != null && promo.MaChuongTrinhNavigation != null)
                         {
                             maChuongTrinhKm = promo.MaKmsp;
-                            
-                            soLuongGiam = item.SoLuong; // Không còn quota
+                            soLuongGiam = item.SoLuong;
 
                             if (soLuongGiam > 0)
                             {
@@ -177,6 +176,7 @@ namespace RestaurantCRM.API.Controllers
                             MaHoaDon = maHoaDon,
                             MaMon = item.MaMon,
                             MaKmsp = maChuongTrinhKm,
+                            TenMon = monAn.TenMon,
                             SoLuong = item.SoLuong,
                             DonGiaGoc = donGiaGoc,
                             DonGiaSauGiam = soLuongGiam > 0 ? donGiaSauGiam : donGiaGoc,
@@ -206,6 +206,18 @@ namespace RestaurantCRM.API.Controllers
                             (ct.NgayKetThuc == null || ct.NgayKetThuc >= today) &&
                             (voucher.GiaTriDonToiThieu == null || hoaDon.TongTienHang >= voucher.GiaTriDonToiThieu))
                         {
+                            if (!string.IsNullOrEmpty(request.MaKhachHang))
+                            {
+                                var isAlreadyUsed = await _service.Query<HoaDon>()
+                                    .AnyAsync(h => h.MaKhachHang == request.MaKhachHang 
+                                                && (h.MaKmvoucher == voucher.MaKmvoucher || (voucher.MaVoucher != null && h.MaKmvoucher == voucher.MaVoucher)) 
+                                                && h.TrangThai != "Cancelled");
+                                if (isAlreadyUsed)
+                                {
+                                    return BadRequest($"Khách hàng đã từng sử dụng voucher {request.MaKmvoucher} này trong đơn hàng trước. Mỗi khách hàng chỉ được dùng 1 lần.");
+                                }
+                            }
+
                             hoaDon.MaKmvoucher = voucher.MaKmvoucher;
                             
                             double tienGiam = 0;
@@ -342,7 +354,7 @@ namespace RestaurantCRM.API.Controllers
                 .Select(d => new 
                 {
                     d.MaHoaDon,
-                    d.NgayDat,
+                    NgayDat = d.NgayDat,
                     d.TrangThai,
                     d.TongThanhToan,
                     SoMon = d.ChiTietHoaDon.Sum(c => c.SoLuong)
@@ -371,7 +383,7 @@ namespace RestaurantCRM.API.Controllers
             var result = new
             {
                 hoaDon.MaHoaDon,
-                hoaDon.NgayDat,
+                NgayDat = hoaDon.NgayDat,
                 hoaDon.TrangThai,
                 hoaDon.DiaChiGiao,
                 hoaDon.TongTienHang,
@@ -381,7 +393,8 @@ namespace RestaurantCRM.API.Controllers
                 ChiTiet = hoaDon.ChiTietHoaDon.Select(c => new
                 {
                     c.MaMon,
-                    TenMon = c.MaMonNavigation?.TenMon,
+                    TenMon = c.MaMonNavigation?.TenMon ?? c.TenMon,
+                    DuongDanAnh = c.MaMonNavigation?.DuongDanAnh,
                     c.SoLuong,
                     c.DonGiaGoc,
                     c.DonGiaSauGiam,

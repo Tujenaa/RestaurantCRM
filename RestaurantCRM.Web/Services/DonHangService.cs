@@ -102,7 +102,12 @@ public class DonHangService
 
     public async Task<List<DonHangViewModel>> GetOrdersForCustomerAsync(string? maKhachHang, string filter = "all")
     {
-        string customerId = string.IsNullOrWhiteSpace(maKhachHang) ? "KH01" : maKhachHang;
+        if (string.IsNullOrWhiteSpace(maKhachHang))
+        {
+            return new List<DonHangViewModel>();
+        }
+
+        string customerId = maKhachHang.Trim();
 
         try
         {
@@ -112,44 +117,53 @@ public class DonHangService
             if (response.IsSuccessStatusCode)
             {
                 var list = await response.Content.ReadFromJsonAsync<List<ApiOrderSummaryDto>>();
-                if (list != null && list.Count > 0)
+                if (list == null || list.Count == 0)
                 {
-                    var orders = new List<DonHangViewModel>();
-
-                    foreach (var s in list)
-                    {
-                        var detail = await GetOrderDetailAsync(s.MaHoaDon);
-                        if (detail != null)
-                        {
-                            orders.Add(detail);
-                        }
-                        else
-                        {
-                            var statusLoc = MapStatusLoc(s.TrangThai);
-                            orders.Add(new DonHangViewModel
-                            {
-                                MaDonHang = s.MaHoaDon,
-                                MaKhachHang = customerId,
-                                NgayDat = s.NgayDat,
-                                TongThanhToan = (decimal)s.TongThanhToan,
-                                TrangThai = MapStatusText(s.TrangThai),
-                                TrangThaiLoc = statusLoc,
-                                BuocHienTai = MapStep(s.TrangThai),
-                                TienTrinh = Steps()
-                            });
-                        }
-                    }
-
-                    return FilterOrders(orders, filter);
+                    // Tài khoản chưa có đơn hàng nào -> Trả về danh sách rỗng, không dùng dữ liệu mẫu (mock/fallback)
+                    return new List<DonHangViewModel>();
                 }
+
+                var orders = new List<DonHangViewModel>();
+
+                foreach (var s in list)
+                {
+                    var detail = await GetOrderDetailAsync(s.MaHoaDon);
+                    if (detail != null)
+                    {
+                        orders.Add(detail);
+                    }
+                    else
+                    {
+                        var statusLoc = MapStatusLoc(s.TrangThai);
+                        orders.Add(new DonHangViewModel
+                        {
+                            MaDonHang = s.MaHoaDon,
+                            MaKhachHang = customerId,
+                            NgayDat = s.NgayDat,
+                            TongThanhToan = (decimal)s.TongThanhToan,
+                            TrangThai = MapStatusText(s.TrangThai),
+                            TrangThaiLoc = statusLoc,
+                            BuocHienTai = MapStep(s.TrangThai),
+                            TienTrinh = Steps()
+                        });
+                    }
+                }
+
+                return FilterOrders(orders, filter);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Lỗi khi lấy lịch sử đơn hàng từ API, dùng dữ liệu fallback.");
+            _logger.LogWarning(ex, "Lỗi khi lấy lịch sử đơn hàng từ API cho khách hàng {CustomerId}.", customerId);
         }
 
-        return FilterOrders(_fallbackOrders, filter);
+        // Tuyệt đối không trả về mock/fallback cho tài khoản khách hàng thực tế
+        if (customerId.Equals("KH01", StringComparison.OrdinalIgnoreCase))
+        {
+            return FilterOrders(_fallbackOrders, filter);
+        }
+
+        return new List<DonHangViewModel>();
     }
 
     public async Task<DonHangViewModel?> GetOrderDetailAsync(string orderId)

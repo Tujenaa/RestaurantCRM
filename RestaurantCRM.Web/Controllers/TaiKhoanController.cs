@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
+using RestaurantCRM.Web.Services;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -10,10 +11,12 @@ namespace RestaurantCRM.Web.Controllers;
 public class TaiKhoanController : Controller
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly GioHangService _gioHangService;
 
-    public TaiKhoanController(IHttpClientFactory httpClientFactory)
+    public TaiKhoanController(IHttpClientFactory httpClientFactory, GioHangService gioHangService)
     {
         _httpClientFactory = httpClientFactory;
+        _gioHangService = gioHangService;
     }
 
     [HttpGet]
@@ -98,6 +101,11 @@ public class TaiKhoanController : Controller
     [HttpGet]
     public IActionResult DangXuat()
     {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (!string.IsNullOrWhiteSpace(customerId))
+        {
+            _gioHangService.PreserveCartBeforeLogout(HttpContext.Session, customerId);
+        }
         HttpContext.Session.Clear();
         TempData["ThongBao"] = "Đã đăng xuất tài khoản thành công.";
         return RedirectToAction("Index", "TrangChu");
@@ -136,8 +144,9 @@ public class TaiKhoanController : Controller
                     return RedirectToAction(nameof(DangNhap), new { returnUrl });
                 }
 
+                var customerId = idProperty.GetString() ?? "";
                 HttpContext.Session.SetString("Token", tokenProperty.GetString() ?? "");
-                HttpContext.Session.SetString("MaKhachHang", idProperty.GetString() ?? "");
+                HttpContext.Session.SetString("MaKhachHang", customerId);
                 HttpContext.Session.SetString("HoTen", nameProperty.GetString() ?? "");
 
                 if (khachHang.TryGetProperty("email", out var emailProp) && emailProp.ValueKind == JsonValueKind.String)
@@ -148,6 +157,29 @@ public class TaiKhoanController : Controller
                 {
                     HttpContext.Session.SetString("SoDienThoai", phoneProp.GetString() ?? "");
                 }
+                if (khachHang.TryGetProperty("diaChi", out var addrProp) && addrProp.ValueKind == JsonValueKind.String)
+                {
+                    var addr = addrProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(addr))
+                    {
+                        HttpContext.Session.SetString("DiaChiGiaoHang", addr);
+                    }
+                }
+
+                // Đồng bộ danh sách voucher khách hàng đã sử dụng vào Session
+                try
+                {
+                    var usedRes = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
+                    if (usedRes.IsSuccessStatusCode)
+                    {
+                        var usedCodes = await usedRes.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
+                        HttpContext.Session.SetString("UsedVouchers", string.Join(",", usedCodes));
+                    }
+                }
+                catch { }
+
+                // Khôi phục và hợp nhất các món trong giỏ hàng đã lưu của khách hàng
+                _gioHangService.RestoreCartOnLogin(HttpContext.Session, customerId);
 
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 {

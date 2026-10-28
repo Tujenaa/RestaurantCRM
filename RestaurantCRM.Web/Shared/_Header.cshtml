@@ -18,7 +18,7 @@
         <div class="top-actions">
             <a class="cart-btn" asp-controller="GioHang" asp-action="Index" aria-label="Giỏ hàng (@cartCount món)">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.1a2 2 0 0 0 2-1.5L21.5 8H6" /></svg>
-                <span class="cart-count@(cartCount == 0 ? " is-empty" : "")">@cartCount</span>
+                <span id="headerCartCount" class="cart-count count@(cartCount == 0 ? " is-empty" : "")">@cartCount</span>
             </a>
             @if (Context.Session.GetString("Token") != null)
             {

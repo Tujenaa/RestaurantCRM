@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
+using System.Net.Http.Json;
 
 namespace RestaurantCRM.Web.Controllers;
 
@@ -17,8 +18,31 @@ public class GioHangController : Controller
         _httpClientFactory = httpClientFactory;
     }
 
+    private async Task SyncUsedVouchersAsync()
+    {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(customerId)) return;
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var codes = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
+                HttpContext.Session.SetString("UsedVouchers", string.Join(",", codes));
+            }
+        }
+        catch { }
+    }
+
     [HttpGet]
-    public IActionResult Index() => View(BuildPage());
+    public async Task<IActionResult> Index()
+    {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        await _gioHangService.SyncUsedVouchersFromApiAsync(HttpContext.Session, customerId);
+        return View(BuildPage());
+    }
 
     [HttpGet]
     public async Task<IActionResult> Checkout()
@@ -30,7 +54,10 @@ public class GioHangController : Controller
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
 
-        var cart = _gioHangService.Get(HttpContext.Session);
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        await _gioHangService.SyncUsedVouchersFromApiAsync(HttpContext.Session, customerId);
+
+        var cart = _gioHangService.Get(HttpContext.Session, customerId);
         if (cart.Items.Count == 0) return RedirectToAction(nameof(Index));
 
         // Pre-fill user information if logged in
@@ -42,7 +69,6 @@ public class GioHangController : Controller
         {
             try
             {
-                var customerId = HttpContext.Session.GetString("MaKhachHang");
                 if (!string.IsNullOrEmpty(customerId))
                 {
                     var client = _httpClientFactory.CreateClient("ApiClient");
@@ -82,13 +108,21 @@ public class GioHangController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult Them(ThemGioHangViewModel model, [FromHeader(Name = "Referer")] string referer)
     {
-        if (ModelState.IsValid)
-        {
-            _gioHangService.Add(HttpContext.Session, model.MaMon, model.SoLuong);
-            TempData["ThongBao"] = "Đã thêm món vào giỏ hàng.";
-        }
-        
         var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+        if (!ModelState.IsValid)
+        {
+            if (isAjax)
+            {
+                var cart = _gioHangService.Get(HttpContext.Session);
+                return Json(new { success = false, message = "Thông tin món ăn không hợp lệ.", cartCount = cart.Items.Sum(x => x.SoLuong) });
+            }
+            if (!string.IsNullOrEmpty(referer)) return Redirect(referer);
+            return RedirectToAction(nameof(Index));
+        }
+
+        _gioHangService.Add(HttpContext.Session, model.MaMon, model.SoLuong);
+        TempData["ThongBao"] = "Đã thêm món vào giỏ hàng.";
+        
         if (isAjax)
         {
             TempData.Remove("ThongBao");
@@ -117,17 +151,18 @@ public class GioHangController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Voucher(ApDungVoucherViewModel model)
+    public async Task<IActionResult> Voucher(ApDungVoucherViewModel model)
     {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
         if (string.IsNullOrWhiteSpace(model.MaVoucher))
         {
-            _gioHangService.ApplyVoucher(HttpContext.Session, null);
+            _gioHangService.ApplyVoucher(HttpContext.Session, null, customerId);
             TempData["ThongBao"] = "Đã gỡ mã ưu đãi khỏi đơn hàng.";
             TempData["IsError"] = false;
         }
         else
         {
-            var result = _gioHangService.ApplyVoucher(HttpContext.Session, model.MaVoucher);
+            var result = _gioHangService.ApplyVoucher(HttpContext.Session, model.MaVoucher, customerId);
             TempData["ThongBao"] = result.Message;
             TempData["IsError"] = !result.Success;
         }
@@ -151,8 +186,9 @@ public class GioHangController : Controller
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
 
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
         var model = page.DatHang;
-        var cart = _gioHangService.Get(HttpContext.Session);
+        var cart = _gioHangService.Get(HttpContext.Session, customerId);
 
         if (cart.Items.Count == 0)
         {
@@ -165,10 +201,10 @@ public class GioHangController : Controller
             return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model });
         }
 
-        var customerId = HttpContext.Session.GetString("MaKhachHang") ?? "KH01";
+        string orderCustomerId = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId;
         var voucherCode = cart.MaVoucher;
 
-        var result = await _donHangService.CreateOrderAsync(model, customerId, voucherCode, cart.Items);
+        var result = await _donHangService.CreateOrderAsync(model, orderCustomerId, voucherCode, cart.Items);
 
         if (!result.Success)
         {
@@ -177,14 +213,14 @@ public class GioHangController : Controller
             return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model });
         }
 
-        _gioHangService.Clear(HttpContext.Session);
-        TempData["DonHangMoi"] = result.OrderId;
-
-        if (!string.IsNullOrWhiteSpace(voucherCode))
+        // Đánh dấu mã voucher này đã được sử dụng riêng cho vị khách này
+        if (!string.IsNullOrWhiteSpace(voucherCode) && !string.IsNullOrWhiteSpace(customerId))
         {
-            var used = HttpContext.Session.GetString("UsedVouchers");
-            HttpContext.Session.SetString("UsedVouchers", string.IsNullOrEmpty(used) ? voucherCode : used + "," + voucherCode);
+            _gioHangService.MarkVoucherAsUsed(HttpContext.Session, customerId, voucherCode);
         }
+
+        _gioHangService.Clear(HttpContext.Session, orderCustomerId);
+        TempData["DonHangMoi"] = result.OrderId;
 
         var isOnline = string.Equals(model.PhuongThucThanhToan, "transfer", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(model.PhuongThucThanhToan, "online", StringComparison.OrdinalIgnoreCase);
@@ -196,5 +232,9 @@ public class GioHangController : Controller
         return RedirectToAction("Index", "DonHang");
     }
 
-    private GioHangPageViewModel BuildPage() => new() { GioHang = _gioHangService.Get(HttpContext.Session) };
+    private GioHangPageViewModel BuildPage()
+    {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        return new GioHangPageViewModel { GioHang = _gioHangService.Get(HttpContext.Session, customerId) };
+    }
 }
