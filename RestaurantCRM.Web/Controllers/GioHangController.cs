@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
+using System.Net.Http.Json;
 
 namespace RestaurantCRM.Web.Controllers;
 
@@ -15,6 +16,24 @@ public class GioHangController : Controller
         _gioHangService = gioHangService;
         _donHangService = donHangService;
         _httpClientFactory = httpClientFactory;
+    }
+
+    private async Task SyncUsedVouchersAsync()
+    {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(customerId)) return;
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/KhuyenMai/UsedVouchers/{Uri.EscapeDataString(customerId)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var codes = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
+                HttpContext.Session.SetString("UsedVouchers", string.Join(",", codes));
+            }
+        }
+        catch { }
     }
 
     [HttpGet]
@@ -132,7 +151,7 @@ public class GioHangController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Voucher(ApDungVoucherViewModel model)
+    public async Task<IActionResult> Voucher(ApDungVoucherViewModel model)
     {
         var customerId = HttpContext.Session.GetString("MaKhachHang");
         if (string.IsNullOrWhiteSpace(model.MaVoucher))

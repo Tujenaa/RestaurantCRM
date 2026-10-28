@@ -146,8 +146,7 @@ namespace RestaurantCRM.API.Controllers
                         if (promo != null && promo.MaChuongTrinhNavigation != null)
                         {
                             maChuongTrinhKm = promo.MaKmsp;
-                            
-                            soLuongGiam = item.SoLuong; // Không còn quota
+                            soLuongGiam = item.SoLuong;
 
                             if (soLuongGiam > 0)
                             {
@@ -177,6 +176,7 @@ namespace RestaurantCRM.API.Controllers
                             MaHoaDon = maHoaDon,
                             MaMon = item.MaMon,
                             MaKmsp = maChuongTrinhKm,
+                            TenMon = monAn.TenMon,
                             SoLuong = item.SoLuong,
                             DonGiaGoc = donGiaGoc,
                             DonGiaSauGiam = soLuongGiam > 0 ? donGiaSauGiam : donGiaGoc,
@@ -201,6 +201,20 @@ namespace RestaurantCRM.API.Controllers
 
                     if (voucher != null && voucher.MaChuongTrinhNavigation != null)
                     {
+                        // Kiểm tra xem khách hàng này đã từng sử dụng voucher này cho đơn hàng hợp lệ chưa
+                        if (!string.IsNullOrWhiteSpace(hoaDon.MaKhachHang))
+                        {
+                            var hasUsed = await _context.HoaDon.AnyAsync(h =>
+                                h.MaKhachHang == hoaDon.MaKhachHang
+                                && h.TrangThai != "Cancelled"
+                                && (h.MaKmvoucher == voucher.MaKmvoucher || h.MaKmvoucher == voucher.MaVoucher));
+
+                            if (hasUsed)
+                            {
+                                return BadRequest("Bạn đã sử dụng mã ưu đãi này cho đơn hàng trước đó.");
+                            }
+                        }
+
                         var ct = voucher.MaChuongTrinhNavigation;
                         if ((ct.NgayBatDau == null || ct.NgayBatDau <= today) &&
                             (ct.NgayKetThuc == null || ct.NgayKetThuc >= today) &&
@@ -354,7 +368,7 @@ namespace RestaurantCRM.API.Controllers
                 .Select(d => new 
                 {
                     d.MaHoaDon,
-                    d.NgayDat,
+                    NgayDat = d.NgayDat,
                     d.TrangThai,
                     d.TongThanhToan,
                     SoMon = d.ChiTietHoaDon.Sum(c => c.SoLuong)
@@ -383,7 +397,7 @@ namespace RestaurantCRM.API.Controllers
             var result = new
             {
                 hoaDon.MaHoaDon,
-                hoaDon.NgayDat,
+                NgayDat = hoaDon.NgayDat,
                 hoaDon.TrangThai,
                 hoaDon.DiaChiGiao,
                 hoaDon.TongTienHang,
@@ -393,7 +407,8 @@ namespace RestaurantCRM.API.Controllers
                 ChiTiet = hoaDon.ChiTietHoaDon.Select(c => new
                 {
                     c.MaMon,
-                    TenMon = c.MaMonNavigation?.TenMon,
+                    TenMon = c.MaMonNavigation?.TenMon ?? c.TenMon,
+                    DuongDanAnh = c.MaMonNavigation?.DuongDanAnh,
                     c.SoLuong,
                     c.DonGiaGoc,
                     c.DonGiaSauGiam,

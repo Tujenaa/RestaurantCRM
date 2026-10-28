@@ -16,9 +16,9 @@ namespace RestaurantCRM.API.Controllers
             _service = service;
         }
 
-        // GET: api/KhuyenMai/Vouchers - Lấy danh sách Voucher hợp lệ
+        // GET: api/KhuyenMai/Vouchers?maKhachHang=... - Lấy danh sách Voucher hợp lệ (ẩn voucher đã dùng của khách)
         [HttpGet("Vouchers")]
-        public async Task<IActionResult> GetVouchers()
+        public async Task<IActionResult> GetVouchers([FromQuery] string? maKhachHang = null)
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
@@ -26,12 +26,14 @@ namespace RestaurantCRM.API.Controllers
                 .Include(v => v.MaChuongTrinhNavigation)
                 .Where(v => v.MaChuongTrinhNavigation != null 
                          && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
-                         && (v.MaChuongTrinhNavigation.NgayKetThuc == null || v.MaChuongTrinhNavigation.NgayKetThuc >= today))
+                         && (v.MaChuongTrinhNavigation.NgayKetThuc == null || v.MaChuongTrinhNavigation.NgayKetThuc >= today));
+
+            var vouchers = await query
                 .Select(v => new
                 {
                     v.MaKmvoucher,
                     v.MaVoucher,
-                    TenChuongTrinh = v.MaChuongTrinhNavigation.TenChuongTrinh,
+                    TenChuongTrinh = v.MaChuongTrinhNavigation!.TenChuongTrinh,
                     v.PhanTramGiam,
                     v.TienGiam,
                     v.GiaTriDonToiThieu,
@@ -40,6 +42,19 @@ namespace RestaurantCRM.API.Controllers
                     v.MaChuongTrinhNavigation.NgayKetThuc
                 })
                 .ToListAsync();
+
+            if (!string.IsNullOrWhiteSpace(maKhachHang))
+            {
+                var usedKeys = await _context.HoaDon
+                    .Where(h => h.MaKhachHang == maKhachHang && h.TrangThai != "Cancelled" && h.MaKmvoucher != null)
+                    .Select(h => h.MaKmvoucher!)
+                    .Distinct()
+                    .ToListAsync();
+
+                vouchers = vouchers
+                    .Where(v => !usedKeys.Contains(v.MaKmvoucher) && (v.MaVoucher == null || !usedKeys.Contains(v.MaVoucher)))
+                    .ToList();
+            }
 
             return Ok(vouchers);
         }

@@ -143,8 +143,9 @@ public class MonAnService
 
         var result = filtered.Where(d => d.ConHang).ToList();
         
-        if (sort == "asc") result = result.OrderBy(x => x.DonGiaSauGiam).ToList();
-        else if (sort == "desc") result = result.OrderByDescending(x => x.DonGiaSauGiam).ToList();
+        if (sort == "asc") result = result.OrderByDescending(x => x.ConHang).ThenBy(x => x.DonGiaSauGiam).ToList();
+        else if (sort == "desc") result = result.OrderByDescending(x => x.ConHang).ThenByDescending(x => x.DonGiaSauGiam).ToList();
+        else result = result.OrderByDescending(x => x.ConHang).ToList();
         
         _cachedDishes = result;
         return result;
@@ -226,7 +227,11 @@ public class MonAnService
         string img = dto.DuongDanAnh ?? "";
         if (string.IsNullOrWhiteSpace(img))
         {
-            img = fallbackMatch?.DuongDanAnh ?? "";
+            img = fallbackMatch?.DuongDanAnh ?? "/images/default.jpg";
+        }
+        else if (!img.StartsWith("/") && !img.StartsWith("http"))
+        {
+            img = "/images/" + img;
         }
 
         return new MonAnViewModel

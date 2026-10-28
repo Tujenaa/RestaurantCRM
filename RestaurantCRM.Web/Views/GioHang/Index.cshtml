@@ -129,6 +129,10 @@ else
                             .Where(v => RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal) == 0)
                             .ToList();
                     }
+                    @if (available.Count == 0)
+                    {
+                        <div style="font-size: 11.5px; color: var(--muted); font-style: italic;">Bạn đã sử dụng hết các mã ưu đãi khả dụng.</div>
+                    }
                     @foreach (var v in validVouchers)
                     {
                         var d = RestaurantCRM.Web.Services.GioHangService.CalculateDiscount(v.Code, subtotal);
