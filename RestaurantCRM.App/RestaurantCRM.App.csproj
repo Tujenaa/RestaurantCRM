@@ -371,7 +371,9 @@
     <Compile Include="Forms\NhaCungCap\ChiTietPhieuNhapDialog.Designer.cs">
       <DependentUpon>ChiTietPhieuNhapDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="Controls\BaoCao\QuarterComparisonChartRenderer.cs" />
     <Compile Include="Models\BaoCaoDoanhThuDto.cs" />
+    <Compile Include="Models\BaoCaoDoanhThuTheoQuyDto.cs" />
     <Compile Include="Services\BaoCaoService.cs" />
   </ItemGroup>
   <ItemGroup>

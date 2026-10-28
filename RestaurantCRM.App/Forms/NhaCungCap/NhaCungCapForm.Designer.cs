@@ -14,6 +14,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
         private System.Windows.Forms.DataGridViewTextBoxColumn colSDT;
         private System.Windows.Forms.DataGridViewTextBoxColumn colEmail;
         private System.Windows.Forms.DataGridViewTextBoxColumn colDiaChi;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colTrangThai;
 
         protected override void Dispose(bool disposing) {
             if (disposing && (components != null)) {
@@ -37,6 +38,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.colSDT = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colEmail = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colDiaChi = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTrangThai = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dgvNhaCungCap)).BeginInit();
             this.SuspendLayout();
             // 
@@ -140,7 +142,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             this.colTenNCC,
             this.colSDT,
             this.colEmail,
-            this.colDiaChi});
+            this.colDiaChi,
+            this.colTrangThai});
             this.dgvNhaCungCap.Location = new System.Drawing.Point(18, 88);
             this.dgvNhaCungCap.MultiSelect = false;
             this.dgvNhaCungCap.Name = "dgvNhaCungCap";
@@ -191,10 +194,19 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             // 
             this.colDiaChi.DataPropertyName = "DiaChi";
             this.colDiaChi.HeaderText = "Địa Chỉ";
-            this.colDiaChi.Width = 320;
-            this.colDiaChi.MinimumWidth = 200;
+            this.colDiaChi.Width = 260;
+            this.colDiaChi.MinimumWidth = 180;
             this.colDiaChi.Name = "colDiaChi";
             this.colDiaChi.ReadOnly = true;
+            // 
+            // colTrangThai
+            // 
+            this.colTrangThai.DataPropertyName = "TrangThaiHienThi";
+            this.colTrangThai.HeaderText = "Trạng Thái";
+            this.colTrangThai.Width = 130;
+            this.colTrangThai.MinimumWidth = 110;
+            this.colTrangThai.Name = "colTrangThai";
+            this.colTrangThai.ReadOnly = true;
             // 
             // NhaCungCapForm
             // 

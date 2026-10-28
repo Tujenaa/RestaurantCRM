@@ -433,5 +433,268 @@ namespace RestaurantCRM.API.Controllers
 
             return Ok(response);
         }
+
+        // GET: api/ThongKe/BaoCaoDoanhThuTheoQuy - Báo cáo tổng hợp chu kỳ Quý/Năm theo yêu cầu đồ án
+        [HttpGet("BaoCaoDoanhThuTheoQuy")]
+        public async Task<IActionResult> GetBaoCaoDoanhThuTheoQuy([FromQuery] int nam)
+        {
+            if (nam <= 0) nam = DateTime.Now.Year;
+
+            // 1. Lấy danh sách các năm có hóa đơn phát sinh
+            var danhSachNamHoaDon = await _service.Query<HoaDon>()
+                .Where(h => h.NgayDat.HasValue)
+                .Select(h => h.NgayDat.Value.Year)
+                .Distinct()
+                .ToListAsync();
+
+            var danhSachNamPhieuNhap = await _service.Query<PhieuNhapHang>()
+                .Where(p => p.NgayNhap.HasValue)
+                .Select(p => p.NgayNhap.Value.Year)
+                .Distinct()
+                .ToListAsync();
+
+            var allYears = danhSachNamHoaDon.Union(danhSachNamPhieuNhap).Union(new[] { nam, nam - 1, nam - 2 }).Distinct().OrderByDescending(y => y).ToList();
+
+            // 2. Lấy dữ liệu hóa đơn hoàn tất trong năm chọn
+            var startDate = new DateTime(nam, 1, 1);
+            var endDate = new DateTime(nam + 1, 1, 1);
+
+            var hoaDonsTrongNam = await _service.Query<HoaDon>()
+                .Include(h => h.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaVaiTroNavigation)
+                .Include(h => h.ChiTietHoaDon)
+                    .ThenInclude(ct => ct.MaMonNavigation)
+                        .ThenInclude(m => m.MaLoaiMonNavigation)
+                .Include(h => h.ChiTietHoaDon)
+                    .ThenInclude(ct => ct.MaMonNavigation)
+                        .ThenInclude(m => m.DinhLuong)
+                            .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                .Where(h => h.NgayDat >= startDate && h.NgayDat < endDate 
+                            && (h.TrangThai == "Completed" || h.TrangThai == "Hoàn thành"))
+                .ToListAsync();
+
+            // Lấy phiếu nhập hàng trong năm chọn
+            var phieuNhapsTrongNam = await _service.Query<PhieuNhapHang>()
+                .Where(p => p.NgayNhap >= startDate && p.NgayNhap < endDate)
+                .ToListAsync();
+
+            // 3. Phân chia theo Quý
+            Func<DateTime?, int> getQuarter = dt => dt.HasValue ? ((dt.Value.Month - 1) / 3) + 1 : 1;
+
+            double thuQ1 = hoaDonsTrongNam.Where(h => getQuarter(h.NgayDat) == 1).Sum(h => h.TongThanhToan ?? 0);
+            double thuQ2 = hoaDonsTrongNam.Where(h => getQuarter(h.NgayDat) == 2).Sum(h => h.TongThanhToan ?? 0);
+            double thuQ3 = hoaDonsTrongNam.Where(h => getQuarter(h.NgayDat) == 3).Sum(h => h.TongThanhToan ?? 0);
+            double thuQ4 = hoaDonsTrongNam.Where(h => getQuarter(h.NgayDat) == 4).Sum(h => h.TongThanhToan ?? 0);
+            double tongThuNam = thuQ1 + thuQ2 + thuQ3 + thuQ4;
+
+            // Chi phí: Ưu tiên lấy từ phiếu nhập hàng; nếu quý đó không có phiếu nhập thì tính từ COGS định lượng món
+            Func<int, double> getChiQuy = q =>
+            {
+                var chiNhap = phieuNhapsTrongNam.Where(p => getQuarter(p.NgayNhap) == q).Sum(p => p.TongTien ?? 0);
+                if (chiNhap > 0) return chiNhap;
+
+                // Tính giá vốn từ đơn bán
+                var donQuy = hoaDonsTrongNam.Where(h => getQuarter(h.NgayDat) == q);
+                double cogs = 0;
+                foreach (var hd in donQuy)
+                {
+                    foreach (var ct in hd.ChiTietHoaDon)
+                    {
+                        var mon = ct.MaMonNavigation;
+                        if (mon != null && mon.DinhLuong.Any())
+                        {
+                            var gv1 = mon.DinhLuong.Sum(dl => (double)dl.SoLuongCan * (dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0));
+                            cogs += gv1 * (ct.SoLuong ?? 1);
+                        }
+                    }
+                }
+                return cogs;
+            };
+
+            double chiQ1 = getChiQuy(1);
+            double chiQ2 = getChiQuy(2);
+            double chiQ3 = getChiQuy(3);
+            double chiQ4 = getChiQuy(4);
+            double tongChiNam = chiQ1 + chiQ2 + chiQ3 + chiQ4;
+
+            double lnQ1 = thuQ1 - chiQ1;
+            double lnQ2 = thuQ2 - chiQ2;
+            double lnQ3 = thuQ3 - chiQ3;
+            double lnQ4 = thuQ4 - chiQ4;
+            double tongLnNam = tongThuNam - tongChiNam;
+
+            double tyLeLnQ1 = thuQ1 > 0 ? (lnQ1 / thuQ1) * 100 : 0;
+            double tyLeLnQ2 = thuQ2 > 0 ? (lnQ2 / thuQ2) * 100 : 0;
+            double tyLeLnQ3 = thuQ3 > 0 ? (lnQ3 / thuQ3) * 100 : 0;
+            double tyLeLnQ4 = thuQ4 > 0 ? (lnQ4 / thuQ4) * 100 : 0;
+            double tyLeLnNam = tongThuNam > 0 ? (tongLnNam / tongThuNam) * 100 : 0;
+
+            // BẢNG 1: TÀI CHÍNH THEO QUÝ
+            var bangTaiChinh = new List<DongTaiChinhQuyDto>
+            {
+                new DongTaiChinhQuyDto { ChiTieu = "💰 Tổng thu (Doanh thu)", Quy1 = Math.Round(thuQ1, 0), Quy2 = Math.Round(thuQ2, 0), Quy3 = Math.Round(thuQ3, 0), Quy4 = Math.Round(thuQ4, 0), TongNam = Math.Round(tongThuNam, 0), DinhDang = "Tien" },
+                new DongTaiChinhQuyDto { ChiTieu = "📦 Tổng chi (Nhập kho / Chi phí)", Quy1 = Math.Round(chiQ1, 0), Quy2 = Math.Round(chiQ2, 0), Quy3 = Math.Round(chiQ3, 0), Quy4 = Math.Round(chiQ4, 0), TongNam = Math.Round(tongChiNam, 0), DinhDang = "Tien" },
+                new DongTaiChinhQuyDto { ChiTieu = "📈 Lợi nhuận thuần", Quy1 = Math.Round(lnQ1, 0), Quy2 = Math.Round(lnQ2, 0), Quy3 = Math.Round(lnQ3, 0), Quy4 = Math.Round(lnQ4, 0), TongNam = Math.Round(tongLnNam, 0), DinhDang = "Tien" },
+                new DongTaiChinhQuyDto { ChiTieu = "🏷️ Tỷ suất lợi nhuận (%)", Quy1 = Math.Round(tyLeLnQ1, 1), Quy2 = Math.Round(tyLeLnQ2, 1), Quy3 = Math.Round(tyLeLnQ3, 1), Quy4 = Math.Round(tyLeLnQ4, 1), TongNam = Math.Round(tyLeLnNam, 1), DinhDang = "PhanTram" }
+            };
+
+            // BẢNG 2: DOANH THU THEO NHÂN VIÊN
+            var tatCaNhanVien = await _service.Query<NhanVien>()
+                .Include(nv => nv.MaVaiTroNavigation)
+                .ToListAsync();
+
+            var bangNhanVien = new List<DongNhanVienQuyDto>();
+            foreach (var nv in tatCaNhanVien)
+            {
+                var donCuaNv = hoaDonsTrongNam.Where(h => h.MaNhanVien == nv.MaNhanVien).ToList();
+                double nvQ1 = donCuaNv.Where(h => getQuarter(h.NgayDat) == 1).Sum(h => h.TongThanhToan ?? 0);
+                double nvQ2 = donCuaNv.Where(h => getQuarter(h.NgayDat) == 2).Sum(h => h.TongThanhToan ?? 0);
+                double nvQ3 = donCuaNv.Where(h => getQuarter(h.NgayDat) == 3).Sum(h => h.TongThanhToan ?? 0);
+                double nvQ4 = donCuaNv.Where(h => getQuarter(h.NgayDat) == 4).Sum(h => h.TongThanhToan ?? 0);
+                double nvTong = nvQ1 + nvQ2 + nvQ3 + nvQ4;
+
+                bangNhanVien.Add(new DongNhanVienQuyDto
+                {
+                    MaNhanVien = nv.MaNhanVien,
+                    TenNhanVien = !string.IsNullOrEmpty(nv.HoTen) ? nv.HoTen : nv.MaNhanVien,
+                    ChucVu = nv.MaVaiTroNavigation?.TenVaiTro ?? "Nhân viên",
+                    Quy1 = Math.Round(nvQ1, 0),
+                    Quy2 = Math.Round(nvQ2, 0),
+                    Quy3 = Math.Round(nvQ3, 0),
+                    Quy4 = Math.Round(nvQ4, 0),
+                    TongNam = Math.Round(nvTong, 0),
+                    TyLeDongGop = tongThuNam > 0 ? Math.Round((nvTong / tongThuNam) * 100, 1) : 0
+                });
+            }
+
+            // Nếu có đơn không gán nhân viên
+            var donKhongNv = hoaDonsTrongNam.Where(h => string.IsNullOrEmpty(h.MaNhanVien)).ToList();
+            if (donKhongNv.Any())
+            {
+                double vQ1 = donKhongNv.Where(h => getQuarter(h.NgayDat) == 1).Sum(h => h.TongThanhToan ?? 0);
+                double vQ2 = donKhongNv.Where(h => getQuarter(h.NgayDat) == 2).Sum(h => h.TongThanhToan ?? 0);
+                double vQ3 = donKhongNv.Where(h => getQuarter(h.NgayDat) == 3).Sum(h => h.TongThanhToan ?? 0);
+                double vQ4 = donKhongNv.Where(h => getQuarter(h.NgayDat) == 4).Sum(h => h.TongThanhToan ?? 0);
+                double vTong = vQ1 + vQ2 + vQ3 + vQ4;
+                bangNhanVien.Add(new DongNhanVienQuyDto
+                {
+                    MaNhanVien = "ONLINE",
+                    TenNhanVien = "Khách đặt trực tuyến / Khác",
+                    ChucVu = "Hệ thống",
+                    Quy1 = Math.Round(vQ1, 0),
+                    Quy2 = Math.Round(vQ2, 0),
+                    Quy3 = Math.Round(vQ3, 0),
+                    Quy4 = Math.Round(vQ4, 0),
+                    TongNam = Math.Round(vTong, 0),
+                    TyLeDongGop = tongThuNam > 0 ? Math.Round((vTong / tongThuNam) * 100, 1) : 0
+                });
+            }
+
+            bangNhanVien = bangNhanVien.OrderByDescending(x => x.TongNam).ToList();
+            for (int i = 0; i < bangNhanVien.Count; i++)
+            {
+                bangNhanVien[i].Stt = i + 1;
+            }
+
+            string nvXuatSac = bangNhanVien.FirstOrDefault(n => n.TongNam > 0)?.TenNhanVien ?? "Chưa có";
+            double dtNvXuatSac = bangNhanVien.FirstOrDefault(n => n.TongNam > 0)?.TongNam ?? 0;
+
+            // BẢNG 3: DOANH THU THEO MÓN ĂN (KÈM SO SÁNH 3 NĂM: nam-2, nam-1, nam)
+            int nam1 = nam - 2;
+            int nam2 = nam - 1;
+            int nam3 = nam;
+
+            var start3Years = new DateTime(nam1, 1, 1);
+            var end3Years = new DateTime(nam3 + 1, 1, 1);
+
+            var chiTiet3Nam = await _service.Query<ChiTietHoaDon>()
+                .Include(ct => ct.MaMonNavigation)
+                    .ThenInclude(m => m.MaLoaiMonNavigation)
+                .Include(ct => ct.MaHoaDonNavigation)
+                .Where(ct => ct.MaHoaDonNavigation != null 
+                             && ct.MaHoaDonNavigation.NgayDat >= start3Years 
+                             && ct.MaHoaDonNavigation.NgayDat < end3Years
+                             && (ct.MaHoaDonNavigation.TrangThai == "Completed" || ct.MaHoaDonNavigation.TrangThai == "Hoàn thành"))
+                .ToListAsync();
+
+            var tatCaMonAn = await _service.Query<MonAn>()
+                .Include(m => m.MaLoaiMonNavigation)
+                .ToListAsync();
+
+            var bangMonAn = new List<DongMonAnDoanhThuDto>();
+            foreach (var mon in tatCaMonAn)
+            {
+                var ctMon = chiTiet3Nam.Where(c => c.MaMon == mon.MaMon).ToList();
+                int slTong = ctMon.Sum(c => c.SoLuong ?? 1);
+
+                // Theo quý của năm chọn
+                var ctNamNay = ctMon.Where(c => c.MaHoaDonNavigation.NgayDat.Value.Year == nam).ToList();
+                double mQ1 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 1)
+                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                double mQ2 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 2)
+                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                double mQ3 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 3)
+                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                double mQ4 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 4)
+                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                double mTongNamNay = mQ1 + mQ2 + mQ3 + mQ4;
+
+                // Theo 3 năm
+                double mNam1 = ctMon.Where(c => c.MaHoaDonNavigation.NgayDat.Value.Year == nam1)
+                                    .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                double mNam2 = ctMon.Where(c => c.MaHoaDonNavigation.NgayDat.Value.Year == nam2)
+                                    .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                double mNam3 = mTongNamNay;
+
+                double tongDoanhThuMon = mNam1 + mNam2 + mNam3;
+
+                bangMonAn.Add(new DongMonAnDoanhThuDto
+                {
+                    MaMon = mon.MaMon,
+                    TenMon = mon.TenMon ?? "Không xác định",
+                    DanhMuc = mon.MaLoaiMonNavigation?.TenLoaiMon ?? "Khác",
+                    TongSoLuongBan = slTong,
+                    Quy1 = Math.Round(mQ1, 0),
+                    Quy2 = Math.Round(mQ2, 0),
+                    Quy3 = Math.Round(mQ3, 0),
+                    Quy4 = Math.Round(mQ4, 0),
+                    DoanhThuNam1 = Math.Round(mNam1, 0),
+                    DoanhThuNam2 = Math.Round(mNam2, 0),
+                    DoanhThuNam3 = Math.Round(mNam3, 0),
+                    TongDoanhThu = Math.Round(mTongNamNay, 0), // Ưu tiên doanh thu năm chọn
+                    TyLeDongGop = tongThuNam > 0 ? Math.Round((mTongNamNay / tongThuNam) * 100, 1) : 0
+                });
+            }
+
+            bangMonAn = bangMonAn.OrderByDescending(x => x.TongDoanhThu).ToList();
+            for (int i = 0; i < bangMonAn.Count; i++)
+            {
+                bangMonAn[i].Stt = i + 1;
+            }
+
+            string monBanChayNhat = bangMonAn.FirstOrDefault(m => m.TongDoanhThu > 0)?.TenMon ?? "Chưa có";
+            double dtMonBanChay = bangMonAn.FirstOrDefault(m => m.TongDoanhThu > 0)?.TongDoanhThu ?? 0;
+
+            var result = new BaoCaoDoanhThuTheoQuyDto
+            {
+                Nam = nam,
+                DanhSachNam = allYears,
+                TongThuNam = Math.Round(tongThuNam, 0),
+                TongChiNam = Math.Round(tongChiNam, 0),
+                LoiNhuanNam = Math.Round(tongLnNam, 0),
+                TyLeLoiNhuanNam = Math.Round(tyLeLnNam, 1),
+                TongDonNam = hoaDonsTrongNam.Count,
+                NhanVienXuatSac = nvXuatSac,
+                DoanhThuNhanVienXuatSac = Math.Round(dtNvXuatSac, 0),
+                MonBanChayNhat = monBanChayNhat,
+                DoanhThuMonBanChayNhat = Math.Round(dtMonBanChay, 0),
+                BangTaiChinhQuy = bangTaiChinh,
+                BangNhanVien = bangNhanVien,
+                BangMonAn = bangMonAn,
+                CacNamSoSanhMonAn = new List<int> { nam1, nam2, nam3 }
+            };
+
+            return Ok(result);
+        }
     }
 }

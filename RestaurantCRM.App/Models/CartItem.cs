@@ -14,5 +14,7 @@ namespace RestaurantCRM.AdminApp.Models
         public int Quantity;
         public int MaxStock;
         public string PromoInfo;        // Tên/mức giảm món nếu có
+        public string MaLoaiMon;        // Mã loại món để áp dụng voucher danh mục
+        public decimal GiaVon;          // Giá vốn nguyên liệu định lượng (BOM)
     }
 }

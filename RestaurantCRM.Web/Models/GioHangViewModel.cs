@@ -27,12 +27,14 @@ public class GioHangPageViewModel
 {
     public GioHangViewModel GioHang { get; set; } = new();
     public DatHangViewModel DatHang { get; set; } = new();
+    public List<VoucherViewModel> AvailableVouchers { get; set; } = new();
 }
 
 public class CheckoutPageViewModel
 {
     public GioHangViewModel GioHang { get; set; } = new();
     public DatHangViewModel DatHang { get; set; } = new();
+    public List<VoucherViewModel> AvailableVouchers { get; set; } = new();
 }
 
 public class CapNhatSoLuongViewModel

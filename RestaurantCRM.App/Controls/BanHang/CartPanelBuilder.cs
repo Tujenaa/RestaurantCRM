@@ -520,7 +520,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             RenderCartLines(cartService);
 
             decimal subTotal = cartService.SubTotal;
-            var (bestVoucher, bestDisc, nearVoucher, missingForNear) = calcService.FindBestVoucher(subTotal, allVouchers);
+            var (bestVoucher, bestDisc, nearVoucher, missingForNear) = calcService.FindBestVoucher(subTotal, allVouchers, cartService.Items);
             var (_, voucherDiscount, finalTotal) = calcService.CalculateTotals(cartService.Items, appliedVoucher);
 
             UpdatePromoBox(subTotal, appliedVoucher, bestVoucher, bestDisc, nearVoucher, missingForNear, calcService);

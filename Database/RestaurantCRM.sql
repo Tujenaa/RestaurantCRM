@@ -103,7 +103,8 @@ CREATE TABLE NHA_CUNG_CAP (
     tenNhaCungCap NVARCHAR(150),
     soDienThoai VARCHAR(15),
     diaChi NVARCHAR(255),
-    email NVARCHAR(100)
+    email NVARCHAR(100),
+    trangThai NVARCHAR(50) DEFAULT 'Active'
 );
 
 CREATE TABLE PHIEU_NHAP_HANG (
@@ -154,6 +155,11 @@ CREATE TABLE KM_THEO_VOUCHER (
     phanTramGiam FLOAT NULL,
     tienGiam FLOAT NULL,
     giamToiDa FLOAT NULL,
+    phamViApDung VARCHAR(20) DEFAULT 'TOAN_DON', -- 'TOAN_DON', 'THEO_LOAI', 'THEO_MON'
+    maLoaiMon VARCHAR(20) NULL FOREIGN KEY REFERENCES LOAI_MON(maLoaiMon),
+    maMon VARCHAR(20) NULL FOREIGN KEY REFERENCES MON_AN(maMon),
+    soLuongToiThieu INT DEFAULT 1, -- Số lượng món tối thiểu để áp dụng
+    choPhepCongDon BIT DEFAULT 1,
     CONSTRAINT CK_KM_THEO_VOUCHER_giamHopLe CHECK (
         (phanTramGiam IS NOT NULL AND tienGiam IS NULL AND phanTramGiam > 0 AND phanTramGiam <= 100) OR
         (tienGiam IS NOT NULL AND phanTramGiam IS NULL AND tienGiam > 0)

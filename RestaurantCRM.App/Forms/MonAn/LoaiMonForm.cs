@@ -40,6 +40,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 SidePanel = grpChiTiet,
                 SideWidth = 360
             });
+
+            txtTenLoaiMon.TextChanged += txtTenLoaiMon_TextChanged;
         }
 
         private async void LoaiMonForm_Load(object sender, EventArgs e)
@@ -151,6 +153,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
 
         private void FillInput(LoaiMonDto dto)
         {
+            txtMaLoaiMon.ReadOnly = true;
             txtMaLoaiMon.Text = dto.MaLoaiMon ?? "";
             txtTenLoaiMon.Text = dto.TenLoaiMon ?? "";
         }
@@ -158,9 +161,86 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         private void ClearInput()
         {
             _selectedLoaiMon = null;
+            txtMaLoaiMon.ReadOnly = false;
             txtMaLoaiMon.Text = "(Tự động sinh)";
             txtTenLoaiMon.Clear();
             txtTenLoaiMon.Focus();
+        }
+
+        private void txtTenLoaiMon_TextChanged(object sender, EventArgs e)
+        {
+            if (_selectedLoaiMon == null)
+            {
+                var txt = txtTenLoaiMon.Text.Trim();
+                if (string.IsNullOrWhiteSpace(txt))
+                {
+                    txtMaLoaiMon.Text = "(Tự động sinh)";
+                }
+                else
+                {
+                    txtMaLoaiMon.Text = GeneratePrefixFromTen(txt);
+                }
+            }
+        }
+
+        private string GeneratePrefixFromTen(string tenLoaiMon)
+        {
+            if (string.IsNullOrWhiteSpace(tenLoaiMon)) return "LM";
+            string unaccented = RemoveAccents(tenLoaiMon).Trim().ToUpper();
+            var words = unaccented.Split(new[] { ' ', ',', '-', '_', '&', '+', '/', '\\', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return "LM";
+
+            if (words.Length == 1)
+            {
+                return words[0].Length > 6 ? words[0].Substring(0, 6) : words[0];
+            }
+
+            if (words.Contains("LAU")) return "LAU";
+
+            if (words.Length == 2)
+            {
+                string combined = string.Concat(words);
+                if (combined == "DOUONG") return "DU";
+                if (combined == "TRANGMIENG") return "TM";
+                if (combined == "KHAIVI") return "KV";
+            }
+
+            string first = words[0];
+            if (first.Length >= 2 && first.Length <= 5) return first;
+
+            string acronym = string.Concat(words.Select(w => w[0]));
+            if (acronym.Length >= 2 && acronym.Length <= 5) return acronym;
+
+            return words[0].Length > 5 ? words[0].Substring(0, 5) : words[0];
+        }
+
+        private string RemoveAccents(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            string[] vietnameseSigns = new string[]
+            {
+                "aAeEoOuUiIdDyY",
+                "áàạảãâấầậẩẫăắằặẳẵ",
+                "ÁÀẠẢÃÂẤẦẬẨẪĂẮẰẶẲẴ",
+                "éèẹẻẽêếềệểễ",
+                "ÉÈẸẺẼÊẾỀỆỂỄ",
+                "óòọỏõôốồộổỗơớờợởỡ",
+                "ÓÒỌỎÕÔỐỒỘỔỖƠỚỜỢỞỠ",
+                "úùụủũưứừựửữ",
+                "ÚÙỤỦŨƯỨỪỰỬỮ",
+                "íìịỉĩ",
+                "ÍÌỊỈĨ",
+                "đ",
+                "Đ",
+                "ýỳỵỷỹ",
+                "ÝỲỴỶỸ"
+            };
+            for (int i = 1; i < vietnameseSigns.Length; i++)
+            {
+                for (int j = 0; j < vietnameseSigns[i].Length; j++)
+                    text = text.Replace(vietnameseSigns[i][j], vietnameseSigns[0][i - 1]);
+            }
+            return text;
         }
 
         private void dgvLoaiMon_SelectionChanged(object sender, EventArgs e)
@@ -208,7 +288,26 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 return;
             }
 
-            var result = await _loaiMonService.CreateAsync(new LoaiMonDto { TenLoaiMon = tenLoai });
+            string customMa = txtMaLoaiMon.Text.Trim();
+            if (customMa == "(Tự động sinh)" || string.IsNullOrWhiteSpace(customMa))
+            {
+                customMa = null;
+            }
+            else
+            {
+                customMa = customMa.ToUpper();
+                if (_allLoaiMon.Any(x => x.MaLoaiMon != null && x.MaLoaiMon.Equals(customMa, StringComparison.OrdinalIgnoreCase)))
+                {
+                    MessageBox.Show($"Mã loại món \"{customMa}\" đã tồn tại trong hệ thống.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtMaLoaiMon.Focus();
+                    return;
+                }
+            }
+
+            var result = await _loaiMonService.CreateAsync(new LoaiMonDto { 
+                MaLoaiMon = customMa,
+                TenLoaiMon = tenLoai 
+            });
             if (result.Success)
             {
                 MessageBox.Show(result.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);

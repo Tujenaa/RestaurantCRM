@@ -513,10 +513,37 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.PhanTramGiam).HasColumnName("phanTramGiam");
             entity.Property(e => e.TienGiam).HasColumnName("tienGiam");
             entity.Property(e => e.GiamToiDa).HasColumnName("giamToiDa");
+            entity.Property(e => e.PhamViApDung)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("TOAN_DON")
+                .HasColumnName("phamViApDung");
+            entity.Property(e => e.MaLoaiMon)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maLoaiMon");
+            entity.Property(e => e.MaMon)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maMon");
+            entity.Property(e => e.SoLuongToiThieu)
+                .HasDefaultValue(1)
+                .HasColumnName("soLuongToiThieu");
+            entity.Property(e => e.ChoPhepCongDon)
+                .HasDefaultValue(true)
+                .HasColumnName("choPhepCongDon");
 
             entity.HasOne(d => d.MaChuongTrinhNavigation).WithMany(p => p.KmTheoVoucher)
                 .HasForeignKey(d => d.MaChuongTrinh)
                 .HasConstraintName("FK__KM_THEO_V__maChu__5812160E");
+
+            entity.HasOne(d => d.MaLoaiMonNavigation).WithMany(p => p.KmTheoVoucher)
+                .HasForeignKey(d => d.MaLoaiMon)
+                .HasConstraintName("FK_KM_VOUCHER_LOAIMON");
+
+            entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.KmTheoVoucher)
+                .HasForeignKey(d => d.MaMon)
+                .HasConstraintName("FK_KM_VOUCHER_MONAN");
         });
 
         modelBuilder.Entity<LichSuTrangThai>(entity =>
@@ -642,6 +669,10 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.TenNhaCungCap)
                 .HasMaxLength(150)
                 .HasColumnName("tenNhaCungCap");
+            entity.Property(e => e.TrangThai)
+                .HasMaxLength(50)
+                .HasDefaultValue("Active")
+                .HasColumnName("trangThai");
         });
 
         modelBuilder.Entity<NhanVien>(entity =>

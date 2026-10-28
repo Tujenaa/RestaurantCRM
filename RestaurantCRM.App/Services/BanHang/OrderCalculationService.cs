@@ -15,18 +15,121 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
     public class OrderCalculationService
     {
         /// <summary>
-        /// Tính đơn giá bán thực tế và thông tin khuyến mãi của món ăn (nếu có).
+        /// Điểm 5 & Điểm 2 & Điểm 3: Tính đơn giá bán thực tế của món ăn theo Tầng 1.
+        /// Khi món vừa có voucher riêng vừa có voucher theo loại món:
+        /// -> Tự động so sánh và lấy mức giảm cao nhất Max(Món, Loại), KHÔNG cộng dồn.
+        /// -> Bảo vệ giá sàn (Floor margin): Đơn giá sau giảm không được thấp hơn giá vốn BOM.
         /// </summary>
+        public (decimal effectivePrice, string promoText, decimal discountPerDish) GetDishPriceInfo(
+            MonAnDto mon, 
+            IEnumerable<VoucherDto> vouchers, 
+            IEnumerable<KmMonDto> kmMonList = null)
+        {
+            if (mon == null) return (0m, null, 0m);
+            decimal basePrice = mon.Gia;
+            if (basePrice <= 0) return (0m, null, 0m);
+
+            decimal maxDiscount = 0m;
+            string bestPromoText = null;
+
+            // 1. Kiểm tra KM từ danh sách KmMonDto (nếu có chương trình giảm món trực tiếp)
+            if (kmMonList != null)
+            {
+                var promo = kmMonList.FirstOrDefault(k => k.MaMon == mon.MaMonAn && k.TrangThai == "Đang áp dụng");
+                if (promo != null)
+                {
+                    decimal disc = basePrice - (decimal)promo.DonGiaSauGiam;
+                    if (disc > maxDiscount)
+                    {
+                        maxDiscount = disc;
+                        bestPromoText = promo.HinhThuc;
+                    }
+                }
+            }
+
+            // 2. Kiểm tra Voucher theo Món (THEO_MON)
+            if (vouchers != null)
+            {
+                var dishVouchers = vouchers.Where(v => v.TrangThai == "Đang áp dụng" 
+                    && v.PhamViApDung == "THEO_MON" 
+                    && string.Equals(v.MaMon, mon.MaMonAn, StringComparison.OrdinalIgnoreCase));
+
+                foreach (var v in dishVouchers)
+                {
+                    decimal disc = 0m;
+                    if (v.PhanTramGiam.HasValue && v.PhanTramGiam.Value > 0)
+                    {
+                        disc = basePrice * (decimal)v.PhanTramGiam.Value / 100m;
+                        if (v.GiamToiDa.HasValue && v.GiamToiDa.Value > 0 && disc > (decimal)v.GiamToiDa.Value)
+                        {
+                            disc = (decimal)v.GiamToiDa.Value;
+                        }
+                    }
+                    else if (v.TienGiam.HasValue && v.TienGiam.Value > 0)
+                    {
+                        disc = (decimal)v.TienGiam.Value;
+                    }
+
+                    if (disc > maxDiscount)
+                    {
+                        maxDiscount = disc;
+                        bestPromoText = $"{v.MaVoucher} (-{disc:N0}đ)";
+                    }
+                }
+
+                // 3. Kiểm tra Voucher theo Loại Món (THEO_LOAI)
+                var catVouchers = vouchers.Where(v => v.TrangThai == "Đang áp dụng" 
+                    && v.PhamViApDung == "THEO_LOAI" 
+                    && string.Equals(v.MaLoaiMon, mon.MaLoaiMon, StringComparison.OrdinalIgnoreCase));
+
+                foreach (var v in catVouchers)
+                {
+                    // Điều kiện: Giá tối thiểu được giảm (Chỉ món có đơn giá >= GiaTriDonToiThieu mới được giảm)
+                    decimal minItemPrice = (decimal)(v.GiaTriDonToiThieu ?? 0);
+                    if (minItemPrice > 0 && basePrice < minItemPrice)
+                    {
+                        continue; // Đơn giá món thấp hơn giá tối thiểu được giảm, giữ nguyên giá gốc
+                    }
+
+                    decimal disc = 0m;
+                    if (v.PhanTramGiam.HasValue && v.PhanTramGiam.Value > 0)
+                    {
+                        disc = basePrice * (decimal)v.PhanTramGiam.Value / 100m;
+                        if (v.GiamToiDa.HasValue && v.GiamToiDa.Value > 0 && disc > (decimal)v.GiamToiDa.Value)
+                        {
+                            disc = (decimal)v.GiamToiDa.Value;
+                        }
+                    }
+                    else if (v.TienGiam.HasValue && v.TienGiam.Value > 0)
+                    {
+                        disc = (decimal)v.TienGiam.Value;
+                    }
+
+                    // Ưu tiên mức giảm cao nhất
+                    if (disc > maxDiscount)
+                    {
+                        maxDiscount = disc;
+                        bestPromoText = $"{v.MaVoucher} (Nhóm -{disc:N0}đ)";
+                    }
+                }
+            }
+
+            // Chốt chặn giá vốn BOM chống bán lỗ trên đĩa món
+            decimal giaVon = mon.GiaVonUocTinh;
+            decimal effectivePrice = basePrice - maxDiscount;
+            if (giaVon > 0 && effectivePrice < giaVon)
+            {
+                maxDiscount = Math.Max(0m, basePrice - giaVon);
+                effectivePrice = basePrice - maxDiscount;
+            }
+
+            return (effectivePrice, bestPromoText, maxDiscount);
+        }
+
         public (decimal effectivePrice, string promoText) GetDishPriceInfo(MonAnDto mon, IEnumerable<KmMonDto> kmMonList)
         {
-            if (mon == null) return (0m, null);
-            var promo = kmMonList?.FirstOrDefault(k => k.MaMon == mon.MaMonAn && k.TrangThai == "Đang áp dụng");
-            if (promo != null)
-            {
-                decimal price = (decimal)promo.DonGiaSauGiam;
-                return (price, promo.HinhThuc);
-            }
-            return (mon.Gia, null);
+            var (price, text, _) = GetDishPriceInfo(mon, null, kmMonList);
+            return (price, text);
         }
 
         /// <summary>
@@ -34,18 +137,27 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
         /// </summary>
         public (bool isEligible, decimal discount, decimal missingAmount) EvaluateVoucher(VoucherDto v, decimal subTotal)
         {
-            if (v == null || subTotal <= 0) return (false, 0m, 0m);
+            return EvaluateVoucher(v, subTotal, null);
+        }
+
+        /// <summary>
+        /// Điểm 4 & Điểm 1: Đánh giá Voucher toàn hóa đơn (TOAN_DON) dựa trên Subtotal sau khi đã giảm giá món/loại món.
+        /// Chốt chặn an toàn giá vốn (Floor Margin): Không để tổng tiền sau giảm thấp hơn tổng giá vốn BOM.
+        /// </summary>
+        public (bool isEligible, decimal discount, decimal missingAmount) EvaluateVoucher(VoucherDto v, decimal subTotalAfterTier1, IEnumerable<CartItem> cart)
+        {
+            if (v == null || subTotalAfterTier1 <= 0) return (false, 0m, 0m);
 
             decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
-            if (subTotal < minOrder)
+            if (subTotalAfterTier1 < minOrder)
             {
-                return (false, 0m, minOrder - subTotal);
+                return (false, 0m, minOrder - subTotalAfterTier1);
             }
 
             decimal discount = 0m;
             if (v.PhanTramGiam.HasValue && v.PhanTramGiam.Value > 0)
             {
-                discount = subTotal * (decimal)v.PhanTramGiam.Value / 100m;
+                discount = subTotalAfterTier1 * (decimal)v.PhanTramGiam.Value / 100m;
                 if (v.GiamToiDa.HasValue && v.GiamToiDa.Value > 0 && discount > (decimal)v.GiamToiDa.Value)
                 {
                     discount = (decimal)v.GiamToiDa.Value;
@@ -56,27 +168,43 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                 discount = (decimal)v.TienGiam.Value;
             }
 
-            if (discount > subTotal) discount = subTotal;
+            if (discount > subTotalAfterTier1) discount = subTotalAfterTier1;
+
+            // Chốt chặn bảo vệ giá vốn (Floor Margin) cho nhà hàng
+            if (cart != null)
+            {
+                decimal totalCogs = cart.Sum(x => x.GiaVon * x.Quantity);
+                if (totalCogs > 0 && (subTotalAfterTier1 - discount) < totalCogs)
+                {
+                    decimal safeDiscount = Math.Max(0m, subTotalAfterTier1 - totalCogs);
+                    if (discount > safeDiscount)
+                    {
+                        discount = safeDiscount;
+                    }
+                }
+            }
+
             return (true, discount, 0m);
         }
 
         /// <summary>
-        /// Thuật toán Smart Best Deal: Tìm voucher có mức chiết khấu cao nhất đã đủ điều kiện,
-        /// hoặc voucher cận điều kiện (gần đạt nhất) để gợi ý mua thêm.
+        /// Điểm 1: Thuật toán Smart Best Deal: Tự động tìm voucher hóa đơn có mức chiết khấu cao nhất đã đủ điều kiện.
         /// </summary>
-        public (VoucherDto bestVoucher, decimal bestDiscount, VoucherDto nearVoucher, decimal missingForNear) FindBestVoucher(decimal subTotal, IEnumerable<VoucherDto> vouchers)
+        public (VoucherDto bestVoucher, decimal bestDiscount, VoucherDto nearVoucher, decimal missingForNear) FindBestVoucher(decimal subTotalAfterTier1, IEnumerable<VoucherDto> vouchers, IEnumerable<CartItem> cart = null)
         {
-            if (vouchers == null || subTotal <= 0) return (null, 0m, null, 0m);
-            var activeVouchers = vouchers.Where(v => v.TrangThai == "Đang áp dụng").ToList();
+            if (vouchers == null || subTotalAfterTier1 <= 0) return (null, 0m, null, 0m);
+            var activeOrderVouchers = vouchers.Where(v => v.TrangThai == "Đang áp dụng" 
+                && (string.IsNullOrEmpty(v.PhamViApDung) || v.PhamViApDung == "TOAN_DON")).ToList();
+
             VoucherDto best = null;
             decimal maxDiscount = 0m;
 
             VoucherDto near = null;
             decimal minMissing = decimal.MaxValue;
 
-            foreach (var v in activeVouchers)
+            foreach (var v in activeOrderVouchers)
             {
-                var (isEligible, discount, missing) = EvaluateVoucher(v, subTotal);
+                var (isEligible, discount, missing) = EvaluateVoucher(v, subTotalAfterTier1, cart);
                 if (isEligible)
                 {
                     if (discount > maxDiscount)
@@ -96,7 +224,30 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
         }
 
         /// <summary>
-        /// Tính toán tổng tiền hàng, số tiền giảm voucher và tổng thanh toán.
+        /// Điểm 1: Lấy danh sách tất cả voucher hóa đơn để khách hàng/thu ngân có thể chọn voucher khác nếu muốn.
+        /// </summary>
+        public List<(VoucherDto voucher, bool isEligible, decimal discount, decimal missingAmount)> GetAvailableOrderVouchers(
+            decimal subTotalAfterTier1, 
+            IEnumerable<VoucherDto> vouchers, 
+            IEnumerable<CartItem> cart = null)
+        {
+            var result = new List<(VoucherDto voucher, bool isEligible, decimal discount, decimal missingAmount)>();
+            if (vouchers == null) return result;
+
+            var activeOrderVouchers = vouchers.Where(v => v.TrangThai == "Đang áp dụng" 
+                && (string.IsNullOrEmpty(v.PhamViApDung) || v.PhamViApDung == "TOAN_DON")).ToList();
+
+            foreach (var v in activeOrderVouchers)
+            {
+                var (isEligible, discount, missing) = EvaluateVoucher(v, subTotalAfterTier1, cart);
+                result.Add((v, isEligible, discount, missing));
+            }
+
+            return result.OrderByDescending(x => x.discount).ThenBy(x => x.missingAmount).ToList();
+        }
+
+        /// <summary>
+        /// Tính toán tổng tiền hàng, số tiền giảm voucher hóa đơn và tổng thanh toán cuối cùng.
         /// </summary>
         public (decimal subTotal, decimal voucherDiscount, decimal finalTotal) CalculateTotals(IEnumerable<CartItem> cart, VoucherDto appliedVoucher)
         {
@@ -106,7 +257,7 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
 
             if (appliedVoucher != null)
             {
-                var (isEligible, disc, _) = EvaluateVoucher(appliedVoucher, subTotal);
+                var (isEligible, disc, _) = EvaluateVoucher(appliedVoucher, subTotal, cart);
                 if (isEligible) voucherDiscount = disc;
             }
 

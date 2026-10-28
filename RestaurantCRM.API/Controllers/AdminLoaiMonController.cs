@@ -43,7 +43,15 @@ namespace RestaurantCRM.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(loaiMon.MaLoaiMon))
             {
-                loaiMon.MaLoaiMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaLoaiMonAsync(_service);
+                loaiMon.MaLoaiMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaLoaiMonAsync(_service, loaiMon.TenLoaiMon);
+            }
+            else
+            {
+                loaiMon.MaLoaiMon = loaiMon.MaLoaiMon.Trim().ToUpper();
+                if (await _service.AnyAsync<LoaiMon>(x => x.MaLoaiMon == loaiMon.MaLoaiMon))
+                {
+                    return BadRequest($"Mã loại món '{loaiMon.MaLoaiMon}' đã tồn tại trong hệ thống.");
+                }
             }
             
             _service.Add(loaiMon);

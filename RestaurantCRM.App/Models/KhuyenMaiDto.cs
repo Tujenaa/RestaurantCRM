@@ -59,8 +59,45 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("giamToiDa")]
         public double? GiamToiDa { get; set; }
 
+        [JsonPropertyName("phamViApDung")]
+        public string PhamViApDung { get; set; } = "TOAN_DON";
+
+        [JsonPropertyName("maLoaiMon")]
+        public string MaLoaiMon { get; set; }
+
+        [JsonPropertyName("tenLoaiMon")]
+        public string TenLoaiMon { get; set; }
+
+        [JsonPropertyName("maMon")]
+        public string MaMon { get; set; }
+
+        [JsonPropertyName("tenMon")]
+        public string TenMon { get; set; }
+
+        [JsonPropertyName("soLuongToiThieu")]
+        public int? SoLuongToiThieu { get; set; } = 1;
+
+        [JsonPropertyName("soLuongDaDung")]
+        public int SoLuongDaDung { get; set; } = 0;
+
+        [JsonPropertyName("soLuongToiDa")]
+        public int? SoLuongToiDa { get; set; }
+
+        [JsonPropertyName("choPhepCongDon")]
+        public bool ChoPhepCongDon { get; set; } = true;
+
         [JsonPropertyName("hinhThuc")]
         public string HinhThuc { get; set; }
+    }
+
+    public class LoaiMonSelectDto {
+        [JsonPropertyName("maLoaiMon")]
+        public string MaLoaiMon { get; set; }
+
+        [JsonPropertyName("tenLoaiMon")]
+        public string TenLoaiMon { get; set; }
+
+        public string DisplayText => $"[{MaLoaiMon}] {TenLoaiMon}";
     }
 
     public class KmMonDto {

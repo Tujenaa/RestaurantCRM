@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using RestaurantCRM.Web.Models;
 
@@ -7,26 +8,49 @@ public class GioHangService
 {
     private const string CartKey = "customer-cart-v1";
     private const string VoucherKey = "customer-voucher-v1";
-    private readonly MonAnService _monAnService;
+    private const string VoucherInfoKey = "customer-voucher-info-v1";
 
-    public GioHangService(MonAnService monAnService) => _monAnService = monAnService;
+    private readonly MonAnService _monAnService;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<GioHangService> _logger;
+
+    public GioHangService(
+        MonAnService monAnService,
+        IHttpClientFactory httpClientFactory,
+        ILogger<GioHangService> logger)
+    {
+        _monAnService = monAnService;
+        _httpClientFactory = httpClientFactory;
+        _logger = logger;
+    }
 
     public GioHangViewModel Get(ISession session)
     {
         var json = session.GetString(CartKey);
-        var cart = String.IsNullOrWhiteSpace(json) ? new List<GioHangItemViewModel>() : JsonSerializer.Deserialize<List<GioHangItemViewModel>>(json) ?? new();
+        var cart = string.IsNullOrWhiteSpace(json) 
+            ? new List<GioHangItemViewModel>() 
+            : JsonSerializer.Deserialize<List<GioHangItemViewModel>>(json) ?? new();
+
         foreach (var it in cart)
         {
             if (string.IsNullOrWhiteSpace(it.DuongDanAnh) || it.DuongDanAnh == "/images/default.jpg")
             {
                 var d = _monAnService.Find(it.MaMon);
-                if (d != null && !string.IsNullOrWhiteSpace(d.DuongDanAnh)) it.DuongDanAnh = d.DuongDanAnh;
+                if (d != null && !string.IsNullOrWhiteSpace(d.DuongDanAnh)) 
+                    it.DuongDanAnh = d.DuongDanAnh;
             }
         }
+
         var voucher = session.GetString(VoucherKey);
         var subtotal = cart.Sum(x => x.ThanhTien);
-        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscount(voucher, subtotal);
-        return new GioHangViewModel { Items = cart, MaVoucher = voucher, GiamGia = discount };
+        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, subtotal);
+
+        return new GioHangViewModel 
+        { 
+            Items = cart, 
+            MaVoucher = voucher, 
+            GiamGia = discount 
+        };
     }
 
     public void Add(ISession session, string maMon, int quantity)
@@ -35,14 +59,25 @@ public class GioHangService
         if (dish is null || !dish.ConHang) return;
         var cart = Get(session).Items;
         var item = cart.FirstOrDefault(x => x.MaMon == maMon);
-        if (item is null) cart.Add(new GioHangItemViewModel { MaMon = dish.MaMon, TenMon = dish.TenMon, DuongDanAnh = dish.DuongDanAnh, BieuTuong = dish.BieuTuong, DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia, SoLuong = Math.Clamp(quantity, 1, 99) });
+        if (item is null)
+        {
+            cart.Add(new GioHangItemViewModel 
+            { 
+                MaMon = dish.MaMon, 
+                TenMon = dish.TenMon, 
+                DuongDanAnh = dish.DuongDanAnh, 
+                BieuTuong = dish.BieuTuong, 
+                DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia, 
+                SoLuong = Math.Clamp(quantity, 1, 99) 
+            });
+        }
         else
         {
-            if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg") item.DuongDanAnh = dish.DuongDanAnh;
+            if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg") 
+                item.DuongDanAnh = dish.DuongDanAnh;
             item.SoLuong = Math.Min(99, item.SoLuong + Math.Clamp(quantity, 1, 99));
         }
         Save(session, cart);
-        AutoApplyBestVoucher(session, cart);
     }
 
     public void SetQuantity(ISession session, string maMon, int quantity)
@@ -55,14 +90,34 @@ public class GioHangService
             else item.SoLuong = Math.Min(quantity, 99);
         }
         Save(session, cart);
-        AutoApplyBestVoucher(session, cart);
     }
 
-    public (bool Success, string Message, decimal Discount) ApplyVoucher(ISession session, string? code)
+    public async Task<List<VoucherViewModel>> GetAvailableVouchersAsync()
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync("/api/KhuyenMai/Vouchers");
+            if (response.IsSuccessStatusCode)
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var vouchers = await response.Content.ReadFromJsonAsync<List<VoucherViewModel>>(options);
+                return vouchers ?? new List<VoucherViewModel>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể kết nối API /api/KhuyenMai/Vouchers để lấy danh sách voucher.");
+        }
+        return new List<VoucherViewModel>();
+    }
+
+    public async Task<(bool Success, string Message, decimal Discount)> ApplyVoucherAsync(ISession session, string? code)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
             session.Remove(VoucherKey);
+            session.Remove(VoucherInfoKey);
             return (true, "Đã gỡ mã ưu đãi khỏi đơn hàng.", 0m);
         }
 
@@ -70,80 +125,118 @@ public class GioHangService
         var cart = Get(session);
         var subtotal = cart.TamTinh;
 
-        if (cart.Items.Count == 0)
+        try
         {
-            session.SetString(VoucherKey, clean);
-            return (true, $"Đã lưu mã {clean}. Hãy chọn thêm món ăn vào giỏ để nhận ưu đãi!", 0m);
-        }
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/KhuyenMai/KiemTraVoucher?code={Uri.EscapeDataString(clean)}&subtotal={(double)subtotal}");
+            if (response.IsSuccessStatusCode)
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var apiResult = await response.Content.ReadFromJsonAsync<KiemTraVoucherApiResponse>(options);
+                if (apiResult != null && apiResult.Valid)
+                {
+                    var savedCode = !string.IsNullOrWhiteSpace(apiResult.MaVoucher) 
+                        ? apiResult.MaVoucher 
+                        : (!string.IsNullOrWhiteSpace(apiResult.MaKmvoucher) ? apiResult.MaKmvoucher : clean);
 
-        decimal discount = CalculateDiscount(clean, subtotal);
-        if (discount > 0)
-        {
-            session.SetString(VoucherKey, clean);
-            return (true, $"Áp dụng voucher {clean} thành công! Giảm ngay {discount:N0}đ.", discount);
-        }
+                    session.SetString(VoucherKey, savedCode);
 
-        // Nếu mã hợp lệ nhưng chưa đạt giá trị tối thiểu
-        if (clean == "NHOM15" || clean == "KM05" || clean == "KMV03")
-        {
-            return (false, $"Mã {clean} (giảm 15%) áp dụng cho đơn từ 500.000đ trở lên (hiện tại: {subtotal:N0}đ).", 0m);
-        }
+                    var voucherInfo = new AppliedVoucherSessionData
+                    {
+                        Code = savedCode,
+                        MaKmvoucher = apiResult.MaKmvoucher,
+                        TenChuongTrinh = apiResult.TenChuongTrinh,
+                        PhanTramGiam = apiResult.PhanTramGiam,
+                        TienGiam = apiResult.TienGiam,
+                        GiaTriDonToiThieu = 0,
+                        GiamToiDa = apiResult.GiamToiDa,
+                        PhamViApDung = apiResult.PhamViApDung,
+                        MaLoaiMon = apiResult.MaLoaiMon,
+                        MaMon = apiResult.MaMon,
+                        LastCalculatedDiscount = (decimal)apiResult.GiaTriGiamThucTe
+                    };
+                    session.SetString(VoucherInfoKey, JsonSerializer.Serialize(voucherInfo));
 
-        if (clean == "VOUCHER40K" || clean == "KM02" || clean == "KMV02")
+                    var msg = !string.IsNullOrWhiteSpace(apiResult.Message) 
+                        ? apiResult.Message 
+                        : $"Áp dụng voucher {savedCode} thành công! Giảm ngay {apiResult.GiaTriGiamThucTe:N0}đ.";
+
+                    return (true, msg, (decimal)apiResult.GiaTriGiamThucTe);
+                }
+                else
+                {
+                    session.Remove(VoucherKey);
+                    session.Remove(VoucherInfoKey);
+                    return (false, apiResult?.Message ?? "Mã ưu đãi không hợp lệ hoặc đã hết hạn.", 0m);
+                }
+            }
+        }
+        catch (Exception ex)
         {
-            return (false, $"Mã {clean} (giảm 40.000đ) áp dụng cho đơn từ 200.000đ trở lên (hiện tại: {subtotal:N0}đ).", 0m);
+            _logger.LogError(ex, "Lỗi khi gọi API kiểm tra voucher {Code}.", clean);
         }
 
         session.Remove(VoucherKey);
-        return (false, "Mã ưu đãi không hợp lệ. Các mã khả dụng: LAUPHO20 (-20k), VOUCHER40K (-40k), VOUCHER10 (-10%), NHOM15 (-15%).", 0m);
+        session.Remove(VoucherInfoKey);
+        return (false, "Không thể kết nối đến hệ thống kiểm tra voucher. Vui lòng thử lại sau.", 0m);
     }
 
-    public static decimal CalculateDiscount(string code, decimal subtotal)
+    public (bool Success, string Message, decimal Discount) ApplyVoucher(ISession session, string? code)
     {
-        var clean = code.Trim().ToUpperInvariant();
-        return clean switch
+        return ApplyVoucherAsync(session, code).GetAwaiter().GetResult();
+    }
+
+    private decimal CalculateDiscountForCart(ISession session, decimal subtotal)
+    {
+        if (subtotal <= 0) return 0m;
+
+        var infoJson = session.GetString(VoucherInfoKey);
+        if (!string.IsNullOrWhiteSpace(infoJson))
         {
-            "LAUPHO20" or "KMV04" => Math.Min(subtotal, 20000m),
-            "VOUCHER40K" or "KM02" or "KMV02" => subtotal >= 200000m ? 40000m : 0m,
-            "VOUCHER10" or "KM01" or "KMV01" => Math.Round(subtotal * 0.10m, 0),
-            "NHOM15" or "KM05" or "KMV03" => subtotal >= 500000m ? Math.Round(subtotal * 0.15m, 0) : 0m,
-            _ => 0m
-        };
+            try
+            {
+                var info = JsonSerializer.Deserialize<AppliedVoucherSessionData>(infoJson);
+                if (info != null)
+                {
+                    if (info.GiaTriDonToiThieu.HasValue && subtotal < (decimal)info.GiaTriDonToiThieu.Value)
+                    {
+                        return 0m;
+                    }
+
+                    if (info.PhanTramGiam.HasValue && info.PhanTramGiam.Value > 0)
+                    {
+                        var disc = Math.Round(subtotal * (decimal)info.PhanTramGiam.Value / 100m, 0);
+                        if (info.GiamToiDa.HasValue && info.GiamToiDa.Value > 0 && disc > (decimal)info.GiamToiDa.Value)
+                        {
+                            disc = (decimal)info.GiamToiDa.Value;
+                        }
+                        return disc;
+                    }
+                    else if (info.TienGiam.HasValue && info.TienGiam.Value > 0)
+                    {
+                        return Math.Min(subtotal, (decimal)info.TienGiam.Value);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        return 0m;
+    }
+
+    public static decimal CalculateDiscount(string code, decimal subtotal, List<GioHangItemViewModel>? items = null, MonAnService? monAnService = null)
+    {
+        // Legacy fallback
+        return 0m;
     }
 
     public void Clear(ISession session)
     {
         session.Remove(CartKey);
         session.Remove(VoucherKey);
+        session.Remove(VoucherInfoKey);
     }
 
-    private static void Save(ISession session, List<GioHangItemViewModel> cart) => session.SetString(CartKey, JsonSerializer.Serialize(cart));
-
-    private void AutoApplyBestVoucher(ISession session, List<GioHangItemViewModel> cart)
-    {
-        var subtotal = cart.Sum(x => x.ThanhTien);
-        if (subtotal == 0) return;
-        
-        var currentVoucher = session.GetString(VoucherKey);
-        var currentDiscount = string.IsNullOrWhiteSpace(currentVoucher) ? 0m : CalculateDiscount(currentVoucher, subtotal);
-
-        var allVouchers = new[] { "LAUPHO20", "VOUCHER40K", "VOUCHER10", "NHOM15" };
-        var bestVoucher = currentVoucher;
-        var maxDiscount = currentDiscount;
-
-        foreach (var v in allVouchers)
-        {
-            var d = CalculateDiscount(v, subtotal);
-            if (d > maxDiscount)
-            {
-                maxDiscount = d;
-                bestVoucher = v;
-            }
-        }
-
-        if (bestVoucher != currentVoucher && maxDiscount > 0)
-        {
-            session.SetString(VoucherKey, bestVoucher);
-        }
-    }
+    private static void Save(ISession session, List<GioHangItemViewModel> cart) => 
+        session.SetString(CartKey, JsonSerializer.Serialize(cart));
 }

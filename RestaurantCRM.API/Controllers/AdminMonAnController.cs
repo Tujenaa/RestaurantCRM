@@ -174,12 +174,52 @@ namespace RestaurantCRM.API.Controllers
                 }
             }
 
+            // 1. Kiểm tra trùng tên món ăn (100%, không phân biệt hoa thường)
+            var tenMonNorm = request.TenMon.Trim();
+            var duplicateName = await _service.Query<MonAn>()
+                .AnyAsync(m => m.TenMon.Trim().ToLower() == tenMonNorm.ToLower());
+            if (duplicateName)
+            {
+                return BadRequest("món đã có, vui lòng nhập tên mới");
+            }
+
+            // 2. RÀNG BUỘC: Công thức món ăn phải có sự khác biệt giữa các món
+            var currentRecipe = request.DinhLuong
+                .GroupBy(d => d.MaNguyenLieu.Trim())
+                .Select(g => new { MaNguyenLieu = g.Key, SoLuongCan = g.Sum(x => x.SoLuongCan) })
+                .ToList();
+
+            var allExistingDishes = await _service.Query<MonAn>()
+                .Include(m => m.DinhLuong)
+                .AsNoTracking()
+                .ToListAsync();
+
+            bool isDuplicateRecipe = allExistingDishes.Any(m =>
+            {
+                if (m.DinhLuong == null || !m.DinhLuong.Any()) return false;
+                var otherRecipe = m.DinhLuong
+                    .GroupBy(d => d.MaNguyenLieu.Trim())
+                    .Select(g => new { MaNguyenLieu = g.Key, SoLuongCan = g.Sum(x => x.SoLuongCan) })
+                    .ToList();
+
+                if (otherRecipe.Count != currentRecipe.Count) return false;
+
+                return currentRecipe.All(cur => otherRecipe.Any(oth =>
+                    string.Equals(oth.MaNguyenLieu, cur.MaNguyenLieu, StringComparison.OrdinalIgnoreCase) &&
+                    oth.SoLuongCan == cur.SoLuongCan));
+            });
+
+            if (isDuplicateRecipe)
+            {
+                return BadRequest("công thức đã tồn tại trong món khác, vui lòng chọn công thức khác");
+            }
+
             // Mở Database Transaction để đảm bảo tính toàn vẹn
             using var transaction = await _service.BeginTransactionAsync();
             try
             {
-                // 1. Tạo Món ăn mới
-                var maMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaMonAnAsync(_service);
+                // 1. Tạo Món ăn mới theo mã loại món (Ví dụ: loại LAU -> mã món LAU001)
+                var maMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaMonAnAsync(_service, request.MaLoaiMon);
 
                 string trangThai = "InStock";
                 if (!string.IsNullOrWhiteSpace(request.TrangThai))
@@ -263,6 +303,50 @@ namespace RestaurantCRM.API.Controllers
             if (request.DinhLuong != null && !request.DinhLuong.Any())
             {
                 return BadRequest("Món ăn bắt buộc phải có ít nhất 1 nguyên vật liệu định lượng.");
+            }
+
+            // 1. Kiểm tra trùng tên món ăn (100%, không phân biệt hoa thường)
+            var tenMonNormPut = request.TenMon.Trim();
+            var duplicateNamePut = await _service.Query<MonAn>()
+                .AnyAsync(m => m.MaMon != id && m.TenMon.Trim().ToLower() == tenMonNormPut.ToLower());
+            if (duplicateNamePut)
+            {
+                return BadRequest("món đã có, vui lòng nhập tên mới");
+            }
+
+            // 2. RÀNG BUỘC: Công thức món ăn phải có sự khác biệt giữa các món (khi client cập nhật định lượng)
+            if (request.DinhLuong != null && request.DinhLuong.Any())
+            {
+                var currentRecipePut = request.DinhLuong
+                    .GroupBy(d => d.MaNguyenLieu.Trim())
+                    .Select(g => new { MaNguyenLieu = g.Key, SoLuongCan = g.Sum(x => x.SoLuongCan) })
+                    .ToList();
+
+                var allOtherDishes = await _service.Query<MonAn>()
+                    .Where(m => m.MaMon != id)
+                    .Include(m => m.DinhLuong)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                bool isDuplicateRecipePut = allOtherDishes.Any(m =>
+                {
+                    if (m.DinhLuong == null || !m.DinhLuong.Any()) return false;
+                    var otherRecipe = m.DinhLuong
+                        .GroupBy(d => d.MaNguyenLieu.Trim())
+                        .Select(g => new { MaNguyenLieu = g.Key, SoLuongCan = g.Sum(x => x.SoLuongCan) })
+                        .ToList();
+
+                    if (otherRecipe.Count != currentRecipePut.Count) return false;
+
+                    return currentRecipePut.All(cur => otherRecipe.Any(oth =>
+                        string.Equals(oth.MaNguyenLieu, cur.MaNguyenLieu, StringComparison.OrdinalIgnoreCase) &&
+                        oth.SoLuongCan == cur.SoLuongCan));
+                });
+
+                if (isDuplicateRecipePut)
+                {
+                    return BadRequest("công thức đã tồn tại trong món khác, vui lòng chọn công thức khác");
+                }
             }
 
             using var transaction = await _service.BeginTransactionAsync();

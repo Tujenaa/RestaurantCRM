@@ -16,9 +16,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                     TenNhaCungCap = ncc.TenNhaCungCap,
                     SoDienThoai = ncc.SoDienThoai,
                     Email = ncc.Email,
-                    DiaChi = ncc.DiaChi
+                    DiaChi = ncc.DiaChi,
+                    TrangThai = ncc.TrangThai ?? "Active"
                 } 
-                : new NhaCungCapDto();
+                : new NhaCungCapDto { TrangThai = "Active" };
 
             if (_isEdit) {
                 this.Text = "Sửa Nhà Cung Cấp";
@@ -28,11 +29,14 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 txtSoDienThoai.Text = NhaCungCap.SoDienThoai;
                 txtEmail.Text = NhaCungCap.Email;
                 txtDiaChi.Text = NhaCungCap.DiaChi;
+                cboTrangThai.SelectedIndex = NhaCungCap.IsActive ? 0 : 1;
             } else {
                 this.Text = "Thêm Nhà Cung Cấp";
                 lblTieuDe.Text = "Thêm Nhà Cung Cấp Mới";
                 lblMaNCC.Visible = false;
                 txtMaNCC.Visible = false;
+                lblTrangThai.Visible = false;
+                cboTrangThai.Visible = false;
                 // Shift other fields up
                 lblTenNCC.Top -= 35;
                 txtTenNCC.Top -= 35;
@@ -42,9 +46,9 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
                 txtEmail.Top -= 35;
                 lblDiaChi.Top -= 35;
                 txtDiaChi.Top -= 35;
-                btnLuu.Top -= 35;
-                btnHuy.Top -= 35;
-                this.ClientSize = new System.Drawing.Size(this.ClientSize.Width, this.ClientSize.Height - 35);
+                btnLuu.Top -= 70;
+                btnHuy.Top -= 70;
+                this.ClientSize = new System.Drawing.Size(this.ClientSize.Width, this.ClientSize.Height - 70);
             }
         }
 
@@ -59,6 +63,11 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             NhaCungCap.SoDienThoai = txtSoDienThoai.Text.Trim();
             NhaCungCap.Email = txtEmail.Text.Trim();
             NhaCungCap.DiaChi = txtDiaChi.Text.Trim();
+            if (_isEdit) {
+                NhaCungCap.TrangThai = (cboTrangThai.SelectedIndex == 1) ? "Hidden" : "Active";
+            } else {
+                NhaCungCap.TrangThai = "Active";
+            }
 
             DialogResult = DialogResult.OK;
             Close();
