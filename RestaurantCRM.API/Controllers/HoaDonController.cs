@@ -206,6 +206,18 @@ namespace RestaurantCRM.API.Controllers
                             (ct.NgayKetThuc == null || ct.NgayKetThuc >= today) &&
                             (voucher.GiaTriDonToiThieu == null || hoaDon.TongTienHang >= voucher.GiaTriDonToiThieu))
                         {
+                            if (!string.IsNullOrEmpty(request.MaKhachHang))
+                            {
+                                var isAlreadyUsed = await _service.Query<HoaDon>()
+                                    .AnyAsync(h => h.MaKhachHang == request.MaKhachHang 
+                                                && (h.MaKmvoucher == voucher.MaKmvoucher || (voucher.MaVoucher != null && h.MaKmvoucher == voucher.MaVoucher)) 
+                                                && h.TrangThai != "Cancelled");
+                                if (isAlreadyUsed)
+                                {
+                                    return BadRequest($"Khách hàng đã từng sử dụng voucher {request.MaKmvoucher} này trong đơn hàng trước. Mỗi khách hàng chỉ được dùng 1 lần.");
+                                }
+                            }
+
                             hoaDon.MaKmvoucher = voucher.MaKmvoucher;
                             
                             double tienGiam = 0;

@@ -25,7 +25,15 @@ public class DonHangController : Controller
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
 
-        var customerId = HttpContext.Session.GetString("MaKhachHang") ?? "KH01";
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrWhiteSpace(customerId))
+        {
+            return View(new DonHangDanhSachViewModel
+            {
+                DonHangs = new List<DonHangViewModel>(),
+                TrangThaiDangChon = trangThai
+            });
+        }
         var orders = await _donHangService.GetOrdersForCustomerAsync(customerId, trangThai);
 
         return View(new DonHangDanhSachViewModel
@@ -68,7 +76,12 @@ public class DonHangController : Controller
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
 
-        var customerId = HttpContext.Session.GetString("MaKhachHang") ?? "KH01";
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrWhiteSpace(customerId))
+        {
+            TempData["ThongBao"] = "Không tìm thấy thông tin tài khoản khách hàng.";
+            return RedirectToAction(nameof(Index));
+        }
         var result = await _donHangService.CancelOrderAsync(id, customerId);
 
         TempData["ThongBao"] = result.Message;
