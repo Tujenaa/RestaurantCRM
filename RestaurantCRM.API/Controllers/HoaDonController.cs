@@ -201,20 +201,6 @@ namespace RestaurantCRM.API.Controllers
 
                     if (voucher != null && voucher.MaChuongTrinhNavigation != null)
                     {
-                        // Kiểm tra xem khách hàng này đã từng sử dụng voucher này cho đơn hàng hợp lệ chưa
-                        if (!string.IsNullOrWhiteSpace(hoaDon.MaKhachHang))
-                        {
-                            var hasUsed = await _context.HoaDon.AnyAsync(h =>
-                                h.MaKhachHang == hoaDon.MaKhachHang
-                                && h.TrangThai != "Cancelled"
-                                && (h.MaKmvoucher == voucher.MaKmvoucher || h.MaKmvoucher == voucher.MaVoucher));
-
-                            if (hasUsed)
-                            {
-                                return BadRequest("Bạn đã sử dụng mã ưu đãi này cho đơn hàng trước đó.");
-                            }
-                        }
-
                         var ct = voucher.MaChuongTrinhNavigation;
                         if ((ct.NgayBatDau == null || ct.NgayBatDau <= today) &&
                             (ct.NgayKetThuc == null || ct.NgayKetThuc >= today) &&

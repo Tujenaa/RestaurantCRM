@@ -22,7 +22,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var vouchers = await _service.Query<KmTheoVoucher>()
+            var query = _service.Query<KmTheoVoucher>()
                 .Include(v => v.MaChuongTrinhNavigation)
                 .Where(v => v.MaChuongTrinhNavigation != null 
                          && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
@@ -45,7 +45,7 @@ namespace RestaurantCRM.API.Controllers
 
             if (!string.IsNullOrWhiteSpace(maKhachHang))
             {
-                var usedKeys = await _context.HoaDon
+                var usedKeys = await _service.Query<HoaDon>()
                     .Where(h => h.MaKhachHang == maKhachHang && h.TrangThai != "Cancelled" && h.MaKmvoucher != null)
                     .Select(h => h.MaKmvoucher!)
                     .Distinct()
