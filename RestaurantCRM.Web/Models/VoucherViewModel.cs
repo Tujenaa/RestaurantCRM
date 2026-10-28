@@ -86,6 +86,7 @@ public class KiemTraVoucherApiResponse
     public string? TenChuongTrinh { get; set; }
     public double? PhanTramGiam { get; set; }
     public double? TienGiam { get; set; }
+    public double? GiaTriDonToiThieu { get; set; }
     public double? GiamToiDa { get; set; }
     public string? PhamViApDung { get; set; }
     public string? MaLoaiMon { get; set; }

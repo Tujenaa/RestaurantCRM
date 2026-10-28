@@ -38,7 +38,7 @@ namespace RestaurantCRM.API.Controllers
                 {
                     v.MaKmvoucher,
                     v.MaVoucher,
-                    TenChuongTrinh = v.MaChuongTrinhNavigation.TenChuongTrinh,
+                    TenChuongTrinh = v.MaChuongTrinhNavigation!.TenChuongTrinh,
                     v.PhanTramGiam,
                     v.TienGiam,
                     v.GiaTriDonToiThieu,
@@ -123,6 +123,7 @@ namespace RestaurantCRM.API.Controllers
                 tenChuongTrinh = ct.TenChuongTrinh,
                 phanTramGiam = voucher.PhanTramGiam,
                 tienGiam = voucher.TienGiam,
+                giaTriDonToiThieu = voucher.GiaTriDonToiThieu,
                 giamToiDa = voucher.GiamToiDa,
                 phamViApDung = voucher.PhamViApDung ?? "TOAN_DON",
                 maLoaiMon = voucher.MaLoaiMon,
