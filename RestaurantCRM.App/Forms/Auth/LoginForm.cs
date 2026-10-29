@@ -27,7 +27,7 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
         public LoginForm()
         {
             _authService = new AuthService();
-            Text = "RestaurantCRM  |  Đăng nhập hệ thống";
+            Text = "Lẩu Phố  |  Đăng nhập hệ thống";
             ClientSize = new Size(960, 600);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = ThemeManager.Bg;
@@ -143,7 +143,7 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
 
             var lblFoot = new Label
             {
-                Text = "© " + DateTime.Now.Year + " LK Corp · Restaurant CRM",
+                Text = "© " + DateTime.Now.Year + " Lẩu Phố · Hệ thống quản lý",
                 Font = new Font("Segoe UI", 8F),
                 ForeColor = ThemeManager.Muted,
                 AutoSize = true,
@@ -228,9 +228,9 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             using (var f1 = new Font("Segoe UI", 14F, FontStyle.Bold))
             using (var f2 = new Font("Segoe UI", 14F))
             {
-                TextRenderer.DrawText(g, "LK", f1, new Point(x + 40, 46), ThemeManager.Ink, TextFormatFlags.NoPadding);
-                int lw = TextRenderer.MeasureText(g, "LK", f1, Size.Empty, TextFormatFlags.NoPadding).Width;
-                TextRenderer.DrawText(g, "restaurant", f2, new Point(x + 42 + lw, 46), ThemeManager.Primary, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, "Lẩu", f1, new Point(x + 40, 46), ThemeManager.Ink, TextFormatFlags.NoPadding);
+                int lw = TextRenderer.MeasureText(g, "Lẩu", f1, Size.Empty, TextFormatFlags.NoPadding).Width;
+                TextRenderer.DrawText(g, "Phố", f2, new Point(x + 42 + lw, 46), ThemeManager.Primary, TextFormatFlags.NoPadding);
             }
 
             // Khẩu hiệu

@@ -298,7 +298,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 bool canAddMore = virtualRemaining > 0;
                 bool rawInStock = mon.SoLuongTon > 0;
 
-                var (effPrice, promoText, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
+                var (effPrice, promoText, _, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
                 bool hasPromo = promoText != null;
 
                 card.BorderColor = rawInStock ? (hasPromo ? Color.FromArgb(254, 202, 202) : ThemeManager.Line) : Color.FromArgb(241, 245, 249);
@@ -369,7 +369,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             bool canAddMore = virtualRemaining > 0;
             bool rawInStock = mon.SoLuongTon > 0;
 
-            var (effPrice, promoText, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
+            var (effPrice, promoText, _, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
             bool hasPromo = promoText != null;
 
             var card = new RoundedPanel

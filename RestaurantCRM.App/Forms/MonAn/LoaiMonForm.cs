@@ -171,15 +171,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         {
             if (_selectedLoaiMon == null)
             {
-                var txt = txtTenLoaiMon.Text.Trim();
-                if (string.IsNullOrWhiteSpace(txt))
-                {
-                    txtMaLoaiMon.Text = "(Tự động sinh)";
-                }
-                else
-                {
-                    txtMaLoaiMon.Text = GeneratePrefixFromTen(txt);
-                }
+                txtMaLoaiMon.Text = "(Tự động sinh: LM...)";
             }
         }
 
@@ -289,7 +281,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             }
 
             string customMa = txtMaLoaiMon.Text.Trim();
-            if (customMa == "(Tự động sinh)" || string.IsNullOrWhiteSpace(customMa))
+            if (customMa.StartsWith("(Tự động sinh") || string.IsNullOrWhiteSpace(customMa))
             {
                 customMa = null;
             }

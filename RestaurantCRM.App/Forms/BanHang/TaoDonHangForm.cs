@@ -52,7 +52,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             _calcService = new OrderCalculationService();
             _cartService = new CartService();
 
-            Text = "Tạo đơn hàng mang đi tại quầy | RestaurantCRM";
+            Text = "Tạo đơn hàng mang đi tại quầy | Lẩu Phố";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1300, 800);
             MinimumSize = new Size(1080, 680);
@@ -128,7 +128,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(12, 12, 12, 10)
+                Padding = new Padding(CartPanelBuilder.S(16), CartPanelBuilder.S(14), CartPanelBuilder.S(16), CartPanelBuilder.S(14))
             };
             cartWrapper.Controls.Add(_cartBuilder.BuildCartColumn());
             root.Controls.Add(cartWrapper, 1, 0);
@@ -187,8 +187,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
         private void OnDishSelected(MonAnDto mon)
         {
-            var (effPrice, promoText, _) = _calcService.GetDishPriceInfo(mon, _allVouchers, _allKmMon);
-            var (success, msg, isWarning) = _cartService.AddItem(mon, effPrice, promoText);
+            var (effPrice, promoText, disc, vCode) = _calcService.GetDishPriceInfo(mon, _allVouchers, _allKmMon);
+            var (success, msg, isWarning) = _cartService.AddItem(mon, effPrice, promoText, vCode, disc);
             if (!success)
             {
                 MessageBox.Show(this, msg, isWarning ? "Thông báo tồn kho" : "Lỗi", MessageBoxButtons.OK, isWarning ? MessageBoxIcon.Warning : MessageBoxIcon.Error);
@@ -282,6 +282,35 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 return;
             }
 
+            // Nếu là voucher món hoặc loại món: kiểm tra xem món trong giỏ có đang dùng mã này không
+            if (found.PhamViApDung == "THEO_MON" || found.PhamViApDung == "THEO_LOAI")
+            {
+                var matched = found.PhamViApDung == "THEO_MON"
+                    ? _cartService.Items.Where(x => string.Equals(x.MaMon, found.MaMon, StringComparison.OrdinalIgnoreCase)).ToList()
+                    : _cartService.Items.Where(x => string.Equals(x.MaLoaiMon, found.MaLoaiMon, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                if (!matched.Any())
+                {
+                    string target = found.PhamViApDung == "THEO_LOAI" ? $"nhóm '{found.TenLoaiMon ?? found.MaLoaiMon}'" : $"món '{found.TenMon ?? found.MaMon}'";
+                    MessageBox.Show(this, $"Mã [{found.MaVoucher}] chỉ áp dụng cho {target}. Giỏ hàng hiện chưa có món phù hợp.", "Không áp dụng được", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (matched.All(x => string.Equals(x.AppliedVoucherCode, found.MaVoucher, StringComparison.OrdinalIgnoreCase)))
+                {
+                    MessageBox.Show(this, $"Mã voucher [{found.MaVoucher}] hiện đã được giảm trực tiếp vào đơn giá món ăn trong giỏ hàng rồi (không áp trùng 2 lần).", "Đã áp dụng", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Thực hiện đổi sang mã này cho món
+                _cartService.ChangeDishVoucher(matched, found, _calcService);
+                _cartBuilder.ResetQuickVoucherText();
+                RenderCart();
+                _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
+                MessageBox.Show(this, $"Đã chuyển món ăn sang áp dụng ưu đãi voucher [{found.MaVoucher}] thành công!", "Đổi voucher thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             decimal subTotal = _cartService.SubTotal;
             var (isEligible, discount, missing) = _calcService.EvaluateVoucher(found, subTotal, _cartService.Items);
             if (!isEligible)
@@ -306,13 +335,17 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
         private void OnSelectVoucherClicked()
         {
             decimal subTotal = _cartService.SubTotal;
-            using (var dlg = new ChonVoucherDialog(subTotal, _allVouchers, _appliedVoucher, _cartService.Items))
+            using (var dlg = new ChonVoucherDialog(subTotal, _allVouchers, _appliedVoucher, _cartService.Items, _cartService, () => {
+                RenderCart();
+                _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
+            }))
             {
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                 {
                     _appliedVoucher = dlg.SelectedVoucher;
                     _autoApplyBestDeal = (_appliedVoucher == null);
                     RenderCart();
+                    _menuBuilder.UpdateProductsInPlace(_allMonAn, _allKmMon, _cartService, _calcService, _allVouchers);
                 }
             }
         }

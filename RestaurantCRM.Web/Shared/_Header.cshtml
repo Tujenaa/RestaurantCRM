@@ -4,37 +4,64 @@
     var menuPage = Context.Request.Query["menu"].ToString() == "true";
     var isMenu = currentController == "Menu" || menuPage;
     var cartCount = CartService.Get(Context.Session).Items.Sum(item => item.SoLuong);
+    var isLoggedIn = Context.Session.GetString("Token") != null;
 }
-<header class="top">
-    <div class="top-inner">
-        <a class="brand" asp-controller="TrangChu" asp-action="Index">🍲 Lẩu <span>Phố</span><small>NGON TẠI NHÀ</small></a>
-        <nav class="nav" aria-label="Điều hướng chính">
-            <a class="@(currentController == "TrangChu" && !isMenu ? "active" : "")" asp-controller="TrangChu" asp-action="Index">Trang chủ</a>
-            <a class="@(isMenu ? "active" : "")" asp-controller="Menu" asp-action="Index">Thực đơn</a>
-            <a class="@(currentController == "DonHang" ? "active" : "")" asp-controller="DonHang" asp-action="Index">Đơn hàng</a>
-            <a class="@(currentController == "PhanHoi" ? "active" : "")" asp-controller="PhanHoi" asp-action="Index">Đánh giá</a>
-            <a class="@(currentController == "KhaoSat" ? "active" : "")" asp-controller="KhaoSat" asp-action="Index">Khảo sát</a>
-        </nav>
-        <div class="top-actions">
-            <a class="cart-btn" asp-controller="GioHang" asp-action="Index" aria-label="Giỏ hàng (@cartCount món)">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.1a2 2 0 0 0 2-1.5L21.5 8H6" /></svg>
-                <span id="headerCartCount" class="cart-count count@(cartCount == 0 ? " is-empty" : "")">@cartCount</span>
+<header class="site-header">
+    <div class="header-main">
+        <div class="header-inner">
+            <a class="brand" asp-controller="TrangChu" asp-action="Index" aria-label="Lẩu Phố - Trang chủ">
+                <span class="brand-name">Lẩu <em>Phố</em></span>
+                <small>Ngon tại nhà</small>
             </a>
-            @if (Context.Session.GetString("Token") != null)
-            {
-                <a class="user-btn" asp-controller="TaiKhoan" asp-action="Index" aria-label="Tài khoản">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></svg>
-                    <span class="user-name">@Context.Session.GetString("HoTen")</span>
+
+            <form class="header-search" asp-controller="Menu" asp-action="Index" method="get" role="search">
+                <input type="search" name="q" value="@(isMenu ? Context.Request.Query["q"].ToString() : "")" placeholder="Tìm kiếm món ăn..." aria-label="Tìm kiếm món ăn" />
+                <button type="submit" aria-label="Tìm kiếm" title="Tìm kiếm">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+                </button>
+            </form>
+
+            <div class="hotline">
+                <small>Hotline</small>
+                <strong>1900 0000</strong>
+            </div>
+
+            <div class="top-actions">
+                @if (isLoggedIn)
+                {
+                    <a class="header-link" asp-controller="TaiKhoan" asp-action="Index" title="Tài khoản của bạn">
+                        <span class="user-name">@(Context.Session.GetString("HoTen") ?? "Tài khoản")</span>
+                    </a>
+                }
+                else
+                {
+                    <a class="header-link" asp-controller="TaiKhoan" asp-action="DangNhap">Tài khoản</a>
+                }
+                <a class="header-link cart-btn" asp-controller="GioHang" asp-action="Index" aria-label="Giỏ hàng (@cartCount món)">
+                    Giỏ hàng
+                    <span id="headerCartCount" class="cart-count@(cartCount == 0 ? " is-empty" : "")">@cartCount</span>
                 </a>
-                <a class="logout-btn" asp-controller="TaiKhoan" asp-action="DangXuat" title="Đăng xuất">Thoát</a>
-            }
-            else
-            {
-                <a class="user-btn login" asp-controller="TaiKhoan" asp-action="DangNhap" aria-label="Đăng nhập">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></svg>
-                    <span>Đăng nhập</span>
-                </a>
-            }
+                @if (isLoggedIn)
+                {
+                    <a class="header-link logout" asp-controller="TaiKhoan" asp-action="DangXuat">Thoát</a>
+                }
+                else
+                {
+                    <a class="header-link login" asp-controller="TaiKhoan" asp-action="DangNhap">Đăng nhập</a>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="header-nav">
+        <div class="header-inner">
+            <nav class="nav" aria-label="Điều hướng chính">
+                <a class="@(currentController == "TrangChu" && !isMenu ? "active" : "")" asp-controller="TrangChu" asp-action="Index">Trang chủ</a>
+                <a class="@(isMenu ? "active" : "")" asp-controller="Menu" asp-action="Index">Thực đơn</a>
+                <a class="@(currentController == "DonHang" ? "active" : "")" asp-controller="DonHang" asp-action="Index">Đơn hàng</a>
+                <a class="@(currentController == "PhanHoi" ? "active" : "")" asp-controller="PhanHoi" asp-action="Index">Đánh giá</a>
+                <a class="@(currentController == "KhaoSat" ? "active" : "")" asp-controller="KhaoSat" asp-action="Index">Khảo sát</a>
+            </nav>
+            <a class="nav-cta" asp-controller="Menu" asp-action="Index">Đặt món ngay</a>
         </div>
     </div>
 </header>

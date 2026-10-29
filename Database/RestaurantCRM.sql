@@ -125,8 +125,8 @@ CREATE TABLE CHI_TIET_PHIEU_NHAP (
     thanhTien FLOAT
 );
 
--- 5. Khuyến mãi
--- Mỗi dòng ở KM_THEO_SP / KM_THEO_VOUCHER chỉ dùng MỘT trong hai: phanTramGiam hoặc tienGiam
+-- 5. Khuyến mãi (3 bảng riêng biệt: Theo Đơn Hàng, Theo Loại Món, Theo Món/Sản Phẩm)
+-- Mỗi dòng chỉ dùng MỘT trong hai: phanTramGiam hoặc tienGiam
 CREATE TABLE CHUONG_TRINH_KHUYEN_MAI (
     maChuongTrinh VARCHAR(20) PRIMARY KEY,
     tenChuongTrinh NVARCHAR(150),
@@ -135,32 +135,53 @@ CREATE TABLE CHUONG_TRINH_KHUYEN_MAI (
     CONSTRAINT CK_CHUONG_TRINH_KHUYEN_MAI_ngay CHECK (ngayKetThuc >= ngayBatDau)
 );
 
-CREATE TABLE KM_THEO_SP (
-    maKMSP VARCHAR(20) PRIMARY KEY,
+-- 5.1. Khuyến mãi / Voucher theo Đơn Hàng (Toàn đơn)
+CREATE TABLE KM_THEO_DON_HANG (
+    maKMDonHang VARCHAR(20) PRIMARY KEY,
     maChuongTrinh VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
-    maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
+    maVoucher VARCHAR(30) NOT NULL CONSTRAINT UQ_KM_THEO_DON_HANG_maVoucher UNIQUE,
+    giaTriDonToiThieu FLOAT NULL,
     phanTramGiam FLOAT NULL,
     tienGiam FLOAT NULL,
-    CONSTRAINT CK_KM_THEO_SP_giamHopLe CHECK (
+    giamToiDa FLOAT NULL,
+    soLuongToiThieu INT NULL DEFAULT 1,
+    choPhepCongDon BIT NULL DEFAULT 1,
+    CONSTRAINT CK_KM_THEO_DON_HANG_giamHopLe CHECK (
         (phanTramGiam IS NOT NULL AND tienGiam IS NULL AND phanTramGiam > 0 AND phanTramGiam <= 100) OR
         (tienGiam IS NOT NULL AND phanTramGiam IS NULL AND tienGiam > 0)
     )
 );
 
-CREATE TABLE KM_THEO_VOUCHER (
-    maKMVoucher VARCHAR(20) PRIMARY KEY,
+-- 5.2. Khuyến mãi / Voucher theo Loại Món
+CREATE TABLE KM_THEO_LOAI (
+    maKMLoai VARCHAR(20) PRIMARY KEY,
     maChuongTrinh VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
-    maVoucher VARCHAR(30) CONSTRAINT UQ_KM_THEO_VOUCHER_maVoucher UNIQUE,
-    giaTriDonToiThieu FLOAT,
+    maLoaiMon VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES LOAI_MON(maLoaiMon),
+    maVoucher VARCHAR(30) NULL,
+    giaTriDonToiThieu FLOAT NULL,
     phanTramGiam FLOAT NULL,
     tienGiam FLOAT NULL,
     giamToiDa FLOAT NULL,
-    phamViApDung VARCHAR(20) DEFAULT 'TOAN_DON', -- 'TOAN_DON', 'THEO_LOAI', 'THEO_MON'
-    maLoaiMon VARCHAR(20) NULL FOREIGN KEY REFERENCES LOAI_MON(maLoaiMon),
-    maMon VARCHAR(20) NULL FOREIGN KEY REFERENCES MON_AN(maMon),
-    soLuongToiThieu INT DEFAULT 1, -- Số lượng món tối thiểu để áp dụng
-    choPhepCongDon BIT DEFAULT 1,
-    CONSTRAINT CK_KM_THEO_VOUCHER_giamHopLe CHECK (
+    soLuongToiThieu INT NULL DEFAULT 1,
+    choPhepCongDon BIT NULL DEFAULT 1,
+    CONSTRAINT CK_KM_THEO_LOAI_giamHopLe CHECK (
+        (phanTramGiam IS NOT NULL AND tienGiam IS NULL AND phanTramGiam > 0 AND phanTramGiam <= 100) OR
+        (tienGiam IS NOT NULL AND phanTramGiam IS NULL AND tienGiam > 0)
+    )
+);
+
+-- 5.3. Khuyến mãi / Voucher theo Món / Sản Phẩm
+CREATE TABLE KM_THEO_SP (
+    maKMSP VARCHAR(20) PRIMARY KEY,
+    maChuongTrinh VARCHAR(20) FOREIGN KEY REFERENCES CHUONG_TRINH_KHUYEN_MAI(maChuongTrinh),
+    maMon VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES MON_AN(maMon),
+    maVoucher VARCHAR(30) NULL,
+    phanTramGiam FLOAT NULL,
+    tienGiam FLOAT NULL,
+    giamToiDa FLOAT NULL,
+    soLuongToiThieu INT NULL DEFAULT 1,
+    choPhepCongDon BIT NULL DEFAULT 1,
+    CONSTRAINT CK_KM_THEO_SP_giamHopLe CHECK (
         (phanTramGiam IS NOT NULL AND tienGiam IS NULL AND phanTramGiam > 0 AND phanTramGiam <= 100) OR
         (tienGiam IS NOT NULL AND phanTramGiam IS NULL AND tienGiam > 0)
     )
@@ -174,7 +195,7 @@ CREATE TABLE HOA_DON (
     maHoaDon VARCHAR(20) PRIMARY KEY,
     maKhachHang VARCHAR(20) FOREIGN KEY REFERENCES KHACH_HANG(maKhachHang),
     maNhanVien VARCHAR(20) NULL FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
-    maKMVoucher VARCHAR(20) NULL FOREIGN KEY REFERENCES KM_THEO_VOUCHER(maKMVoucher),
+    maKMDonHang VARCHAR(20) NULL FOREIGN KEY REFERENCES KM_THEO_DON_HANG(maKMDonHang),
     tenKhachHang NVARCHAR(100),
     soDienThoai VARCHAR(15),
     diaChiGiao NVARCHAR(255),
@@ -191,6 +212,7 @@ CREATE TABLE CHI_TIET_HOA_DON (
     maHoaDon VARCHAR(20) FOREIGN KEY REFERENCES HOA_DON(maHoaDon),
     maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
     maKMSP VARCHAR(20) NULL FOREIGN KEY REFERENCES KM_THEO_SP(maKMSP),
+    maKMLoai VARCHAR(20) NULL FOREIGN KEY REFERENCES KM_THEO_LOAI(maKMLoai),
     tenMon NVARCHAR(150),
     soLuong INT,
     donGiaGoc FLOAT,

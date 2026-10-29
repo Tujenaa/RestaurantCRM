@@ -16,11 +16,19 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
         private readonly HoaDonService _hoaDonService;
         private List<HoaDonDto> _allHoaDon = new List<HoaDonDto>();
 
+        // Xem nhanh khi rê chuột (không cần click)
+        private readonly OrderHoverCard _hoverCard = new OrderHoverCard();
+        private readonly Dictionary<string, HoaDonDetailDto> _detailCache = new Dictionary<string, HoaDonDetailDto>();
+        private readonly HashSet<string> _loadingDetail = new HashSet<string>();
+        private readonly Timer _hoverWatch = new Timer { Interval = 60 };
+        private int _hoverRow = -1;
+
         public HoaDonForm()
         {
             InitializeComponent();
             _hoaDonService = new HoaDonService();
             SetupGridColumns();
+            SetupHoverPreview();
 
             // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
             PageKit.BuildListPage(this, new ListPageSpec
@@ -158,6 +166,8 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             try
             {
                 _allHoaDon = await _hoaDonService.GetAllAsync();
+                _detailCache.Clear();
+                PrefetchDetails();
                 UpdateThongKe();
                 FilterData();
             }
@@ -240,8 +250,14 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                     default:
                         return true;
                 }
-            }).ToList();
+            })
+            // Sắp xếp mã đơn tăng dần theo số (DH1, DH2, ..., DH10)
+            .OrderBy(x => CodePrefix(x.MaHoaDon))
+            .ThenBy(x => CodeNumber(x.MaHoaDon))
+            .ThenBy(x => x.MaHoaDon)
+            .ToList();
 
+            HideHover();
             dgvHoaDon.DataSource = filtered;
             ColorGridRows();
         }
@@ -294,23 +310,28 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             OpenChiTietDialog();
         }
 
-        private void dgvHoaDon_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        // Click 1 lần vào dòng là mở luôn màn hình xử lý đơn
+        private void dgvHoaDon_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0)
-            {
-                OpenChiTietDialog();
-            }
+            if (e.RowIndex < 0 || e.RowIndex >= dgvHoaDon.Rows.Count) return;
+            var item = dgvHoaDon.Rows[e.RowIndex].DataBoundItem as HoaDonDto;
+            if (item == null) return;
+            HideHover();
+            OpenChiTietDialog(item);
         }
 
-        private async void OpenChiTietDialog()
+        private async void OpenChiTietDialog(HoaDonDto selected = null)
         {
-            if (dgvHoaDon.SelectedRows.Count == 0)
+            HideHover();
+            if (selected == null)
             {
-                MessageBox.Show("Vui lòng chọn một đơn hàng từ danh sách để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                if (dgvHoaDon.SelectedRows.Count == 0)
+                {
+                    MessageBox.Show("Vui lòng chọn một đơn hàng từ danh sách để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                selected = dgvHoaDon.SelectedRows[0].DataBoundItem as HoaDonDto;
             }
-
-            var selected = dgvHoaDon.SelectedRows[0].DataBoundItem as HoaDonDto;
             if (selected == null) return;
 
             using (var dialog = new HoaDonDialog(selected.MaHoaDon))
@@ -319,6 +340,150 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 {
                     await LoadData();
                 }
+            }
+        }
+
+        // ── Sắp xếp mã đơn theo số ───────────────────────────────────
+        private static string CodePrefix(string code)
+        {
+            if (string.IsNullOrEmpty(code)) return "";
+            int i = 0;
+            while (i < code.Length && !char.IsDigit(code[i])) i++;
+            return code.Substring(0, i).ToUpperInvariant();
+        }
+
+        private static long CodeNumber(string code)
+        {
+            if (string.IsNullOrEmpty(code)) return 0;
+            var digits = new string(code.Where(char.IsDigit).ToArray());
+            long n;
+            return long.TryParse(digits, out n) ? n : long.MaxValue;
+        }
+
+        // ── Xem nhanh đơn hàng khi rê chuột ──────────────────────────
+        private void SetupHoverPreview()
+        {
+            dgvHoaDon.ShowCellToolTips = false; // tooltip mặc định của lưới chen vào làm thẻ nháy
+            dgvHoaDon.CellMouseEnter += (s, e) =>
+            {
+                if (e.RowIndex < 0) { HideHover(); return; }
+                if (e.RowIndex == _hoverRow) return;
+                _hoverRow = e.RowIndex;
+                ShowHover(_hoverRow);   // hiện ngay, không chờ
+            };
+            // Rời một ô: nếu chuột không còn nằm trên dòng đơn nào thì ẩn ngay
+            dgvHoaDon.CellMouseLeave += (s, e) => BeginInvoke((Action)HideIfOffRow);
+            dgvHoaDon.MouseMove += (s, e) =>
+            {
+                if (_hoverCard.IsShown && dgvHoaDon.HitTest(e.X, e.Y).RowIndex < 0) HideHover();
+            };
+            dgvHoaDon.Scroll += (s, e) => HideHover();
+            dgvHoaDon.MouseLeave += (s, e) =>
+            {
+                // Chuột đi qua thẻ (trong suốt) vẫn tính là trên lưới; chỉ ẩn khi thật sự rời lưới
+                var pt = dgvHoaDon.PointToClient(Cursor.Position);
+                if (!dgvHoaDon.ClientRectangle.Contains(pt)) HideHover();
+            };
+
+            // Lưới an toàn khi thẻ đang hiện: rời lưới / đổi cửa sổ / mở dialog thì ẩn
+            _hoverWatch.Tick += (s, e) =>
+            {
+                if (!_hoverCard.IsShown) { _hoverWatch.Stop(); return; }
+                HideIfOffRow();
+                if (!dgvHoaDon.Visible || !IsOwnerWindowActive()) HideHover();
+            };
+
+            VisibleChanged += (s, e) => { if (!Visible) HideHover(); };
+            Disposed += (s, e) =>
+            {
+                _hoverWatch.Dispose();
+                _hoverCard.Dispose();
+            };
+        }
+
+        private void HideIfOffRow()
+        {
+            if (IsDisposed || !_hoverCard.IsShown) return;
+            var pt = dgvHoaDon.PointToClient(Cursor.Position);
+            if (!dgvHoaDon.ClientRectangle.Contains(pt) || dgvHoaDon.HitTest(pt.X, pt.Y).RowIndex < 0)
+                HideHover();
+        }
+
+        private bool IsOwnerWindowActive()
+        {
+            var active = Form.ActiveForm;
+            return active != null && (active == (TopLevelControl as Form) || active == _hoverCard);
+        }
+
+        private void ShowHover(int rowIndex)
+        {
+            if (IsDisposed || rowIndex < 0 || rowIndex >= dgvHoaDon.Rows.Count) return;
+            if (!IsOwnerWindowActive()) return;
+            var item = dgvHoaDon.Rows[rowIndex].DataBoundItem as HoaDonDto;
+            if (item == null || string.IsNullOrEmpty(item.MaHoaDon)) return;
+
+            var rowRect = dgvHoaDon.RectangleToScreen(dgvHoaDon.GetRowDisplayRectangle(rowIndex, false));
+            HoaDonDetailDto detail;
+            _detailCache.TryGetValue(item.MaHoaDon, out detail);
+            _hoverCard.ShowFor(item, detail, rowRect, Cursor.Position);
+            _hoverWatch.Start();
+
+            if (detail == null) LoadHoverDetail(item.MaHoaDon);
+        }
+
+        private async void LoadHoverDetail(string maHoaDon)
+        {
+            if (!_loadingDetail.Add(maHoaDon)) return;
+            try
+            {
+                var detail = await _hoaDonService.GetByIdAsync(maHoaDon);
+                if (detail == null || IsDisposed) return;
+                _detailCache[maHoaDon] = detail;
+                if (_hoverCard.IsShown && _hoverCard.CurrentMaHoaDon == maHoaDon)
+                    _hoverCard.UpdateDetail(detail);
+            }
+            catch
+            {
+                // Lỗi mạng khi xem nhanh: bỏ qua, thẻ vẫn hiện thông tin tóm tắt
+            }
+            finally
+            {
+                _loadingDetail.Remove(maHoaDon);
+            }
+        }
+
+        private void HideHover()
+        {
+            _hoverWatch.Stop();
+            _hoverRow = -1;
+            _hoverCard.HideCard();
+        }
+
+        // Tải sẵn chi tiết tất cả đơn ở chế độ nền để rê chuột là có đủ thông tin ngay,
+        // không bị thẻ "Đang tải..." rồi giãn ra (gây cảm giác nháy).
+        private int _prefetchVersion;
+        private async void PrefetchDetails()
+        {
+            int version = ++_prefetchVersion;
+            var codes = _allHoaDon.Where(x => !string.IsNullOrEmpty(x.MaHoaDon))
+                                  .Select(x => x.MaHoaDon).Distinct().ToList();
+            using (var gate = new System.Threading.SemaphoreSlim(4))
+            {
+                var tasks = codes.Select(async ma =>
+                {
+                    await gate.WaitAsync();
+                    try
+                    {
+                        if (version != _prefetchVersion || IsDisposed || _detailCache.ContainsKey(ma)) return;
+                        var d = await _hoaDonService.GetByIdAsync(ma);
+                        if (d == null || version != _prefetchVersion || IsDisposed) return;
+                        _detailCache[ma] = d;
+                        if (_hoverCard.IsShown && _hoverCard.CurrentMaHoaDon == ma) _hoverCard.UpdateDetail(d);
+                    }
+                    catch { /* bỏ qua lỗi từng đơn */ }
+                    finally { gate.Release(); }
+                }).ToList();
+                try { await Task.WhenAll(tasks); } catch { }
             }
         }
     }

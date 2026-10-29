@@ -80,25 +80,29 @@ namespace RestaurantCRM.BusinessLogic.Services
             return words[0].Length > 5 ? words[0].Substring(0, 5) : words[0];
         }
 
-        public static async Task<string> GenerateMaLoaiMonAsync(IRestaurantService service, string tenLoaiMon = null)
+        public static async Task<string> GenerateMaLoaiMonAsync(IRestaurantService service, string? tenLoaiMon = null)
         {
-            string prefix = !string.IsNullOrWhiteSpace(tenLoaiMon) 
-                ? GeneratePrefixFromTenLoaiMon(tenLoaiMon) 
-                : "LM";
+            const string prefix = "LM";
+            var codes = await service.ListAsync<LoaiMon, string>(
+                x => x.MaLoaiMon != null && x.MaLoaiMon.StartsWith(prefix),
+                x => x.MaLoaiMon!);
 
-            // Nếu prefix chưa tồn tại trong bảng LOAI_MON, dùng ngay prefix (ví dụ "LAU", "THIT")
-            if (!await service.AnyAsync<LoaiMon>(x => x.MaLoaiMon == prefix))
+            int maxNum = 0;
+            foreach (var code in codes)
             {
-                return prefix;
+                var numStr = code.Substring(prefix.Length);
+                if (int.TryParse(numStr, out int val) && val > maxNum)
+                {
+                    maxNum = val;
+                }
             }
 
-            // Nếu đã tồn tại prefix thì thêm số thứ tự: LAU2, LAU3...
-            int num = 2;
-            while (await service.AnyAsync<LoaiMon>(x => x.MaLoaiMon == $"{prefix}{num}"))
+            int nextNum = maxNum + 1;
+            while (await service.AnyAsync<LoaiMon>(x => x.MaLoaiMon == $"{prefix}{nextNum:D3}"))
             {
-                num++;
+                nextNum++;
             }
-            return $"{prefix}{num}";
+            return $"{prefix}{nextNum:D3}";
         }
 
         public static Task<string> GenerateMaLoaiMonAsync(IRestaurantService service)
@@ -106,9 +110,9 @@ namespace RestaurantCRM.BusinessLogic.Services
             return GenerateMaLoaiMonAsync(service, null);
         }
 
-        public static async Task<string> GenerateMaMonAnAsync(IRestaurantService service, string maLoaiMon = null)
+        public static async Task<string> GenerateMaMonAnAsync(IRestaurantService service, string? maLoaiMon = null)
         {
-            string prefix = !string.IsNullOrWhiteSpace(maLoaiMon) ? maLoaiMon.Trim().ToUpper() : "M";
+            const string prefix = "MA";
 
             var codes = await service.ListAsync<MonAn, string>(
                 x => x.MaMon != null && x.MaMon.StartsWith(prefix),

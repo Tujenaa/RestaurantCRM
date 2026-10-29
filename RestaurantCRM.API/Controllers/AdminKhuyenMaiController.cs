@@ -31,7 +31,8 @@ namespace RestaurantCRM.API.Controllers
             var today = DateOnly.FromDateTime(DateTime.Now);
 
             var list = await _service.Query<ChuongTrinhKhuyenMai>()
-                .Include(k => k.KmTheoVoucher)
+                .Include(k => k.KmTheoDonHang)
+                .Include(k => k.KmTheoLoai)
                 .Include(k => k.KmTheoSp)
                 .OrderByDescending(k => k.NgayBatDau)
                 .Select(k => new
@@ -42,7 +43,9 @@ namespace RestaurantCRM.API.Controllers
                     k.NgayKetThuc,
                     TrangThai = (k.NgayKetThuc != null && today > k.NgayKetThuc) ? "Đã kết thúc" :
                                 (k.NgayBatDau != null && today < k.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
-                    SoLuongVoucher = k.KmTheoVoucher.Count,
+                    SoLuongVoucher = k.KmTheoDonHang.Count 
+                                   + k.KmTheoLoai.Count(l => !string.IsNullOrEmpty(l.MaVoucher)) 
+                                   + k.KmTheoSp.Count(s => !string.IsNullOrEmpty(s.MaVoucher)),
                     SoLuongMonKm = k.KmTheoSp.Count
                 })
                 .ToListAsync();
@@ -55,12 +58,61 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
             var k = await _service.Query<ChuongTrinhKhuyenMai>()
-                .Include(x => x.KmTheoVoucher)
+                .Include(x => x.KmTheoDonHang)
+                .Include(x => x.KmTheoLoai)
+                    .ThenInclude(l => l.MaLoaiMonNavigation)
                 .Include(x => x.KmTheoSp)
                     .ThenInclude(sp => sp.MaMonNavigation)
                 .FirstOrDefaultAsync(x => x.MaChuongTrinh == id);
 
             if (k == null) return NotFound("Không tìm thấy chương trình khuyến mãi.");
+
+            var vDon = k.KmTheoDonHang.Select(v => new
+            {
+                MaKmvoucher = v.MaKMDonHang,
+                v.MaVoucher,
+                v.PhanTramGiam,
+                v.TienGiam,
+                v.GiaTriDonToiThieu,
+                v.GiamToiDa,
+                PhamViApDung = "TOAN_DON",
+                MaLoaiMon = (string?)null,
+                TenLoaiMon = (string?)null,
+                MaMon = (string?)null,
+                TenMon = (string?)null
+            });
+
+            var vLoai = k.KmTheoLoai.Where(v => !string.IsNullOrEmpty(v.MaVoucher)).Select(v => new
+            {
+                MaKmvoucher = v.MaKMLoai,
+                v.MaVoucher,
+                v.PhanTramGiam,
+                v.TienGiam,
+                v.GiaTriDonToiThieu,
+                v.GiamToiDa,
+                PhamViApDung = "THEO_LOAI",
+                v.MaLoaiMon,
+                TenLoaiMon = v.MaLoaiMonNavigation != null ? v.MaLoaiMonNavigation.TenLoaiMon : null,
+                MaMon = (string?)null,
+                TenMon = (string?)null
+            });
+
+            var vMon = k.KmTheoSp.Where(v => !string.IsNullOrEmpty(v.MaVoucher)).Select(v => new
+            {
+                MaKmvoucher = v.MaKmsp,
+                v.MaVoucher,
+                v.PhanTramGiam,
+                v.TienGiam,
+                GiaTriDonToiThieu = (double?)null,
+                v.GiamToiDa,
+                PhamViApDung = "THEO_MON",
+                MaLoaiMon = (string?)null,
+                TenLoaiMon = (string?)null,
+                v.MaMon,
+                TenMon = v.MaMonNavigation != null ? v.MaMonNavigation.TenMon : null
+            });
+
+            var allVouchers = vDon.Concat(vLoai).Concat(vMon).ToList();
 
             return Ok(new
             {
@@ -70,15 +122,7 @@ namespace RestaurantCRM.API.Controllers
                 k.NgayKetThuc,
                 TrangThai = (k.NgayKetThuc != null && today > k.NgayKetThuc) ? "Đã kết thúc" :
                             (k.NgayBatDau != null && today < k.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
-                Vouchers = k.KmTheoVoucher.Select(v => new
-                {
-                    v.MaKmvoucher,
-                    v.MaVoucher,
-                    v.PhanTramGiam,
-                    v.TienGiam,
-                    v.GiaTriDonToiThieu,
-                    v.GiamToiDa
-                }),
+                Vouchers = allVouchers,
                 MonAns = k.KmTheoSp.Select(sp => new
                 {
                     sp.MaKmsp,
@@ -98,15 +142,14 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Tên chương trình không được để trống.");
             }
 
-            if (request.NgayBatDau.HasValue && request.NgayKetThuc.HasValue && request.NgayKetThuc < request.NgayBatDau)
+            if (request.NgayBatDau.HasValue && request.NgayKetThuc.HasValue && request.NgayBatDau > request.NgayKetThuc)
             {
-                return BadRequest("Ngày kết thúc không được nhỏ hơn ngày bắt đầu.");
+                return BadRequest("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
             }
 
-            var maCT = "CTKM" + DateTime.Now.ToString("yyMMddHHmmss");
             var ct = new ChuongTrinhKhuyenMai
             {
-                MaChuongTrinh = maCT,
+                MaChuongTrinh = "KM" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper(),
                 TenChuongTrinh = request.TenChuongTrinh.Trim(),
                 NgayBatDau = request.NgayBatDau,
                 NgayKetThuc = request.NgayKetThuc
@@ -115,7 +158,7 @@ namespace RestaurantCRM.API.Controllers
             _service.Add(ct);
             await _service.SaveChangesAsync();
 
-            return Ok(new { message = "Tạo chương trình thành công.", maChuongTrinh = ct.MaChuongTrinh, data = ct });
+            return Ok(new { message = "Tạo chương trình khuyến mãi thành công.", data = ct });
         }
 
         [HttpPut("ChuongTrinh/{id}")]
@@ -129,9 +172,9 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Tên chương trình không được để trống.");
             }
 
-            if (request.NgayBatDau.HasValue && request.NgayKetThuc.HasValue && request.NgayKetThuc < request.NgayBatDau)
+            if (request.NgayBatDau.HasValue && request.NgayKetThuc.HasValue && request.NgayBatDau > request.NgayKetThuc)
             {
-                return BadRequest("Ngày kết thúc không được nhỏ hơn ngày bắt đầu.");
+                return BadRequest("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
             }
 
             ct.TenChuongTrinh = request.TenChuongTrinh.Trim();
@@ -146,7 +189,8 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> DeleteChuongTrinh(string id)
         {
             var ct = await _service.Query<ChuongTrinhKhuyenMai>()
-                .Include(k => k.KmTheoVoucher).ThenInclude(v => v.HoaDon)
+                .Include(k => k.KmTheoDonHang).ThenInclude(v => v.HoaDon)
+                .Include(k => k.KmTheoLoai).ThenInclude(l => l.ChiTietHoaDon)
                 .Include(k => k.KmTheoSp).ThenInclude(sp => sp.ChiTietHoaDon)
                 .FirstOrDefaultAsync(k => k.MaChuongTrinh == id);
 
@@ -154,15 +198,12 @@ namespace RestaurantCRM.API.Controllers
 
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            // Kiểm tra xem đã có hóa đơn nào từng áp dụng voucher hoặc món ưu đãi trong chương trình này chưa
-            bool hasVoucherInvoice = ct.KmTheoVoucher.Any(v => v.HoaDon.Any());
+            bool hasDonInvoice = ct.KmTheoDonHang.Any(v => v.HoaDon.Any());
+            bool hasLoaiInvoice = ct.KmTheoLoai.Any(l => l.ChiTietHoaDon.Any());
             bool hasSpInvoice = ct.KmTheoSp.Any(sp => sp.ChiTietHoaDon.Any());
 
-            if (hasVoucherInvoice || hasSpInvoice)
+            if (hasDonInvoice || hasLoaiInvoice || hasSpInvoice)
             {
-                // Đã từng phát sinh giao dịch trên hóa đơn:
-                // Không xóa cứng để bảo vệ dữ liệu kế toán và tránh vi phạm ràng buộc khóa ngoại (FK Exception).
-                // Tự động kết thúc chương trình (Soft Close/Deactivate).
                 ct.NgayKetThuc = today.AddDays(-1);
                 if (!string.IsNullOrEmpty(ct.TenChuongTrinh) && !ct.TenChuongTrinh.StartsWith("[ĐÃ DỪNG]"))
                 {
@@ -177,9 +218,9 @@ namespace RestaurantCRM.API.Controllers
                 });
             }
 
-            // Chưa từng sử dụng: Xóa sạch an toàn khỏi CSDL
             if (ct.KmTheoSp.Any()) _service.RemoveRange(ct.KmTheoSp);
-            if (ct.KmTheoVoucher.Any()) _service.RemoveRange(ct.KmTheoVoucher);
+            if (ct.KmTheoLoai.Any()) _service.RemoveRange(ct.KmTheoLoai);
+            if (ct.KmTheoDonHang.Any()) _service.RemoveRange(ct.KmTheoDonHang);
 
             _service.Remove(ct);
             await _service.SaveChangesAsync();
@@ -188,7 +229,7 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // ==============================================================
-        // 2. QUẢN LÝ VOUCHER TOÀN HÓA ĐƠN (ORDER VOUCHER)
+        // 2. QUẢN LÝ VOUCHER (ĐƠN HÀNG, THEO LOẠI, THEO MÓN)
         // ==============================================================
 
         [HttpGet("Voucher")]
@@ -196,15 +237,14 @@ namespace RestaurantCRM.API.Controllers
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
 
-            var vouchers = await _service.Query<KmTheoVoucher>()
+            // 1. Voucher toàn đơn (KM_THEO_DON_HANG)
+            var vDon = await _service.Query<KmTheoDonHang>()
                 .Include(v => v.MaChuongTrinhNavigation)
-                .Include(v => v.MaLoaiMonNavigation)
-                .Include(v => v.MaMonNavigation)
                 .Include(v => v.HoaDon)
-                .OrderByDescending(v => v.MaKmvoucher)
+                .OrderByDescending(v => v.MaKMDonHang)
                 .Select(v => new
                 {
-                    v.MaKmvoucher,
+                    MaKmvoucher = v.MaKMDonHang,
                     v.MaVoucher,
                     v.MaChuongTrinh,
                     TenChuongTrinh = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.TenChuongTrinh : "",
@@ -221,24 +261,94 @@ namespace RestaurantCRM.API.Controllers
                     v.TienGiam,
                     v.GiaTriDonToiThieu,
                     v.GiamToiDa,
-                    v.PhamViApDung,
+                    PhamViApDung = "TOAN_DON",
+                    MaLoaiMon = (string?)null,
+                    TenLoaiMon = (string?)null,
+                    MaMon = (string?)null,
+                    TenMon = (string?)null,
+                    v.SoLuongToiThieu,
+                    v.ChoPhepCongDon,
+                    HinhThuc = v.PhanTramGiam.HasValue ? $"Giảm {v.PhanTramGiam.Value}%" : $"Giảm {v.TienGiam:N0} đ"
+                })
+                .ToListAsync();
+
+            // 2. Voucher theo loại món (KM_THEO_LOAI)
+            var vLoai = await _service.Query<KmTheoLoai>()
+                .Include(v => v.MaChuongTrinhNavigation)
+                .Include(v => v.MaLoaiMonNavigation)
+                .Include(v => v.ChiTietHoaDon)
+                .OrderByDescending(v => v.MaKMLoai)
+                .Select(v => new
+                {
+                    MaKmvoucher = v.MaKMLoai,
+                    v.MaVoucher,
+                    v.MaChuongTrinh,
+                    TenChuongTrinh = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.TenChuongTrinh : "",
+                    NgayBatDau = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayBatDau : null,
+                    NgayKetThuc = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayKetThuc : null,
+                    SoLuongDaDung = v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled"),
+                    SoLuongToiDa = v.SoLuongToiThieu,
+                    TrangThai = (v.ChoPhepCongDon == false) ? "Đã kết thúc" :
+                                (v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_")) ? "Đã kết thúc" :
+                                (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled") >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
+                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayKetThuc != null && today > v.MaChuongTrinhNavigation.NgayKetThuc) ? "Đã kết thúc" :
+                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayBatDau != null && today < v.MaChuongTrinhNavigation.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                    v.PhanTramGiam,
+                    v.TienGiam,
+                    v.GiaTriDonToiThieu,
+                    v.GiamToiDa,
+                    PhamViApDung = "THEO_LOAI",
                     v.MaLoaiMon,
                     TenLoaiMon = v.MaLoaiMonNavigation != null ? v.MaLoaiMonNavigation.TenLoaiMon : null,
+                    MaMon = (string?)null,
+                    TenMon = (string?)null,
+                    v.SoLuongToiThieu,
+                    v.ChoPhepCongDon,
+                    HinhThuc = v.GiaTriDonToiThieu.HasValue && v.GiaTriDonToiThieu.Value > 0
+                        ? $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} nhóm {v.MaLoaiMonNavigation!.TenLoaiMon ?? v.MaLoaiMon} (món ≥ {v.GiaTriDonToiThieu:N0} đ)"
+                        : $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} nhóm {v.MaLoaiMonNavigation!.TenLoaiMon ?? v.MaLoaiMon}"
+                })
+                .ToListAsync();
+
+            // 3. Voucher theo món ăn (KM_THEO_SP có MaVoucher)
+            var vMon = await _service.Query<KmTheoSp>()
+                .Include(v => v.MaChuongTrinhNavigation)
+                .Include(v => v.MaMonNavigation)
+                .Include(v => v.ChiTietHoaDon)
+                .Where(v => !string.IsNullOrEmpty(v.MaVoucher))
+                .OrderByDescending(v => v.MaKmsp)
+                .Select(v => new
+                {
+                    MaKmvoucher = v.MaKmsp,
+                    v.MaVoucher,
+                    v.MaChuongTrinh,
+                    TenChuongTrinh = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.TenChuongTrinh : "",
+                    NgayBatDau = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayBatDau : null,
+                    NgayKetThuc = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayKetThuc : null,
+                    SoLuongDaDung = v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled"),
+                    SoLuongToiDa = v.SoLuongToiThieu,
+                    TrangThai = (v.ChoPhepCongDon == false) ? "Đã kết thúc" :
+                                (v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_")) ? "Đã kết thúc" :
+                                (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled") >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
+                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayKetThuc != null && today > v.MaChuongTrinhNavigation.NgayKetThuc) ? "Đã kết thúc" :
+                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayBatDau != null && today < v.MaChuongTrinhNavigation.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                    v.PhanTramGiam,
+                    v.TienGiam,
+                    GiaTriDonToiThieu = (double?)null,
+                    v.GiamToiDa,
+                    PhamViApDung = "THEO_MON",
+                    MaLoaiMon = (string?)null,
+                    TenLoaiMon = (string?)null,
                     v.MaMon,
                     TenMon = v.MaMonNavigation != null ? v.MaMonNavigation.TenMon : null,
                     v.SoLuongToiThieu,
                     v.ChoPhepCongDon,
-                    HinhThuc = v.PhamViApDung == "THEO_MON"
-                        ? $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} món {v.MaMonNavigation!.TenMon ?? v.MaMon}"
-                        : (v.PhamViApDung == "THEO_LOAI"
-                            ? (v.GiaTriDonToiThieu.HasValue && v.GiaTriDonToiThieu.Value > 0
-                                ? $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} nhóm {v.MaLoaiMonNavigation!.TenLoaiMon ?? v.MaLoaiMon} (món ≥ {v.GiaTriDonToiThieu:N0} đ)"
-                                : $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} nhóm {v.MaLoaiMonNavigation!.TenLoaiMon ?? v.MaLoaiMon}")
-                            : (v.PhanTramGiam.HasValue ? $"Giảm {v.PhanTramGiam.Value}%" : $"Giảm {v.TienGiam:N0} đ"))
+                    HinhThuc = $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} món {v.MaMonNavigation!.TenMon ?? v.MaMon}"
                 })
                 .ToListAsync();
 
-            return Ok(vouchers);
+            var all = vDon.Concat(vLoai).Concat(vMon).ToList();
+            return Ok(all);
         }
 
         [HttpPost("Voucher")]
@@ -254,8 +364,11 @@ namespace RestaurantCRM.API.Controllers
             if (ct == null) return NotFound("Chương trình khuyến mãi không tồn tại.");
 
             var maVoucherUpper = req.MaVoucher.Trim().ToUpper();
-            var exists = await _service.Query<KmTheoVoucher>().AnyAsync(v => v.MaVoucher == maVoucherUpper);
-            if (exists)
+            var existsDon = await _service.Query<KmTheoDonHang>().AnyAsync(v => v.MaVoucher == maVoucherUpper);
+            var existsLoai = await _service.Query<KmTheoLoai>().AnyAsync(v => v.MaVoucher == maVoucherUpper);
+            var existsSp = await _service.Query<KmTheoSp>().AnyAsync(v => v.MaVoucher == maVoucherUpper);
+
+            if (existsDon || existsLoai || existsSp)
                 return BadRequest($"Mã voucher '{maVoucherUpper}' đã tồn tại trong hệ thống. Vui lòng đặt mã khác.");
 
             if (req.GiaTriGiam <= 0)
@@ -268,129 +381,273 @@ namespace RestaurantCRM.API.Controllers
             if (phamVi == "THEO_MON" && string.IsNullOrWhiteSpace(req.MaMon))
                 return BadRequest("Vui lòng chọn món ăn áp dụng cho voucher.");
 
-            // Kiểm tra an toàn giá vốn nếu là voucher theo món
             if (phamVi == "THEO_MON")
             {
-                var dish = await _service.Query<MonAn>()
-                    .Include(m => m.DinhLuong)
-                        .ThenInclude(dl => dl.MaNguyenLieuNavigation)
-                    .FirstOrDefaultAsync(m => m.MaMon == req.MaMon);
-
-                if (dish != null && dish.DonGia.HasValue)
+                var voucherSp = new KmTheoSp
                 {
-                    double goc = dish.DonGia.Value;
-                    double giaVon = dish.DinhLuong.Sum(dl => (double)dl.SoLuongCan * (dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0));
-                    double sauGiam = req.LoaiGiam == "%" ? goc * (1 - req.GiaTriGiam / 100.0) : Math.Max(0, goc - req.GiaTriGiam);
+                    MaKmsp = "VCH" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
+                    MaChuongTrinh = req.MaChuongTrinh,
+                    MaMon = req.MaMon!,
+                    MaVoucher = maVoucherUpper,
+                    PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
+                    TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null,
+                    GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null),
+                    SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : 1,
+                    ChoPhepCongDon = req.ChoPhepCongDon ?? true
+                };
 
-                    if (giaVon > 0 && sauGiam < giaVon)
-                    {
-                        double tienLo = giaVon - sauGiam;
-                        return BadRequest($"Mức giảm khiến giá sau ưu đãi ({sauGiam:N0} đ) thấp hơn giá vốn ({giaVon:N0} đ). Thua lỗ {tienLo:N0} đ/đĩa. Hệ thống chặn lưu voucher này.");
-                    }
-                }
+                _service.Add(voucherSp);
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Tạo voucher theo món ăn thành công.", data = voucherSp });
             }
-
-            var voucher = new KmTheoVoucher
+            else if (phamVi == "THEO_LOAI")
             {
-                MaKmvoucher = "VCH" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
-                MaChuongTrinh = req.MaChuongTrinh,
-                MaVoucher = maVoucherUpper,
-                GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null,
-                PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
-                TienGiam = req.LoaiGiam == "VND" ? req.GiaTriGiam : null,
-                GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null),
-                PhamViApDung = phamVi,
-                MaLoaiMon = phamVi == "THEO_LOAI" ? req.MaLoaiMon : null,
-                MaMon = phamVi == "THEO_MON" ? req.MaMon : null,
-                SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : 1,
-                ChoPhepCongDon = req.ChoPhepCongDon ?? true
-            };
+                var voucherLoai = new KmTheoLoai
+                {
+                    MaKMLoai = "VCH" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
+                    MaChuongTrinh = req.MaChuongTrinh,
+                    MaLoaiMon = req.MaLoaiMon!,
+                    MaVoucher = maVoucherUpper,
+                    GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null,
+                    PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
+                    TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null,
+                    GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null),
+                    SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : 1,
+                    ChoPhepCongDon = req.ChoPhepCongDon ?? true
+                };
 
-            _service.Add(voucher);
-            await _service.SaveChangesAsync();
+                _service.Add(voucherLoai);
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Tạo voucher theo nhóm món thành công.", data = voucherLoai });
+            }
+            else
+            {
+                var voucherDon = new KmTheoDonHang
+                {
+                    MaKMDonHang = "VCH" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
+                    MaChuongTrinh = req.MaChuongTrinh,
+                    MaVoucher = maVoucherUpper,
+                    GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null,
+                    PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
+                    TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null,
+                    GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null),
+                    SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : 1,
+                    ChoPhepCongDon = req.ChoPhepCongDon ?? true
+                };
 
-            return Ok(new { message = "Tạo voucher thành công.", data = voucher });
+                _service.Add(voucherDon);
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Tạo voucher toàn đơn thành công.", data = voucherDon });
+            }
         }
 
         [HttpPut("Voucher/{id}")]
         public async Task<IActionResult> UpdateVoucher(string id, [FromBody] VoucherCreateRequest req)
         {
-            var voucher = await _service.Query<KmTheoVoucher>()
-                .Include(v => v.HoaDon)
-                .FirstOrDefaultAsync(v => v.MaKmvoucher == id || v.MaVoucher == id);
-
-            if (voucher == null) return NotFound("Không tìm thấy voucher cần cập nhật.");
-
             if (req.GiaTriGiam <= 0)
                 return BadRequest("Giá trị giảm giá phải lớn hơn 0.");
 
-            if (!string.IsNullOrWhiteSpace(req.MaChuongTrinh))
-            {
-                var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(req.MaChuongTrinh);
-                if (ct != null) voucher.MaChuongTrinh = req.MaChuongTrinh;
-            }
+            var maUpper = !string.IsNullOrWhiteSpace(req.MaVoucher) ? req.MaVoucher.Trim().ToUpper() : null;
 
-            if (!string.IsNullOrWhiteSpace(req.MaVoucher))
+            // 1. Kiểm tra KM_THEO_DON_HANG
+            var vDon = await _service.Query<KmTheoDonHang>().FirstOrDefaultAsync(v => v.MaKMDonHang == id || v.MaVoucher == id);
+            if (vDon != null)
             {
-                var maUpper = req.MaVoucher.Trim().ToUpper();
-                if (maUpper != voucher.MaVoucher)
+                if (maUpper != null && maUpper != vDon.MaVoucher)
                 {
-                    var exists = await _service.Query<KmTheoVoucher>().AnyAsync(v => v.MaVoucher == maUpper && v.MaKmvoucher != voucher.MaKmvoucher);
+                    var exists = await _service.Query<KmTheoDonHang>().AnyAsync(v => v.MaVoucher == maUpper && v.MaKMDonHang != vDon.MaKMDonHang)
+                              || await _service.Query<KmTheoLoai>().AnyAsync(v => v.MaVoucher == maUpper)
+                              || await _service.Query<KmTheoSp>().AnyAsync(v => v.MaVoucher == maUpper);
                     if (exists) return BadRequest($"Mã voucher '{maUpper}' đã được sử dụng. Vui lòng chọn mã khác.");
-                    voucher.MaVoucher = maUpper;
+                    vDon.MaVoucher = maUpper;
                 }
+
+                if (!string.IsNullOrWhiteSpace(req.MaChuongTrinh))
+                {
+                    var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(req.MaChuongTrinh);
+                    if (ct != null) vDon.MaChuongTrinh = req.MaChuongTrinh;
+                }
+
+                vDon.PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null;
+                vDon.TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null;
+                vDon.GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null;
+                vDon.GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null);
+                vDon.SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : null;
+
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Cập nhật voucher thành công.", data = vDon });
             }
 
-            voucher.PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null;
-            voucher.TienGiam = req.LoaiGiam == "VND" ? req.GiaTriGiam : null;
-            voucher.GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null;
-            voucher.GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null);
-            voucher.SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : null;
+            // 2. Kiểm tra KM_THEO_LOAI
+            var vLoai = await _service.Query<KmTheoLoai>().FirstOrDefaultAsync(v => v.MaKMLoai == id || v.MaVoucher == id);
+            if (vLoai != null)
+            {
+                if (maUpper != null && maUpper != vLoai.MaVoucher)
+                {
+                    var exists = await _service.Query<KmTheoDonHang>().AnyAsync(v => v.MaVoucher == maUpper)
+                              || await _service.Query<KmTheoLoai>().AnyAsync(v => v.MaVoucher == maUpper && v.MaKMLoai != vLoai.MaKMLoai)
+                              || await _service.Query<KmTheoSp>().AnyAsync(v => v.MaVoucher == maUpper);
+                    if (exists) return BadRequest($"Mã voucher '{maUpper}' đã được sử dụng. Vui lòng chọn mã khác.");
+                    vLoai.MaVoucher = maUpper;
+                }
 
-            await _service.SaveChangesAsync();
-            return Ok(new { message = "Cập nhật voucher thành công.", data = voucher });
+                if (!string.IsNullOrWhiteSpace(req.MaChuongTrinh))
+                {
+                    var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(req.MaChuongTrinh);
+                    if (ct != null) vLoai.MaChuongTrinh = req.MaChuongTrinh;
+                }
+
+                if (!string.IsNullOrWhiteSpace(req.MaLoaiMon)) vLoai.MaLoaiMon = req.MaLoaiMon;
+
+                vLoai.PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null;
+                vLoai.TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null;
+                vLoai.GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null;
+                vLoai.GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null);
+                vLoai.SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : null;
+
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Cập nhật voucher thành công.", data = vLoai });
+            }
+
+            // 3. Kiểm tra KM_THEO_SP
+            var vSp = await _service.Query<KmTheoSp>().FirstOrDefaultAsync(v => v.MaKmsp == id || v.MaVoucher == id);
+            if (vSp != null)
+            {
+                if (maUpper != null && maUpper != vSp.MaVoucher)
+                {
+                    var exists = await _service.Query<KmTheoDonHang>().AnyAsync(v => v.MaVoucher == maUpper)
+                              || await _service.Query<KmTheoLoai>().AnyAsync(v => v.MaVoucher == maUpper)
+                              || await _service.Query<KmTheoSp>().AnyAsync(v => v.MaVoucher == maUpper && v.MaKmsp != vSp.MaKmsp);
+                    if (exists) return BadRequest($"Mã voucher '{maUpper}' đã được sử dụng. Vui lòng chọn mã khác.");
+                    vSp.MaVoucher = maUpper;
+                }
+
+                if (!string.IsNullOrWhiteSpace(req.MaChuongTrinh))
+                {
+                    var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(req.MaChuongTrinh);
+                    if (ct != null) vSp.MaChuongTrinh = req.MaChuongTrinh;
+                }
+
+                if (!string.IsNullOrWhiteSpace(req.MaMon)) vSp.MaMon = req.MaMon;
+
+                vSp.PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null;
+                vSp.TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null;
+                vSp.GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null);
+                vSp.SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : null;
+
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Cập nhật voucher thành công.", data = vSp });
+            }
+
+            return NotFound("Không tìm thấy voucher cần cập nhật.");
         }
 
         [HttpDelete("Voucher/{id}")]
         public async Task<IActionResult> DeleteVoucher(string id)
         {
-            var voucher = await _service.Query<KmTheoVoucher>()
+            // 1. Kiểm tra KM_THEO_DON_HANG
+            var vDon = await _service.Query<KmTheoDonHang>()
                 .Include(v => v.HoaDon)
-                .FirstOrDefaultAsync(v => v.MaKmvoucher == id || v.MaVoucher == id);
+                .FirstOrDefaultAsync(v => v.MaKMDonHang == id || v.MaVoucher == id);
 
-            if (voucher == null) return NotFound("Không tìm thấy voucher.");
-
-            if (voucher.HoaDon.Any())
+            if (vDon != null)
             {
-                // Đã từng phát sinh trên hóa đơn: Không thể xóa cứng vì ràng buộc FK với bảng HOA_DON.
-                // Hệ thống thực hiện ẨN và vô hiệu hóa voucher:
-                voucher.ChoPhepCongDon = false;
-
-                // Cập nhật số lượng áp dụng bằng số lượng đã dùng để hệ thống ghi nhận hết lượt ngay lập tức
-                int daDung = voucher.HoaDon.Count(h => h.TrangThai != "Cancelled");
-                voucher.SoLuongToiThieu = Math.Max(1, daDung);
-
-                // Giữ nguyên PhanTramGiam / TienGiam để KHÔNG vi phạm ràng buộc CK_KM_THEO_VOUCHER_giamHopLe
-                // Đổi tiền tố mã voucher sang [DA_HUY]_ (cắt chuỗi tối đa 30 ký tự để không vượt quá giới hạn cột VARCHAR(30))
-                if (!string.IsNullOrEmpty(voucher.MaVoucher) && !voucher.MaVoucher.StartsWith("[DA_HUY]_"))
+                if (vDon.HoaDon.Any())
                 {
-                    string prefix = "[DA_HUY]_";
-                    int maxLen = 30 - prefix.Length;
-                    string raw = voucher.MaVoucher;
-                    voucher.MaVoucher = prefix + (raw.Length > maxLen ? raw.Substring(0, maxLen) : raw);
+                    vDon.ChoPhepCongDon = false;
+                    int daDung = vDon.HoaDon.Count(h => h.TrangThai != "Cancelled");
+                    vDon.SoLuongToiThieu = Math.Max(1, daDung);
+
+                    if (!string.IsNullOrEmpty(vDon.MaVoucher) && !vDon.MaVoucher.StartsWith("[DA_HUY]_"))
+                    {
+                        string prefix = "[DA_HUY]_";
+                        int maxLen = 30 - prefix.Length;
+                        string raw = vDon.MaVoucher;
+                        vDon.MaVoucher = prefix + (raw.Length > maxLen ? raw.Substring(0, maxLen) : raw);
+                    }
+
+                    await _service.SaveChangesAsync();
+                    return Ok(new
+                    {
+                        message = "Voucher này đã có đơn hàng sử dụng nên không thể xóa khỏi CSDL. Hệ thống đã ẨN voucher (chuyển sang trạng thái Đã kết thúc) để bảo toàn lịch sử hóa đơn.",
+                        softDeleted = true
+                    });
                 }
 
+                _service.Remove(vDon);
                 await _service.SaveChangesAsync();
-                return Ok(new
-                {
-                    message = "Voucher này đã có đơn hàng sử dụng nên không thể xóa khỏi CSDL. Hệ thống đã ẨN voucher (chuyển sang trạng thái Đã kết thúc) để bảo toàn lịch sử hóa đơn.",
-                    softDeleted = true
-                });
+                return Ok(new { message = "Đã xóa voucher thành công khỏi hệ thống.", softDeleted = false });
             }
 
-            _service.Remove(voucher);
-            await _service.SaveChangesAsync();
-            return Ok(new { message = "Đã xóa voucher thành công khỏi hệ thống.", softDeleted = false });
+            // 2. Kiểm tra KM_THEO_LOAI
+            var vLoai = await _service.Query<KmTheoLoai>()
+                .Include(v => v.ChiTietHoaDon)
+                .FirstOrDefaultAsync(v => v.MaKMLoai == id || v.MaVoucher == id);
+
+            if (vLoai != null)
+            {
+                if (vLoai.ChiTietHoaDon.Any())
+                {
+                    vLoai.ChoPhepCongDon = false;
+                    int daDung = vLoai.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                    vLoai.SoLuongToiThieu = Math.Max(1, daDung);
+
+                    if (!string.IsNullOrEmpty(vLoai.MaVoucher) && !vLoai.MaVoucher.StartsWith("[DA_HUY]_"))
+                    {
+                        string prefix = "[DA_HUY]_";
+                        int maxLen = 30 - prefix.Length;
+                        string raw = vLoai.MaVoucher;
+                        vLoai.MaVoucher = prefix + (raw.Length > maxLen ? raw.Substring(0, maxLen) : raw);
+                    }
+
+                    await _service.SaveChangesAsync();
+                    return Ok(new
+                    {
+                        message = "Voucher này đã có đơn hàng sử dụng nên không thể xóa khỏi CSDL. Hệ thống đã ẨN voucher (chuyển sang trạng thái Đã kết thúc) để bảo toàn lịch sử hóa đơn.",
+                        softDeleted = true
+                    });
+                }
+
+                _service.Remove(vLoai);
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Đã xóa voucher thành công khỏi hệ thống.", softDeleted = false });
+            }
+
+            // 3. Kiểm tra KM_THEO_SP
+            var vSp = await _service.Query<KmTheoSp>()
+                .Include(v => v.ChiTietHoaDon)
+                .FirstOrDefaultAsync(v => v.MaKmsp == id || v.MaVoucher == id);
+
+            if (vSp != null)
+            {
+                if (vSp.ChiTietHoaDon.Any())
+                {
+                    vSp.ChoPhepCongDon = false;
+                    int daDung = vSp.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                    vSp.SoLuongToiThieu = Math.Max(1, daDung);
+
+                    if (!string.IsNullOrEmpty(vSp.MaVoucher) && !vSp.MaVoucher.StartsWith("[DA_HUY]_"))
+                    {
+                        string prefix = "[DA_HUY]_";
+                        int maxLen = 30 - prefix.Length;
+                        string raw = vSp.MaVoucher;
+                        vSp.MaVoucher = prefix + (raw.Length > maxLen ? raw.Substring(0, maxLen) : raw);
+                    }
+
+                    await _service.SaveChangesAsync();
+                    return Ok(new
+                    {
+                        message = "Voucher này đã có đơn hàng sử dụng nên không thể xóa khỏi CSDL. Hệ thống đã ẨN voucher (chuyển sang trạng thái Đã kết thúc) để bảo toàn lịch sử hóa đơn.",
+                        softDeleted = true
+                    });
+                }
+
+                _service.Remove(vSp);
+                await _service.SaveChangesAsync();
+                return Ok(new { message = "Đã xóa voucher thành công khỏi hệ thống.", softDeleted = false });
+            }
+
+            return NotFound("Không tìm thấy voucher.");
         }
 
         // ==============================================================
@@ -445,7 +702,6 @@ namespace RestaurantCRM.API.Controllers
             var mon = await _service.FindAsync<MonAn>(req.MaMon);
             if (mon == null) return NotFound("Món ăn không tồn tại.");
 
-            // Kiểm tra món đã được thêm vào chương trình này chưa
             var exists = await _service.Query<KmTheoSp>().AnyAsync(s => s.MaChuongTrinh == req.MaChuongTrinh && s.MaMon == req.MaMon);
             if (exists)
                 return BadRequest($"Món '{mon.TenMon}' đã có trong chương trình này.");
@@ -480,7 +736,6 @@ namespace RestaurantCRM.API.Controllers
 
             if (kmsp.ChiTietHoaDon.Any())
             {
-                // Đã từng phát sinh trong chi tiết đơn hàng: Không xóa cứng khỏi DB để bảo toàn lịch sử
                 return Ok(new
                 {
                     message = $"Ưu đãi món '{kmsp.MaMonNavigation?.TenMon ?? kmsp.MaMon}' đã có đơn hàng sử dụng. Hệ thống giữ thông tin để bảo toàn lịch sử hóa đơn.",

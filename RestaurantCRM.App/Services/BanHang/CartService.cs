@@ -23,7 +23,7 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
         /// <summary>
         /// Thêm món vào giỏ hàng. Trả về thông báo lỗi nếu hết hàng hoặc vượt tồn kho.
         /// </summary>
-        public (bool success, string message, bool isWarning) AddItem(MonAnDto mon, decimal effPrice, string promoText)
+        public (bool success, string message, bool isWarning) AddItem(MonAnDto mon, decimal effPrice, string promoText, string appliedVoucherCode = null, decimal dishDiscount = 0m)
         {
             if (mon == null) return (false, "Món ăn không hợp lệ.", true);
 
@@ -45,7 +45,9 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                     MaxStock = mon.SoLuongTon,
                     PromoInfo = promoText,
                     MaLoaiMon = mon.MaLoaiMon,
-                    GiaVon = mon.GiaVonUocTinh
+                    GiaVon = mon.GiaVonUocTinh,
+                    AppliedVoucherCode = appliedVoucherCode,
+                    DishDiscount = dishDiscount
                 });
                 return (true, null, false);
             }
@@ -58,6 +60,33 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
             item.Quantity++;
             item.MaxStock = mon.SoLuongTon;
             return (true, null, false);
+        }
+
+        /// <summary>
+        /// Đổi voucher cho các món trong giỏ (hoặc gỡ voucher nếu newVoucher == null).
+        /// Cho phép chọn qua lại giữa các mã voucher món / loại món mà không bị trừ trùng lặp 2 lần.
+        /// </summary>
+        public void ChangeDishVoucher(IEnumerable<CartItem> items, VoucherDto newVoucher, OrderCalculationService calcService)
+        {
+            if (items == null || calcService == null) return;
+            foreach (var item in items)
+            {
+                if (newVoucher == null)
+                {
+                    item.AppliedVoucherCode = null;
+                    item.Price = item.BasePrice;
+                    item.PromoInfo = null;
+                    item.DishDiscount = 0m;
+                }
+                else
+                {
+                    var (effPrice, promoText, disc) = calcService.CalculateDishPriceWithVoucher(item.BasePrice, item.GiaVon, newVoucher);
+                    item.AppliedVoucherCode = newVoucher.MaVoucher;
+                    item.Price = effPrice;
+                    item.PromoInfo = promoText;
+                    item.DishDiscount = disc;
+                }
+            }
         }
 
         /// <summary>

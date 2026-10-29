@@ -11,9 +11,17 @@ public partial class KmTheoSp
 
     public string? MaMon { get; set; }
 
+    public string? MaVoucher { get; set; }
+
     public double? PhanTramGiam { get; set; }
 
     public double? TienGiam { get; set; }
+
+    public double? GiamToiDa { get; set; }
+
+    public int? SoLuongToiThieu { get; set; } = 1;
+
+    public bool? ChoPhepCongDon { get; set; } = true;
 
     public virtual ICollection<ChiTietHoaDon> ChiTietHoaDon { get; set; } = new List<ChiTietHoaDon>();
 

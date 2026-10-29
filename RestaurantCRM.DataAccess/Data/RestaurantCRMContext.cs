@@ -38,9 +38,11 @@ public partial class RestaurantCrmContext : DbContext
 
     public virtual DbSet<KhaoSat> KhaoSat { get; set; }
 
-    public virtual DbSet<KmTheoSp> KmTheoSp { get; set; }
+    public virtual DbSet<KmTheoDonHang> KmTheoDonHang { get; set; }
 
-    public virtual DbSet<KmTheoVoucher> KmTheoVoucher { get; set; }
+    public virtual DbSet<KmTheoLoai> KmTheoLoai { get; set; }
+
+    public virtual DbSet<KmTheoSp> KmTheoSp { get; set; }
 
     public virtual DbSet<LichSuTrangThai> LichSuTrangThai { get; set; }
 
@@ -174,6 +176,10 @@ public partial class RestaurantCrmContext : DbContext
                 .HasColumnName("tenMon");
             entity.Property(e => e.ThanhTien).HasColumnName("thanhTien");
             entity.Property(e => e.TienGiamMon).HasColumnName("tienGiamMon");
+            entity.Property(e => e.MaKmLoai)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maKMLoai");
 
             entity.HasOne(d => d.MaHoaDonNavigation).WithMany(p => p.ChiTietHoaDon)
                 .HasForeignKey(d => d.MaHoaDon)
@@ -182,6 +188,9 @@ public partial class RestaurantCrmContext : DbContext
             entity.HasOne(d => d.MaKmspNavigation).WithMany(p => p.ChiTietHoaDon)
                 .HasForeignKey(d => d.MaKmsp)
                 .HasConstraintName("FK__CHI_TIET___maKMS__6383C8BA");
+
+            entity.HasOne(d => d.MaKmLoaiNavigation).WithMany(p => p.ChiTietHoaDon)
+                .HasForeignKey(d => d.MaKmLoai);
 
             entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.ChiTietHoaDon)
                 .HasForeignKey(d => d.MaMon)
@@ -354,10 +363,11 @@ public partial class RestaurantCrmContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("maKhachHang");
-            entity.Property(e => e.MaKmvoucher)
+            entity.Ignore(e => e.MaKmvoucher);
+            entity.Property(e => e.MaKMDonHang)
                 .HasMaxLength(20)
                 .IsUnicode(false)
-                .HasColumnName("maKMVoucher");
+                .HasColumnName("maKMDonHang");
             entity.Property(e => e.MaNhanVien)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -386,9 +396,8 @@ public partial class RestaurantCrmContext : DbContext
                 .HasForeignKey(d => d.MaKhachHang)
                 .HasConstraintName("FK__HOA_DON__maKhach__5BE2A6F2");
 
-            entity.HasOne(d => d.MaKmvoucherNavigation).WithMany(p => p.HoaDon)
-                .HasForeignKey(d => d.MaKmvoucher)
-                .HasConstraintName("FK__HOA_DON__maKMVou__5DCAEF64");
+            entity.HasOne(d => d.MaKMDonHangNavigation).WithMany(p => p.HoaDon)
+                .HasForeignKey(d => d.MaKMDonHang);
 
             entity.HasOne(d => d.MaNhanVienNavigation).WithMany(p => p.HoaDon)
                 .HasForeignKey(d => d.MaNhanVien)
@@ -461,7 +470,7 @@ public partial class RestaurantCrmContext : DbContext
 
         modelBuilder.Entity<KmTheoSp>(entity =>
         {
-            entity.HasKey(e => e.MaKmsp).HasName("PK__KM_THEO___86D5D326F2348C92");
+            entity.HasKey(e => e.MaKmsp);
 
             entity.ToTable("KM_THEO_SP");
 
@@ -477,31 +486,79 @@ public partial class RestaurantCrmContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("maMon");
+            entity.Property(e => e.MaVoucher)
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasColumnName("maVoucher");
             entity.Property(e => e.PhanTramGiam).HasColumnName("phanTramGiam");
             entity.Property(e => e.TienGiam).HasColumnName("tienGiam");
+            entity.Property(e => e.GiamToiDa).HasColumnName("giamToiDa");
+            entity.Property(e => e.SoLuongToiThieu)
+                .HasDefaultValue(1)
+                .HasColumnName("soLuongToiThieu");
+            entity.Property(e => e.ChoPhepCongDon)
+                .HasDefaultValue(true)
+                .HasColumnName("choPhepCongDon");
 
             entity.HasOne(d => d.MaChuongTrinhNavigation).WithMany(p => p.KmTheoSp)
-                .HasForeignKey(d => d.MaChuongTrinh)
-                .HasConstraintName("FK__KM_THEO_S__maChu__52593CB8");
+                .HasForeignKey(d => d.MaChuongTrinh);
 
             entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.KmTheoSp)
-                .HasForeignKey(d => d.MaMon)
-                .HasConstraintName("FK__KM_THEO_S__maMon__534D60F1");
+                .HasForeignKey(d => d.MaMon);
         });
 
-        modelBuilder.Entity<KmTheoVoucher>(entity =>
+        modelBuilder.Entity<KmTheoLoai>(entity =>
         {
-            entity.HasKey(e => e.MaKmvoucher).HasName("PK__KM_THEO___C33F4D9EB5637068");
+            entity.HasKey(e => e.MaKMLoai);
 
-            entity.ToTable("KM_THEO_VOUCHER");
+            entity.ToTable("KM_THEO_LOAI");
 
-            entity.HasIndex(e => e.MaVoucher, "UQ_KM_THEO_VOUCHER_maVoucher").IsUnique();
-
-            entity.Property(e => e.MaKmvoucher)
+            entity.Property(e => e.MaKMLoai)
                 .HasMaxLength(20)
                 .IsUnicode(false)
-                .HasColumnName("maKMVoucher");
+                .HasColumnName("maKMLoai");
+            entity.Property(e => e.MaChuongTrinh)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maChuongTrinh");
+            entity.Property(e => e.MaLoaiMon)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maLoaiMon");
+            entity.Property(e => e.MaVoucher)
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasColumnName("maVoucher");
             entity.Property(e => e.GiaTriDonToiThieu).HasColumnName("giaTriDonToiThieu");
+            entity.Property(e => e.PhanTramGiam).HasColumnName("phanTramGiam");
+            entity.Property(e => e.TienGiam).HasColumnName("tienGiam");
+            entity.Property(e => e.GiamToiDa).HasColumnName("giamToiDa");
+            entity.Property(e => e.SoLuongToiThieu)
+                .HasDefaultValue(1)
+                .HasColumnName("soLuongToiThieu");
+            entity.Property(e => e.ChoPhepCongDon)
+                .HasDefaultValue(true)
+                .HasColumnName("choPhepCongDon");
+
+            entity.HasOne(d => d.MaChuongTrinhNavigation).WithMany(p => p.KmTheoLoai)
+                .HasForeignKey(d => d.MaChuongTrinh);
+
+            entity.HasOne(d => d.MaLoaiMonNavigation).WithMany(p => p.KmTheoLoai)
+                .HasForeignKey(d => d.MaLoaiMon);
+        });
+
+        modelBuilder.Entity<KmTheoDonHang>(entity =>
+        {
+            entity.HasKey(e => e.MaKMDonHang);
+
+            entity.ToTable("KM_THEO_DON_HANG");
+
+            entity.HasIndex(e => e.MaVoucher, "UQ_KM_THEO_DON_HANG_maVoucher").IsUnique();
+
+            entity.Property(e => e.MaKMDonHang)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maKMDonHang");
             entity.Property(e => e.MaChuongTrinh)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -510,22 +567,10 @@ public partial class RestaurantCrmContext : DbContext
                 .HasMaxLength(30)
                 .IsUnicode(false)
                 .HasColumnName("maVoucher");
+            entity.Property(e => e.GiaTriDonToiThieu).HasColumnName("giaTriDonToiThieu");
             entity.Property(e => e.PhanTramGiam).HasColumnName("phanTramGiam");
             entity.Property(e => e.TienGiam).HasColumnName("tienGiam");
             entity.Property(e => e.GiamToiDa).HasColumnName("giamToiDa");
-            entity.Property(e => e.PhamViApDung)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasDefaultValue("TOAN_DON")
-                .HasColumnName("phamViApDung");
-            entity.Property(e => e.MaLoaiMon)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maLoaiMon");
-            entity.Property(e => e.MaMon)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("maMon");
             entity.Property(e => e.SoLuongToiThieu)
                 .HasDefaultValue(1)
                 .HasColumnName("soLuongToiThieu");
@@ -533,17 +578,8 @@ public partial class RestaurantCrmContext : DbContext
                 .HasDefaultValue(true)
                 .HasColumnName("choPhepCongDon");
 
-            entity.HasOne(d => d.MaChuongTrinhNavigation).WithMany(p => p.KmTheoVoucher)
-                .HasForeignKey(d => d.MaChuongTrinh)
-                .HasConstraintName("FK__KM_THEO_V__maChu__5812160E");
-
-            entity.HasOne(d => d.MaLoaiMonNavigation).WithMany(p => p.KmTheoVoucher)
-                .HasForeignKey(d => d.MaLoaiMon)
-                .HasConstraintName("FK_KM_VOUCHER_LOAIMON");
-
-            entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.KmTheoVoucher)
-                .HasForeignKey(d => d.MaMon)
-                .HasConstraintName("FK_KM_VOUCHER_MONAN");
+            entity.HasOne(d => d.MaChuongTrinhNavigation).WithMany(p => p.KmTheoDonHang)
+                .HasForeignKey(d => d.MaChuongTrinh);
         });
 
         modelBuilder.Entity<LichSuTrangThai>(entity =>
