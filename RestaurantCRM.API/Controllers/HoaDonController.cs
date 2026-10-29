@@ -63,13 +63,28 @@ namespace RestaurantCRM.API.Controllers
                 double tongTienHang = 0;
                 var today = DateOnly.FromDateTime(DateTime.Now);
 
-                // Lấy tất cả các món đang được sale hợp lệ
+                // Lấy tất cả các món đang được sale hợp lệ (KM_THEO_SP)
+                // Chỉ lấy khuyến mãi thường (không có mã voucher). Voucher có mã chỉ áp dụng khi khách nhập đúng mã ở Bước 5.
                 var activeDishPromos = await _service.Query<KmTheoSp>()
                     .Include(c => c.MaChuongTrinhNavigation)
                     .Where(c => c.MaChuongTrinhNavigation != null
+                             && string.IsNullOrEmpty(c.MaVoucher)
+                             && (c.ChoPhepCongDon == null || c.ChoPhepCongDon == true)
                              && (c.MaChuongTrinhNavigation.NgayBatDau == null || c.MaChuongTrinhNavigation.NgayBatDau <= today)
                              && (c.MaChuongTrinhNavigation.NgayKetThuc == null || c.MaChuongTrinhNavigation.NgayKetThuc >= today))
                     .ToListAsync();
+
+                // Lấy tất cả ưu đãi theo loại món hợp lệ (KM_THEO_LOAI) - chỉ khuyến mãi thường, không phải voucher có mã
+                var activeCategoryPromos = await _service.Query<KmTheoLoai>()
+                    .Include(c => c.MaChuongTrinhNavigation)
+                    .Where(c => c.MaChuongTrinhNavigation != null
+                             && string.IsNullOrEmpty(c.MaVoucher)
+                             && (c.ChoPhepCongDon == null || c.ChoPhepCongDon == true)
+                             && (c.MaChuongTrinhNavigation.NgayBatDau == null || c.MaChuongTrinhNavigation.NgayBatDau <= today)
+                             && (c.MaChuongTrinhNavigation.NgayKetThuc == null || c.MaChuongTrinhNavigation.NgayKetThuc >= today))
+                    .ToListAsync();
+
+                var createdLines = new List<(ChiTietHoaDon Line, MonAn Mon)>();
 
                 // Bước 1: Tính toán tổng nguyên vật liệu cần tiêu thụ theo công thức BOM
                 var tongNguyenLieuCan = new Dictionary<string, decimal>();
@@ -130,6 +145,7 @@ namespace RestaurantCRM.API.Controllers
                     nl.SoLuongTon -= tongNguyenLieuCan[maNl];
                 }
 
+                // Bước 4: Áp dụng Tầng 1 - So sánh lấy khuyến mãi cao nhất giữa Món ăn và Loại món (không cộng dồn)
                 foreach (var item in request.Items)
                 {
                     var monAn = monAnCache[item.MaMon];
@@ -138,37 +154,74 @@ namespace RestaurantCRM.API.Controllers
                         double donGiaGoc = monAn.DonGia.Value;
                         double donGiaSauGiam = donGiaGoc;
                         double tienGiamMon = 0;
-                        string? maChuongTrinhKm = null;
-                        int soLuongGiam = 0;
+                        string? maKmsp = null;
+                        string? maKmLoai = null;
+                        int soLuong = item.SoLuong;
 
-                        // Kiểm tra xem món này có đang Sale không
-                        var promo = activeDishPromos.FirstOrDefault(p => p.MaMon == item.MaMon);
-                        if (promo != null && promo.MaChuongTrinhNavigation != null)
+                        // 1. Kiểm tra KM theo Món (KM_THEO_SP)
+                        double discountSP = 0;
+                        KmTheoSp? bestDishPromo = null;
+                        var dishPromos = activeDishPromos.Where(p => p.MaMon == item.MaMon).ToList();
+                        foreach (var p in dishPromos)
                         {
-                            maChuongTrinhKm = promo.MaKmsp;
-                            
-                            soLuongGiam = item.SoLuong; // Không còn quota
+                            double disc = 0;
+                            if (p.PhanTramGiam.HasValue && p.PhanTramGiam.Value > 0)
+                                disc = donGiaGoc * p.PhanTramGiam.Value / 100.0;
+                            else if (p.TienGiam.HasValue && p.TienGiam.Value > 0)
+                                disc = p.TienGiam.Value;
+                            if (p.GiamToiDa.HasValue && p.GiamToiDa.Value > 0 && disc > p.GiamToiDa.Value)
+                                disc = p.GiamToiDa.Value;
 
-                            if (soLuongGiam > 0)
+                            if (disc > discountSP)
                             {
-                                double discountPerItem = 0;
-                                if (promo.PhanTramGiam.HasValue && promo.PhanTramGiam.Value > 0)
-                                {
-                                    discountPerItem = donGiaGoc * promo.PhanTramGiam.Value / 100.0;
-                                }
-                                else if (promo.TienGiam.HasValue && promo.TienGiam.Value > 0)
-                                {
-                                    discountPerItem = promo.TienGiam.Value;
-                                }
-                                
-                                donGiaSauGiam = donGiaGoc - discountPerItem;
-                                if (donGiaSauGiam < 0) donGiaSauGiam = 0;
-                                
-                                tienGiamMon = discountPerItem * soLuongGiam;
+                                discountSP = disc;
+                                bestDishPromo = p;
                             }
                         }
 
-                        double thanhTien = (donGiaSauGiam * soLuongGiam) + (donGiaGoc * (item.SoLuong - soLuongGiam));
+                        // 2. Kiểm tra KM theo Loại Món (KM_THEO_LOAI)
+                        double discountLoai = 0;
+                        KmTheoLoai? bestCategoryPromo = null;
+                        if (!string.IsNullOrEmpty(monAn.MaLoaiMon))
+                        {
+                            var catPromos = activeCategoryPromos.Where(p => p.MaLoaiMon == monAn.MaLoaiMon).ToList();
+                            foreach (var p in catPromos)
+                            {
+                                if (p.GiaTriDonToiThieu.HasValue && donGiaGoc < p.GiaTriDonToiThieu.Value)
+                                    continue; // Chỉ áp dụng cho món có đơn giá >= GiaTriDonToiThieu
+
+                                double disc = 0;
+                                if (p.PhanTramGiam.HasValue && p.PhanTramGiam.Value > 0)
+                                    disc = donGiaGoc * p.PhanTramGiam.Value / 100.0;
+                                else if (p.TienGiam.HasValue && p.TienGiam.Value > 0)
+                                    disc = p.TienGiam.Value;
+                                if (p.GiamToiDa.HasValue && p.GiamToiDa.Value > 0 && disc > p.GiamToiDa.Value)
+                                    disc = p.GiamToiDa.Value;
+
+                                if (disc > discountLoai)
+                                {
+                                    discountLoai = disc;
+                                    bestCategoryPromo = p;
+                                }
+                            }
+                        }
+
+                        // 3. Quy tắc người dùng: Không cộng dồn, lấy mức giảm cao nhất Max(SP, Loai)
+                        double chosenDiscount = 0;
+                        if (discountSP >= discountLoai && discountSP > 0 && bestDishPromo != null)
+                        {
+                            chosenDiscount = discountSP;
+                            maKmsp = bestDishPromo.MaKmsp;
+                        }
+                        else if (discountLoai > discountSP && discountLoai > 0 && bestCategoryPromo != null)
+                        {
+                            chosenDiscount = discountLoai;
+                            maKmLoai = bestCategoryPromo.MaKMLoai;
+                        }
+
+                        donGiaSauGiam = Math.Max(0, donGiaGoc - chosenDiscount);
+                        tienGiamMon = chosenDiscount * soLuong;
+                        double thanhTien = donGiaSauGiam * soLuong;
 
                         var maChiTiet = "CT" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
                         var chiTiet = new ChiTietHoaDon
@@ -176,15 +229,17 @@ namespace RestaurantCRM.API.Controllers
                             MaChiTiet = maChiTiet,
                             MaHoaDon = maHoaDon,
                             MaMon = item.MaMon,
-                            MaKmsp = maChuongTrinhKm,
-                            SoLuong = item.SoLuong,
+                            MaKmsp = maKmsp,
+                            MaKmLoai = maKmLoai,
+                            SoLuong = soLuong,
                             DonGiaGoc = donGiaGoc,
-                            DonGiaSauGiam = soLuongGiam > 0 ? donGiaSauGiam : donGiaGoc,
+                            DonGiaSauGiam = donGiaSauGiam,
                             TienGiamMon = tienGiamMon,
                             ThanhTien = thanhTien
                         };
 
                         _service.Add(chiTiet);
+                        createdLines.Add((chiTiet, monAn));
                         tongTienHang += thanhTien;
                     }
                 }
@@ -192,40 +247,14 @@ namespace RestaurantCRM.API.Controllers
                 hoaDon.TongTienHang = tongTienHang;
                 hoaDon.TongThanhToan = tongTienHang;
 
-                // Áp dụng Voucher (nếu có)
-                if (!string.IsNullOrEmpty(request.MaKmvoucher))
+                // Bước 5: Áp dụng Tầng 2 - Voucher (toàn đơn / theo loại món / theo món). Server tự tính, không tin số tiền từ client.
+                var voucherCode = request.MaKmvoucher?.Trim();
+                if (!string.IsNullOrEmpty(voucherCode))
                 {
-                    var voucher = await _service.Query<KmTheoVoucher>()
-                        .Include(v => v.MaChuongTrinhNavigation)
-                        .FirstOrDefaultAsync(v => v.MaKmvoucher == request.MaKmvoucher || v.MaVoucher == request.MaKmvoucher);
-
-                    if (voucher != null && voucher.MaChuongTrinhNavigation != null)
+                    var voucherError = await ApplyVoucherAsync(hoaDon, voucherCode, createdLines, tongTienHang, today);
+                    if (voucherError != null)
                     {
-                        var ct = voucher.MaChuongTrinhNavigation;
-                        if ((ct.NgayBatDau == null || ct.NgayBatDau <= today) &&
-                            (ct.NgayKetThuc == null || ct.NgayKetThuc >= today) &&
-                            (voucher.GiaTriDonToiThieu == null || hoaDon.TongTienHang >= voucher.GiaTriDonToiThieu))
-                        {
-                            hoaDon.MaKmvoucher = voucher.MaKmvoucher;
-                            
-                            double tienGiam = 0;
-                            if (voucher.PhanTramGiam.HasValue && voucher.PhanTramGiam.Value > 0)
-                            {
-                                tienGiam = tongTienHang * voucher.PhanTramGiam.Value / 100.0;
-                                if (voucher.GiamToiDa.HasValue && voucher.GiamToiDa.Value > 0 && tienGiam > voucher.GiamToiDa.Value)
-                                {
-                                    tienGiam = voucher.GiamToiDa.Value;
-                                }
-                            }
-                            else if (voucher.TienGiam.HasValue && voucher.TienGiam.Value > 0)
-                            {
-                                tienGiam = voucher.TienGiam.Value;
-                            }
-
-                            hoaDon.TienGiamVoucher = tienGiam;
-                            hoaDon.TongThanhToan = tongTienHang - tienGiam;
-                            if (hoaDon.TongThanhToan < 0) hoaDon.TongThanhToan = 0;
-                        }
+                        return BadRequest(voucherError);
                     }
                 }
 
@@ -275,6 +304,134 @@ namespace RestaurantCRM.API.Controllers
                 await transaction.RollbackAsync();
                 return StatusCode(500, "Lỗi hệ thống: " + ex.Message + " | Inner: " + ex.InnerException?.Message);
             }
+        }
+
+        /// <summary>
+        /// Kiểm tra và áp dụng voucher cho hóa đơn. Trả về thông báo lỗi nếu mã không hợp lệ, ngược lại trả null.
+        /// TOAN_DON: tính trên cả đơn. THEO_LOAI / THEO_MON: chỉ tính trên các dòng thuộc loại món / món đó.
+        /// </summary>
+        private async Task<string?> ApplyVoucherAsync(
+            HoaDon hoaDon, string code,
+            List<(ChiTietHoaDon Line, MonAn Mon)> lines, double tongTienHang, DateOnly today)
+        {
+            ChuongTrinhKhuyenMai? ct = null;
+            string? maVoucher = null;
+            bool? choPhep = null;
+            int? gioiHanDung = null;
+            int daDung = 0;
+            double? pct = null, tien = null, giamToiDa = null, donToiThieu = null;
+            string scope;
+            KmTheoDonHang? vDon = null;
+            KmTheoSp? vSp = null;
+            KmTheoLoai? vLoai = null;
+
+            vDon = await _service.Query<KmTheoDonHang>()
+                .Include(v => v.MaChuongTrinhNavigation)
+                .FirstOrDefaultAsync(v => v.MaVoucher == code || v.MaKMDonHang == code);
+            if (vDon != null)
+            {
+                scope = "TOAN_DON";
+                ct = vDon.MaChuongTrinhNavigation; maVoucher = vDon.MaVoucher; choPhep = vDon.ChoPhepCongDon;
+                gioiHanDung = vDon.SoLuongToiThieu; pct = vDon.PhanTramGiam; tien = vDon.TienGiam;
+                giamToiDa = vDon.GiamToiDa; donToiThieu = vDon.GiaTriDonToiThieu;
+                var maKm = vDon.MaKMDonHang;
+                daDung = await _service.Query<HoaDon>().CountAsync(h => h.MaKMDonHang == maKm && h.TrangThai != "Cancelled");
+            }
+            else
+            {
+                vLoai = await _service.Query<KmTheoLoai>()
+                    .Include(v => v.MaChuongTrinhNavigation)
+                    .FirstOrDefaultAsync(v => v.MaVoucher == code || (v.MaKMLoai == code && v.MaVoucher != null && v.MaVoucher != ""));
+                if (vLoai != null)
+                {
+                    scope = "THEO_LOAI";
+                    ct = vLoai.MaChuongTrinhNavigation; maVoucher = vLoai.MaVoucher; choPhep = vLoai.ChoPhepCongDon;
+                    gioiHanDung = vLoai.SoLuongToiThieu; pct = vLoai.PhanTramGiam; tien = vLoai.TienGiam;
+                    giamToiDa = vLoai.GiamToiDa; donToiThieu = vLoai.GiaTriDonToiThieu;
+                    var maKm = vLoai.MaKMLoai;
+                    daDung = await _service.Query<ChiTietHoaDon>().CountAsync(c => c.MaKmLoai == maKm
+                        && c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                }
+                else
+                {
+                    vSp = await _service.Query<KmTheoSp>()
+                        .Include(v => v.MaChuongTrinhNavigation)
+                        .FirstOrDefaultAsync(v => v.MaVoucher == code || (v.MaKmsp == code && v.MaVoucher != null && v.MaVoucher != ""));
+                    if (vSp == null) return "Mã voucher không tồn tại.";
+
+                    scope = "THEO_MON";
+                    ct = vSp.MaChuongTrinhNavigation; maVoucher = vSp.MaVoucher; choPhep = vSp.ChoPhepCongDon;
+                    gioiHanDung = vSp.SoLuongToiThieu; pct = vSp.PhanTramGiam; tien = vSp.TienGiam;
+                    giamToiDa = vSp.GiamToiDa; donToiThieu = null;
+                    var maKm = vSp.MaKmsp;
+                    daDung = await _service.Query<ChiTietHoaDon>().CountAsync(c => c.MaKmsp == maKm
+                        && c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                }
+            }
+
+            // Kiểm tra hiệu lực chung
+            if (ct == null) return "Chương trình khuyến mãi không tồn tại.";
+            if (choPhep == false || (maVoucher != null && maVoucher.StartsWith("[DA_HUY]_")))
+                return "Mã voucher này đã bị ẩn hoặc hủy áp dụng.";
+            if (ct.NgayBatDau.HasValue && today < ct.NgayBatDau.Value) return "Chương trình khuyến mãi chưa bắt đầu.";
+            if (ct.NgayKetThuc.HasValue && today > ct.NgayKetThuc.Value) return "Mã voucher đã hết hạn sử dụng.";
+            if (gioiHanDung.HasValue && gioiHanDung.Value > 0 && daDung >= gioiHanDung.Value)
+                return "Mã voucher này đã hết lượt sử dụng.";
+            if ((!pct.HasValue || pct <= 0) && (!tien.HasValue || tien <= 0))
+                return "Voucher không còn hiệu lực giảm giá.";
+
+            // Xác định phần tiền (sau giảm giá món) được áp dụng voucher theo phạm vi
+            double baseAmount = tongTienHang;
+            List<(ChiTietHoaDon Line, MonAn Mon)> scopedLines = lines;
+            if (scope == "THEO_MON")
+                scopedLines = lines.Where(l => l.Line.MaMon == vSp!.MaMon).ToList();
+            else if (scope == "THEO_LOAI")
+                scopedLines = lines.Where(l => l.Mon.MaLoaiMon == vLoai!.MaLoaiMon).ToList();
+
+            if (scope != "TOAN_DON")
+            {
+                baseAmount = scopedLines.Sum(l => l.Line.ThanhTien ?? 0);
+                if (baseAmount <= 0)
+                    return scope == "THEO_MON"
+                        ? "Mã này chỉ áp dụng cho một món nhất định mà đơn hàng không có."
+                        : "Mã này chỉ áp dụng cho một nhóm món nhất định mà đơn hàng không có.";
+            }
+
+            if (donToiThieu.HasValue && donToiThieu.Value > 0 && baseAmount < donToiThieu.Value)
+                return $"Mã này yêu cầu giá trị áp dụng tối thiểu {donToiThieu.Value:N0} đ.";
+
+            double tienGiam = 0;
+            if (pct.HasValue && pct.Value > 0)
+            {
+                tienGiam = baseAmount * pct.Value / 100.0;
+                if (giamToiDa.HasValue && giamToiDa.Value > 0 && tienGiam > giamToiDa.Value) tienGiam = giamToiDa.Value;
+            }
+            else if (tien.HasValue && tien.Value > 0)
+            {
+                tienGiam = tien.Value;
+            }
+            tienGiam = Math.Min(tienGiam, baseAmount);
+
+            hoaDon.TienGiamVoucher = tienGiam;
+            hoaDon.TongThanhToan = Math.Max(0, tongTienHang - tienGiam);
+
+            // Ghi nhận voucher đã dùng để đếm lượt sử dụng
+            if (scope == "TOAN_DON")
+            {
+                hoaDon.MaKMDonHang = vDon!.MaKMDonHang;
+            }
+            else
+            {
+                // Gắn mã voucher vào dòng đầu tiên thuộc phạm vi chưa gắn khuyến mãi nào
+                var tagLine = scopedLines.Select(l => l.Line).FirstOrDefault(l => l.MaKmsp == null && l.MaKmLoai == null);
+                if (tagLine != null)
+                {
+                    if (scope == "THEO_MON") tagLine.MaKmsp = vSp!.MaKmsp;
+                    else tagLine.MaKmLoai = vLoai!.MaKMLoai;
+                }
+            }
+
+            return null;
         }
 
         // PUT: api/HoaDon/{id}/HuyDon - Khách hàng hủy đơn (chỉ khi Pending)

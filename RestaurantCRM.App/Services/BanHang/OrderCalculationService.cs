@@ -20,19 +20,20 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
         /// -> Tự động so sánh và lấy mức giảm cao nhất Max(Món, Loại), KHÔNG cộng dồn.
         /// -> Bảo vệ giá sàn (Floor margin): Đơn giá sau giảm không được thấp hơn giá vốn BOM.
         /// </summary>
-        public (decimal effectivePrice, string promoText, decimal discountPerDish) GetDishPriceInfo(
+        public (decimal effectivePrice, string promoText, decimal discountPerDish, string appliedVoucherCode) GetDishPriceInfo(
             MonAnDto mon, 
             IEnumerable<VoucherDto> vouchers, 
             IEnumerable<KmMonDto> kmMonList = null)
         {
-            if (mon == null) return (0m, null, 0m);
+            if (mon == null) return (0m, null, 0m, null);
             decimal basePrice = mon.Gia;
-            if (basePrice <= 0) return (0m, null, 0m);
+            if (basePrice <= 0) return (0m, null, 0m, null);
 
             decimal maxDiscount = 0m;
             string bestPromoText = null;
+            string bestVoucherCode = null;
 
-            // 1. Kiểm tra KM từ danh sách KmMonDto (nếu có chương trình giảm món trực tiếp)
+            // 1. Kiểm tra KM từ danh sách KmMonDto (nếu có chương trình giảm món trực tiếp không cần voucher)
             if (kmMonList != null)
             {
                 var promo = kmMonList.FirstOrDefault(k => k.MaMon == mon.MaMonAn && k.TrangThai == "Đang áp dụng");
@@ -43,6 +44,7 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                     {
                         maxDiscount = disc;
                         bestPromoText = promo.HinhThuc;
+                        bestVoucherCode = null;
                     }
                 }
             }
@@ -74,6 +76,7 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                     {
                         maxDiscount = disc;
                         bestPromoText = $"{v.MaVoucher} (-{disc:N0}đ)";
+                        bestVoucherCode = v.MaVoucher;
                     }
                 }
 
@@ -110,6 +113,7 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                     {
                         maxDiscount = disc;
                         bestPromoText = $"{v.MaVoucher} (Nhóm -{disc:N0}đ)";
+                        bestVoucherCode = v.MaVoucher;
                     }
                 }
             }
@@ -123,13 +127,55 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                 effectivePrice = basePrice - maxDiscount;
             }
 
-            return (effectivePrice, bestPromoText, maxDiscount);
+            return (effectivePrice, bestPromoText, maxDiscount, bestVoucherCode);
         }
 
         public (decimal effectivePrice, string promoText) GetDishPriceInfo(MonAnDto mon, IEnumerable<KmMonDto> kmMonList)
         {
-            var (price, text, _) = GetDishPriceInfo(mon, null, kmMonList);
+            var (price, text, _, _) = GetDishPriceInfo(mon, null, kmMonList);
             return (price, text);
+        }
+
+        /// <summary>
+        /// Tính toán lại giá bán món ăn khi chọn áp dụng một voucher cụ thể (hoặc đổi qua lại giữa các voucher).
+        /// </summary>
+        public (decimal effectivePrice, string promoText, decimal discountPerDish) CalculateDishPriceWithVoucher(
+            decimal basePrice,
+            decimal giaVon,
+            VoucherDto voucher)
+        {
+            if (voucher == null || basePrice <= 0) return (basePrice, null, 0m);
+
+            decimal minItemPrice = (decimal)(voucher.GiaTriDonToiThieu ?? 0);
+            if (minItemPrice > 0 && basePrice < minItemPrice)
+            {
+                return (basePrice, null, 0m);
+            }
+
+            decimal disc = 0m;
+            if (voucher.PhanTramGiam.HasValue && voucher.PhanTramGiam.Value > 0)
+            {
+                disc = basePrice * (decimal)voucher.PhanTramGiam.Value / 100m;
+                if (voucher.GiamToiDa.HasValue && voucher.GiamToiDa.Value > 0 && disc > (decimal)voucher.GiamToiDa.Value)
+                {
+                    disc = (decimal)voucher.GiamToiDa.Value;
+                }
+            }
+            else if (voucher.TienGiam.HasValue && voucher.TienGiam.Value > 0)
+            {
+                disc = (decimal)voucher.TienGiam.Value;
+            }
+
+            // Chốt chặn giá vốn BOM
+            decimal effectivePrice = basePrice - disc;
+            if (giaVon > 0 && effectivePrice < giaVon)
+            {
+                disc = Math.Max(0m, basePrice - giaVon);
+                effectivePrice = basePrice - disc;
+            }
+
+            string promoText = $"{voucher.MaVoucher} (-{disc:N0}đ)";
+            return (effectivePrice, promoText, disc);
         }
 
         /// <summary>
@@ -148,16 +194,34 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
         {
             if (v == null || subTotalAfterTier1 <= 0) return (false, 0m, 0m);
 
-            decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
-            if (subTotalAfterTier1 < minOrder)
+            // Xác định phần tiền được phép áp dụng voucher theo phạm vi
+            decimal baseAmount = subTotalAfterTier1;
+            string scope = string.IsNullOrEmpty(v.PhamViApDung) ? "TOAN_DON" : v.PhamViApDung;
+            if (scope == "THEO_MON" || scope == "THEO_LOAI")
             {
-                return (false, 0m, minOrder - subTotalAfterTier1);
+                // Không có giỏ hàng thì không thể xác định món áp dụng -> không hợp lệ
+                if (cart == null) return (false, 0m, 0m);
+
+                var scoped = scope == "THEO_MON"
+                    ? cart.Where(x => !string.IsNullOrEmpty(v.MaMon)
+                                   && string.Equals(x.MaMon, v.MaMon, StringComparison.OrdinalIgnoreCase))
+                    : cart.Where(x => !string.IsNullOrEmpty(v.MaLoaiMon)
+                                   && string.Equals(x.MaLoaiMon, v.MaLoaiMon, StringComparison.OrdinalIgnoreCase));
+
+                baseAmount = scoped.Sum(x => x.Price * x.Quantity);
+                if (baseAmount <= 0) return (false, 0m, 0m);
+            }
+
+            decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
+            if (baseAmount < minOrder)
+            {
+                return (false, 0m, minOrder - baseAmount);
             }
 
             decimal discount = 0m;
             if (v.PhanTramGiam.HasValue && v.PhanTramGiam.Value > 0)
             {
-                discount = subTotalAfterTier1 * (decimal)v.PhanTramGiam.Value / 100m;
+                discount = baseAmount * (decimal)v.PhanTramGiam.Value / 100m;
                 if (v.GiamToiDa.HasValue && v.GiamToiDa.Value > 0 && discount > (decimal)v.GiamToiDa.Value)
                 {
                     discount = (decimal)v.GiamToiDa.Value;
@@ -168,7 +232,7 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
                 discount = (decimal)v.TienGiam.Value;
             }
 
-            if (discount > subTotalAfterTier1) discount = subTotalAfterTier1;
+            if (discount > baseAmount) discount = baseAmount;
 
             // Chốt chặn bảo vệ giá vốn (Floor Margin) cho nhà hàng
             if (cart != null)

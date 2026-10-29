@@ -13,7 +13,9 @@ public partial class ChuongTrinhKhuyenMai
 
     public DateOnly? NgayKetThuc { get; set; }
 
-    public virtual ICollection<KmTheoSp> KmTheoSp { get; set; } = new List<KmTheoSp>();
+    public virtual ICollection<KmTheoDonHang> KmTheoDonHang { get; set; } = new List<KmTheoDonHang>();
 
-    public virtual ICollection<KmTheoVoucher> KmTheoVoucher { get; set; } = new List<KmTheoVoucher>();
+    public virtual ICollection<KmTheoLoai> KmTheoLoai { get; set; } = new List<KmTheoLoai>();
+
+    public virtual ICollection<KmTheoSp> KmTheoSp { get; set; } = new List<KmTheoSp>();
 }

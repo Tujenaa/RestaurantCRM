@@ -5,6 +5,7 @@ namespace RestaurantCRM.Web.Models;
 public class GioHangItemViewModel
 {
     public string MaMon { get; set; } = "";
+    public string? MaLoaiMon { get; set; }
     public string TenMon { get; set; } = "";
     public string DuongDanAnh { get; set; } = "/images/default.jpg";
     public string BieuTuong { get; set; } = "🍲";

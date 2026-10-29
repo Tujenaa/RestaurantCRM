@@ -75,6 +75,33 @@ public class VoucherViewModel
         }
         return true;
     }
+
+    /// <summary>
+    /// Kiểm tra voucher theo giỏ hàng thực tế (có xét phạm vi món / loại món).
+    /// Trả về null nếu dùng được, ngược lại trả lý do ngắn gọn để hiện cho khách.
+    /// </summary>
+    public string? GetIneligibleReason(decimal subtotal, IEnumerable<GioHangItemViewModel>? items)
+    {
+        var baseAmount = subtotal;
+        if (PhamViApDung == "THEO_MON")
+        {
+            baseAmount = items?.Where(x => string.Equals(x.MaMon, MaMon, StringComparison.OrdinalIgnoreCase))
+                               .Sum(x => x.ThanhTien) ?? 0m;
+            if (baseAmount <= 0) return $"Cần có món {TenMon ?? MaMon} trong giỏ";
+        }
+        else if (PhamViApDung == "THEO_LOAI")
+        {
+            baseAmount = items?.Where(x => string.Equals(x.MaLoaiMon, MaLoaiMon, StringComparison.OrdinalIgnoreCase))
+                               .Sum(x => x.ThanhTien) ?? 0m;
+            if (baseAmount <= 0) return $"Cần có món thuộc nhóm {TenLoaiMon ?? MaLoaiMon} trong giỏ";
+        }
+
+        if (GiaTriDonToiThieu.HasValue && GiaTriDonToiThieu.Value > 0 && baseAmount < (decimal)GiaTriDonToiThieu.Value)
+        {
+            return $"Cần thêm {(decimal)GiaTriDonToiThieu.Value - baseAmount:N0}đ để dùng";
+        }
+        return null;
+    }
 }
 
 public class KiemTraVoucherApiResponse
@@ -86,6 +113,7 @@ public class KiemTraVoucherApiResponse
     public string? TenChuongTrinh { get; set; }
     public double? PhanTramGiam { get; set; }
     public double? TienGiam { get; set; }
+    public double? GiaTriDonToiThieu { get; set; }
     public double? GiamToiDa { get; set; }
     public string? PhamViApDung { get; set; }
     public string? MaLoaiMon { get; set; }

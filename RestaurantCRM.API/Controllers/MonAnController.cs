@@ -38,7 +38,7 @@ namespace RestaurantCRM.API.Controllers
             var dbList = await query.ToListAsync();
             
             var result = dbList.Select(m => {
-                var activeKm = m.KmTheoSp.FirstOrDefault(k => k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
+                var activeKm = m.KmTheoSp.FirstOrDefault(k => string.IsNullOrEmpty(k.MaVoucher) && k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
                 double donGia = m.DonGia ?? 0;
                 double giaSauGiam = donGia;
                 if (activeKm != null) {
@@ -97,7 +97,7 @@ namespace RestaurantCRM.API.Controllers
                 .ToListAsync();
 
             var result = list.Select(m => {
-                var activeKm = m.KmTheoSp.FirstOrDefault(k => k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
+                var activeKm = m.KmTheoSp.FirstOrDefault(k => string.IsNullOrEmpty(k.MaVoucher) && k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
                 double donGia = m.DonGia ?? 0;
                 double giaSauGiam = donGia;
                 if (activeKm != null) {
@@ -145,7 +145,7 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound();
             }
 
-            var activeKm = monAn.KmTheoSp.FirstOrDefault(k => k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
+            var activeKm = monAn.KmTheoSp.FirstOrDefault(k => string.IsNullOrEmpty(k.MaVoucher) && k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
             double donGia = monAn.DonGia ?? 0;
             double giaSauGiam = donGia;
             if (activeKm != null) {

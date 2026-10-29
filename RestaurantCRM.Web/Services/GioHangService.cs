@@ -39,11 +39,15 @@ public class GioHangService
                 if (d != null && !string.IsNullOrWhiteSpace(d.DuongDanAnh)) 
                     it.DuongDanAnh = d.DuongDanAnh;
             }
+            if (string.IsNullOrWhiteSpace(it.MaLoaiMon))
+            {
+                it.MaLoaiMon = _monAnService.Find(it.MaMon)?.MaLoaiMon;
+            }
         }
 
         var voucher = session.GetString(VoucherKey);
         var subtotal = cart.Sum(x => x.ThanhTien);
-        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, subtotal);
+        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, cart, subtotal);
 
         return new GioHangViewModel 
         { 
@@ -64,6 +68,7 @@ public class GioHangService
             cart.Add(new GioHangItemViewModel 
             { 
                 MaMon = dish.MaMon, 
+                MaLoaiMon = dish.MaLoaiMon,
                 TenMon = dish.TenMon, 
                 DuongDanAnh = dish.DuongDanAnh, 
                 BieuTuong = dish.BieuTuong, 
@@ -139,8 +144,6 @@ public class GioHangService
                         ? apiResult.MaVoucher 
                         : (!string.IsNullOrWhiteSpace(apiResult.MaKmvoucher) ? apiResult.MaKmvoucher : clean);
 
-                    session.SetString(VoucherKey, savedCode);
-
                     var voucherInfo = new AppliedVoucherSessionData
                     {
                         Code = savedCode,
@@ -148,20 +151,29 @@ public class GioHangService
                         TenChuongTrinh = apiResult.TenChuongTrinh,
                         PhanTramGiam = apiResult.PhanTramGiam,
                         TienGiam = apiResult.TienGiam,
-                        GiaTriDonToiThieu = 0,
+                        GiaTriDonToiThieu = apiResult.GiaTriDonToiThieu,
                         GiamToiDa = apiResult.GiamToiDa,
                         PhamViApDung = apiResult.PhamViApDung,
                         MaLoaiMon = apiResult.MaLoaiMon,
-                        MaMon = apiResult.MaMon,
-                        LastCalculatedDiscount = (decimal)apiResult.GiaTriGiamThucTe
+                        MaMon = apiResult.MaMon
                     };
+
+                    // API không biết giỏ hàng -> tự tính giảm giá theo đúng phạm vi áp dụng
+                    var realDiscount = ComputeScopedDiscount(voucherInfo, cart.Items, subtotal);
+                    if (realDiscount <= 0)
+                    {
+                        session.Remove(VoucherKey);
+                        session.Remove(VoucherInfoKey);
+                        return (false, BuildNotApplicableMessage(voucherInfo, subtotal, cart.Items), 0m);
+                    }
+
+                    voucherInfo.LastCalculatedDiscount = realDiscount;
+                    session.SetString(VoucherKey, savedCode);
                     session.SetString(VoucherInfoKey, JsonSerializer.Serialize(voucherInfo));
 
-                    var msg = !string.IsNullOrWhiteSpace(apiResult.Message) 
-                        ? apiResult.Message 
-                        : $"Áp dụng voucher {savedCode} thành công! Giảm ngay {apiResult.GiaTriGiamThucTe:N0}đ.";
+                    var msg = $"Áp dụng voucher {savedCode} thành công! Giảm ngay {realDiscount:N0}đ.";
 
-                    return (true, msg, (decimal)apiResult.GiaTriGiamThucTe);
+                    return (true, msg, realDiscount);
                 }
                 else
                 {
@@ -186,7 +198,7 @@ public class GioHangService
         return ApplyVoucherAsync(session, code).GetAwaiter().GetResult();
     }
 
-    private decimal CalculateDiscountForCart(ISession session, decimal subtotal)
+    private decimal CalculateDiscountForCart(ISession session, List<GioHangItemViewModel> items, decimal subtotal)
     {
         if (subtotal <= 0) return 0m;
 
@@ -196,32 +208,78 @@ public class GioHangService
             try
             {
                 var info = JsonSerializer.Deserialize<AppliedVoucherSessionData>(infoJson);
-                if (info != null)
-                {
-                    if (info.GiaTriDonToiThieu.HasValue && subtotal < (decimal)info.GiaTriDonToiThieu.Value)
-                    {
-                        return 0m;
-                    }
-
-                    if (info.PhanTramGiam.HasValue && info.PhanTramGiam.Value > 0)
-                    {
-                        var disc = Math.Round(subtotal * (decimal)info.PhanTramGiam.Value / 100m, 0);
-                        if (info.GiamToiDa.HasValue && info.GiamToiDa.Value > 0 && disc > (decimal)info.GiamToiDa.Value)
-                        {
-                            disc = (decimal)info.GiamToiDa.Value;
-                        }
-                        return disc;
-                    }
-                    else if (info.TienGiam.HasValue && info.TienGiam.Value > 0)
-                    {
-                        return Math.Min(subtotal, (decimal)info.TienGiam.Value);
-                    }
-                }
+                if (info != null) return ComputeScopedDiscount(info, items, subtotal);
             }
             catch { }
         }
 
         return 0m;
+    }
+
+    /// <summary>
+    /// Tính tiền giảm chỉ trên các dòng giỏ hàng thuộc phạm vi voucher:
+    /// TOAN_DON = cả giỏ, THEO_LOAI = món cùng loại, THEO_MON = đúng món đó.
+    /// </summary>
+    private static decimal GetScopedBase(AppliedVoucherSessionData info, List<GioHangItemViewModel> items, decimal subtotal)
+    {
+        var scope = string.IsNullOrWhiteSpace(info.PhamViApDung) ? "TOAN_DON" : info.PhamViApDung;
+        if (scope == "THEO_MON")
+        {
+            if (string.IsNullOrWhiteSpace(info.MaMon)) return 0m;
+            return items.Where(x => string.Equals(x.MaMon, info.MaMon, StringComparison.OrdinalIgnoreCase))
+                        .Sum(x => x.ThanhTien);
+        }
+        if (scope == "THEO_LOAI")
+        {
+            if (string.IsNullOrWhiteSpace(info.MaLoaiMon)) return 0m;
+            return items.Where(x => string.Equals(x.MaLoaiMon, info.MaLoaiMon, StringComparison.OrdinalIgnoreCase))
+                        .Sum(x => x.ThanhTien);
+        }
+        return subtotal;
+    }
+
+    private static decimal ComputeScopedDiscount(AppliedVoucherSessionData info, List<GioHangItemViewModel> items, decimal subtotal)
+    {
+        var baseAmount = GetScopedBase(info, items, subtotal);
+        if (baseAmount <= 0) return 0m;
+
+        if (info.GiaTriDonToiThieu.HasValue && info.GiaTriDonToiThieu.Value > 0
+            && baseAmount < (decimal)info.GiaTriDonToiThieu.Value)
+        {
+            return 0m;
+        }
+
+        decimal disc = 0m;
+        if (info.PhanTramGiam.HasValue && info.PhanTramGiam.Value > 0)
+        {
+            disc = Math.Round(baseAmount * (decimal)info.PhanTramGiam.Value / 100m, 0);
+            if (info.GiamToiDa.HasValue && info.GiamToiDa.Value > 0 && disc > (decimal)info.GiamToiDa.Value)
+            {
+                disc = (decimal)info.GiamToiDa.Value;
+            }
+        }
+        else if (info.TienGiam.HasValue && info.TienGiam.Value > 0)
+        {
+            disc = (decimal)info.TienGiam.Value;
+        }
+
+        return Math.Min(disc, baseAmount);
+    }
+
+    private static string BuildNotApplicableMessage(AppliedVoucherSessionData info, decimal subtotal, List<GioHangItemViewModel> items)
+    {
+        var baseAmount = GetScopedBase(info, items, subtotal);
+        if (baseAmount <= 0)
+        {
+            return info.PhamViApDung == "THEO_LOAI"
+                ? "Mã này chỉ áp dụng cho nhóm món nhất định. Giỏ hàng của bạn chưa có món thuộc nhóm đó."
+                : "Mã này chỉ áp dụng cho một món nhất định. Giỏ hàng của bạn chưa có món đó.";
+        }
+        if (info.GiaTriDonToiThieu.HasValue && baseAmount < (decimal)info.GiaTriDonToiThieu.Value)
+        {
+            return $"Mã này yêu cầu giá trị áp dụng tối thiểu {info.GiaTriDonToiThieu.Value:N0}đ (hiện có {baseAmount:N0}đ).";
+        }
+        return "Mã ưu đãi không áp dụng được cho giỏ hàng hiện tại.";
     }
 
     public static decimal CalculateDiscount(string code, decimal subtotal, List<GioHangItemViewModel>? items = null, MonAnService? monAnService = null)
