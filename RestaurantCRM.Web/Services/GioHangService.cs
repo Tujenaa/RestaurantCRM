@@ -6,6 +6,22 @@ using RestaurantCRM.Web.Models;
 
 namespace RestaurantCRM.Web.Services;
 
+public class CartCheckApiResponse
+{
+    public bool HopLe { get; set; }
+    public string? ThongBao { get; set; }
+    public List<CartItemErrorDetailDto> ChiTietLoi { get; set; } = new();
+}
+
+public class CartItemErrorDetailDto
+{
+    public string MaMon { get; set; } = "";
+    public string? TenMon { get; set; }
+    public int SoLuongYeuCau { get; set; }
+    public int SoLuongKhaDung { get; set; }
+    public string? LyDo { get; set; }
+}
+
 public class GioHangService
 {
     private const string CartKey = "customer-cart-v1";
@@ -324,6 +340,44 @@ public class GioHangService
     public (bool Success, string Message, decimal Discount) ApplyVoucher(ISession session, string? code, string? customerId = null)
     {
         return ApplyVoucherAsync(session, code, customerId).GetAwaiter().GetResult();
+    }
+
+    public async Task<(bool IsValid, string? ErrorMessage)> CheckCartAvailabilityAsync(IReadOnlyList<GioHangItemViewModel> items)
+    {
+        if (items == null || items.Count == 0)
+        {
+            return (true, null);
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var payload = new
+            {
+                Items = items.Select(i => new { MaMon = i.MaMon, SoLuong = i.SoLuong }).ToList()
+            };
+
+            var response = await client.PostAsJsonAsync("/api/HoaDon/KiemTraGioHang", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var result = await response.Content.ReadFromJsonAsync<CartCheckApiResponse>(options);
+                if (result != null && !result.HopLe)
+                {
+                    return (false, !string.IsNullOrWhiteSpace(result.ThongBao) 
+                        ? result.ThongBao 
+                        : "Một số món ăn trong giỏ hàng hiện không đủ số lượng hoặc đã ngừng phục vụ.");
+                }
+
+                return (true, null);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể kết nối đến API /api/HoaDon/KiemTraGioHang.");
+        }
+
+        return (true, null);
     }
 
     private decimal CalculateDiscountForCart(ISession session, decimal subtotal)

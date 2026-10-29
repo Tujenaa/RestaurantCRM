@@ -17,6 +17,161 @@ namespace RestaurantCRM.API.Controllers
             _service = service;
         }
 
+        // POST: api/HoaDon/KiemTraGioHang - Kiểm tra tính khả dụng và số lượng món ăn trước khi vào thanh toán
+        [HttpPost("KiemTraGioHang")]
+        public async Task<IActionResult> KiemTraGioHang([FromBody] CartCheckRequest request)
+        {
+            if (request.Items == null || !request.Items.Any())
+            {
+                return Ok(new CartCheckResult { HopLe = true });
+            }
+
+            var result = new CartCheckResult { HopLe = true };
+            var tongNguyenLieuCan = new Dictionary<string, decimal>();
+            var monAnList = new List<(OrderItemRequest Item, MonAn MonAn)>();
+
+            foreach (var item in request.Items)
+            {
+                var monAn = await _service.Query<MonAn>()
+                    .Include(m => m.DinhLuong)
+                        .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                    .FirstOrDefaultAsync(m => m.MaMon == item.MaMon);
+
+                if (monAn == null)
+                {
+                    result.HopLe = false;
+                    result.ChiTietLoi.Add(new CartItemErrorDetail
+                    {
+                        MaMon = item.MaMon,
+                        TenMon = "Món không xác định",
+                        SoLuongYeuCau = item.SoLuong,
+                        SoLuongKhaDung = 0,
+                        LyDo = $"Không tìm thấy món ăn với mã '{item.MaMon}' trong hệ thống."
+                    });
+                    continue;
+                }
+
+                // 1. Kiểm tra trạng thái đang kinh doanh
+                if (string.Equals(monAn.TrangThai, "Discontinued", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(monAn.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.HopLe = false;
+                    result.ChiTietLoi.Add(new CartItemErrorDetail
+                    {
+                        MaMon = item.MaMon,
+                        TenMon = monAn.TenMon,
+                        SoLuongYeuCau = item.SoLuong,
+                        SoLuongKhaDung = 0,
+                        LyDo = $"Món '{monAn.TenMon}' hiện đã ngừng kinh doanh."
+                    });
+                    continue;
+                }
+
+                // 2. Kiểm tra trạng thái hết hàng chủ động
+                if (string.Equals(monAn.TrangThai, "OutOfStock", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.HopLe = false;
+                    result.ChiTietLoi.Add(new CartItemErrorDetail
+                    {
+                        MaMon = item.MaMon,
+                        TenMon = monAn.TenMon,
+                        SoLuongYeuCau = item.SoLuong,
+                        SoLuongKhaDung = 0,
+                        LyDo = $"Món '{monAn.TenMon}' hiện tạm hết hàng."
+                    });
+                    continue;
+                }
+
+                // 3. Kiểm tra công thức định lượng
+                if (!monAn.DinhLuong.Any())
+                {
+                    result.HopLe = false;
+                    result.ChiTietLoi.Add(new CartItemErrorDetail
+                    {
+                        MaMon = item.MaMon,
+                        TenMon = monAn.TenMon,
+                        SoLuongYeuCau = item.SoLuong,
+                        SoLuongKhaDung = 0,
+                        LyDo = $"Món '{monAn.TenMon}' chưa có công thức định lượng, tạm thời chưa thể phục vụ."
+                    });
+                    continue;
+                }
+
+                monAnList.Add((item, monAn));
+
+                // Gom nguyên vật liệu cần tiêu thụ theo BOM
+                foreach (var dl in monAn.DinhLuong)
+                {
+                    var can = (decimal)item.SoLuong * dl.SoLuongCan;
+                    if (tongNguyenLieuCan.ContainsKey(dl.MaNguyenLieu))
+                        tongNguyenLieuCan[dl.MaNguyenLieu] += can;
+                    else
+                        tongNguyenLieuCan[dl.MaNguyenLieu] = can;
+                }
+            }
+
+            // 4. Kiểm tra tồn kho nguyên vật liệu
+            if (tongNguyenLieuCan.Any())
+            {
+                var dsMaNl = tongNguyenLieuCan.Keys.ToList();
+                var dbNguyenLieu = await _service.Query<NguyenLieu>()
+                    .Where(nl => dsMaNl.Contains(nl.MaNguyenLieu))
+                    .ToListAsync();
+
+                var thieuNguyenLieu = false;
+                foreach (var maNl in dsMaNl)
+                {
+                    var nl = dbNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == maNl);
+                    var canDung = tongNguyenLieuCan[maNl];
+                    var tonHienTai = nl?.SoLuongTon ?? 0;
+                    if (nl == null || tonHienTai < canDung)
+                    {
+                        thieuNguyenLieu = true;
+                        break;
+                    }
+                }
+
+                if (thieuNguyenLieu)
+                {
+                    result.HopLe = false;
+                    // Tính số suất tối đa khả dụng cho từng món ăn dựa trên nguyên liệu tồn
+                    foreach (var (item, monAn) in monAnList)
+                    {
+                        int maxSuat = (int)monAn.DinhLuong.Min(dl =>
+                        {
+                            var nl = dbNguyenLieu.FirstOrDefault(x => x.MaNguyenLieu == dl.MaNguyenLieu);
+                            var ton = nl?.SoLuongTon ?? 0;
+                            if (dl.SoLuongCan <= 0) return 0;
+                            return Math.Floor(ton / dl.SoLuongCan);
+                        });
+                        if (maxSuat < 0) maxSuat = 0;
+
+                        if (item.SoLuong > maxSuat)
+                        {
+                            result.ChiTietLoi.Add(new CartItemErrorDetail
+                            {
+                                MaMon = item.MaMon,
+                                TenMon = monAn.TenMon,
+                                SoLuongYeuCau = item.SoLuong,
+                                SoLuongKhaDung = maxSuat,
+                                LyDo = maxSuat > 0 
+                                    ? $"Món '{monAn.TenMon}' chỉ còn tối đa {maxSuat} phần (bạn đang chọn {item.SoLuong} phần)."
+                                    : $"Món '{monAn.TenMon}' hiện đã hết nguyên liệu để phục vụ."
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (!result.HopLe)
+            {
+                var messages = result.ChiTietLoi.Select(c => c.LyDo).Where(m => !string.IsNullOrEmpty(m)).Distinct();
+                result.ThongBao = string.Join(" ", messages);
+            }
+
+            return Ok(result);
+        }
+
         // POST: api/HoaDon - Tạo đơn hàng mới
         [HttpPost]
         public async Task<IActionResult> CreateOrder(OrderRequest request)
@@ -85,6 +240,19 @@ namespace RestaurantCRM.API.Controllers
                     if (monAn == null)
                     {
                         return BadRequest($"Không tìm thấy món ăn với mã '{item.MaMon}'.");
+                    }
+
+                    // Kiểm tra trạng thái đang kinh doanh
+                    if (string.Equals(monAn.TrangThai, "Discontinued", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(monAn.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return BadRequest($"Món ăn '{monAn.TenMon}' hiện đã ngừng kinh doanh, không thể đặt hàng.");
+                    }
+
+                    // Kiểm tra trạng thái hết hàng chủ động
+                    if (string.Equals(monAn.TrangThai, "OutOfStock", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return BadRequest($"Món ăn '{monAn.TenMon}' hiện đã hết hàng, vui lòng chọn món khác.");
                     }
 
                     if (!monAn.DinhLuong.Any())
@@ -229,24 +397,42 @@ namespace RestaurantCRM.API.Controllers
                     }
                 }
 
-                // Lưu lại thanh toán nếu online hoặc nhân viên bán mang đi tại quầy
-                if (isOnline || !string.IsNullOrEmpty(resolvedMaNhanVien))
-                {
-                    string phuongThuc = !string.IsNullOrWhiteSpace(request.PhuongThucThanhToan)
-                        ? request.PhuongThucThanhToan
-                        : (isOnline ? "Online" : "Tiền mặt (Tại quầy)");
+                // Luôn luôn lưu lại bản ghi phương thức thanh toán cho đơn hàng (COD hoặc Online/Tại quầy)
+                string phuongThucTen;
+                string trangThaiThanhToan;
+                DateTime? ngayThanhToan;
 
-                    var thanhToan = new ThanhToan
-                    {
-                        MaThanhToan = "TT" + DateTime.Now.Ticks.ToString().Substring(8, 6),
-                        MaHoaDon = maHoaDon,
-                        PhuongThuc = phuongThuc,
-                        TrangThai = "Paid",
-                        NgayThanhToan = DateTime.Now,
-                        SoTien = hoaDon.TongThanhToan
-                    };
-                    _service.Add(thanhToan);
+                if (isOnline)
+                {
+                    phuongThucTen = "Chuyển khoản ngân hàng (VietQR / Online)";
+                    trangThaiThanhToan = "Paid";
+                    ngayThanhToan = DateTime.Now;
                 }
+                else if (!string.IsNullOrEmpty(resolvedMaNhanVien))
+                {
+                    phuongThucTen = !string.IsNullOrWhiteSpace(request.PhuongThucThanhToan)
+                        ? request.PhuongThucThanhToan
+                        : "Tiền mặt (Tại quầy)";
+                    trangThaiThanhToan = "Paid";
+                    ngayThanhToan = DateTime.Now;
+                }
+                else
+                {
+                    phuongThucTen = "Tiền mặt khi nhận hàng (COD)";
+                    trangThaiThanhToan = "Pending";
+                    ngayThanhToan = null;
+                }
+
+                var thanhToan = new ThanhToan
+                {
+                    MaThanhToan = "TT" + DateTime.Now.Ticks.ToString().Substring(8, 6),
+                    MaHoaDon = maHoaDon,
+                    PhuongThuc = phuongThucTen,
+                    TrangThai = trangThaiThanhToan,
+                    NgayThanhToan = ngayThanhToan,
+                    SoTien = hoaDon.TongThanhToan
+                };
+                _service.Add(thanhToan);
 
                 // Lưu lại lịch sử trạng thái
                 var logNote = !string.IsNullOrEmpty(resolvedMaNhanVien)
