@@ -13,6 +13,8 @@ public partial class ChiTietHoaDon
 
     public string? MaKmsp { get; set; }
 
+    public string? MaKmLoai { get; set; }
+
     public string? TenMon { get; set; }
 
     public int? SoLuong { get; set; }
@@ -28,6 +30,8 @@ public partial class ChiTietHoaDon
     public virtual HoaDon? MaHoaDonNavigation { get; set; }
 
     public virtual KmTheoSp? MaKmspNavigation { get; set; }
+
+    public virtual KmTheoLoai? MaKmLoaiNavigation { get; set; }
 
     public virtual MonAn? MaMonNavigation { get; set; }
 }

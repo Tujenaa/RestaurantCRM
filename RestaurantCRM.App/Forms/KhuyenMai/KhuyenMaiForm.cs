@@ -130,7 +130,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
             ParentChanged += (s, e) => placeTitle();
 
             // ── 2. Thẻ KPI Thống kê ──────────────────────────────────────
-            var kpis = new TableLayoutPanel { Dock = DockStyle.Top, Height = 96, ColumnCount = 4, RowCount = 1, BackColor = ThemeManager.Bg };
+            var kpis = new TableLayoutPanel { Dock = DockStyle.Top, Height = 100, ColumnCount = 4, RowCount = 1, BackColor = ThemeManager.Bg };
             kpis.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             for (int i = 0; i < 4; i++) kpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 

@@ -37,21 +37,28 @@ namespace RestaurantCRM.AdminApp.Services.KhuyenMai
 
     /// <summary>
     /// Bộ tính toán biên lợi nhuận, chi phí nguyên liệu (Food Cost) và đánh giá độ an toàn tài chính của Voucher ưu đãi theo món.
+    /// Tính toán chuẩn xác có xét đến cả Mức giảm tối đa (Trần giảm giá).
     /// </summary>
     public static class VoucherMarginCalculator
     {
-        public static VoucherMarginResult Calculate(double goc, double giaVon, int loaiGiamIndex, double giam)
+        public static VoucherMarginResult Calculate(double goc, double giaVon, int loaiGiamIndex, double giam, double giamToiDa = 0)
         {
-            double sauGiam = goc;
-            if (loaiGiamIndex == 0)
+            double tienGiam = 0;
+            if (loaiGiamIndex == 0) // % (Phần trăm)
             {
-                sauGiam = goc * (1 - giam / 100.0);
+                tienGiam = goc * (giam / 100.0);
+                if (giamToiDa > 0 && tienGiam > giamToiDa)
+                {
+                    tienGiam = giamToiDa;
+                }
             }
-            else
+            else // VND (Tiền mặt / Giảm tối đa)
             {
-                sauGiam = Math.Max(0, goc - giam);
+                double discountAmt = giamToiDa > 0 ? giamToiDa : giam;
+                tienGiam = Math.Min(goc, discountAmt);
             }
 
+            double sauGiam = Math.Max(0, goc - tienGiam);
             double tietKiem = goc - sauGiam;
             double laiGop = sauGiam - giaVon;
             double tyLeLai = sauGiam > 0 ? (laiGop / sauGiam) * 100.0 : 0;

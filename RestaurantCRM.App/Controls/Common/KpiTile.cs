@@ -65,14 +65,44 @@ namespace RestaurantCRM.AdminApp.Controls
             var g = e.Graphics;
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             var r = CardRect;
-            // vạch màu nhỏ bên trái
-            using (var path = SkinUtil.Round(new RectangleF(r.X + 16, r.Y + 18, 4, 16), 2))
-            using (var br = new SolidBrush(_accent)) g.FillPath(br, path);
+            if (r.Width <= 10 || r.Height <= 10) return;
+
+            // Tính toán kích thước & căn giữa nội dung theo chiều dọc
+            int capHeight = 16;
+            int valHeight = 32;
+            int gap = 6;
+            int totalContentH = capHeight + gap + valHeight;
+            int topY = r.Y + Math.Max(8, (r.Height - totalContentH) / 2);
+            int valY = topY + capHeight + gap;
+
+            int barX = r.X + 16;
+            int barW = 4;
+            int textX = barX + barW + 8; // = r.X + 28: thẳng hàng hoàn hảo giữa tiêu đề và số
+            int textW = Math.Max(20, r.Width - (textX - r.X) - 14);
+
+            // Vạch màu nhỏ chỉ báo bên trái tiêu đề
+            using (var path = SkinUtil.Round(new RectangleF(barX, topY + 1, barW, 14), 2))
+            using (var br = new SolidBrush(_accent))
+                g.FillPath(br, path);
+
+            // Tiêu đề KPI (viết hoa, Muted, căn lề thẳng hàng với số bên dưới)
             using (var f = new Font(ThemeManager.FontFamily, 7.5F, FontStyle.Bold))
-                TextRenderer.DrawText(g, (_caption ?? "").ToUpper(), f, new Rectangle(r.X + 28, r.Y + 18, r.Width - 40, 16), ThemeManager.Muted,
+                TextRenderer.DrawText(g, (_caption ?? "").ToUpper(), f,
+                    new Rectangle(textX, topY, textW, capHeight),
+                    ThemeManager.Muted,
                     TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-            using (var f = new Font(ThemeManager.FontFamily, 17F, FontStyle.Bold))
-                TextRenderer.DrawText(g, _value ?? "", f, new Rectangle(r.X + 15, r.Y + 40, r.Width - 26, 34), ThemeManager.Ink,
+
+            // Giá trị KPI (căn thẳng hàng với tiêu đề ở textX, cỡ chữ sắc nét, tự co vừa vặn)
+            float fontSize = 18F;
+            if (!string.IsNullOrEmpty(_value))
+            {
+                if (_value.Length > 16) fontSize = 13.5F;
+                else if (_value.Length > 12) fontSize = 15F;
+            }
+            using (var f = new Font(ThemeManager.FontFamily, fontSize, FontStyle.Bold))
+                TextRenderer.DrawText(g, _value ?? "", f,
+                    new Rectangle(textX, valY, textW, valHeight),
+                    ThemeManager.Ink,
                     TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
         }
     }

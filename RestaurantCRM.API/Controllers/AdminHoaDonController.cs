@@ -51,7 +51,7 @@ namespace RestaurantCRM.API.Controllers
             var hoaDon = await _service.Query<HoaDon>()
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaNhanVienNavigation)
-                .Include(d => d.MaKmvoucherNavigation)
+                .Include(d => d.MaKMDonHangNavigation)
                     .ThenInclude(v => v.MaChuongTrinhNavigation)
                 .Include(d => d.ThanhToan)
                 .Include(d => d.ChiTietHoaDon)
@@ -77,7 +77,7 @@ namespace RestaurantCRM.API.Controllers
                     ? new { HoTen = hoaDon.MaKhachHangNavigation.HoTen, SoDienThoai = hoaDon.MaKhachHangNavigation.SoDienThoai } 
                     : new { HoTen = !string.IsNullOrEmpty(hoaDon.TenKhachHang) ? hoaDon.TenKhachHang : "Khách vãng lai", SoDienThoai = hoaDon.SoDienThoai ?? "" },
                 NhanVienPhuTrach = hoaDon.MaNhanVienNavigation != null ? hoaDon.MaNhanVienNavigation.HoTen : null,
-                KhuyenMai = hoaDon.MaKmvoucherNavigation?.MaChuongTrinhNavigation?.TenChuongTrinh,
+                KhuyenMai = hoaDon.MaKMDonHangNavigation?.MaChuongTrinhNavigation?.TenChuongTrinh,
                 ThanhToan = hoaDon.ThanhToan.Select(t => new { t.PhuongThuc, t.NgayThanhToan, t.SoTien, t.TrangThai }),
                 ChiTiet = hoaDon.ChiTietHoaDon.Select(c => new
                 {

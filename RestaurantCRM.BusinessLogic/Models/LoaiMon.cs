@@ -11,5 +11,5 @@ public partial class LoaiMon
 
     public virtual ICollection<MonAn> MonAn { get; set; } = new List<MonAn>();
 
-    public virtual ICollection<KmTheoVoucher> KmTheoVoucher { get; set; } = new List<KmTheoVoucher>();
+    public virtual ICollection<KmTheoLoai> KmTheoLoai { get; set; } = new List<KmTheoLoai>();
 }
