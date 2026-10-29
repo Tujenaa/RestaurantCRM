@@ -62,7 +62,12 @@ namespace RestaurantCRM.API.Controllers
             var khachHang = await _service.Query<KhachHang>().FirstOrDefaultAsync(k =>
                 (k.Email == request.EmailOrPhone || k.SoDienThoai == request.EmailOrPhone));
 
-            if (khachHang == null || !PasswordVerifier.Verify(request.MatKhau, khachHang.MatKhau))
+            if (khachHang == null)
+            {
+                return NotFound("Tài khoản không tồn tại.");
+            }
+
+            if (!PasswordVerifier.Verify(request.MatKhau, khachHang.MatKhau))
             {
                 return Unauthorized("Email/Số điện thoại hoặc mật khẩu không đúng.");
             }
@@ -97,7 +102,8 @@ namespace RestaurantCRM.API.Controllers
                     khachHang.MaKhachHang,
                     khachHang.HoTen,
                     khachHang.Email,
-                    khachHang.SoDienThoai
+                    khachHang.SoDienThoai,
+                    khachHang.DiaChi
                 }
             });
         }

@@ -60,6 +60,7 @@ namespace RestaurantCRM.API.Controllers
                 return new {
                     m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
                     SoLuong = soSuatKhaDung,
+                    ConHang = (m.TrangThai == "Active" || m.TrangThai == "InStock") && soSuatKhaDung > 0,
                     m.TrangThai,
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
@@ -73,10 +74,13 @@ namespace RestaurantCRM.API.Controllers
                 ).ToList();
             }
 
+            // Sắp xếp món còn hàng lên đầu, món hết hàng đẩy xuống dưới cùng
             if (sort == "asc")
-                result = result.OrderBy(m => m.DonGiaSauGiam).ToList();
+                result = result.OrderByDescending(m => m.ConHang).ThenBy(m => m.DonGiaSauGiam).ToList();
             else if (sort == "desc")
-                result = result.OrderByDescending(m => m.DonGiaSauGiam).ToList();
+                result = result.OrderByDescending(m => m.ConHang).ThenByDescending(m => m.DonGiaSauGiam).ToList();
+            else
+                result = result.OrderByDescending(m => m.ConHang).ToList();
 
             return Ok(result);
         }
@@ -119,6 +123,7 @@ namespace RestaurantCRM.API.Controllers
                 return new {
                     m.MaMon, m.MaLoaiMon, m.TenMon, m.MoTa, m.DuongDanAnh, m.DonGia,
                     SoLuong = soSuatKhaDung,
+                    ConHang = (m.TrangThai == "Active" || m.TrangThai == "InStock") && soSuatKhaDung > 0,
                     m.TrangThai,
                     DonGiaSauGiam = Math.Max(0, giaSauGiam)
                 };
@@ -172,12 +177,11 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new {
                 monAn.MaMon, monAn.MaLoaiMon, monAn.TenMon, monAn.MoTa, monAn.DuongDanAnh, monAn.DonGia,
                 SoLuong = soSuatKhaDung,
+                ConHang = (monAn.TrangThai == "Active" || monAn.TrangThai == "InStock") && soSuatKhaDung > 0,
                 monAn.TrangThai,
                 DonGiaSauGiam = Math.Max(0, giaSauGiam)
             });
         }
-
-
 
         private bool MonAnExists(string id)
         {

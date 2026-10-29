@@ -1,15 +1,44 @@
 (() => {
+  // 1. Scroll Restoration across page reloads (e.g. voucher switch, cart updates)
+  const savedScroll = sessionStorage.getItem('restoreScrollY');
+  if (savedScroll !== null) {
+    sessionStorage.removeItem('restoreScrollY');
+    const scrollY = parseInt(savedScroll, 10);
+    const doScroll = () => {
+      window.scrollTo({ top: scrollY, behavior: 'instant' });
+    };
+    doScroll();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', doScroll);
+    }
+    window.addEventListener('load', doScroll);
+    setTimeout(doScroll, 40);
+    setTimeout(doScroll, 120);
+  }
+
+  // 2. Gentle popup toast
   let toastTimer;
-  const toast = message => {
+  const toast = (message, isError = false) => {
     const element = document.getElementById('toast');
     if (!element) return;
-    element.textContent = message;
+    element.innerHTML = (isError ? '<span style="margin-right:6px;">⚠️</span>' : '<span style="margin-right:6px;">✓</span>') + message;
+    element.classList.toggle('toast--error', Boolean(isError));
     element.classList.add('show');
     window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => element.classList.remove('show'), 2800);
+    toastTimer = window.setTimeout(() => {
+      element.classList.remove('show');
+      element.classList.remove('toast--error');
+    }, 3200);
   };
+  window.showToast = toast;
 
   document.addEventListener('click', event => {
+    // Preserve scroll position when clicking voucher chips
+    const chip = event.target.closest('.chip-voucher, [data-preserve-scroll]');
+    if (chip) {
+      sessionStorage.setItem('restoreScrollY', String(window.scrollY || window.pageYOffset));
+    }
+
     const trigger = event.target.closest('[data-toast]');
     if (trigger) toast(trigger.dataset.toast);
 
@@ -39,7 +68,11 @@
 
   document.addEventListener('submit', async event => {
     const form = event.target;
-    if (form && (form.classList.contains('add-cart-form') || form.classList.contains('dish-order-form'))) {
+    if (form && (form.id === 'cartVoucherForm' || form.id === 'checkoutVoucherForm' || form.classList.contains('qty') || form.hasAttribute('data-preserve-scroll'))) {
+      sessionStorage.setItem('restoreScrollY', String(window.scrollY || window.pageYOffset));
+    }
+
+    if (form && (form.classList.contains('add-cart-form') || form.classList.contains('dish-order-form') || form.classList.contains('quickview-form'))) {
       event.preventDefault();
       try {
         const formData = new FormData(form);
@@ -53,7 +86,19 @@
            const result = await response.json().catch(() => null);
            toast((result && result.message) ? result.message : 'Đã thêm món vào giỏ hàng.');
            if (result && result.cartCount !== undefined) {
-               document.querySelectorAll('.count').forEach(el => el.textContent = result.cartCount);
+               const count = Number(result.cartCount) || 0;
+               document.querySelectorAll('.cart-count, .count, #headerCartCount').forEach(el => {
+                   el.textContent = count;
+                   el.classList.toggle('is-empty', count === 0);
+                   el.classList.remove('bump');
+                   void el.offsetWidth;
+                   el.classList.add('bump');
+               });
+               const cartBtn = document.querySelector('.cart-btn');
+               if (cartBtn) cartBtn.setAttribute('aria-label', `Giỏ hàng (${count} món)`);
+           }
+           if (form.classList.contains('quickview-form') && typeof window.closeQuickView === 'function') {
+               window.closeQuickView();
            }
         } else {
            toast('Có lỗi xảy ra, không thể thêm vào giỏ.');

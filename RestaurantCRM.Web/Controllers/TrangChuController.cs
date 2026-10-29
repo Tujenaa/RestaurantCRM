@@ -7,10 +7,12 @@ namespace RestaurantCRM.Web.Controllers;
 public class TrangChuController : Controller
 {
     private readonly MonAnService _monAnService;
+    private readonly PhanHoiService _phanHoiService;
 
-    public TrangChuController(MonAnService monAnService)
+    public TrangChuController(MonAnService monAnService, PhanHoiService phanHoiService)
     {
         _monAnService = monAnService;
+        _phanHoiService = phanHoiService;
     }
 
     public async Task<IActionResult> Index(string? loai, string? q, bool menu = false)
@@ -22,11 +24,19 @@ public class TrangChuController : Controller
 
         var all = await _monAnService.GetAllAsync(loai, q);
         var categories = await _monAnService.GetCategoriesAsync();
+        var monNoiBat = all.Where(d => d.ConHang).Take(6).ToList();
+
+        foreach (var d in monNoiBat)
+        {
+            var summary = await _phanHoiService.GetDishRatingSummaryAsync(d.MaMon);
+            d.DiemDanhGiaTrungBinh = summary.AverageRating;
+            d.SoLuongDanhGia = summary.ReviewCount;
+        }
 
         return View(new MonAnDanhSachViewModel
         {
             MonAns = all,
-            MonNoiBat = all.Where(d => d.ConHang).Take(6).ToList(),
+            MonNoiBat = monNoiBat,
             DanhSachLoaiMon = categories,
             LoaiMons = categories.Select(c => c.TenLoaiMon).ToList(),
             LoaiDangChon = loai,

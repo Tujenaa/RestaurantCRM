@@ -9,27 +9,7 @@ public class MonAnService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<MonAnService> _logger;
 
-    // Built-in fallback catalog matching database seeds
-    private static readonly List<MonAnViewModel> FallbackMenu = new()
-    {
-        new() { MaMon = "LAU001", MaLoaiMon = "LAU", TenMon = "Lẩu Thái chua cay", LoaiMon = "Lẩu", MoTa = "Nước lẩu Thái chua cay, thơm sả và lá chanh tươi mát, chuẩn vị truyền thống.", DuongDanAnh = "https://images.unsplash.com/photo-1547928576-a4a33237cbc3?auto=format&fit=crop&w=800&q=80", DonGia = 180000, SoLuong = 37, TrangThai = "InStock", BieuTuong = "🥘", Tone = "red", Tag = "Bán chạy" },
-        new() { MaMon = "LAU002", MaLoaiMon = "LAU", TenMon = "Lẩu bò nhúng dấm", LoaiMon = "Lẩu", MoTa = "Nước lẩu bò nhúng dấm chua dịu thanh tao, thơm nồng tỏi phi giòn rụm.", DuongDanAnh = "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80", DonGia = 220000, SoLuong = 31, TrangThai = "InStock", BieuTuong = "🍲", Tone = "gold", Tag = "Đặc sắc" },
-        new() { MaMon = "LAU003", MaLoaiMon = "LAU", TenMon = "Lẩu nấm thanh đạm", LoaiMon = "Lẩu", MoTa = "Nước lẩu nấm ninh từ các loại củ quả thiên nhiên, vị ngọt thanh tự nhiên tốt cho sức khỏe.", DuongDanAnh = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80", DonGia = 170000, SoLuong = 28, TrangThai = "InStock", BieuTuong = "🍄", Tone = "green", Tag = "Thanh đạm" },
-        new() { MaMon = "LAU004", MaLoaiMon = "LAU", TenMon = "Lẩu gà lá é", LoaiMon = "Lẩu", MoTa = "Lẩu gà ta ngọt bùi kết hợp cùng lá é rừng thơm lừng, cay nồng ớt xiêm xanh.", DuongDanAnh = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80", DonGia = 200000, SoLuong = 27, TrangThai = "InStock", BieuTuong = "🍗", Tone = "gold", Tag = "Đặc sản" },
-        new() { MaMon = "THIT001", MaLoaiMon = "THIT", TenMon = "Bò Mỹ thái lát", LoaiMon = "Thịt & hải sản nhúng lẩu", MoTa = "Thịt ba chỉ bò Mỹ thượng hạng thái lát mỏng đều, vân mỡ đan xen mềm tan.", DuongDanAnh = "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80", DonGia = 120000, SoLuong = 52, TrangThai = "InStock", BieuTuong = "🥩", Tone = "red", Tag = "Yêu thích" },
-        new() { MaMon = "THIT002", MaLoaiMon = "THIT", TenMon = "Tôm sú tươi", LoaiMon = "Thịt & hải sản nhúng lẩu", MoTa = "Tôm sú tươi rói đánh bắt trong ngày, thịt chắc ngọt giòn sần sật.", DuongDanAnh = "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=800&q=80", DonGia = 140000, SoLuong = 46, TrangThai = "InStock", BieuTuong = "🍤", Tone = "gold", Tag = "Tươi sống" },
-        new() { MaMon = "VIEN001", MaLoaiMon = "VIEN", TenMon = "Viên thả lẩu thập cẩm", LoaiMon = "Viên, chả & đồ chế biến sẵn", MoTa = "Bộ sưu tập viên thả lẩu cao cấp: cá viên trứng muối, phô mai tan chảy, bò viên gân.", DuongDanAnh = "https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=800&q=80", DonGia = 70000, SoLuong = 76, TrangThai = "InStock", BieuTuong = "🧀", Tone = "gold" },
-        new() { MaMon = "THIT003", MaLoaiMon = "THIT", TenMon = "Ba chỉ heo thái mỏng", LoaiMon = "Thịt & hải sản nhúng lẩu", MoTa = "Ba chỉ heo sạch chuẩn VietGAP, thái lát mỏng nhúng lẩu vừa chín tới ngọt thơm.", DuongDanAnh = "https://images.unsplash.com/photo-1602498456745-e9503b30470b?auto=format&fit=crop&w=800&q=80", DonGia = 90000, SoLuong = 56, TrangThai = "InStock", BieuTuong = "🥓", Tone = "red" },
-        new() { MaMon = "RAU001", MaLoaiMon = "RAU", TenMon = "Rau lẩu thập cẩm", LoaiMon = "Rau, nấm & đậu hũ", MoTa = "Đĩa rau tổng hợp gồm cải thảo non, cải cúc tần ô, rau muống và hoa chuối bào.", DuongDanAnh = "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80", DonGia = 50000, SoLuong = 95, TrangThai = "InStock", BieuTuong = "🥬", Tone = "green" },
-        new() { MaMon = "RAU002", MaLoaiMon = "RAU", TenMon = "Nấm thập cẩm", LoaiMon = "Rau, nấm & đậu hũ", MoTa = "Nấm kim châm trắng muốt, nấm đùi gà giòn ngọt, nấm hương tươi và nấm đông cô.", DuongDanAnh = "https://images.unsplash.com/photo-1509358271058-acd22cc93898?auto=format&fit=crop&w=800&q=80", DonGia = 60000, SoLuong = 77, TrangThai = "InStock", BieuTuong = "🍄", Tone = "green" },
-        new() { MaMon = "MI001", MaLoaiMon = "MI", TenMon = "Mì Udon", LoaiMon = "Mì, bún & cơm", MoTa = "Sợi mì Udon Nhật Bản dai mềm, hút trọn vị nước lẩu đậm đà.", DuongDanAnh = "https://images.unsplash.com/photo-1618841557871-b4664fbf0cb3?auto=format&fit=crop&w=800&q=80", DonGia = 25000, SoLuong = 117, TrangThai = "InStock", BieuTuong = "🍜", Tone = "gold" },
-        new() { MaMon = "MI002", MaLoaiMon = "MI", TenMon = "Bún tươi", LoaiMon = "Mì, bún & cơm", MoTa = "Bún tươi sợi nhỏ làm từ gạo sạch nguyên chất, làm mới mỗi sáng.", DuongDanAnh = "https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=800&q=80", DonGia = 15000, SoLuong = 146, TrangThai = "InStock", BieuTuong = "🥣", Tone = "gold" },
-        new() { MaMon = "DU001", MaLoaiMon = "DU", TenMon = "Trà đào cam sả", LoaiMon = "Đồ uống", MoTa = "Trà đen ủ lạnh kết hợp đào miếng giòn ngọt, cam vàng tươi và hương sả thơm mát.", DuongDanAnh = "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80", DonGia = 40000, SoLuong = 93, TrangThai = "InStock", BieuTuong = "🍹", Tone = "gold", Tag = "Giải khát" },
-        new() { MaMon = "TM001", MaLoaiMon = "TM", TenMon = "Chè khúc bạch", LoaiMon = "Tráng miệng", MoTa = "Khúc bạch béo ngậy vị sữa hạnh nhân, vải thiều ngọt lịm cùng hạt hạnh nhân giòn bùi.", DuongDanAnh = "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80", DonGia = 35000, SoLuong = 55, TrangThai = "InStock", BieuTuong = "🍧", Tone = "green" },
-        new() { MaMon = "DU002", MaLoaiMon = "DU", TenMon = "Nước ép cam", LoaiMon = "Đồ uống", MoTa = "Cam sành vắt tươi nguyên chất 100%, giàu vitamin C sảng khoái.", DuongDanAnh = "https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=800&q=80", DonGia = 40000, SoLuong = 0, TrangThai = "OutOfStock", BieuTuong = "🍊", Tone = "gold", Tag = "Tạm hết" }
-    };
-
-    private static readonly Dictionary<string, string> FallbackCategories = new()
+    private static readonly Dictionary<string, string> DefaultCategoryMap = new(StringComparer.OrdinalIgnoreCase)
     {
         { "LAU", "Lẩu" },
         { "THIT", "Thịt & hải sản nhúng lẩu" },
@@ -41,9 +21,9 @@ public class MonAnService
         { "VIEN", "Viên, chả & đồ chế biến sẵn" }
     };
 
-    // Cached state for synchronous access
-    private List<MonAnViewModel> _cachedDishes = new(FallbackMenu);
-    private Dictionary<string, string> _cachedCategoryMap = new(FallbackCategories);
+    // Cached state for synchronous access (chỉ lưu các món thực tế đã tải từ API)
+    private List<MonAnViewModel> _cachedDishes = new();
+    private Dictionary<string, string> _cachedCategoryMap = new(DefaultCategoryMap, StringComparer.OrdinalIgnoreCase);
 
     public MonAnService(IHttpClientFactory httpClientFactory, ILogger<MonAnService> logger)
     {
@@ -86,7 +66,6 @@ public class MonAnService
 
             if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "all" && maLoai != "Tất cả")
             {
-                // Prefer TheoLoai endpoint if no search, or pass query params
                 if (string.IsNullOrWhiteSpace(search))
                 {
                     endpoint = $"/api/MonAn/TheoLoai/{Uri.EscapeDataString(maLoai)}";
@@ -110,47 +89,32 @@ public class MonAnService
             if (response.IsSuccessStatusCode)
             {
                 var apiDishes = await response.Content.ReadFromJsonAsync<List<ApiMonAnDto>>();
-                if (apiDishes != null && apiDishes.Count > 0)
+                if (apiDishes != null)
                 {
                     var viewModels = apiDishes
                         .Select(dto => MapToViewModel(dto, categoryMap))
                         .Where(d => d.ConHang)
                         .ToList();
-                    _cachedDishes = viewModels;
+
+                    if (string.IsNullOrWhiteSpace(maLoai) && string.IsNullOrWhiteSpace(search))
+                    {
+                        _cachedDishes = viewModels;
+                    }
+                    else if (_cachedDishes.Count == 0 && viewModels.Count > 0)
+                    {
+                        _cachedDishes = viewModels;
+                    }
+
                     return viewModels;
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Không thể kết nối đến API MonAn, chuyển sang sử dụng dữ liệu cục bộ.");
+            _logger.LogWarning(ex, "Không thể kết nối đến API MonAn.");
         }
 
-        // Fallback filter
-        IEnumerable<MonAnViewModel> filtered = FallbackMenu;
-
-        if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "all" && maLoai != "Tất cả")
-        {
-            filtered = filtered.Where(d =>
-                string.Equals(d.MaLoaiMon, maLoai, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(d.LoaiMon, maLoai, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var clean = search.Trim();
-            filtered = filtered.Where(d =>
-                d.TenMon.Contains(clean, StringComparison.OrdinalIgnoreCase) ||
-                d.MoTa.Contains(clean, StringComparison.OrdinalIgnoreCase));
-        }
-
-        var result = filtered.Where(d => d.ConHang).ToList();
-        
-        if (sort == "asc") result = result.OrderBy(x => x.DonGiaSauGiam).ToList();
-        else if (sort == "desc") result = result.OrderByDescending(x => x.DonGiaSauGiam).ToList();
-        
-        _cachedDishes = result;
-        return result;
+        return new List<MonAnViewModel>();
     }
 
     public async Task<MonAnViewModel?> GetByIdAsync(string id)
@@ -173,11 +137,10 @@ public class MonAnService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Lỗi khi lấy chi tiết món từ API, tìm trong bộ nhớ cục bộ.");
+            _logger.LogWarning(ex, "Lỗi khi lấy chi tiết món từ API.");
         }
 
-        var fallback = FallbackMenu.FirstOrDefault(d => string.Equals(d.MaMon, id, StringComparison.OrdinalIgnoreCase));
-        return fallback != null && fallback.ConHang ? fallback : null;
+        return null;
     }
 
     private async Task<Dictionary<string, string>> EnsureCategoriesLoadedAsync()
@@ -189,7 +152,7 @@ public class MonAnService
             if (response.IsSuccessStatusCode)
             {
                 var apiCategories = await response.Content.ReadFromJsonAsync<List<ApiLoaiMonDto>>();
-                if (apiCategories != null && apiCategories.Count > 0)
+                if (apiCategories != null)
                 {
                     var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var c in apiCategories)
@@ -206,7 +169,7 @@ public class MonAnService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Không thể kết nối đến API LoaiMon, sử dụng danh mục mặc định.");
+            _logger.LogWarning(ex, "Không thể kết nối đến API LoaiMon.");
         }
 
         return _cachedCategoryMap;
@@ -220,16 +183,18 @@ public class MonAnService
             loaiTen = name;
         }
 
-        var fallbackMatch = FallbackMenu.FirstOrDefault(f => string.Equals(f.MaMon, dto.MaMon, StringComparison.OrdinalIgnoreCase));
-
-        string icon = fallbackMatch?.BieuTuong ?? GuessIcon(dto.TenMon, loaiTen);
-        string tone = fallbackMatch?.Tone ?? GuessTone(loaiTen);
-        string tag = fallbackMatch?.Tag ?? (dto.SoLuong <= 0 ? "Tạm hết" : "");
+        string icon = GuessIcon(dto.TenMon, loaiTen);
+        string tone = GuessTone(loaiTen);
+        string tag = dto.SoLuong <= 0 ? "Tạm hết" : "";
 
         string img = dto.DuongDanAnh ?? "";
         if (string.IsNullOrWhiteSpace(img))
         {
-            img = fallbackMatch?.DuongDanAnh ?? "";
+            img = "/images/default.jpg";
+        }
+        else if (!img.StartsWith("/") && !img.StartsWith("http"))
+        {
+            img = "/images/" + img;
         }
 
         return new MonAnViewModel
@@ -247,8 +212,8 @@ public class MonAnService
             BieuTuong = icon,
             Tag = tag,
             Tone = tone,
-            DiemDanhGiaTrungBinh = fallbackMatch?.DiemDanhGiaTrungBinh ?? 4.9,
-            SoLuongDanhGia = fallbackMatch?.SoLuongDanhGia ?? 12
+            DiemDanhGiaTrungBinh = 5.0,
+            SoLuongDanhGia = 0
         };
     }
 
@@ -277,13 +242,20 @@ public class MonAnService
         return "gold";
     }
 
-    // Synchronous helpers for compatibility with GioHangService and legacy calls
-    public IReadOnlyList<MonAnViewModel> GetAll() => (_cachedDishes.Count > 0 ? _cachedDishes : FallbackMenu).Where(d => d.ConHang).ToList();
-    public IReadOnlyList<string> GetCategories() => new[] { "Tất cả", "Nước lẩu", "Thịt & Hải sản nhúng lẩu", "Rau & Nấm", "Mì, Bún ăn kèm", "Đồ uống & Tráng miệng" };
+    // Synchronous helpers for compatibility with GioHangService
+    public IReadOnlyList<MonAnViewModel> GetAll() => _cachedDishes.Where(d => d.ConHang).ToList();
+    public IReadOnlyList<string> GetCategories() => _cachedCategoryMap.Values.ToList();
     public MonAnViewModel? Find(string id)
     {
-        var item = _cachedDishes.FirstOrDefault(x => string.Equals(x.MaMon, id, StringComparison.OrdinalIgnoreCase))
-            ?? FallbackMenu.FirstOrDefault(x => string.Equals(x.MaMon, id, StringComparison.OrdinalIgnoreCase));
+        var item = _cachedDishes.FirstOrDefault(x => string.Equals(x.MaMon, id, StringComparison.OrdinalIgnoreCase));
+        if (item == null)
+        {
+            item = GetByIdAsync(id).GetAwaiter().GetResult();
+            if (item != null)
+            {
+                _cachedDishes.Add(item);
+            }
+        }
         return item != null && item.ConHang ? item : null;
     }
 }

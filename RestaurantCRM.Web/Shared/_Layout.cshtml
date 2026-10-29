@@ -5,18 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>@(ViewData["Title"] ?? "Lẩu Phố — Cổng khách hàng")</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script>
+        (function() {
+            try {
+                var y = sessionStorage.getItem('restoreScrollY');
+                if (y !== null) {
+                    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+                    window.scrollTo(0, parseInt(y, 10));
+                }
+            } catch(e){}
+        })();
+    </script>
 </head>
 <body>
     <partial name="/Shared/_Header.cshtml" />
     <main>
-        @if (TempData["ThongBao"] is string message)
-        {
-            var isError = TempData["IsError"] as bool? == true;
-            <div class="notice @(isError ? "notice-error" : "")" role="status">
-                @if(isError) { <strong>⚠️ Lỗi ưu đãi:</strong> }
-                @message
-            </div>
-        }
         @RenderBody()
     </main>
     <partial name="/Shared/_Footer.cshtml" />
@@ -35,6 +38,26 @@
         </div>
     </div>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (TempData["ThongBao"] is string notifyMsg)
+    {
+        var isErr = TempData["IsError"] as bool? == true || string.Equals(TempData["ThongBaoLoai"]?.ToString(), "error", StringComparison.OrdinalIgnoreCase);
+        <script>
+            (function() {
+                var msg = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(notifyMsg));
+                var isErr = @(isErr ? "true" : "false");
+                var trigger = function() {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(msg, isErr);
+                    }
+                };
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', trigger);
+                } else {
+                    trigger();
+                }
+            })();
+        </script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

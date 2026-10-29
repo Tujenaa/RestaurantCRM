@@ -33,8 +33,6 @@
 <div class="layout">
     <form class="panel" asp-action="DatHang" method="post" id="checkoutForm">
         @Html.AntiForgeryToken()
-        
-
 
         <h3>Thông tin người nhận</h3>
         <div class="two">
@@ -232,7 +230,7 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="ReturnUrl" value="checkout" />
                 <div style="display: flex; flex-direction:column; gap: 8px;">
-                    <input id="checkoutVoucherInput" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã (VD: LAUPHO20)" style="width:100%;" />
+                    <input id="checkoutVoucherInput" name="MaVoucher" value="@Model.GioHang.MaVoucher" placeholder="Nhập mã ưu đãi" style="width:100%;" />
                     <div style="display: flex; gap: 6px;">
                         <button class="btn secondary small" type="submit" style="flex:1; width:auto; margin-top:0;">Áp dụng ưu đãi</button>
                         @if (!string.IsNullOrWhiteSpace(Model.GioHang.MaVoucher))
@@ -242,14 +240,11 @@
                     </div>
                 </div>
             </form>
-            <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Gợi ý mã giảm giá:</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Bấm để áp dụng nhanh mã ưu đãi:</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                 @{
                     var subtotal = Model.GioHang.TamTinh;
-                    var usedStr = Context.Session.GetString("UsedVouchers") ?? "";
-                    var vouchers = Model.AvailableVouchers?
-                        .Where(v => !usedStr.Contains(v.DisplayCode))
-                        .ToList() ?? new List<RestaurantCRM.Web.Models.VoucherViewModel>();
+                    var vouchers = Model.AvailableVouchers ?? new List<RestaurantCRM.Web.Models.VoucherViewModel>();
                 }
                 @if (!vouchers.Any())
                 {
@@ -304,8 +299,6 @@
 @section Scripts {
     <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
     <script>
-
-
         // Online payment toggle & tabs
         const payCod = document.getElementById('payCod');
         const payOnline = document.getElementById('payOnline');
@@ -345,6 +338,7 @@
         }
 
         function quickApplyCheckoutVoucher(code) {
+            try { sessionStorage.setItem('restoreScrollY', String(window.scrollY || window.pageYOffset)); } catch (e) {}
             const input = document.getElementById('checkoutVoucherInput');
             const form = document.getElementById('checkoutVoucherForm');
             if (input && form) {
@@ -354,6 +348,7 @@
         }
 
         function removeCheckoutVoucher() {
+            try { sessionStorage.setItem('restoreScrollY', String(window.scrollY || window.pageYOffset)); } catch (e) {}
             const input = document.getElementById('checkoutVoucherInput');
             const form = document.getElementById('checkoutVoucherForm');
             if (input && form) {
