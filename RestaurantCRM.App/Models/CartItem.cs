@@ -16,5 +16,7 @@ namespace RestaurantCRM.AdminApp.Models
         public string PromoInfo;        // Tên/mức giảm món nếu có
         public string MaLoaiMon;        // Mã loại món để áp dụng voucher danh mục
         public decimal GiaVon;          // Giá vốn nguyên liệu định lượng (BOM)
+        public string AppliedVoucherCode; // Mã voucher món/loại món đang áp dụng trực tiếp (VD: "009")
+        public decimal DishDiscount;      // Số tiền giảm từ voucher trên 1 đơn vị món
     }
 }

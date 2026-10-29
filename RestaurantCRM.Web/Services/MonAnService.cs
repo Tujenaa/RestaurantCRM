@@ -11,14 +11,14 @@ public class MonAnService
 
     private static readonly Dictionary<string, string> DefaultCategoryMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "LAU", "Lẩu" },
-        { "THIT", "Thịt & hải sản nhúng lẩu" },
-        { "RAU", "Rau, nấm & đậu hũ" },
-        { "MI", "Mì, bún & cơm" },
-        { "DU", "Đồ uống" },
-        { "TM", "Tráng miệng" },
-        { "KV", "Khai vị & món ăn kèm" },
-        { "VIEN", "Viên, chả & đồ chế biến sẵn" }
+        { "LM001", "Lẩu" },
+        { "LM002", "Thịt & hải sản nhúng lẩu" },
+        { "LM003", "Rau, nấm & đậu hũ" },
+        { "LM004", "Mì, bún & cơm" },
+        { "LM005", "Đồ uống" },
+        { "LM006", "Tráng miệng" },
+        { "LM007", "Khai vị & món ăn kèm" },
+        { "LM008", "Viên, chả & đồ chế biến sẵn" }
     };
 
     // Cached state for synchronous access (chỉ lưu các món thực tế đã tải từ API)

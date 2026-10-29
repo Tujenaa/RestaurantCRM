@@ -11,7 +11,14 @@ public partial class HoaDon
 
     public string? MaNhanVien { get; set; }
 
-    public string? MaKmvoucher { get; set; }
+    public string? MaKMDonHang { get; set; }
+
+    // Compatibility alias
+    public string? MaKmvoucher
+    {
+        get => MaKMDonHang;
+        set => MaKMDonHang = value;
+    }
 
     public string? TenKhachHang { get; set; }
 
@@ -39,7 +46,7 @@ public partial class HoaDon
 
     public virtual KhachHang? MaKhachHangNavigation { get; set; }
 
-    public virtual KmTheoVoucher? MaKmvoucherNavigation { get; set; }
+    public virtual KmTheoDonHang? MaKMDonHangNavigation { get; set; }
 
     public virtual NhanVien? MaNhanVienNavigation { get; set; }
 

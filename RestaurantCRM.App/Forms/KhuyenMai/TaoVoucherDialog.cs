@@ -42,19 +42,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
 
         // Mức giảm giá
         private ComboBox _cboLoaiGiam;
+        private Label _lblGiaTriGiam;
         private NumericUpDown _nudGiaTriGiam;
+        private TableLayoutPanel _gridDiscount;
+        private TableLayoutPanel _grpGiaTriGiam;
+        private TableLayoutPanel _grpGiamToiDa;
         private Label _lblGiamToiDa;
         private NumericUpDown _nudGiamToiDa;
 
-        // Financial Analysis Card (dành cho Theo Món)
-        private Panel _pnlFinanceCard;
-        private Label _lblGiaGocVal;
-        private Label _lblGiaVonVal;
-        private Label _lblGiaSauGiamVal;
-        private Label _lblTietKiemVal;
-        private Label _lblLaiGopVal;
-        private Panel _pnlWarningBanner;
-        private Label _lblWarningText;
 
         private readonly VoucherDto _voucherToEdit;
         private Button _btnSave;
@@ -68,7 +63,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             _voucherToEdit = voucherToEdit;
 
             Text = _voucherToEdit != null ? $"Chỉnh sửa Voucher [{_voucherToEdit.MaVoucher}]" : "Thiết lập voucher / ưu đãi khuyến mãi";
-            ClientSize = new Size(1000, 680);
+            ClientSize = new Size(1000, 520);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -99,7 +94,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                     _nudGiaTriGiam.Value = (decimal)_voucherToEdit.PhanTramGiam.Value;
                 } else if (_voucherToEdit.TienGiam.HasValue && _voucherToEdit.TienGiam > 0) {
                     _cboLoaiGiam.SelectedIndex = 1;
-                    _nudGiaTriGiam.Value = (decimal)_voucherToEdit.TienGiam.Value;
+                    _nudGiamToiDa.Value = (decimal)_voucherToEdit.TienGiam.Value;
                 }
 
                 if (_voucherToEdit.GiamToiDa.HasValue) _nudGiamToiDa.Value = (decimal)_voucherToEdit.GiamToiDa.Value;
@@ -338,7 +333,6 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             _lblTargetSelect = MakeLabel("Chọn đối tượng áp dụng (*)");
             _cboLoaiMon = MakeCombo();
             _cboMonAn = MakeCombo();
-            _cboMonAn.SelectedIndexChanged += (s, e) => UpdatePreviewPrice();
 
             _pnlCboLoaiMon = CreateComboWrapper(_cboLoaiMon);
             _pnlCboMonAn = CreateComboWrapper(_cboMonAn);
@@ -392,75 +386,30 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             _cboLoaiGiam.Items.AddRange(new object[] { "% (Phần trăm)", "VND (Tiền mặt)" });
             _cboLoaiGiam.SelectedIndex = 0;
 
+            _lblGiaTriGiam = MakeLabel("Mức giảm (%) (*)");
             _nudGiaTriGiam = MakeNumeric();
             _nudGiaTriGiam.Maximum = 100;
             _nudGiaTriGiam.Value = 10;
-            _nudGiaTriGiam.ValueChanged += (s, e) => UpdatePreviewPrice();
 
-            _cboLoaiGiam.SelectedIndexChanged += (s, e) => {
-                bool isPercent = _cboLoaiGiam.SelectedIndex == 0;
-                _nudGiaTriGiam.Maximum = isPercent ? 100 : 10000000;
-                UpdatePreviewPrice();
-            };
-
-            _lblGiamToiDa = MakeLabel("Mức giảm tối đa (VNĐ)");
+            _lblGiamToiDa = MakeLabel("Giảm tối đa (VNĐ)");
             _nudGiamToiDa = MakeNumeric();
             _nudGiamToiDa.Maximum = 100000000;
             _nudGiamToiDa.Increment = 10000;
             _nudGiamToiDa.Value = 50000;
 
-            _lblGiamToiDa.Text = "Giảm tối đa (VNĐ)";
-            var gridDiscount = MakeGrid(34f, 26f, 40f);
-            gridDiscount.Controls.Add(MakeField(MakeLabel("Hình thức giảm"), _cboLoaiGiam, null), 0, 0);
-            gridDiscount.Controls.Add(MakeField(MakeLabel("Mức giảm (*)"), _nudGiaTriGiam, null), 1, 0);
-            gridDiscount.Controls.Add(MakeField(_lblGiamToiDa, _nudGiamToiDa, null), 2, 0);
-            right.Controls.Add(NewCard("5. Mức giảm giá", gridDiscount));
+            _gridDiscount = MakeGrid(34f, 30f, 36f);
+            var grpLoai = MakeField(MakeLabel("Hình thức giảm"), _cboLoaiGiam, null);
+            _grpGiaTriGiam = MakeField(_lblGiaTriGiam, _nudGiaTriGiam, null);
+            _grpGiamToiDa = MakeField(_lblGiamToiDa, _nudGiamToiDa, null);
 
-            // ===== Thẻ 6: Phân tích tài chính (chỉ khi Theo món) =====
-            _lblGiaGocVal = MakeValue("0 đ", FontStyle.Bold, ThemeManager.Ink);
-            _lblGiaSauGiamVal = MakeValue("0 đ", FontStyle.Bold, ThemeManager.PrimaryDark);
-            _lblGiaVonVal = MakeValue("0 đ", FontStyle.Bold, ThemeManager.Ink2);
-            _lblTietKiemVal = MakeValue("0 đ", FontStyle.Regular, ThemeManager.Muted);
-            _lblLaiGopVal = MakeValue("0 đ", FontStyle.Bold, ThemeManager.Green);
+            _gridDiscount.Controls.Add(grpLoai, 0, 0);
+            _gridDiscount.Controls.Add(_grpGiaTriGiam, 1, 0);
+            _gridDiscount.Controls.Add(_grpGiamToiDa, 2, 0);
+            right.Controls.Add(NewCard("5. Mức giảm giá", _gridDiscount));
 
-            var fin = new TableLayoutPanel {
-                AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 4, Dock = DockStyle.Fill
-            };
-            fin.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            fin.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            fin.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            fin.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            // Mỗi dòng một cặp nhãn - giá trị: thẳng hàng, không tràn khung
-            AddFinRow(fin, 0, "Giá bán niêm yết:", _lblGiaGocVal, "Giá sau ưu đãi:", _lblGiaSauGiamVal);
-            AddFinRow(fin, 1, "Mức giảm / đĩa:", _lblTietKiemVal, "Lãi gộp dự kiến:", _lblLaiGopVal);
-            fin.Controls.Add(new Label {
-                Text = "Giá vốn (Food Cost):", AutoSize = true, ForeColor = ThemeManager.Muted,
-                Margin = new Padding(0, 4, 10, 4), UseMnemonic = false
-            }, 0, 2);
-            fin.Controls.Add(_lblGiaVonVal, 1, 2);
-            fin.SetColumnSpan(_lblGiaVonVal, 3);
+            _cboLoaiGiam.SelectedIndexChanged += (s, e) => UpdateDiscountFormLayout();
+            UpdateDiscountFormLayout();
 
-            _pnlWarningBanner = new Panel {
-                Dock = DockStyle.Fill,
-                Height = 54,
-                BackColor = ThemeManager.GreenSoft,
-                Padding = new Padding(10, 6, 10, 6),
-                Margin = new Padding(0, 6, 0, 6)
-            };
-            _lblWarningText = new Label {
-                Text = "Đang phân tích dữ liệu món ăn...",
-                Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                ForeColor = ThemeManager.Green,
-                UseMnemonic = false
-            };
-            _pnlWarningBanner.Controls.Add(_lblWarningText);
-            fin.Controls.Add(_pnlWarningBanner, 0, 3);
-            fin.SetColumnSpan(_pnlWarningBanner, 4);
-
-            _pnlFinanceCard = NewCard("6. Phân tích tài chính & biên lợi nhuận", fin);
-            _pnlFinanceCard.Visible = false;
-            right.Controls.Add(_pnlFinanceCard);
 
             // ===== Header (gắn sau body) =====
             var header = new Panel { Dock = DockStyle.Top, Height = 68, BackColor = ThemeManager.Blue };
@@ -535,31 +484,6 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             RefreshSegments();
         }
 
-        private static Label MakeValue(string text, FontStyle style, Color color) {
-            return new Label {
-                Text = text,
-                AutoSize = true,
-                Font = new Font("Segoe UI", 10F, style),
-                ForeColor = color,
-                Margin = new Padding(0, 4, 16, 4),
-                UseMnemonic = false
-            };
-        }
-
-        private static void AddFinRow(TableLayoutPanel t, int row, string t1, Label v1, string t2, Label v2) {
-            t.Controls.Add(new Label {
-                Text = t1, AutoSize = true, ForeColor = ThemeManager.Muted,
-                Margin = new Padding(0, 4, 10, 4), UseMnemonic = false
-            }, 0, row);
-            t.Controls.Add(v1, 1, row);
-            if (t2 != null) {
-                t.Controls.Add(new Label {
-                    Text = t2, AutoSize = true, ForeColor = ThemeManager.Muted,
-                    Margin = new Padding(0, 4, 10, 4), UseMnemonic = false
-                }, 2, row);
-                t.Controls.Add(v2, 3, row);
-            }
-        }
 
         private static Panel CreateComboWrapper(ComboBox cbo) {
             var pnl = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Tag = UiStyler.NoStyleTag };
@@ -574,7 +498,6 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             if (_rbToanDon.Checked) {
                 _lblScopeHint.Text = "Giảm trực tiếp trên tổng hóa đơn khi đạt giá trị đơn tối thiểu.";
                 _pnlTargetContainer.Visible = false;
-                _pnlFinanceCard.Visible = false;
                 SetCondColumns(true);
                 _lblDonToiThieu.Text = "Đơn hàng tối thiểu (VNĐ)";
                 _lblDonToiThieuHint.Text = "Áp dụng khi tổng hóa đơn đạt từ mức này trở lên (0đ = mọi đơn)";
@@ -585,21 +508,18 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _lblTargetSelect.Text = "Chọn loại món áp dụng (*)";
                 _pnlCboLoaiMon.Visible = true;
                 _pnlCboMonAn.Visible = false;
-                _pnlFinanceCard.Visible = false;
                 SetCondColumns(true);
                 _lblDonToiThieu.Text = "Giá tối thiểu được giảm (VNĐ)";
                 _lblDonToiThieuHint.Text = "Chỉ món trong nhóm có đơn giá ≥ mức này mới được giảm (0đ = tất cả món)";
                 _lblSoLuongVoucherHint.Text = "Ví dụ: 20 lượt. Khi đủ số lượt dùng mã sẽ tự động ẩn";
             } else if (_rbTheoMon.Checked) {
-                _lblScopeHint.Text = "Giảm cho một món ăn cụ thể, có phân tích biên lợi nhuận bên dưới.";
+                _lblScopeHint.Text = "Giảm giá trực tiếp cho một món ăn cụ thể.";
                 _pnlTargetContainer.Visible = true;
                 _lblTargetSelect.Text = "Chọn món ăn áp dụng (*)";
                 _pnlCboLoaiMon.Visible = false;
                 _pnlCboMonAn.Visible = true;
-                _pnlFinanceCard.Visible = true;
                 SetCondColumns(false);
                 _lblSoLuongVoucherHint.Text = "Tổng số lượt ưu đãi cho món này (0 = không giới hạn lượt dùng)";
-                UpdatePreviewPrice();
             }
         }
 
@@ -614,68 +534,29 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             }
         }
 
-        private void UpdatePreviewPrice() {
-            if (!_rbTheoMon.Checked) return;
-
-            var selectedDish = _cboMonAn.SelectedItem as MonAnSelectDto;
-            if (selectedDish == null || !selectedDish.DonGia.HasValue) {
-                var empty = VoucherMarginResult.CreateEmpty();
-                _lblGiaGocVal.Text = "0 đ";
-                _lblGiaVonVal.Text = "0 đ";
-                _lblGiaSauGiamVal.Text = "0 đ";
-                _lblTietKiemVal.Text = "0 đ";
-                _lblLaiGopVal.Text = empty.LaiGopDisplayText;
-                _lblWarningText.Text = empty.WarningText;
-                return;
-            }
-
-            double goc = selectedDish.DonGia.Value;
-            double giaVon = selectedDish.GiaVonUocTinh ?? 0;
-            double giam = (double)_nudGiaTriGiam.Value;
-            int loaiGiam = _cboLoaiGiam.SelectedIndex;
-
-            var result = VoucherMarginCalculator.Calculate(goc, giaVon, loaiGiam, giam);
-
-            _lblGiaGocVal.Text = $"{result.DonGiaGoc:N0} đ";
-            _lblGiaSauGiamVal.Text = $"{result.GiaSauGiam:N0} đ";
-            _lblTietKiemVal.Text = $"-{result.TietKiem:N0} đ";
-
-            if (result.GiaVon > 0) {
-                _lblGiaVonVal.Text = $"{result.GiaVon:N0} đ ({result.TyLeFoodCost:N1}% giá gốc)";
+        private void UpdateDiscountFormLayout() {
+            if (_gridDiscount == null) return;
+            bool isPercent = _cboLoaiGiam.SelectedIndex == 0;
+            _gridDiscount.SuspendLayout();
+            if (isPercent) {
+                _gridDiscount.ColumnStyles[0] = new ColumnStyle(SizeType.Percent, 34f);
+                _gridDiscount.ColumnStyles[1] = new ColumnStyle(SizeType.Percent, 30f);
+                _gridDiscount.ColumnStyles[2] = new ColumnStyle(SizeType.Percent, 36f);
+                _grpGiaTriGiam.Visible = true;
+                _lblGiaTriGiam.Text = "Mức giảm (%) (*)";
+                _lblGiamToiDa.Text = "Giảm tối đa (VNĐ)";
+                _nudGiaTriGiam.Maximum = 100;
             } else {
-                _lblGiaVonVal.Text = "Chưa có định lượng";
+                _gridDiscount.ColumnStyles[0] = new ColumnStyle(SizeType.Percent, 45f);
+                _gridDiscount.ColumnStyles[1] = new ColumnStyle(SizeType.Absolute, 0f);
+                _gridDiscount.ColumnStyles[2] = new ColumnStyle(SizeType.Percent, 55f);
+                _grpGiaTriGiam.Visible = false;
+                _lblGiamToiDa.Text = "Mức giảm tối đa (VNĐ) (*)";
+                _nudGiamToiDa.Maximum = 100000000;
             }
-
-            _lblLaiGopVal.Text = result.LaiGopDisplayText;
-            _lblWarningText.Text = result.WarningText;
-
-            switch (result.Health) {
-                case MarginHealth.NoRecipe:
-                    _lblLaiGopVal.ForeColor = ThemeManager.Muted;
-                    _pnlWarningBanner.BackColor = ThemeManager.AmberSoft;
-                    _lblWarningText.ForeColor = ThemeManager.Amber;
-                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
-                    break;
-                case MarginHealth.NegativeMargin:
-                    _lblLaiGopVal.ForeColor = ThemeManager.Red;
-                    _pnlWarningBanner.BackColor = ThemeManager.RedSoft;
-                    _lblWarningText.ForeColor = ThemeManager.Red;
-                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                    break;
-                case MarginHealth.ThinMargin:
-                    _lblLaiGopVal.ForeColor = ThemeManager.Amber;
-                    _pnlWarningBanner.BackColor = ThemeManager.AmberSoft;
-                    _lblWarningText.ForeColor = ThemeManager.Amber;
-                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                    break;
-                case MarginHealth.SafeMargin:
-                    _lblLaiGopVal.ForeColor = ThemeManager.Green;
-                    _pnlWarningBanner.BackColor = ThemeManager.GreenSoft;
-                    _lblWarningText.ForeColor = ThemeManager.Green;
-                    _lblWarningText.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                    break;
-            }
+            _gridDiscount.ResumeLayout();
         }
+
 
         private async void LoadDataAsync(string preselectedCtId) {
             try {
@@ -731,7 +612,6 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _cboMonAn.DataSource = _dishList;
                 if (_dishList != null && _dishList.Count > 0) {
                     _cboMonAn.SelectedIndex = 0;
-                    UpdatePreviewPrice();
                 }
             } catch (Exception ex) {
                 MessageBox.Show(this, "Lỗi khi tải dữ liệu khởi tạo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -759,8 +639,19 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             }
 
             string loaiGiam = _cboLoaiGiam.SelectedIndex == 0 ? "%" : "VND";
-            double giaTriGiam = (double)_nudGiaTriGiam.Value;
+            double giaTriGiam = loaiGiam == "%" ? (double)_nudGiaTriGiam.Value : (double)_nudGiamToiDa.Value;
             double? giamToiDa = _nudGiamToiDa.Value > 0 ? (double?)_nudGiamToiDa.Value : null;
+
+            if (loaiGiam == "%" && _nudGiaTriGiam.Value <= 0) {
+                MessageBox.Show(this, "Vui lòng nhập mức giảm (%) lớn hơn 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _nudGiaTriGiam.Focus();
+                return;
+            }
+            if (loaiGiam == "VND" && _nudGiamToiDa.Value <= 0) {
+                MessageBox.Show(this, "Vui lòng nhập mức giảm tối đa (VNĐ) lớn hơn 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _nudGiamToiDa.Focus();
+                return;
+            }
 
             string phamVi = "TOAN_DON";
             string maLoaiMon = null;
@@ -785,38 +676,6 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                     return;
                 }
                 maMon = dish.MaMon;
-
-                // Kiểm tra an toàn tài chính chống bán dưới giá vốn Food Cost
-                if (dish.DonGia.HasValue) {
-                    double goc = dish.DonGia.Value;
-                    double giaVon = dish.GiaVonUocTinh ?? 0;
-                    double sauGiam = loaiGiam == "%" ? goc * (1 - giaTriGiam / 100.0) : Math.Max(0, goc - giaTriGiam);
-
-                    if (giaVon > 0 && sauGiam < giaVon) {
-                        double tienLo = giaVon - sauGiam;
-                        MessageBox.Show(this,
-                            "NGĂN CHẶN THUA LỖ:\n\n" +
-                            $"Giá sau ưu đãi ({sauGiam:N0} đ) THẤP HƠN Giá vốn nguyên liệu ({giaVon:N0} đ).\n" +
-                            $"Nhà hàng sẽ chịu lỗ trực tiếp {tienLo:N0} đ trên mỗi đĩa bán ra!\n\n" +
-                            "Vui lòng điều chỉnh lại mức giảm giá hoặc thiết lập mức giảm tối đa.",
-                            "Cảnh báo thua lỗ nghiêm trọng", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                        return;
-                    }
-
-                    if (giaVon > 0) {
-                        double laiGop = sauGiam - giaVon;
-                        double tyLeLai = sauGiam > 0 ? (laiGop / sauGiam) * 100.0 : 0;
-                        if (tyLeLai < 20.0) {
-                            var confirm = MessageBox.Show(this,
-                                "CẢNH BÁO BIÊN LỢI NHUẬN THẤP:\n\n" +
-                                $"Biên lợi nhuận gộp của món này sau giảm chỉ đạt {tyLeLai:N1}% ({laiGop:N0} đ/đĩa).\n" +
-                                "Mức lãi này có nguy cơ không đủ bù đắp chi phí mặt bằng & nhân sự.\n\n" +
-                                "Bạn có chắc chắn vẫn muốn tạo voucher này không?",
-                                "Xác nhận rủi ro tài chính", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                            if (confirm != DialogResult.Yes) return;
-                        }
-                    }
-                }
             } else {
                 // TOAN_DON
                 phamVi = "TOAN_DON";
