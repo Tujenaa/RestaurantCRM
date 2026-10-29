@@ -40,7 +40,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
 
         public PhanTichForm()
         {
-            Text = "Phân tích khách hàng | RestaurantCRM";
+            Text = "Phân tích khách hàng | Lẩu Phố";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1220, 800);
             MinimumSize = new Size(1000, 680);

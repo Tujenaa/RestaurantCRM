@@ -33,7 +33,7 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
 
         public BackupRestoreForm()
         {
-            Text = "Sao Lưu & Phục Hồi Dữ Liệu | RestaurantCRM";
+            Text = "Sao Lưu & Phục Hồi Dữ Liệu | Lẩu Phố";
             Size = new Size(1020, 680);
             StartPosition = FormStartPosition.CenterParent;
             BackColor = ThemeManager.Bg;

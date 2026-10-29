@@ -1,6 +1,6 @@
 -- =============================================================
 -- DU LIEU MAU RESTAURANT CRM - khớp cấu trúc RestaurantCRM.sql
--- 20 món ăn, 60 hóa đơn, 10 phiếu nhập, dữ liệu thanh toán, khảo sát, đánh giá và phản hồi
+-- 20 món ăn, 60 hóa đơn, 10 phiếu nhập, 6 chương trình khuyến mãi và dữ liệu CRM đầy đủ
 -- Chạy script sau khi tạo CSDL bằng RestaurantCRM.sql; script này không xóa dữ liệu hiện có.
 -- Chay script nay tren CSDL RestaurantCRM sau khi tao bang
 -- =============================================================
@@ -306,24 +306,44 @@ GO
 
 -- 11. CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, ngayBatDau, ngayKetThuc)
 INSERT INTO CHUONG_TRINH_KHUYEN_MAI (maChuongTrinh, tenChuongTrinh, ngayBatDau, ngayKetThuc) VALUES
-  ('CTKM261028191037', N'ngày của mẹ', '2026-10-28', '2026-10-30');
+('CTKM261028191037', N'ngày của mẹ', '2026-10-28', '2026-10-30'),
+  ('CTKM261101', N'Tháng 11 ăn lẩu vui', '2026-11-01', '2026-11-30'),
+  ('CTKM261102', N'Cuối tuần sum vầy', '2026-10-01', '2026-12-31'),
+  ('CTKM261103', N'Ưu đãi khách thân thiết', '2026-09-01', '2026-12-31'),
+  ('CTKM261104', N'Mùa mưa ấm bụng', '2026-10-01', '2026-11-30'),
+  ('CTKM261105', N'Sinh nhật Lẩu Phố', '2026-08-01', '2026-12-31');
 GO
 
 -- 12. KM_THEO_DON_HANG (maKMDonHang, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa, soLuongToiThieu, choPhepCongDon)
 INSERT INTO KM_THEO_DON_HANG (maKMDonHang, maChuongTrinh, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa, soLuongToiThieu, choPhepCongDon) VALUES
-  ('VCHEF2B08B', 'CTKM261028191037', 'OO3', 50000, 10, NULL, 20000, 5, NULL);
+('VCHEF2B08B', 'CTKM261028191037', 'OO3', 50000, 10, NULL, 20000, 5, NULL),
+  ('KMHD002', 'CTKM261101', 'LAU11', 250000, 10, NULL, 40000, 1, 0),
+  ('KMHD003', 'CTKM261102', 'SUMVAY30', 500000, NULL, 30000, NULL, 1, 1),
+  ('KMHD004', 'CTKM261103', 'THANVIEN15', 400000, 15, NULL, 75000, 1, 0),
+  ('KMHD005', 'CTKM261104', 'MUAAM50', 700000, NULL, 50000, NULL, 1, 1),
+  ('KMHD006', 'CTKM261105', 'SINHNHAT8', 200000, 8, NULL, 100000, 1, 0);
 GO
 
 -- 13. KM_THEO_LOAI (maKMLoai, maChuongTrinh, maLoaiMon, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa, soLuongToiThieu, choPhepCongDon)
 INSERT INTO KM_THEO_LOAI (maKMLoai, maChuongTrinh, maLoaiMon, maVoucher, giaTriDonToiThieu, phanTramGiam, tienGiam, giamToiDa, soLuongToiThieu, choPhepCongDon) VALUES
-  ('VCH166C79D', 'CTKM261028191037', 'LM001', '009', 70000, 13, NULL, 40000, 5, NULL),
+('VCH166C79D', 'CTKM261028191037', 'LM001', '009', 70000, 13, NULL, 40000, 5, NULL),
   ('VCH2FB1A3C', 'CTKM261028191037', 'LM005', '5555', 40000, NULL, 10000, 10000, 5, NULL),
-  ('VCHBE4D44C', 'CTKM261028191037', 'LM005', 'DOUONG01', 70000, 4, NULL, 10000, 5, NULL);
+  ('VCHBE4D44C', 'CTKM261028191037', 'LM005', 'DOUONG01', 70000, 4, NULL, 10000, 5, NULL),
+  ('KML002', 'CTKM261101', 'LM001', 'LAUHOT10', 200000, 10, NULL, 50000, 1, 0),
+  ('KML003', 'CTKM261102', 'LM002', 'THIT12', 200000, 12, NULL, 60000, 2, 0),
+  ('KML004', 'CTKM261103', 'LM003', 'RAUXANH15', 100000, NULL, 15000, NULL, 1, 1),
+  ('KML005', 'CTKM261104', 'LM005', 'DOUONG10', 50000, 10, NULL, 25000, 2, 0),
+  ('KML006', 'CTKM261105', 'LM006', 'TRANGMIENG15', 70000, 15, NULL, 30000, 1, 1);
 GO
 
 -- 14. KM_THEO_SP (maKMSP, maChuongTrinh, maMon, maVoucher, phanTramGiam, tienGiam, giamToiDa, soLuongToiThieu, choPhepCongDon)
 INSERT INTO KM_THEO_SP (maKMSP, maChuongTrinh, maMon, maVoucher, phanTramGiam, tienGiam, giamToiDa, soLuongToiThieu, choPhepCongDon) VALUES
-  ('VCH480463D', 'CTKM261028191037', 'MA006', 'OO8', 15, NULL, 50000, 5, NULL);
+('VCH480463D', 'CTKM261028191037', 'MA006', 'OO8', 15, NULL, 50000, 5, NULL),
+  ('KMSP002', 'CTKM261101', 'MA001', 'LAUTHAI10', 10, NULL, 30000, 1, 0),
+  ('KMSP003', 'CTKM261102', 'MA005', 'TUXUYEN15', 15, NULL, 40000, 1, 0),
+  ('KMSP004', 'CTKM261103', 'MA006', 'HAISAN20', 20, NULL, 60000, 1, 0),
+  ('KMSP005', 'CTKM261104', 'MA010', 'KIMCHI10', 10, NULL, 25000, 1, 1),
+  ('KMSP006', 'CTKM261105', 'MA014', 'WAGYU50000', NULL, 50000, NULL, 1, 0);
 GO
 
 -- 15. HOA_DON (60 đơn hàng; trải đều tháng 09–10/2026, đủ trạng thái để thống kê)

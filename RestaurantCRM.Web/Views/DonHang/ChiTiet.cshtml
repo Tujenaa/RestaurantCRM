@@ -7,7 +7,7 @@
 }
 
 <div class="page-intro">
-    <a asp-action="Index" class="text-btn" style="margin-bottom: 8px; display: inline-block;">← Quay lại danh sách đơn hàng</a>
+    <a asp-action="Index" class="text-btn" style="margin-bottom: 8px; display: inline-block;">Quay lại danh sách đơn hàng</a>
     <h1 class="page-title">Chi tiết đơn hàng #@Model.MaDonHang</h1>
     <p>Đặt lúc @Model.NgayDat.ToString("dd/MM/yyyy · HH:mm:ss")</p>
 </div>
@@ -47,9 +47,9 @@
                         <div style="display:flex; gap:6px;">
                             @if (Model.TrangThaiLoc == "done")
                             {
-                                <a href="/PhanHoi/DanhGia?maDonHang=@Model.MaDonHang&maMon=@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px; background:#fff7ed; border-color:#fed7aa; color:#c2410c;">⭐ Đánh giá món</a>
+                                <a href="/PhanHoi/DanhGia?maDonHang=@Model.MaDonHang&maMon=@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px; background:#fff7ed; border-color:#fed7aa; color:#c2410c;">Đánh giá món</a>
                             }
-                            <a href="/Menu/ChiTiet/@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px;">Chi tiết món →</a>
+                            <a href="/Menu/ChiTiet/@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px;">Chi tiết món</a>
                         </div>
                     </div>
                 </div>
@@ -61,7 +61,7 @@
         {
             <div class="order-progress" style="margin-top: 24px;">
                 <div class="progress-heading">
-                    <strong>📦 Trạng thái xử lý đơn hàng</strong>
+                    <strong>Trạng thái xử lý đơn hàng</strong>
                     <small>@Model.TrangThai</small>
                 </div>
                 <div class="track-steps" style="--progress:@(progress)%">
@@ -70,7 +70,7 @@
                         var isComplete = i < Model.BuocHienTai;
                         var isCurrent = i == (Model.BuocHienTai - 1);
                         <div class="track-step @(isComplete ? "complete" : "") @(isCurrent ? "current" : "")">
-                            <div class="track-dot">@(isComplete ? "✓" : (i + 1).ToString())</div>
+                            <div class="track-dot">@(i + 1)</div>
                             <span>@steps[i]</span>
                         </div>
                     }
@@ -80,7 +80,7 @@
         else
         {
             <div class="alert alert-info" style="margin-top: 20px; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; padding: 14px; border-radius: 12px;">
-                ✕ Đơn hàng này đã được hủy. Món ăn đã được hoàn trả lại kho phục vụ.
+                Đơn hàng này đã được hủy. Món ăn đã được hoàn trả lại kho phục vụ.
             </div>
         }
 
@@ -91,7 +91,7 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.MaDonHang" />
                     <button class="btn secondary" type="submit" style="color: #c62828; border-color: #ef9a9a;">
-                        ✕ Hủy đơn hàng này
+                        Hủy đơn hàng này
                     </button>
                 </form>
             }
@@ -100,14 +100,14 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.MaDonHang" />
                 <button class="btn" type="submit">
-                    🔄 Đặt lại các món này
+                    Đặt lại các món này
                 </button>
             </form>
 
             @if (Model.TrangThaiLoc == "done")
             {
                 <a asp-controller="PhanHoi" asp-action="DanhGia" asp-route-maDonHang="@Model.MaDonHang" class="btn secondary" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
-                    ⭐ Đánh giá đơn hàng này
+                    Đánh giá đơn hàng này
                 </a>
             }
         </div>

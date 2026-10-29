@@ -52,7 +52,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             _calcService = new OrderCalculationService();
             _cartService = new CartService();
 
-            Text = "Tạo đơn hàng mang đi tại quầy | RestaurantCRM";
+            Text = "Tạo đơn hàng mang đi tại quầy | Lẩu Phố";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1300, 800);
             MinimumSize = new Size(1080, 680);
@@ -128,7 +128,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(12, 12, 12, 10)
+                Padding = new Padding(CartPanelBuilder.S(16), CartPanelBuilder.S(14), CartPanelBuilder.S(16), CartPanelBuilder.S(14))
             };
             cartWrapper.Controls.Add(_cartBuilder.BuildCartColumn());
             root.Controls.Add(cartWrapper, 1, 0);

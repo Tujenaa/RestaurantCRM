@@ -27,7 +27,7 @@ namespace RestaurantCRM.AdminApp.Controls
         private static readonly Color[] AgePalette = new Color[]
         {
             ColorTranslator.FromHtml("#3BA4F5"), // < 18: Sky
-            ColorTranslator.FromHtml("#4D5BF9"), // 18 - 24: Primary (Xanh dương)
+            ColorTranslator.FromHtml("#B8461B"), // 18 - 24: Primary (Cam đất)
             ColorTranslator.FromHtml("#14A99A"), // 25 - 34: Teal (Xanh ngọc)
             ColorTranslator.FromHtml("#E99A2C"), // 35 - 50: Amber (Cam vàng)
             ColorTranslator.FromHtml("#7B6CF6"), // > 50: Violet (Tím)

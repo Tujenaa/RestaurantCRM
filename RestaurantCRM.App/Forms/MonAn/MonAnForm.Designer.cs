@@ -391,7 +391,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             this.MinimumSize = new System.Drawing.Size(960, 620);
             this.Name = "MonAnForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Quản Lý Món Ăn & Thực Đơn | RestaurantCRM";
+            this.Text = "Quản Lý Món Ăn & Thực Đơn | Lẩu Phố";
             this.Load += new System.EventHandler(this.MonAnForm_Load);
             this.pnlHeader.ResumeLayout(false);
             this.pnlHeader.PerformLayout();

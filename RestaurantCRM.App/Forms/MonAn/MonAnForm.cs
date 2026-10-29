@@ -303,26 +303,26 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             if (dgvMonAn.Columns["MaMonAn"] != null)
             {
                 dgvMonAn.Columns["MaMonAn"].HeaderText = "Mã Món";
-                dgvMonAn.Columns["MaMonAn"].Width = 85;
-                dgvMonAn.Columns["MaMonAn"].MinimumWidth = 70;
+                dgvMonAn.Columns["MaMonAn"].Width = 95;
+                dgvMonAn.Columns["MaMonAn"].MinimumWidth = 90;
                 dgvMonAn.Columns["MaMonAn"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 dgvMonAn.Columns["MaMonAn"].DisplayIndex = 0;
 
                 dgvMonAn.Columns["TenMonAn"].HeaderText = "Tên Món Ăn";
-                dgvMonAn.Columns["TenMonAn"].Width = 240;
-                dgvMonAn.Columns["TenMonAn"].MinimumWidth = 160;
+                dgvMonAn.Columns["TenMonAn"].Width = 220;
+                dgvMonAn.Columns["TenMonAn"].MinimumWidth = 170;
                 dgvMonAn.Columns["TenMonAn"].DisplayIndex = 1;
 
                 dgvMonAn.Columns["Gia"].HeaderText = "Giá Bán";
-                dgvMonAn.Columns["Gia"].Width = 120;
+                dgvMonAn.Columns["Gia"].Width = 110;
                 dgvMonAn.Columns["Gia"].MinimumWidth = 100;
                 dgvMonAn.Columns["Gia"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
                 dgvMonAn.Columns["Gia"].DisplayIndex = 2;
 
                 if (dgvMonAn.Columns["GiaVonUocTinh"] != null)
                 {
-                    dgvMonAn.Columns["GiaVonUocTinh"].HeaderText = "Giá Vốn (COGS)";
-                    dgvMonAn.Columns["GiaVonUocTinh"].Width = 130;
+                    dgvMonAn.Columns["GiaVonUocTinh"].HeaderText = "Giá Vốn";
+                    dgvMonAn.Columns["GiaVonUocTinh"].Width = 110;
                     dgvMonAn.Columns["GiaVonUocTinh"].MinimumWidth = 100;
                     dgvMonAn.Columns["GiaVonUocTinh"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
                     dgvMonAn.Columns["GiaVonUocTinh"].Visible = true;
@@ -331,18 +331,18 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
 
                 dgvMonAn.Columns["SoLuongTon"].HeaderText = "Khả Dụng";
                 dgvMonAn.Columns["SoLuongTon"].Width = 110;
-                dgvMonAn.Columns["SoLuongTon"].MinimumWidth = 90;
+                dgvMonAn.Columns["SoLuongTon"].MinimumWidth = 100;
                 dgvMonAn.Columns["SoLuongTon"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 dgvMonAn.Columns["SoLuongTon"].Visible = true;
                 dgvMonAn.Columns["SoLuongTon"].DisplayIndex = 4;
 
                 dgvMonAn.Columns["MaLoaiMon"].HeaderText = "Loại Món";
-                dgvMonAn.Columns["MaLoaiMon"].Width = 120;
-                dgvMonAn.Columns["MaLoaiMon"].MinimumWidth = 100;
+                dgvMonAn.Columns["MaLoaiMon"].Width = 160;
+                dgvMonAn.Columns["MaLoaiMon"].MinimumWidth = 140;
                 dgvMonAn.Columns["MaLoaiMon"].DisplayIndex = 5;
 
                 dgvMonAn.Columns["TrangThaiRaw"].HeaderText = "Trạng Thái";
-                dgvMonAn.Columns["TrangThaiRaw"].Width = 160;
+                dgvMonAn.Columns["TrangThaiRaw"].Width = 150;
                 dgvMonAn.Columns["TrangThaiRaw"].MinimumWidth = 140;
                 dgvMonAn.Columns["TrangThaiRaw"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
                 dgvMonAn.Columns["TrangThaiRaw"].DisplayIndex = 6;
@@ -350,7 +350,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 if (dgvMonAn.Columns["MoTa"] != null)
                 {
                     dgvMonAn.Columns["MoTa"].HeaderText = "Mô Tả / Ghi Chú";
-                    dgvMonAn.Columns["MoTa"].Width = 220;
+                    dgvMonAn.Columns["MoTa"].Width = 200;
                     dgvMonAn.Columns["MoTa"].MinimumWidth = 120;
                     dgvMonAn.Columns["MoTa"].Visible = true;
                     dgvMonAn.Columns["MoTa"].DisplayIndex = 7;
@@ -391,6 +391,10 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             UpdateButtonState();
         }
 
+        private static readonly Font FontBold9 = new Font("Segoe UI", 9F, FontStyle.Bold);
+        private static readonly Font FontBold95 = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+        private static readonly Font FontRegular9 = new Font("Segoe UI", 9F, FontStyle.Regular);
+
         private void dgvMonAn_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
@@ -399,13 +403,13 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             // Mã món
             if (colName == "MaMonAn" && e.Value != null)
             {
-                e.CellStyle.ForeColor = Color.FromArgb(79, 70, 229);
-                e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                e.CellStyle.ForeColor = ThemeManager.Ink2;
+                e.CellStyle.Font = FontBold9;
             }
             // Tên món
             else if (colName == "TenMonAn" && e.Value != null)
             {
-                e.CellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+                e.CellStyle.Font = FontBold95;
                 e.CellStyle.ForeColor = Color.FromArgb(17, 24, 39);
             }
             // Loại món (hiển thị tên loại thay vì mã)
@@ -428,7 +432,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                     e.Value = $"{gia:N0} đ";
                     e.FormattingApplied = true;
                 }
-                e.CellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+                e.CellStyle.Font = FontBold95;
                 e.CellStyle.ForeColor = Color.FromArgb(15, 23, 42);
             }
             // Giá vốn ước tính (COGS)
@@ -439,7 +443,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                     e.Value = $"{giaVon:N0} đ";
                     e.FormattingApplied = true;
                 }
-                e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+                e.CellStyle.Font = FontRegular9;
                 e.CellStyle.ForeColor = Color.FromArgb(100, 116, 139);
             }
             // Số lượng tồn khả dụng (suất)
@@ -451,19 +455,19 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                     {
                         e.Value = "0 (Hết NL)";
                         e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
-                        e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                        e.CellStyle.Font = FontBold9;
                     }
                     else if (sl <= 5)
                     {
                         e.Value = $"{sl} suất (Sắp hết)";
                         e.CellStyle.ForeColor = Color.FromArgb(217, 119, 6);
-                        e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                        e.CellStyle.Font = FontBold9;
                     }
                     else
                     {
                         e.Value = $"{sl} suất";
                         e.CellStyle.ForeColor = Color.FromArgb(5, 150, 105);
-                        e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                        e.CellStyle.Font = FontBold9;
                     }
                     e.FormattingApplied = true;
                 }
@@ -476,21 +480,21 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 {
                     e.Value = "● Ngừng kinh doanh";
                     e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
-                    e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    e.CellStyle.Font = FontBold9;
                     e.FormattingApplied = true;
                 }
                 else if (val == "OutOfStock")
                 {
                     e.Value = "● Hết hàng";
                     e.CellStyle.ForeColor = Color.FromArgb(217, 119, 6);
-                    e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    e.CellStyle.Font = FontBold9;
                     e.FormattingApplied = true;
                 }
                 else
                 {
                     e.Value = "● Đang kinh doanh";
                     e.CellStyle.ForeColor = Color.FromArgb(5, 150, 105);
-                    e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                    e.CellStyle.Font = FontBold9;
                     e.FormattingApplied = true;
                 }
             }

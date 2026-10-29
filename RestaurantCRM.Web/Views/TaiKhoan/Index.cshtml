@@ -14,9 +14,9 @@
                 <div class="muted account-caption">Thành viên Lẩu Phố</div>
             </div>
         </div>
-        <button class="@(activeTab == "profile" ? "active" : "")" type="button" data-account="profile">👤 Thông tin cá nhân</button>
-        <button class="@(activeTab == "addresses" ? "active" : "")" type="button" data-account="addresses">📍 Địa chỉ giao hàng</button>
-        <a class="btn secondary small" asp-action="DangXuat" style="margin-top:14px; width:100%; text-align:center; display:block;">🚪 Đăng xuất</a>
+        <button class="@(activeTab == "profile" ? "active" : "")" type="button" data-account="profile">Thông tin cá nhân</button>
+        <button class="@(activeTab == "addresses" ? "active" : "")" type="button" data-account="addresses">Địa chỉ giao hàng</button>
+        <a class="btn secondary small" asp-action="DangXuat" style="margin-top:14px; width:100%; text-align:center; display:block;">Đăng xuất</a>
     </aside>
     <section class="panel" id="accountPanel">
         <div data-account-panel="profile" hidden="@(activeTab != "profile")">
@@ -24,7 +24,7 @@
             <div id="viewProfileSection">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <h3 style="margin:0;">Thông tin cá nhân</h3>
-                    <button class="btn small" type="button" onclick="toggleProfileEdit(true)">✏️ Cập nhật thông tin</button>
+                    <button class="btn small" type="button" onclick="toggleProfileEdit(true)">Cập nhật thông tin</button>
                 </div>
                 <div class="profile-info-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; background:#fffcf8; border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:20px;">
                     <div>
@@ -60,7 +60,7 @@
             <div id="editProfileSection" style="display:none; margin-bottom:20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                     <h3 style="margin:0;">Cập nhật thông tin cá nhân</h3>
-                    <button type="button" class="text-btn" onclick="toggleProfileEdit(false)">← Quay lại xem</button>
+                    <button type="button" class="text-btn" onclick="toggleProfileEdit(false)">Quay lại xem</button>
                 </div>
                 <form asp-action="CapNhat" method="post" style="background:#fffcf8; border:1px solid var(--line); border-radius:14px; padding:20px;">
                     @Html.AntiForgeryToken()
@@ -94,8 +94,8 @@
                         </select>
                     </div>
                     <div style="display:flex; gap:10px; margin-top:16px;">
-                        <button class="btn" type="submit">💾 Lưu thay đổi</button>
-                        <button class="btn secondary" type="button" onclick="toggleProfileEdit(false)">✕ Hủy bỏ</button>
+                        <button class="btn" type="submit">Lưu thay đổi</button>
+                        <button class="btn secondary" type="button" onclick="toggleProfileEdit(false)">Hủy bỏ</button>
                     </div>
                 </form>
             </div>
@@ -121,7 +121,7 @@
                 <button class="btn secondary" type="submit">Cập nhật mật khẩu</button>
             </form>
         </div>
-        <div data-account-panel="login" hidden="@(activeTab != "login")"><h3>Đăng nhập</h3><p class="muted">Đăng nhập để xem lịch sử đơn và thông tin thành viên.</p><a class="btn" asp-action="DangNhap">Mở trang đăng nhập →</a><p class="account-register-prompt"><button class="text-btn" type="button" data-account="register">Chưa có tài khoản? Đăng ký</button></p></div>
+        <div data-account-panel="login" hidden="@(activeTab != "login")"><h3>Đăng nhập</h3><p class="muted">Đăng nhập để xem lịch sử đơn và thông tin thành viên.</p><a class="btn" asp-action="DangNhap">Mở trang đăng nhập</a><p class="account-register-prompt"><button class="text-btn" type="button" data-account="register">Chưa có tài khoản? Đăng ký</button></p></div>
         <div data-account-panel="register" hidden="@(activeTab != "register")">
             <h3>Tạo tài khoản Lẩu Phố</h3><form asp-action="DangKy" method="post">
                 <div class="field"><label for="regName">Họ và tên *</label><input id="regName" name="hoTen" required maxlength="100" placeholder="Nguyễn Văn A" /></div>
@@ -136,13 +136,13 @@
                 {
                     <div class="notice" style="background: #fffdf9; border: 1.5px solid #d4c3b3; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                         <div style="font-weight: 600; font-size: 16px; color: #2c1810; margin-bottom: 6px;">
-                            📍 @Model.DiaChi
+                            @Model.DiaChi
                         </div>
                         <div class="muted" style="font-size: 14px;">
                             Người nhận: <strong>@(string.IsNullOrWhiteSpace(Model.HoTen) ? "Khách hàng" : Model.HoTen)</strong> · @(string.IsNullOrWhiteSpace(Model.SoDienThoai) ? "Chưa có SĐT" : Model.SoDienThoai)
                         </div>
                     </div>
-                    <button class="btn secondary" type="button" onclick="toggleAddressEdit(true)">✏️ Đổi địa chỉ giao hàng</button>
+                    <button class="btn secondary" type="button" onclick="toggleAddressEdit(true)">Đổi địa chỉ giao hàng</button>
                 }
                 else
                 {

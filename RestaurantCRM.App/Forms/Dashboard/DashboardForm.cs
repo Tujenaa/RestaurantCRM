@@ -54,7 +54,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             _role = !string.IsNullOrEmpty(activeRole) && _roles.Contains(activeRole) ? activeRole : _roles[0];
             _accent = ThemeManager.AccentFor(_role);
 
-            Text = ThemeManager.DisplayWorkspaceName(_role) + " Workspace | RestaurantCRM";
+            Text = ThemeManager.DisplayWorkspaceName(_role) + " Workspace | Lẩu Phố";
             var wa = Screen.PrimaryScreen.WorkingArea;
             Size = new Size(Math.Min(1320, wa.Width), Math.Min(820, wa.Height));
             MinimumSize = new Size(980, 640);
@@ -117,7 +117,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             CloseModule();
             _role = role;
             _accent = ThemeManager.AccentFor(_role);
-            Text = ThemeManager.DisplayWorkspaceName(_role) + " Workspace | RestaurantCRM";
+            Text = ThemeManager.DisplayWorkspaceName(_role) + " Workspace | Lẩu Phố";
 
             _header.SetTitle("Dashboard", _role);
             _header.SetUserInfo(_displayName, _role);

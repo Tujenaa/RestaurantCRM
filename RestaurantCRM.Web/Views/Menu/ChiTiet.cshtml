@@ -31,9 +31,7 @@
                     }
                     else
                     {
-                        <div class="dish-art @dish.Tone" style="height: 100%; border-radius: 0; font-size: 130px; user-select: none;">
-                            <span>@dish.BieuTuong</span>
-                        </div>
+                        <img src="/images/default.jpg" alt="@dish.TenMon" style="width: 100%; height: 100%; object-fit: cover;" />
                     }
 
                     <!-- Floating Badges -->
@@ -51,21 +49,18 @@
                 <!-- Feature highlights -->
                 <div class="dish-trust-badges">
                     <div class="trust-item">
-                        <span class="trust-icon">🥬</span>
                         <div>
                             <strong>Tươi mới mỗi ngày</strong>
                             <p>Nguyên liệu sạch, kiểm định an toàn</p>
                         </div>
                     </div>
                     <div class="trust-item">
-                        <span class="trust-icon">⚡</span>
                         <div>
                             <strong>Giao nhanh nóng hổi</strong>
                             <p>Đóng gói giữ nhiệt giao 30-45 phút</p>
                         </div>
                     </div>
                     <div class="trust-item">
-                        <span class="trust-icon">🍲</span>
                         <div>
                             <strong>Nồi lẩu gia truyền</strong>
                             <p>Vị đậm đà khó quên</p>
@@ -79,7 +74,7 @@
                 <div class="dish-meta-header">
                     <span class="category-badge">@dish.LoaiMon</span>
                     <span class="sku-badge">Mã món: <strong>@dish.MaMon</strong></span>
-                    <span class="rating-badge" title="Điểm đánh giá trung bình từ thực khách">⭐ @dish.DiemDanhGiaTrungBinh.ToString("0.0") (@(dish.SoLuongDanhGia > 0 ? $"{dish.SoLuongDanhGia} đánh giá" : "Chưa có đánh giá"))</span>
+                    <span class="rating-badge" title="Điểm đánh giá trung bình từ thực khách">Đánh giá @dish.DiemDanhGiaTrungBinh.ToString("0.0")/5 (@(dish.SoLuongDanhGia > 0 ? $"{dish.SoLuongDanhGia} đánh giá" : "Chưa có đánh giá"))</span>
                 </div>
 
                 <h1 class="dish-title">@dish.TenMon</h1>
@@ -163,7 +158,7 @@
 
                         <div class="order-action-buttons">
                             <button type="submit" class="btn btn-primary btn-submit-cart">
-                                🛒 Thêm vào giỏ hàng
+                                Thêm vào giỏ hàng
                             </button>
                             <a asp-controller="GioHang" asp-action="Index" class="btn btn-outline-cart">
                                 Xem giỏ hàng
@@ -174,7 +169,6 @@
                 else
                 {
                     <div class="dish-out-of-stock-card">
-                        <div class="alert-icon">⚠️</div>
                         <div>
                             <h4>Món ăn hiện tạm hết hàng</h4>
                             <p>Bếp đang chuẩn bị bổ sung nguyên liệu tươi mới. Quý khách vui lòng chọn món ăn khác hoặc quay lại sau ít phút.</p>
@@ -211,11 +205,11 @@
     <section class="dish-reviews-section" style="margin-top: 40px; background: white; border-radius: 20px; border: 1px solid var(--line); padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:28px;">
             <div>
-                <h2 style="font-size:24px; margin:0 0 6px;">💬 Đánh giá & Phản hồi về "@dish.TenMon"</h2>
+                <h2 style="font-size:24px; margin:0 0 6px;">Đánh giá & Phản hồi về "@dish.TenMon"</h2>
                 <p style="margin:0; color:var(--muted); font-size:14px;">Trải nghiệm ẩm thực thực tế từ những khách hàng đã thưởng thức món ăn này tại Lẩu Phố.</p>
             </div>
             <div style="font-size:13px; color:var(--muted); background:#f8fafc; padding:8px 14px; border-radius:10px; border:1px dashed #cbd5e1;">
-                ℹ️ Đánh giá được gửi từ đơn hàng đã hoàn tất
+                Đánh giá được gửi từ đơn hàng đã hoàn tất
             </div>
         </div>
 
@@ -242,7 +236,6 @@
                 @if (Model.DanhGias == null || Model.DanhGias.Count == 0)
                 {
                     <div style="text-align:center; padding:32px 20px; background:#f9fafb; border-radius:12px; color:var(--muted);">
-                        <div style="font-size:36px; margin-bottom:8px;">🍲</div>
                         <h4 style="margin:0 0 4px; color:#374151;">Chưa có đánh giá nào cho món này</h4>
                         <p style="margin:0; font-size:13.5px;">Hãy là người đầu tiên đặt món và chia sẻ cảm nhận tuyệt vời của bạn nhé!</p>
                     </div>
@@ -275,7 +268,7 @@
                                 {
                                     <div style="margin-top:12px; background:#f8fafc; border-radius:10px; padding:12px 16px; border-left:3px solid #3b82f6;">
                                         <small style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:11.5px; display:block; margin-bottom:8px;">
-                                            💬 Phản hồi trao đổi (@review.TraLois.Count câu trả lời)
+                                            Phản hồi trao đổi (@review.TraLois.Count câu trả lời)
                                         </small>
                                         <div style="display:flex; flex-direction:column; gap:8px;">
                                             @foreach (var reply in review.TraLois)
@@ -283,7 +276,7 @@
                                                 <div style="padding:8px 12px; border-radius:8px; background:@(reply.NguoiGui == "NhanVien" ? "#eff6ff" : "#ffffff"); border:1px solid @(reply.NguoiGui == "NhanVien" ? "#bfdbfe" : "#e2e8f0"); font-size:13px;">
                                                     <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
                                                         <strong style="color:@(reply.NguoiGui == "NhanVien" ? "#1d4ed8" : "#334155");">
-                                                            @(reply.NguoiGui == "NhanVien" ? "🏢 " + reply.NguoiTraLoi + " (Nhà hàng)" : "👤 " + reply.NguoiTraLoi)
+                                                            @(reply.NguoiGui == "NhanVien" ? reply.NguoiTraLoi + " (Nhà hàng)" : reply.NguoiTraLoi)
                                                         </strong>
                                                         <span class="muted" style="font-size:11px;">@reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")</span>
                                                     </div>
@@ -312,7 +305,7 @@
                     <p>Khám phá thêm các lựa chọn hấp dẫn trong nhóm @dish.LoaiMon</p>
                 </div>
                 <a asp-controller="Menu" asp-action="Index" asp-route-loai="@dish.MaLoaiMon" class="text-btn">
-                    Xem tất cả @dish.LoaiMon →
+                    Xem tất cả @dish.LoaiMon
                 </a>
             </div>
 

@@ -28,6 +28,19 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         private readonly Font _baseFont;
         private readonly Color _accent = ThemeManager.Primary;
 
+        // Tỉ lệ DPI màn hình (100% = 1, 125% = 1.25...). Mọi kích thước pixel đều nhân qua S()
+        // để bố cục không bị chật / cắt chữ khi Windows phóng to chữ.
+        public static readonly float DpiScale = GetDpiScale();
+        public static int S(int px) { return (int)Math.Round(px * DpiScale); }
+        private static float GetDpiScale()
+        {
+            try { using (var g = Graphics.FromHwnd(IntPtr.Zero)) return Math.Max(1f, g.DpiX / 96f); }
+            catch { return 1f; }
+        }
+
+        private InputBox _voucherBox;
+        private bool _voucherApplied;
+
         // UI Controls
         private FlowLayoutPanel _cartLines;
         private int _lastRenderedLineCount;
@@ -86,8 +99,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 Padding = Padding.Empty
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 136F));   // thông tin đơn hàng
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));    // header giỏ hàng
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, S(156)));  // thông tin đơn hàng
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));   // header giỏ hàng
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));    // danh sách món cuộn
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // footer cố định
 
@@ -123,11 +136,11 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(30)));   // tiêu đề
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(22)));   // nhãn
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));   // ô nhập
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(24)));   // nhãn
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));   // ô nhập
 
             var title = new Label
             {
@@ -141,34 +154,24 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             t.Controls.Add(title, 0, 0);
             t.SetColumnSpan(title, 2);
 
-            t.Controls.Add(MakeCaption("Tên khách hàng", new Padding(0, 0, 6, 1)), 0, 1);
-            t.Controls.Add(MakeCaption("Số điện thoại", new Padding(6, 0, 0, 1)), 1, 1);
+            var left = new Padding(0, 0, S(6), 0);
+            var right = new Padding(S(6), 0, 0, 0);
 
-            _txtTenKhach = new TextBox
-            {
-                Text = "Khách mua mang đi",
-                Font = _baseFont,
-                Anchor = AnchorStyles.Left | AnchorStyles.Right,
-                Margin = new Padding(0, 0, 6, 0)
-            };
-            _txtSdt = new TextBox
-            {
-                Font = _baseFont,
-                Anchor = AnchorStyles.Left | AnchorStyles.Right,
-                Margin = new Padding(6, 0, 0, 0)
-            };
-            t.Controls.Add(_txtTenKhach, 0, 2);
-            t.Controls.Add(_txtSdt, 1, 2);
+            t.Controls.Add(MakeCaption("Tên khách hàng", left), 0, 1);
+            t.Controls.Add(MakeCaption("Số điện thoại", right), 1, 1);
 
-            t.Controls.Add(MakeCaption("Phương thức thanh toán", new Padding(0, 0, 6, 1)), 0, 3);
-            t.Controls.Add(MakeCaption("Ghi chú đơn hàng", new Padding(6, 0, 0, 1)), 1, 3);
+            _txtTenKhach = new TextBox { Text = "Khách mua mang đi", Font = _baseFont };
+            _txtSdt = new TextBox { Font = _baseFont };
+            t.Controls.Add(new InputBox(_txtTenKhach) { Dock = DockStyle.Fill, Margin = left }, 0, 2);
+            t.Controls.Add(new InputBox(_txtSdt) { Dock = DockStyle.Fill, Margin = right }, 1, 2);
+
+            t.Controls.Add(MakeCaption("Phương thức thanh toán", left), 0, 3);
+            t.Controls.Add(MakeCaption("Ghi chú đơn hàng", right), 1, 3);
 
             _cboPaymentMethod = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = _baseFont,
-                Anchor = AnchorStyles.Left | AnchorStyles.Right,
-                Margin = new Padding(0, 0, 6, 0)
+                Font = _baseFont
             };
             _cboPaymentMethod.Items.AddRange(new object[]
             {
@@ -179,15 +182,9 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             });
             _cboPaymentMethod.SelectedIndex = 0;
 
-            _txtGhiChu = new TextBox
-            {
-                Text = "Bán mang đi tại quầy",
-                Font = _baseFont,
-                Anchor = AnchorStyles.Left | AnchorStyles.Right,
-                Margin = new Padding(6, 0, 0, 0)
-            };
-            t.Controls.Add(_cboPaymentMethod, 0, 4);
-            t.Controls.Add(_txtGhiChu, 1, 4);
+            _txtGhiChu = new TextBox { Text = "Bán mang đi tại quầy", Font = _baseFont };
+            t.Controls.Add(new InputBox(_cboPaymentMethod) { Dock = DockStyle.Fill, Margin = left }, 0, 4);
+            t.Controls.Add(new InputBox(_txtGhiChu) { Dock = DockStyle.Fill, Margin = right }, 1, 4);
             return t;
         }
 
@@ -200,8 +197,65 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 TextAlign = ContentAlignment.BottomLeft,
                 Font = new Font("Segoe UI", 8.5F),
                 ForeColor = ThemeManager.Muted,
-                Margin = margin
+                Margin = new Padding(margin.Left, 0, margin.Right, S(3)),
+                UseMnemonic = false
             };
+        }
+
+        /// <summary>
+        /// Ô nhập bo tròn tự vẽ viền, chứa TextBox/ComboBox bên trong.
+        /// Tự căn giữa control con nên không bị lệch khi nằm trong TableLayoutPanel.
+        /// </summary>
+        private class InputBox : Panel
+        {
+            private readonly Control _inner;
+            private bool _focus;
+
+            public InputBox(Control inner)
+            {
+                _inner = inner;
+                inner.Tag = UiStyler.NoStyleTag;            // không cho FieldSkin chung can thiệp
+                SetStyle(ControlStyles.SupportsTransparentBackColor | ControlStyles.ResizeRedraw | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+                BackColor = Color.Transparent;   // góc bo lấy nền của khung cha (trắng hoặc nền ô voucher)
+
+                var tb = inner as TextBox;
+                if (tb != null) { tb.BorderStyle = BorderStyle.None; tb.BackColor = Color.White; }
+                var cb = inner as ComboBox;
+                if (cb != null) { cb.FlatStyle = FlatStyle.Flat; cb.BackColor = Color.White; }
+
+                Controls.Add(inner);
+                if (cb != null) ComboFrame.Attach(cb);   // che viền vuông + vẽ mũi tên chevron
+
+                inner.Enter += (s, e) => { _focus = true; Invalidate(); };
+                inner.Leave += (s, e) => { _focus = false; Invalidate(); };
+                inner.EnabledChanged += (s, e) => Invalidate();
+                Click += (s, e) => _inner.Focus();
+                Cursor = Cursors.IBeam;
+            }
+
+            protected override void OnLayout(LayoutEventArgs e)
+            {
+                base.OnLayout(e);
+                bool combo = _inner is ComboBox;
+                int padL = combo ? S(5) : S(12);
+                int padR = combo ? S(4) : S(12);
+                int w = Math.Max(10, Width - padL - padR);
+                int h = _inner.Height;
+                _inner.SetBounds(padL, Math.Max(0, (Height - h) / 2), w, h);
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
+                using (var path = SkinUtil.Round(r, Math.Min(S(9), r.Height / 2f)))
+                {
+                    using (var br = new SolidBrush(_inner.Enabled ? Color.White : ThemeManager.Surface2)) g.FillPath(br, path);
+                    using (var pen = new Pen(_focus ? ThemeManager.Primary : Color.FromArgb(222, 225, 234), _focus ? 1.6f : 1f))
+                        g.DrawPath(pen, path);
+                }
+            }
         }
 
         private Control BuildCartHeader()
@@ -275,14 +329,15 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 46F));
-            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 13F));
-            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, 58F));
 
             var promo = BuildPromoBox();
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, promo.Height + promo.Margin.Vertical));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(13)));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(60)));
+
             t.Controls.Add(promo, 0, 0);
             t.SetColumnSpan(promo, 2);
 
@@ -298,14 +353,14 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             t.Controls.Add(_lblDiscountCaption, 0, 2);
             t.Controls.Add(_lblDiscountValue, 1, 2);
 
-            var divider = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Line, Margin = new Padding(0, 6, 0, 6) };
+            var divider = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.Line, Margin = new Padding(0, S(6), 0, S(6)) };
             t.Controls.Add(divider, 0, 3);
             t.SetColumnSpan(divider, 2);
 
             Label totalCaption = MakeSummaryLabel("Tổng thanh toán", 11F, true, ThemeManager.Ink, ContentAlignment.MiddleLeft);
-            _lblTotalValue = MakeSummaryLabel("0 đ", 15F, true, ThemeManager.Ink, ContentAlignment.MiddleRight);
-            totalCaption.Margin = new Padding(0, 2, 0, 2);
-            _lblTotalValue.Margin = new Padding(0, 2, 0, 2);
+            _lblTotalValue = MakeSummaryLabel("0 đ", 15F, true, ThemeManager.Primary, ContentAlignment.MiddleRight);
+            totalCaption.Margin = new Padding(0, S(2), 0, S(2));
+            _lblTotalValue.Margin = new Padding(0, S(2), 0, S(2));
             t.Controls.Add(totalCaption, 0, 4);
             t.Controls.Add(_lblTotalValue, 1, 4);
 
@@ -313,7 +368,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             {
                 Text = "✓  Xác nhận đơn hàng",
                 Dock = DockStyle.Fill,
-                Margin = new Padding(0, 10, 0, 0),
+                Margin = new Padding(0, S(10), 0, 0),
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
                 UseMnemonic = false,
                 Cursor = Cursors.Hand
@@ -335,62 +390,128 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 Anchor = align == ContentAlignment.MiddleRight ? AnchorStyles.Right : AnchorStyles.Left,
                 Font = new Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular),
                 ForeColor = color,
-                Margin = new Padding(0, 3, 0, 3),
+                Margin = new Padding(0, S(3), 0, S(3)),
                 UseMnemonic = false
             };
         }
 
+        /// <summary>
+        /// Ô voucher 2 tầng:
+        ///   [icon] Tiêu đề / dòng phụ ............ Chọn mã ▾
+        ///   [ ô nhập mã voucher ................ ] [Dùng]   (hoặc [Bỏ mã] khi đã áp mã)
+        /// </summary>
         private Control BuildPromoBox()
         {
+            var fTitle = new Font("Segoe UI", 9F, FontStyle.Bold);
+            var fSub = new Font("Segoe UI", 8F);
+            int pad = S(10);
+            int inputRowH = S(36);
+            int textH = TextRenderer.MeasureText("Ag", fTitle).Height + TextRenderer.MeasureText("Ag", fSub).Height;
+
             _pnlPromoBox = new RoundedPanel
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(0, 4, 0, 4),
-                Radius = 8,
+                Height = pad + textH + S(8) + inputRowH + pad,
+                Margin = new Padding(0, S(4), 0, S(6)),
+                Padding = new Padding(pad, pad - S(2), pad, pad),
+                Radius = S(10),
                 BorderWidth = 1,
                 BorderColor = ThemeManager.Line,
                 FillColor = ThemeManager.Surface2
             };
 
+            var grid = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                ColumnCount = 3,
+                RowCount = 3,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
             _lblPromoIcon = new Label
             {
                 Text = "🎟️",
-                Location = new Point(8, 8),
-                Size = new Size(22, 22),
-                Font = new Font("Segoe UI", 10.5F),
+                AutoSize = true,
+                Anchor = AnchorStyles.Left,
+                Font = new Font("Segoe UI Emoji", 12F),
                 BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter
+                Margin = new Padding(0, 0, S(6), 0)
             };
+            grid.Controls.Add(_lblPromoIcon, 0, 0);
+            grid.SetRowSpan(_lblPromoIcon, 2);
 
             _lblPromoTitle = new Label
             {
                 Text = "Voucher / Mã giảm giá",
-                Location = new Point(34, 4),
-                Size = new Size(180, 16),
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                Font = fTitle,
                 ForeColor = ThemeManager.Ink,
                 BackColor = Color.Transparent,
                 AutoEllipsis = true,
-                UseMnemonic = false
+                UseMnemonic = false,
+                Margin = Padding.Empty
             };
+            grid.Controls.Add(_lblPromoTitle, 1, 0);
 
             _lblPromoSub = new Label
             {
                 Text = "Nhập mã hoặc chọn ưu đãi",
-                Location = new Point(34, 20),
-                Size = new Size(180, 15),
-                Font = new Font("Segoe UI", 7.5F),
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                Font = fSub,
                 ForeColor = ThemeManager.Muted,
                 BackColor = Color.Transparent,
                 AutoEllipsis = true,
-                UseMnemonic = false
+                UseMnemonic = false,
+                Margin = Padding.Empty
             };
+            grid.Controls.Add(_lblPromoSub, 1, 1);
+
+            _lnkChangePromo = new Label
+            {
+                Text = "Chọn mã ▾",
+                AutoSize = true,
+                Anchor = AnchorStyles.Right,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Primary,
+                Cursor = Cursors.Hand,
+                BackColor = Color.Transparent,
+                Padding = new Padding(S(4)),
+                Margin = Padding.Empty
+            };
+            _lnkChangePromo.Click += (s, e) => SelectVoucherClicked?.Invoke();
+            _lnkChangePromo.MouseEnter += (s, e) => _lnkChangePromo.ForeColor = ThemeManager.PrimaryDark;
+            _lnkChangePromo.MouseLeave += (s, e) => _lnkChangePromo.ForeColor = ThemeManager.Primary;
+            grid.Controls.Add(_lnkChangePromo, 2, 0);
+            grid.SetRowSpan(_lnkChangePromo, 2);
+
+            // Hàng nhập mã
+            var inputRow = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = new Padding(0, S(8), 0, 0),
+                Padding = Padding.Empty
+            };
+            inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            inputRow.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             _txtQuickVoucher = new TextBox
             {
-                Font = new Font("Segoe UI", 8.5F),
-                ForeColor = ThemeManager.Ink,
-                Height = 24
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = ThemeManager.Ink
             };
             UiStyler.SetPlaceholder(_txtQuickVoucher, "Mã voucher...");
             _txtQuickVoucher.KeyDown += (s, e) => {
@@ -400,13 +521,28 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                     QuickVoucherApplied?.Invoke(_txtQuickVoucher.Text);
                 }
             };
+            _voucherBox = new InputBox(_txtQuickVoucher) { Dock = DockStyle.Fill, Margin = new Padding(0, 0, S(8), 0) };
+            inputRow.Controls.Add(_voucherBox, 0, 0);
+
+            var actions = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                FlowDirection = FlowDirection.RightToLeft,
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
 
             _btnQuickApply = new Button
             {
                 Text = "Dùng",
-                Size = new Size(54, 26),
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Size = new Size(S(72), inputRowH),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = Padding.Empty
             };
             ButtonSkin.SetKind(_btnQuickApply, ButtonSkin.Kind.Primary);
             _btnQuickApply.Click += (s, e) => QuickVoucherApplied?.Invoke(_txtQuickVoucher.Text);
@@ -414,75 +550,39 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             _btnPromoAction = new Button
             {
                 Text = "Bỏ mã",
-                Size = new Size(64, 26),
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Size = new Size(S(84), inputRowH),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = Padding.Empty,
+                Visible = false
             };
             ButtonSkin.SetKind(_btnPromoAction, ButtonSkin.Kind.Soft);
             _btnPromoAction.Click += (s, e) => PromoActionClicked?.Invoke();
 
-            _lnkChangePromo = new Label
-            {
-                Text = "Chọn mã ▾",
-                Size = new Size(70, 26),
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                ForeColor = ThemeManager.Primary,
-                Cursor = Cursors.Hand,
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.Transparent
-            };
-            _lnkChangePromo.Click += (s, e) => SelectVoucherClicked?.Invoke();
+            actions.Controls.Add(_btnQuickApply);
+            actions.Controls.Add(_btnPromoAction);
+            inputRow.Controls.Add(actions, 1, 0);
 
-            _pnlPromoBox.Controls.Add(_lblPromoIcon);
-            _pnlPromoBox.Controls.Add(_lblPromoTitle);
-            _pnlPromoBox.Controls.Add(_lblPromoSub);
-            _pnlPromoBox.Controls.Add(_txtQuickVoucher);
-            _pnlPromoBox.Controls.Add(_btnQuickApply);
-            _pnlPromoBox.Controls.Add(_btnPromoAction);
-            _pnlPromoBox.Controls.Add(_lnkChangePromo);
+            grid.Controls.Add(inputRow, 0, 2);
+            grid.SetColumnSpan(inputRow, 3);
 
-            _pnlPromoBox.Resize += (s, e) => LayoutPromoBox();
+            _pnlPromoBox.Controls.Add(grid);
             LayoutPromoBox();
             return _pnlPromoBox;
+        }
+
+        /// <summary>Đã áp mã: ẩn ô nhập + nút Dùng, hiện nút Bỏ mã (và ngược lại).</summary>
+        private void SetVoucherApplied(bool applied)
+        {
+            _voucherApplied = applied;
         }
 
         private void LayoutPromoBox()
         {
             if (_pnlPromoBox == null) return;
-            int w = _pnlPromoBox.Width;
-
-            if (_btnPromoAction.Visible)
-            {
-                _txtQuickVoucher.Visible = false;
-                _btnQuickApply.Visible = false;
-                _lnkChangePromo.Visible = true;
-
-                int rightMargin = 8;
-                _lnkChangePromo.Location = new Point(w - _lnkChangePromo.Width - rightMargin, 6);
-                _btnPromoAction.Location = new Point(_lnkChangePromo.Left - _btnPromoAction.Width - 6, 6);
-
-                int textW = Math.Max(60, _btnPromoAction.Left - 38);
-                _lblPromoTitle.Width = textW;
-                _lblPromoSub.Width = textW;
-            }
-            else
-            {
-                _lnkChangePromo.Visible = true;
-                _txtQuickVoucher.Visible = true;
-                _btnQuickApply.Visible = true;
-
-                int rightMargin = 8;
-                _lnkChangePromo.Location = new Point(w - _lnkChangePromo.Width - rightMargin, 6);
-                _btnQuickApply.Location = new Point(_lnkChangePromo.Left - _btnQuickApply.Width - 4, 6);
-
-                int txtW = Math.Max(75, Math.Min(110, _btnQuickApply.Left - 180));
-                _txtQuickVoucher.Size = new Size(txtW, 24);
-                _txtQuickVoucher.Location = new Point(_btnQuickApply.Left - txtW - 4, 7);
-
-                int textW = Math.Max(50, _txtQuickVoucher.Left - 38);
-                _lblPromoTitle.Width = textW;
-                _lblPromoSub.Width = textW;
-            }
+            _voucherBox.Visible = !_voucherApplied;
+            _btnQuickApply.Visible = !_voucherApplied;
+            _btnPromoAction.Visible = _voucherApplied;
         }
 
         public void SetPayButtonEnabled(bool enabled)
@@ -557,8 +657,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 _cartLines.Controls.Add(new Label
                 {
                     Text = "Giỏ hàng đang trống.\nChọn món từ thực đơn để bắt đầu.",
-                    Size = new Size(rowWidth, 64),
-                    Margin = new Padding(0, 12, 0, 0),
+                    Size = new Size(rowWidth, S(64)),
+                    Margin = new Padding(0, S(12), 0, 0),
                     TextAlign = ContentAlignment.MiddleCenter,
                     ForeColor = ThemeManager.Muted,
                     Font = new Font("Segoe UI", 9F)
@@ -594,19 +694,21 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         {
             var card = new RoundedPanel
             {
-                Size = new Size(width, 66),
-                Margin = new Padding(0, 0, 0, 5),
-                Radius = 8,
+                Size = new Size(width, S(70)),
+                Margin = new Padding(0, 0, 0, S(6)),
+                Radius = S(8),
                 BorderWidth = 1,
                 BorderColor = CartCardBorder,
                 FillColor = CartCardBg
             };
 
+            int pad = S(10);
+            int btn = S(26);
             var btnDelete = new Button
             {
                 Text = ThemeManager.Glyph.Delete,
-                Location = new Point(width - 8 - 24, 6),
-                Size = new Size(24, 24),
+                Location = new Point(width - pad - btn, S(7)),
+                Size = new Size(btn, btn),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 FlatStyle = FlatStyle.Flat,
                 Font = ThemeManager.Icon(9.5F),
@@ -628,37 +730,46 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             card.Controls.Add(btnDelete);
 
             var qtyEditor = CreateInlineQuantityEditor(item);
-            qtyEditor.Location = new Point(btnDelete.Left - qtyEditor.Width - 6, 6);
+            qtyEditor.Location = new Point(btnDelete.Left - qtyEditor.Width - S(6), S(7));
             qtyEditor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             card.Controls.Add(qtyEditor);
 
-            int nameAvailableWidth = Math.Max(100, qtyEditor.Left - 10 - 6);
+            var fName = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            int nameH = TextRenderer.MeasureText("Ag", fName).Height + S(2);
             var lblName = new Label
             {
                 Text = item.Name,
-                Location = new Point(10, 8),
-                Size = new Size(nameAvailableWidth, 20),
+                Location = new Point(pad, S(9)),
+                Size = new Size(Math.Max(S(80), qtyEditor.Left - pad - S(6)), nameH),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 AutoEllipsis = true,
                 UseMnemonic = false,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Font = fName,
                 ForeColor = ThemeManager.Ink,
                 BackColor = CartCardBg
             };
             card.Controls.Add(lblName);
 
-            string unitPriceText = $"{item.Price:N0} đ / phần";
+            var fPrice = new Font("Segoe UI", 8.5F);
+            var fTotal = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            string totalText = $"{item.Price * item.Quantity:N0} đ";
+            int totalW = TextRenderer.MeasureText(totalText, fTotal).Width + S(4);
+            int lineH = TextRenderer.MeasureText("Ag", fTotal).Height + S(2);
+            int lineY = card.Height - pad - lineH + S(2);
+
+            string unitPriceText = $"{item.Price:N0} đ × {item.Quantity}";
             if (item.Price < item.BasePrice)
-                unitPriceText += $" (Gốc {item.BasePrice:N0} đ)";
+                unitPriceText += $"  (gốc {item.BasePrice:N0} đ)";
             var lblPrice = new Label
             {
                 Text = unitPriceText,
-                Location = new Point(10, 36),
-                Size = new Size(160, 18),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+                Location = new Point(pad, lineY),
+                Size = new Size(Math.Max(S(60), width - pad * 2 - totalW - S(8)), lineH),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                TextAlign = ContentAlignment.MiddleLeft,
                 AutoEllipsis = true,
                 UseMnemonic = false,
-                Font = new Font("Segoe UI", 8.5F),
+                Font = fPrice,
                 ForeColor = ThemeManager.Muted,
                 BackColor = CartCardBg
             };
@@ -666,14 +777,13 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             var lblTotal = new Label
             {
-                Text = $"Thành tiền: {item.Price * item.Quantity:N0} đ",
-                Location = new Point(width - 8 - 180, 36),
-                Size = new Size(180, 20),
+                Text = totalText,
+                Location = new Point(width - pad - totalW, lineY),
+                Size = new Size(totalW, lineH),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
                 TextAlign = ContentAlignment.MiddleRight,
-                AutoEllipsis = true,
                 UseMnemonic = false,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Font = fTotal,
                 ForeColor = ThemeManager.Primary,
                 BackColor = CartCardBg
             };
@@ -686,14 +796,14 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         {
             var host = new Panel
             {
-                Size = new Size(110, 24),
+                Size = new Size(S(112), S(26)),
                 BackColor = Color.Transparent
             };
 
             var pnlView = new RoundedPanel
             {
                 Dock = DockStyle.Fill,
-                Radius = 6,
+                Radius = S(6),
                 BorderWidth = 1,
                 BorderColor = StepperBorder,
                 FillColor = Color.White,
@@ -722,7 +832,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var numInput = new NumericUpDown
             {
                 Location = new Point(0, 0),
-                Size = new Size(52, 24),
+                Size = new Size(S(54), S(26)),
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 Minimum = 0,
                 Maximum = Math.Max(100, item.MaxStock),
@@ -733,8 +843,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var btnOk = new Button
             {
                 Text = "✓",
-                Location = new Point(54, 0),
-                Size = new Size(26, 24),
+                Location = new Point(S(56), 0),
+                Size = new Size(S(27), S(26)),
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 BackColor = _accent,
                 ForeColor = Color.White,
@@ -746,8 +856,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var btnCancel = new Button
             {
                 Text = "✕",
-                Location = new Point(82, 0),
-                Size = new Size(26, 24),
+                Location = new Point(S(85), 0),
+                Size = new Size(S(27), S(26)),
                 Font = new Font("Segoe UI", 8F, FontStyle.Bold),
                 BackColor = Color.FromArgb(241, 245, 249),
                 ForeColor = ThemeManager.Muted,
@@ -835,10 +945,10 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 _lblPromoTitle.Text = "Voucher / Giảm giá";
                 _lblPromoTitle.ForeColor = ThemeManager.Ink;
                 _lblPromoSub.Text = "Chưa có món";
-                _btnPromoAction.Visible = false;
+                SetVoucherApplied(false);
                 _lnkChangePromo.Text = "Chọn mã ▾";
-                _pnlPromoBox.FillColor = Color.FromArgb(248, 250, 252);
-                _pnlPromoBox.BorderColor = Color.FromArgb(226, 232, 240);
+                _pnlPromoBox.FillColor = ThemeManager.Surface2;
+                _pnlPromoBox.BorderColor = ThemeManager.Line;
                 LayoutPromoBox();
                 return;
             }
@@ -850,7 +960,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 _lblPromoTitle.Text = $"Mã [{appliedVoucher.MaVoucher}]";
                 _lblPromoTitle.ForeColor = Color.FromArgb(22, 163, 74);
                 _lblPromoSub.Text = $"Giảm -{disc:N0} đ";
-                _btnPromoAction.Visible = true;
+                SetVoucherApplied(true);
                 _btnPromoAction.Text = "Bỏ mã";
                 _btnPromoAction.BackColor = Color.FromArgb(254, 242, 242);
                 _btnPromoAction.ForeColor = ThemeManager.Red;
@@ -865,12 +975,12 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             {
                 _lblPromoIcon.Text = "✨";
                 _lblPromoTitle.Text = $"Gợi ý: [{best.MaVoucher}]";
-                _lblPromoTitle.ForeColor = Color.FromArgb(79, 70, 229);
+                _lblPromoTitle.ForeColor = ThemeManager.Primary;
                 _lblPromoSub.Text = $"Giảm {bestDisc:N0} đ";
-                _btnPromoAction.Visible = false;
+                SetVoucherApplied(false);
                 _lnkChangePromo.Text = "Chọn mã ▾";
-                _pnlPromoBox.FillColor = Color.FromArgb(238, 242, 255);
-                _pnlPromoBox.BorderColor = Color.FromArgb(199, 210, 254);
+                _pnlPromoBox.FillColor = ThemeManager.PrimarySoft;
+                _pnlPromoBox.BorderColor = Color.FromArgb(247, 213, 192);
             }
             else if (near != null)
             {
@@ -878,7 +988,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 _lblPromoTitle.Text = $"+{missing:N0} đ";
                 _lblPromoTitle.ForeColor = ThemeManager.Amber;
                 _lblPromoSub.Text = $"Nhận mã [{near.MaVoucher}]";
-                _btnPromoAction.Visible = false;
+                SetVoucherApplied(false);
                 _lnkChangePromo.Text = "Xem mã ▾";
                 _pnlPromoBox.FillColor = Color.FromArgb(255, 251, 235);
                 _pnlPromoBox.BorderColor = Color.FromArgb(254, 243, 199);
@@ -889,10 +999,10 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 _lblPromoTitle.Text = "Voucher / Giảm giá";
                 _lblPromoTitle.ForeColor = ThemeManager.Muted;
                 _lblPromoSub.Text = "Nhập mã hoặc chọn";
-                _btnPromoAction.Visible = false;
+                SetVoucherApplied(false);
                 _lnkChangePromo.Text = "Chọn mã ▾";
-                _pnlPromoBox.FillColor = Color.FromArgb(248, 250, 252);
-                _pnlPromoBox.BorderColor = Color.FromArgb(226, 232, 240);
+                _pnlPromoBox.FillColor = ThemeManager.Surface2;
+                _pnlPromoBox.BorderColor = ThemeManager.Line;
             }
             LayoutPromoBox();
         }
