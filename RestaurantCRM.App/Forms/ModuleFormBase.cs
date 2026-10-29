@@ -38,7 +38,7 @@ namespace RestaurantCRM.AdminApp.Forms
         public ModuleFormBase(string title, string description, string[] columns, ModuleField[] fields, string[][] rows, Color accent)
         {
             _moduleTitle = title; _fields = fields; _accent = ThemeManager.Primary; _columns = columns;
-            Text = title + " | RestaurantCRM";
+            Text = title + " | Lẩu Phố";
             StartPosition = FormStartPosition.CenterParent;
 
             Size = new Size(1060, 680);

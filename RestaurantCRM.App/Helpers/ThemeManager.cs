@@ -11,20 +11,20 @@ namespace RestaurantCRM.AdminApp.Helpers
     public static class ThemeManager
     {
         // ===== Nền & bề mặt (phong cách SaaS sáng, tối giản) =====
-        public static readonly Color Bg = ColorTranslator.FromHtml("#F5F6FA");
+        public static readonly Color Bg = ColorTranslator.FromHtml("#FBF6F0");
         public static readonly Color Paper = ColorTranslator.FromHtml("#FFFFFF");
-        public static readonly Color Surface2 = ColorTranslator.FromHtml("#F8F9FC");
-        public static readonly Color Line = ColorTranslator.FromHtml("#ECEEF4");
+        public static readonly Color Surface2 = ColorTranslator.FromHtml("#FDF9F4");
+        public static readonly Color Line = ColorTranslator.FromHtml("#F0E4D6");
 
         // ===== Chữ =====
-        public static readonly Color Ink = ColorTranslator.FromHtml("#1E2235");
-        public static readonly Color Ink2 = ColorTranslator.FromHtml("#4B5168");
-        public static readonly Color Muted = ColorTranslator.FromHtml("#9097AE");
+        public static readonly Color Ink = ColorTranslator.FromHtml("#2A1A12");
+        public static readonly Color Ink2 = ColorTranslator.FromHtml("#5A463A");
+        public static readonly Color Muted = ColorTranslator.FromHtml("#9A8778");
 
-        // ===== Màu chủ đạo (một màu nhấn xanh dương duy nhất) =====
-        public static readonly Color Primary = ColorTranslator.FromHtml("#4D5BF9");
-        public static readonly Color PrimaryDark = ColorTranslator.FromHtml("#3B47D9");
-        public static readonly Color PrimarySoft = ColorTranslator.FromHtml("#EEF0FE");
+        // ===== Màu chủ đạo Lẩu Phố (cam đất, đồng bộ với website) =====
+        public static readonly Color Primary = ColorTranslator.FromHtml("#B8461B");
+        public static readonly Color PrimaryDark = ColorTranslator.FromHtml("#933412");
+        public static readonly Color PrimarySoft = ColorTranslator.FromHtml("#FCEDE3");
         public static readonly Color Violet = ColorTranslator.FromHtml("#7B6CF6");
         public static readonly Color VioletSoft = ColorTranslator.FromHtml("#F2F0FE");
         public static readonly Color Teal = ColorTranslator.FromHtml("#14A99A");
@@ -60,7 +60,7 @@ namespace RestaurantCRM.AdminApp.Helpers
         public static Font Body(float size = 9.5F, FontStyle style = FontStyle.Regular) { return new Font(FontFamily, size, style); }
         public static Font Semibold(float size = 9.5F) { return new Font("Segoe UI Semibold", size, FontStyle.Regular); }
 
-        /// <summary>Màu nhấn theo phân hệ — thống nhất một màu xanh dương cho mọi phân hệ.</summary>
+        /// <summary>Màu nhấn theo phân hệ — thống nhất một màu chủ đạo cho mọi phân hệ.</summary>
         public static Color AccentFor(string role)
         {
             return Primary;
@@ -139,6 +139,7 @@ namespace RestaurantCRM.AdminApp.Helpers
             public const string Up = "\uE74A";
             public const string Down = "\uE74B";
             public const string More = "\uE712";
+            public const string Hamburger = "\uE700";
         }
 
         /// <summary>Nhận diện giá trị trạng thái để vẽ dạng pill màu (xanh / đỏ / vàng / xanh dương).</summary>

@@ -82,7 +82,7 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
                 IsBalloon = false
             };
 
-            Text = "Thống kê Doanh thu & Báo cáo Tài chính | RestaurantCRM";
+            Text = "Thống kê Doanh thu & Báo cáo Tài chính | Lẩu Phố";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1220, 860);
             MinimumSize = new Size(1000, 700);

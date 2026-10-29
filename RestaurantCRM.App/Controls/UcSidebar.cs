@@ -24,11 +24,39 @@ namespace RestaurantCRM.AdminApp.Controls
         private readonly Color _hoverBg = ColorTranslator.FromHtml("#F7F8FC");
         private MenuItemControl _active;
 
+        // Thu gọn / mở rộng sidebar (nhớ trạng thái trong suốt phiên làm việc)
+        private const int ExpandedWidth = 224;
+        private const int CollapsedWidth = 76;
+        private static bool s_collapsed;
+        private readonly ToolTip _tip = new ToolTip { InitialDelay = 200 };
+
+        public bool IsCollapsed => s_collapsed;
+
         public void UpdateRole(string role)
         {
             if (_role == role) return;
             _role = role;
             _active = null;
+            RebuildLayout();
+        }
+
+        /// <summary>Chuyển giữa chế độ đầy đủ và chế độ chỉ hiện icon.</summary>
+        public void ToggleCollapsed()
+        {
+            string activeKey = _active?.Tag as string;
+            s_collapsed = !s_collapsed;
+            var parent = Parent;
+            parent?.SuspendLayout();
+            Width = s_collapsed ? CollapsedWidth : ExpandedWidth;
+            RebuildLayout();
+            if (!string.IsNullOrEmpty(activeKey)) SetActive(activeKey);
+            parent?.ResumeLayout(true);
+        }
+
+        private void RebuildLayout()
+        {
+            SuspendLayout();
+            _tip.RemoveAll();
             var oldControls = new Control[Controls.Count];
             Controls.CopyTo(oldControls, 0);
             Controls.Clear();
@@ -37,6 +65,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 try { c.Dispose(); } catch { }
             }
             BuildLayout();
+            ResumeLayout(true);
             Invalidate();
         }
 
@@ -46,7 +75,7 @@ namespace RestaurantCRM.AdminApp.Controls
             _roles = roles;
             _displayName = displayName;
 
-            Width = 224;
+            Width = s_collapsed ? CollapsedWidth : ExpandedWidth;
             Dock = DockStyle.Left;
             BackColor = Color.White;
             Font = new Font("Segoe UI", 9.5F);
@@ -60,29 +89,42 @@ namespace RestaurantCRM.AdminApp.Controls
             Controls.Clear();
 
             // ── 1. Logo ──────────────────────────────────────────────
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 92, BackColor = Color.White };
+            bool collapsed = s_collapsed;
+            var topPanel = new Panel { Dock = DockStyle.Top, Height = collapsed ? 108 : 92, BackColor = Color.White };
             topPanel.Paint += (s, e) =>
             {
                 var g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 // biểu tượng logo: ô vuông bo góc xanh
-                var badge = new Rectangle(28, 34, 26, 26);
+                var badge = collapsed ? new Rectangle((Width - 26) / 2, 24, 26, 26) : new Rectangle(28, 34, 26, 26);
                 using (var path = ThemeManager.RoundedRect(badge, 7))
                 using (var br = new SolidBrush(ThemeManager.Primary))
                     g.FillPath(br, path);
                 using (var f = ThemeManager.Icon(10F))
                     TextRenderer.DrawText(g, ThemeManager.Glyph.Home, f, badge, Color.White,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                if (collapsed) return;
                 using (var f1 = new Font("Segoe UI", 13F, FontStyle.Bold))
                 using (var f2 = new Font("Segoe UI", 13F, FontStyle.Regular))
                 {
-                    TextRenderer.DrawText(g, "LK", f1, new Point(60, 33), ThemeManager.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-                    var w = TextRenderer.MeasureText(g, "LK", f1, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
-                    TextRenderer.DrawText(g, "restaurant", f2, new Point(62 + w, 33), ThemeManager.Primary, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    TextRenderer.DrawText(g, "Lẩu", f1, new Point(60, 33), ThemeManager.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    var w = TextRenderer.MeasureText(g, "Lẩu", f1, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
+                    TextRenderer.DrawText(g, "Phố", f2, new Point(62 + w, 33), ThemeManager.Primary, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                 }
             };
             Controls.Add(topPanel);
+
+            // Nút thu gọn / mở rộng sidebar
+            // Logo (expanded): badge y=34, cao 26 → tâm y=47; nút 32px đặt y=31 để cùng tâm
+            var btnToggle = new IconButton(ThemeManager.Glyph.Hamburger, _hoverBg)
+            {
+                Size = new Size(32, 32),
+                Location = collapsed ? new Point((Width - 32) / 2, 62) : new Point(Width - 48, 31)
+            };
+            _tip.SetToolTip(btnToggle, collapsed ? "Mở rộng menu" : "Thu gọn menu");
+            btnToggle.Click += (s, e) => BeginInvoke((Action)ToggleCollapsed);
+            topPanel.Controls.Add(btnToggle);
 
             // ── 2. Chân trang: ô phân hệ + người dùng ──────────────────
             var footPanel = new Panel { Dock = DockStyle.Bottom, Height = 132, BackColor = Color.White };
@@ -164,10 +206,11 @@ namespace RestaurantCRM.AdminApp.Controls
         private void BuildFooter(Panel foot)
         {
             // Ô chuyển phân hệ (giống "Company 1 ⌄")
+            bool collapsed = s_collapsed;
             var workspace = new Panel
             {
-                Location = new Point(20, 14),
-                Size = new Size(184, 44),
+                Location = collapsed ? new Point((Width - 44) / 2, 10) : new Point(20, 14),
+                Size = collapsed ? new Size(44, 44) : new Size(184, 44),
                 BackColor = Color.White,
                 Cursor = (_roles != null && _roles.Count > 1) ? Cursors.Hand : Cursors.Default
             };
@@ -182,12 +225,13 @@ namespace RestaurantCRM.AdminApp.Controls
                     using (var br = new SolidBrush(hover ? _hoverBg : Color.White)) g.FillPath(br, path);
                     using (var pen = new Pen(ThemeManager.Line)) g.DrawPath(pen, path);
                 }
-                var dot = new Rectangle(10, 11, 22, 22);
+                var dot = collapsed ? new Rectangle((workspace.Width - 22) / 2, 11, 22, 22) : new Rectangle(10, 11, 22, 22);
                 using (var br = new SolidBrush(ThemeManager.Primary)) g.FillEllipse(br, dot);
                 string displayRole = ThemeManager.DisplayWorkspaceName(_role);
                 using (var f = new Font("Segoe UI", 8F, FontStyle.Bold))
                     TextRenderer.DrawText(g, string.IsNullOrEmpty(displayRole) ? "?" : displayRole.Substring(0, 1).ToUpper(), f, dot, Color.White,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                if (collapsed) return;
                 using (var f = new Font("Segoe UI", 9F, FontStyle.Bold))
                     TextRenderer.DrawText(g, "Phân hệ " + displayRole, f, new Rectangle(40, 0, workspace.Width - 64, workspace.Height),
                         ThemeManager.Primary, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
@@ -218,19 +262,24 @@ namespace RestaurantCRM.AdminApp.Controls
                 workspace.MouseLeave += (s, e) => { hover = false; workspace.Invalidate(); };
                 workspace.Click += (s, e) => menu.Show(workspace, new Point(0, -menu.PreferredSize.Height - 4));
             }
+            _tip.SetToolTip(workspace, "Phân hệ " + ThemeManager.DisplayWorkspaceName(_role));
             foot.Controls.Add(workspace);
 
             // Người dùng
-            var user = new Panel { Location = new Point(20, 70), Size = new Size(184, 44), BackColor = Color.White };
+            var user = collapsed
+                ? new Panel { Location = new Point((Width - 44) / 2, 58), Size = new Size(44, 72), BackColor = Color.White }
+                : new Panel { Location = new Point(20, 70), Size = new Size(184, 44), BackColor = Color.White };
+            if (collapsed) _tip.SetToolTip(user, _displayName ?? "");
             user.Paint += (s, e) =>
             {
                 var g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                var av = new Rectangle(0, 6, 32, 32);
+                var av = collapsed ? new Rectangle(6, 2, 32, 32) : new Rectangle(0, 6, 32, 32);
                 using (var br = new SolidBrush(ThemeManager.AvatarColor(_displayName))) g.FillEllipse(br, av);
                 using (var f = new Font("Segoe UI", 8.5F, FontStyle.Bold))
                     TextRenderer.DrawText(g, ThemeManager.Initials(_displayName), f, av, Color.White,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                if (collapsed) return;
                 string first = string.IsNullOrWhiteSpace(_displayName) ? "bạn" : _displayName.Trim().Split(' ')[_displayName.Trim().Split(' ').Length - 1];
                 using (var f = new Font("Segoe UI", 9F))
                     TextRenderer.DrawText(g, "Chào, " + first + "!", f, new Rectangle(42, 4, user.Width - 80, 20),
@@ -249,7 +298,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 BackColor = Color.Transparent,
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(32, 32),
-                Location = new Point(user.Width - 32, 6),
+                Location = collapsed ? new Point(6, 38) : new Point(user.Width - 32, 6),
                 Cursor = Cursors.Hand,
                 TabStop = false
             };
@@ -257,7 +306,7 @@ namespace RestaurantCRM.AdminApp.Controls
             btnLogout.FlatAppearance.MouseOverBackColor = ThemeManager.RedSoft;
             btnLogout.MouseEnter += (s, e) => btnLogout.ForeColor = ThemeManager.Red;
             btnLogout.MouseLeave += (s, e) => btnLogout.ForeColor = ThemeManager.Muted;
-            new ToolTip().SetToolTip(btnLogout, "Đăng xuất");
+            _tip.SetToolTip(btnLogout, "Đăng xuất");
             btnLogout.Click += (s, e) => {
                 btnLogout.Enabled = false;
                 BeginInvoke((Action)(() => MenuSelected?.Invoke("Đăng xuất")));
@@ -290,6 +339,18 @@ namespace RestaurantCRM.AdminApp.Controls
 
         private void AddSectionHeader(Panel parent, string title, ref int y)
         {
+            if (s_collapsed)
+            {
+                // Chế độ thu gọn: thay tiêu đề nhóm bằng một vạch ngăn mảnh
+                parent.Controls.Add(new Panel
+                {
+                    Location = new Point(22, y + 10),
+                    Size = new Size(Width - 44, 1),
+                    BackColor = ThemeManager.Line
+                });
+                y += 22;
+                return;
+            }
             var lbl = new Label
             {
                 Text = title.ToUpper(),
@@ -312,6 +373,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 Size = new Size(Width - 24, 38)
             };
             if (commandKey == "Dashboard") _active = item;
+            if (s_collapsed) _tip.SetToolTip(item, title);
             item.Click += (s, e) =>
             {
                 var prev = _active;
@@ -322,6 +384,45 @@ namespace RestaurantCRM.AdminApp.Controls
             };
             parent.Controls.Add(item);
             y += 40;
+        }
+
+        /// <summary>Nút icon tự vẽ: icon luôn nằm chính giữa (Button chuẩn có padding/viền làm lệch glyph).</summary>
+        private class IconButton : Control
+        {
+            private readonly string _glyph;
+            private readonly Color _hoverBg;
+            private bool _hover, _down;
+
+            public IconButton(string glyph, Color hoverBg)
+            {
+                _glyph = glyph; _hoverBg = hoverBg;
+                Cursor = Cursors.Hand;
+                TabStop = false;
+                BackColor = Color.White;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            }
+
+            protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { _hover = false; _down = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnMouseDown(MouseEventArgs e) { _down = true; Invalidate(); base.OnMouseDown(e); }
+            protected override void OnMouseUp(MouseEventArgs e) { _down = false; Invalidate(); base.OnMouseUp(e); }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.Clear(BackColor);
+                if (_hover || _down)
+                {
+                    using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, Width - 1, Height - 1), 8))
+                    using (var br = new SolidBrush(_down ? ThemeManager.PrimarySoft : _hoverBg))
+                        g.FillPath(br, path);
+                }
+                using (var f = ThemeManager.Icon(11F))
+                    TextRenderer.DrawText(g, _glyph, f, new Rectangle(0, 0, Width, Height),
+                        _hover ? ThemeManager.Primary : ThemeManager.Muted,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+            }
         }
 
         /// <summary>Một mục menu tự vẽ (icon + chữ), trạng thái hover / active.</summary>
@@ -357,6 +458,13 @@ namespace RestaurantCRM.AdminApp.Controls
                         g.FillPath(br, path);
                 }
                 Color c = active ? ThemeManager.Primary : (_hover ? ThemeManager.Ink2 : _owner._textNormal);
+                if (s_collapsed)
+                {
+                    using (var f = ThemeManager.Icon(11.5F))
+                        TextRenderer.DrawText(g, _glyph, f, new Rectangle(0, 0, Width, Height), c,
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    return;
+                }
                 using (var f = ThemeManager.Icon(10.5F))
                     TextRenderer.DrawText(g, _glyph, f, new Rectangle(14, 0, 22, Height), c,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);

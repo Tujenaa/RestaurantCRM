@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>@(ViewData["Title"] ?? "Lẩu Phố — Cổng khách hàng")</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <script>
         (function() {
@@ -28,7 +31,7 @@
     <div class="quickview-modal" id="quickViewModal" aria-hidden="true" role="dialog">
         <div class="quickview-modal__backdrop" onclick="closeQuickView()"></div>
         <div class="quickview-modal__dialog">
-            <button class="quickview-modal__close" onclick="closeQuickView()" aria-label="Đóng">✕</button>
+            <button class="quickview-modal__close" onclick="closeQuickView()" aria-label="Đóng">Đóng</button>
             <div class="quickview-modal__content" id="quickViewContent">
                 <div class="quickview-loading">
                     <div class="spinner"></div>

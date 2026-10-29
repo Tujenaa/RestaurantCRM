@@ -52,7 +52,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             _calcService = new OrderCalculationService();
             _cartService = new CartService();
 
-            Text = "Tạo đơn hàng mang đi tại quầy | RestaurantCRM";
+            Text = "Tạo đơn hàng mang đi tại quầy | Lẩu Phố";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(1300, 800);
             MinimumSize = new Size(1080, 680);

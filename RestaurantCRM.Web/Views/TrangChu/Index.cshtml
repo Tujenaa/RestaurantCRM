@@ -2,72 +2,105 @@
 @{
     ViewData["Title"] = "Lẩu Phố — Website ẩm thực & Đặt món trực tuyến";
     Layout = "/Shared/_Layout.cshtml";
+
+    const string anhMacDinh = "/images/default.jpg";
+    var danhMuc = Model.DanhSachLoaiMon
+        .Where(c => c.MaLoaiMon != "all" && c.TenLoaiMon != "Tất cả món")
+        .ToList();
 }
 
 <section class="page active" id="page-home">
-    <div class="hero">
-        <div class="hero-copy">
-            <span class="eyebrow">✦ Bữa ngon bắt đầu từ đây</span>
-            <h1>Nồi lẩu nóng,<br />giao tận cửa.</h1>
+    <div class="home-hero" style="background-image:url('@anhMacDinh')">
+        <div class="home-hero__copy">
+            <span class="hero-tag">Lẩu nóng giao tận nhà</span>
+            <h1>Nồi Lẩu Nóng Hổi –<br /><span>Giao Tận Cửa.</span></h1>
             <p>Nguyên liệu tươi ngon, nước lẩu đậm vị chuẩn công thức gia truyền. Chọn món yêu thích và để Lẩu Phố lo phần còn lại.</p>
             <div class="hero-actions">
-                <a class="btn" asp-controller="Menu" asp-action="Index">Khám phá thực đơn&nbsp; →</a>
-                <a class="btn secondary btn-hero-secondary" asp-controller="DonHang" asp-action="Index" style="color: #ffffff; border: 1.5px solid rgba(255,255,255,0.6); background: rgba(255,255,255,0.15);">Theo dõi đơn</a>
+                <a class="btn" asp-controller="Menu" asp-action="Index">Khám phá thực đơn</a>
+                <a class="btn light" asp-controller="DonHang" asp-action="Index">Theo dõi đơn</a>
             </div>
         </div>
-        <div class="hero-art">
-            <div class="floating one">⭐ 4.9/5 · Khách yêu thích</div>
-            <div class="hotpot">🍲</div>
-            <div class="floating two">🔥 Nóng hổi · Tươi ngon</div>
+    </div>
+
+    <div class="feature-strip">
+        <div class="feature">
+            <span class="feature-no">01</span>
+            <div><strong>Nguyên liệu tươi</strong><span>Nhập mới và kiểm duyệt mỗi ngày</span></div>
+        </div>
+        <div class="feature">
+            <span class="feature-no">02</span>
+            <div><strong>Giao hàng nhanh</strong><span>Nóng hổi 30–45 phút tận nhà</span></div>
+        </div>
+        <div class="feature">
+            <span class="feature-no">03</span>
+            <div><strong>Ưu đãi thành viên</strong><span>Voucher giảm giá cho mỗi đơn</span></div>
+        </div>
+        <div class="feature">
+            <span class="feature-no">04</span>
+            <div><strong>Hỗ trợ tận tình</strong><span>09:00–22:00 mỗi ngày</span></div>
         </div>
     </div>
 
-    <!-- Featured dishes section -->
-    <div class="section-head">
-        <div>
-            <h2>Món được yêu thích</h2>
-            <p>Lựa chọn nổi bật từ gian bếp Lẩu Phố hôm nay</p>
-        </div>
-        <a class="text-btn" asp-controller="Menu" asp-action="Index">Xem toàn bộ thực đơn (@Model.TongSoMon món) →</a>
-    </div>
+    @if (danhMuc.Count > 0)
+    {
+        <section class="home-section">
+            <div class="section-head">
+                <div>
+                    <h2>Danh mục món</h2>
+                    <p>Chọn nhanh theo nhóm món bạn thích</p>
+                </div>
+                <div class="slider-nav">
+                    <button type="button" class="slider-btn" data-slide="-1" aria-label="Danh mục trước">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                    </button>
+                    <button type="button" class="slider-btn" data-slide="1" aria-label="Danh mục tiếp theo">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="category-slider" id="categorySlider">
+                @foreach (var cat in danhMuc)
+                {
+                    var anh = Model.MonAns.FirstOrDefault(d => d.MaLoaiMon == cat.MaLoaiMon && !string.IsNullOrWhiteSpace(d.DuongDanAnh))?.DuongDanAnh ?? anhMacDinh;
+                    <a class="category-tile" asp-controller="Menu" asp-action="Index" asp-route-loai="@cat.MaLoaiMon">
+                        <img src="@anh" alt="@cat.TenLoaiMon" loading="lazy" onerror="this.onerror=null; this.src='@anhMacDinh';" />
+                        <strong>@cat.TenLoaiMon</strong>
+                        @if (cat.SoLuongMon > 0)
+                        {
+                            <span>@cat.SoLuongMon món</span>
+                        }
+                    </a>
+                }
+            </div>
+        </section>
+    }
 
-    <div class="grid">
-        @foreach (var dish in Model.MonNoiBat)
-        {
-            <partial name="_DishCard" model="@dish" />
-        }
-    </div>
-
-    <div class="promo-row">
-        <div class="promo">
-            <div class="emoji">🛵</div>
+    <section class="home-section">
+        <div class="section-head">
             <div>
-                <strong>Giao hàng tiện lợi</strong>
-                <span>Nóng hổi 30-45 phút tận nhà</span>
+                <h2>Món được yêu thích</h2>
+                <p>Lựa chọn nổi bật từ gian bếp Lẩu Phố hôm nay</p>
             </div>
+            <a class="text-btn" asp-controller="Menu" asp-action="Index">Xem toàn bộ thực đơn (@Model.TongSoMon món)</a>
         </div>
-        <div class="promo">
-            <div class="emoji">🥬</div>
-            <div>
-                <strong>Nguyên liệu tươi</strong>
-                <span>Nhập mới và kiểm duyệt mỗi ngày</span>
-            </div>
-        </div>
-        <div class="promo">
-            <div class="emoji">🎁</div>
-            <div>
-                <strong>Ưu đãi thành viên</strong>
-                <span>Voucher giảm giá cho mỗi đơn hàng</span>
-            </div>
-        </div>
-    </div>
 
-    <div class="section-head">
+        <div class="grid">
+            @foreach (var dish in Model.MonNoiBat)
+            {
+                <partial name="_DishCard" model="@dish" />
+            }
+        </div>
+    </section>
+
+    <div class="cta-band">
         <div>
             <h2>Lắng nghe bạn mỗi ngày</h2>
             <p>Đánh giá món ăn hoặc tham gia khảo sát trải nghiệm dịch vụ.</p>
         </div>
-        <a class="btn small" asp-controller="KhaoSat" asp-action="Index">Tham gia khảo sát</a>
+        <div class="cta-actions">
+            <a class="btn secondary" asp-controller="PhanHoi" asp-action="Index">Gửi đánh giá</a>
+            <a class="btn" asp-controller="KhaoSat" asp-action="Index">Tham gia khảo sát</a>
+        </div>
     </div>
 </section>
 
@@ -75,7 +108,7 @@
 <div class="quickview-modal" id="quickViewModal" aria-hidden="true" role="dialog">
     <div class="quickview-modal__backdrop" onclick="closeQuickView()"></div>
     <div class="quickview-modal__dialog">
-        <button class="quickview-modal__close" onclick="closeQuickView()" aria-label="Đóng">✕</button>
+        <button class="quickview-modal__close" onclick="closeQuickView()" aria-label="Đóng">Đóng</button>
         <div class="quickview-modal__content" id="quickViewContent">
             <div class="quickview-loading">
                 <div class="spinner"></div>
@@ -87,6 +120,28 @@
 
 @section Scripts {
     <script>
+        // Thanh trượt danh mục: nút trái/phải cuộn theo bề rộng khung, tự ẩn khi hết chỗ cuộn
+        (function () {
+            const slider = document.getElementById('categorySlider');
+            if (!slider) return;
+            const buttons = document.querySelectorAll('.slider-btn[data-slide]');
+            const update = () => {
+                const max = slider.scrollWidth - slider.clientWidth - 2;
+                buttons.forEach(btn => {
+                    const dir = Number(btn.dataset.slide);
+                    btn.disabled = dir < 0 ? slider.scrollLeft <= 2 : slider.scrollLeft >= max;
+                });
+                const nav = document.querySelector('.slider-nav');
+                if (nav) nav.hidden = max <= 0;
+            };
+            buttons.forEach(btn => btn.addEventListener('click', () => {
+                slider.scrollBy({ left: Number(btn.dataset.slide) * slider.clientWidth * 0.8, behavior: 'smooth' });
+            }));
+            slider.addEventListener('scroll', update, { passive: true });
+            window.addEventListener('resize', update);
+            update();
+        })();
+
         function openQuickView(dishId) {
             const modal = document.getElementById('quickViewModal');
             const content = document.getElementById('quickViewContent');
@@ -115,7 +170,7 @@
                 .catch(err => {
                     content.innerHTML = `
                         <div class="quickview-error">
-                            <p>⚠️ Không thể tải thông tin món lúc này. Vui lòng mở xem chi tiết trực tiếp.</p>
+                            <p>Không thể tải thông tin món lúc này. Vui lòng mở xem chi tiết trực tiếp.</p>
                             <a href="/Menu/ChiTiet/${encodeURIComponent(dishId)}" class="btn btn-primary">Xem trang chi tiết</a>
                         </div>
                     `;

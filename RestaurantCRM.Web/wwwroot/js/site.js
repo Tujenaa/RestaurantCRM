@@ -21,7 +21,7 @@
   const toast = (message, isError = false) => {
     const element = document.getElementById('toast');
     if (!element) return;
-    element.innerHTML = (isError ? '<span style="margin-right:6px;">⚠️</span>' : '<span style="margin-right:6px;">✓</span>') + message;
+    element.innerHTML = message;
     element.classList.toggle('toast--error', Boolean(isError));
     element.classList.add('show');
     window.clearTimeout(toastTimer);
@@ -139,7 +139,7 @@ window.openQuickView = function(dishId) {
         .catch(err => {
             content.innerHTML = `
                 <div class="quickview-error">
-                    <p>⚠️ Không thể tải thông tin món lúc này. Vui lòng mở xem chi tiết trực tiếp.</p>
+                    <p>Không thể tải thông tin món lúc này. Vui lòng mở xem chi tiết trực tiếp.</p>
                     <a href="/Menu/ChiTiet/${encodeURIComponent(dishId)}" class="btn btn-primary">Xem trang chi tiết</a>
                 </div>
             `;

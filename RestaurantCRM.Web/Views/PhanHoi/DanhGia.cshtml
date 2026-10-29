@@ -11,10 +11,10 @@
 <div class="page-intro" style="max-width:800px; margin:0 auto 28px; text-align:center;">
     <div style="margin-bottom:12px;">
         <a asp-action="Index" style="text-decoration:none; color:var(--muted); font-size:14px; font-weight:600;">
-            ← Quay lại lịch sử đánh giá cá nhân
+            Quay lại lịch sử đánh giá cá nhân
         </a>
     </div>
-    <h1 class="page-title" style="font-size:30px; margin-bottom:8px;">✍️ Gửi đánh giá món ăn & dịch vụ</h1>
+    <h1 class="page-title" style="font-size:30px; margin-bottom:8px;">Gửi đánh giá món ăn & dịch vụ</h1>
     <p style="color:var(--muted); font-size:15px; margin:0;">
         Ý kiến đóng góp quý báu của bạn giúp Lẩu Phố ngày càng nâng cao chất lượng món ăn và phục vụ tốt hơn.
     </p>
@@ -23,13 +23,13 @@
 @if (TempData["ThongBao"] != null)
 {
     <div class="alert alert-success" style="max-width:800px; margin:0 auto 20px; background:#e8f5e9; border:1px solid #a5d6a7; color:#2e7d32; padding:12px 18px; border-radius:12px; font-weight:500;">
-        ✓ @TempData["ThongBao"]
+        @TempData["ThongBao"]
     </div>
 }
 @if (TempData["Loi"] != null)
 {
     <div class="alert alert-danger" style="max-width:800px; margin:0 auto 20px; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:12px 18px; border-radius:12px; font-weight:500;">
-        ✕ @TempData["Loi"]
+        @TempData["Loi"]
     </div>
 }
 
@@ -43,13 +43,13 @@
                 Thông tin đánh giá
             </div>
             <a asp-action="Index" class="btn secondary small" style="border-radius:8px; font-size:13px;">
-                📜 Xem lịch sử của bạn
+                Xem lịch sử của bạn
             </a>
         </div>
 
         <!-- 1. Chọn đơn hàng -->
         <div class="field" style="margin-bottom:20px;">
-            <label for="MaDonHang" style="font-weight:600; display:block; margin-bottom:6px; font-size:14px;">📦 Đơn hàng của bạn</label>
+            <label for="MaDonHang" style="font-weight:600; display:block; margin-bottom:6px; font-size:14px;">Đơn hàng của bạn</label>
             @if (Model.DonHangs.Count > 0)
             {
                 <select id="MaDonHang" name="MaDonHang" required class="form-select" onchange="location.href='?maDonHang=' + this.value" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--line); background:#fafafa; font-size:14px;">
@@ -64,8 +64,8 @@
             else
             {
                 <div style="padding:16px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; font-size:14px; color:#c2410c;">
-                    ⚠️ Bạn cần có ít nhất một đơn hàng đã giao hoàn tất để thực hiện đánh giá. 
-                    <a asp-controller="DonHang" asp-action="Index" style="color:#c2410c; font-weight:700; text-decoration:underline; margin-left:6px;">Xem đơn hàng của bạn →</a>
+                    Bạn cần có ít nhất một đơn hàng đã giao hoàn tất để thực hiện đánh giá. 
+                    <a asp-controller="DonHang" asp-action="Index" style="color:#c2410c; font-weight:700; text-decoration:underline; margin-left:6px;">Xem đơn hàng của bạn</a>
                 </div>
             }
             <span asp-validation-for="MaDonHang" class="validation" style="color:#d32f2f; font-size:12px;"></span>
@@ -73,7 +73,7 @@
 
         <!-- 2. Chế độ đánh giá (Tất cả món hoặc Món cụ thể) -->
         <div class="field" style="margin-bottom:20px;">
-            <label style="font-weight:600; display:block; margin-bottom:8px; font-size:14px;">🎯 Hình thức đánh giá</label>
+            <label style="font-weight:600; display:block; margin-bottom:8px; font-size:14px;">Hình thức đánh giá</label>
             <div style="display:flex; gap:14px;">
                 <label style="flex:1; display:flex; align-items:center; gap:10px; padding:12px 16px; border:1px solid var(--line); border-radius:12px; cursor:pointer; background:@(Model.CheDoDanhGia == "DonHang" ? "#fdf3eb" : "#fff"); border-color:@(Model.CheDoDanhGia == "DonHang" ? "var(--red)" : "var(--line)"); transition:all 0.2s ease;">
                     <input type="radio" name="CheDoDanhGia" value="DonHang" @(Model.CheDoDanhGia == "DonHang" ? "checked" : "") onchange="toggleDishSelect(false)" />
@@ -94,7 +94,7 @@
 
         <!-- 3. Danh sách chọn món ăn khi chọn 'Món cụ thể' -->
         <div id="dishSelectGroup" class="field" style="margin-bottom:20px; display:@(Model.CheDoDanhGia == "TungMon" ? "block" : "none");">
-            <label for="MaMon" style="font-weight:600; display:block; margin-bottom:6px; font-size:14px;">🍲 Chọn món ăn muốn đánh giá</label>
+            <label for="MaMon" style="font-weight:600; display:block; margin-bottom:6px; font-size:14px;">Chọn món ăn muốn đánh giá</label>
             <select asp-for="MaMon" id="MaMon" class="form-select" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--line); background:#fafafa; font-size:14px;">
                 <option value="">-- Vui lòng chọn món ăn --</option>
                 @foreach (var dish in availableDishes)
@@ -107,7 +107,7 @@
 
         <!-- 4. Chọn số sao (Mức độ hài lòng) -->
         <div class="field" style="margin-bottom:22px;">
-            <label style="font-weight:600; display:block; margin-bottom:8px; font-size:14px;">⭐ Mức độ hài lòng của bạn</label>
+            <label style="font-weight:600; display:block; margin-bottom:8px; font-size:14px;">Mức độ hài lòng của bạn</label>
             <div style="display:flex; align-items:center; gap:16px; background:#fffbf5; padding:14px 18px; border-radius:12px; border:1px solid #fed7aa;">
                 <div class="rating" id="ratingStars" role="group" aria-label="Chọn số sao" style="display:inline-flex; gap:6px; font-size:32px; cursor:pointer;">
                     @for (var i = 1; i <= 5; i++)
@@ -123,14 +123,14 @@
 
         <!-- 5. Nội dung phản hồi -->
         <div class="field" style="margin-bottom:24px;">
-            <label asp-for="NoiDung" style="font-weight:600; display:block; margin-bottom:6px; font-size:14px;">💬 Cảm nhận của bạn về món ăn & phục vụ</label>
+            <label asp-for="NoiDung" style="font-weight:600; display:block; margin-bottom:6px; font-size:14px;">Cảm nhận của bạn về món ăn & phục vụ</label>
             <textarea asp-for="NoiDung" rows="5" placeholder="Chia sẻ cảm nhận chi tiết về hương vị món ăn, độ nóng giòn, cách đóng gói hoặc sự nhiệt tình của nhân viên..." style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;"></textarea>
             <span asp-validation-for="NoiDung" class="validation" style="color:#d32f2f; font-size:12px;"></span>
         </div>
 
         <div style="display:flex; gap:14px; align-items:center;">
             <button class="btn" type="submit" style="flex:1; padding:14px; font-size:16px; font-weight:700; border-radius:12px;">
-                🚀 Gửi đánh giá ngay
+                Gửi đánh giá ngay
             </button>
             <a asp-action="Index" class="btn secondary" style="padding:14px 22px; font-size:15px; font-weight:600; border-radius:12px;">
                 Hủy bỏ

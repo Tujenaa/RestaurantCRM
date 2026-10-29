@@ -8,9 +8,7 @@
         }
         else
         {
-            <div class="dish-art @Model.Tone" style="height: 100%; min-height: 320px; border-radius: 0; font-size: 100px; user-select: none;">
-                <span>@Model.BieuTuong</span>
-            </div>
+            <img src="/images/default.jpg" alt="@Model.TenMon" style="width: 100%; height: 100%; object-fit: cover;" />
         }
         <div class="quickview-badge-wrap">
             <span class="badge @Model.TrangThaiBadgeClass">
@@ -22,7 +20,7 @@
     <div class="quickview-info">
         <div class="quickview-header">
             <span class="quickview-category">@Model.LoaiMon</span>
-            <span class="quickview-rating" style="color:#b45309; font-weight:700; font-size:13px; background:#fef3c7; padding:2px 8px; border-radius:6px;">⭐ @Model.DiemDanhGiaTrungBinh.ToString("0.0")</span>
+            <span class="quickview-rating" style="color:#b45309; font-weight:700; font-size:13px; background:#fef3c7; padding:2px 8px; border-radius:6px;">@Model.DiemDanhGiaTrungBinh.ToString("0.0")/5</span>
             <span class="quickview-sku">Mã: @Model.MaMon</span>
         </div>
 
@@ -36,13 +34,13 @@
                 @if (Model.ConHang)
                 {
                     <span class="stock-badge in-stock">
-                        ✓ Còn <strong>@Model.SoLuong</strong> suất có thể đặt
+                        Còn <strong>@Model.SoLuong</strong> suất có thể đặt
                     </span>
                 }
                 else
                 {
                     <span class="stock-badge out-stock">
-                        ✕ Tạm hết hàng tại cửa hàng
+                        Tạm hết hàng tại cửa hàng
                     </span>
                 }
             </div>
@@ -77,10 +75,10 @@
 
                 <div class="quickview-actions">
                     <button type="submit" class="btn btn-add-cart-lg">
-                        🛒 Thêm vào giỏ hàng
+                        Thêm vào giỏ hàng
                     </button>
                     <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="btn btn-view-full">
-                        Xem trang chi tiết →
+                        Xem trang chi tiết
                     </a>
                 </div>
             </form>
@@ -88,9 +86,9 @@
         else
         {
             <div class="quickview-unavailable-alert">
-                <p>⚠️ Món ăn này hiện đang tạm hết nguyên liệu phục vụ. Quý khách vui lòng chọn món ăn khác trong thực đơn.</p>
+                <p>Món ăn này hiện đang tạm hết nguyên liệu phục vụ. Quý khách vui lòng chọn món ăn khác trong thực đơn.</p>
                 <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="btn btn-view-full">
-                    Xem thông tin chi tiết món →
+                    Xem thông tin chi tiết món
                 </a>
             </div>
         }
