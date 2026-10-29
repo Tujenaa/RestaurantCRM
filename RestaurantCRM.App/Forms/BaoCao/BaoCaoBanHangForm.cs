@@ -27,7 +27,6 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
 
         // Bộ lọc trên cùng
         private ComboBox _cboNam;
-        private Button _btnXem;
         private Button _btnRefresh;
         private Label _lblStatus;
 
@@ -171,25 +170,11 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             };
             pnlFilter.Controls.Add(_cboNam);
 
-            _btnXem = new Button
-            {
-                Text = "⚡ Xem báo cáo",
-                Location = new Point(275, 11),
-                Size = new Size(130, 32),
-                BackColor = ThemeManager.Primary,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            _btnXem.FlatAppearance.BorderSize = 0;
-            _btnXem.Click += async (s, e) => await LoadDataAsync();
-            pnlFilter.Controls.Add(_btnXem);
-
+            // Không cần nút "Xem báo cáo": đổi năm là báo cáo tự tải lại
             _btnRefresh = new Button
             {
                 Text = "🔄 Làm mới",
-                Location = new Point(415, 11),
+                Location = new Point(275, 11),
                 Size = new Size(105, 32),
                 BackColor = ThemeManager.Surface2,
                 ForeColor = ThemeManager.Ink2,
@@ -204,7 +189,7 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             _lblStatus = new Label
             {
                 Text = "",
-                Location = new Point(530, 18),
+                Location = new Point(390, 18),
                 AutoSize = true,
                 ForeColor = ThemeManager.Muted,
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Italic)
@@ -645,7 +630,7 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             }
 
             _lblStatus.Text = $"⏳ Đang tổng hợp dữ liệu năm {selectedYear}...";
-            _btnXem.Enabled = false;
+            _btnRefresh.Enabled = false;
             _btnRefresh.Enabled = false;
 
             try
@@ -682,7 +667,7 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             }
             finally
             {
-                _btnXem.Enabled = true;
+                _btnRefresh.Enabled = true;
                 _btnRefresh.Enabled = true;
             }
         }

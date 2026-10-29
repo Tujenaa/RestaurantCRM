@@ -128,7 +128,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(12, 12, 12, 10)
+                Padding = new Padding(CartPanelBuilder.S(16), CartPanelBuilder.S(14), CartPanelBuilder.S(16), CartPanelBuilder.S(14))
             };
             cartWrapper.Controls.Add(_cartBuilder.BuildCartColumn());
             root.Controls.Add(cartWrapper, 1, 0);

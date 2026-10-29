@@ -48,6 +48,13 @@ namespace RestaurantCRM.AdminApp.Controls
             Invalidate();
         }
 
+        // Chiều rộng đã được đo theo pixel thật (Refit) → không để Windows phóng to thêm lần nữa
+        // theo DPI, nếu không chip sẽ quá rộng và bị cắt mất chip phía sau.
+        protected override void ScaleControl(SizeF factor, BoundsSpecified specified)
+        {
+            base.ScaleControl(factor, specified & ~BoundsSpecified.Width);
+        }
+
         protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
         protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
 
