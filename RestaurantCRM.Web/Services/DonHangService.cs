@@ -155,7 +155,7 @@ public class DonHangService
                         TongTienHang = (decimal)dto.TongTienHang,
                         TienGiamVoucher = (decimal)dto.TienGiamVoucher,
                         TongThanhToan = (decimal)dto.TongThanhToan,
-                        PhuongThucThanhToan = (dto.PhuongThucThanhToan == "Online" ? "Thanh toán Online (Đã thanh toán)" : "Thanh toán tiền mặt khi nhận hàng (COD)"),
+                        PhuongThucThanhToan = MapPaymentMethodText(dto.PhuongThucThanhToan),
                         BuocHienTai = MapStep(dto.TrangThai),
                         TienTrinh = Steps(),
                         ChiTiet = (dto.ChiTiet ?? new()).Select(c =>
@@ -226,6 +226,17 @@ public class DonHangService
             .Where(x => filter == "all" || x.TrangThaiLoc == filter)
             .OrderByDescending(x => x.NgayDat)
             .ToList();
+    }
+
+    private static string MapPaymentMethodText(string? method)
+    {
+        if (string.IsNullOrWhiteSpace(method)) return "Thanh toán tiền mặt khi nhận hàng (COD)";
+        var m = method.ToLowerInvariant();
+        if (m.Contains("online") || m.Contains("transfer") || m.Contains("chuyển khoản") || m.Contains("vietqr") || m.Contains("thẻ"))
+        {
+            return "Chuyển khoản trực tuyến / VietQR (Đã thanh toán)";
+        }
+        return "Thanh toán tiền mặt khi nhận hàng (COD)";
     }
 
     private static string MapStatusLoc(string? status)

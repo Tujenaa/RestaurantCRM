@@ -37,6 +37,15 @@ public class GioHangController : Controller
         var cart = _gioHangService.Get(HttpContext.Session, customerId);
         if (cart.Items.Count == 0) return RedirectToAction(nameof(Index));
 
+        // Kiểm tra tính khả dụng & số lượng món ăn ngay từ bước tiến hành đặt hàng
+        var availability = await _gioHangService.CheckCartAvailabilityAsync(cart.Items);
+        if (!availability.IsValid)
+        {
+            TempData["ThongBao"] = availability.ErrorMessage;
+            TempData["IsError"] = true;
+            return RedirectToAction(nameof(Index));
+        }
+
         // Pre-fill user information if logged in
         var hoTen = HttpContext.Session.GetString("HoTen") ?? "";
         var phone = HttpContext.Session.GetString("SoDienThoai") ?? "";
@@ -176,6 +185,16 @@ public class GioHangController : Controller
 
         if (!ModelState.IsValid)
         {
+            var vouchers = await _gioHangService.GetAvailableVouchersAsync();
+            return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model, AvailableVouchers = vouchers });
+        }
+
+        // Kiểm tra lại tính khả dụng & tồn kho trước khi gửi tạo đơn
+        var availability = await _gioHangService.CheckCartAvailabilityAsync(cart.Items);
+        if (!availability.IsValid)
+        {
+            ModelState.AddModelError("", availability.ErrorMessage ?? "Một số món trong giỏ hàng hiện không đủ số lượng để phục vụ.");
+            ViewBag.ErrorMessage = availability.ErrorMessage;
             var vouchers = await _gioHangService.GetAvailableVouchersAsync();
             return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model, AvailableVouchers = vouchers });
         }

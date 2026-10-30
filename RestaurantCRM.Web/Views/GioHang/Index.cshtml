@@ -9,6 +9,16 @@
     <p>Kiểm tra món ăn, áp dụng mã ưu đãi và hoàn tất đơn hàng.</p>
 </div>
 
+@if (TempData["ThongBao"] is string errMsg && (TempData["IsError"] as bool? == true))
+{
+    <div class="alert alert-danger" style="background:#ffebee; border:1.5px solid #ef9a9a; color:#c62828; padding:16px 20px; border-radius:14px; margin-bottom:24px; animation:fadeIn .2s;">
+        <h4 style="margin:0 0 6px; font-size:15px; font-weight:800; display:flex; align-items:center; gap:8px;">
+            <span>⚠️</span> Giỏ hàng cần điều chỉnh số lượng hoặc món ăn
+        </h4>
+        <p style="margin:0; font-size:13.5px; line-height:1.5;">@errMsg</p>
+    </div>
+}
+
 @if (Model.GioHang.Items.Count == 0)
 {
     <div class="panel empty">
@@ -68,7 +78,6 @@ else
                 <span>Tạm tính tiền món</span>
                 <strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong>
             </div>
-
 
             @if (Model.GioHang.GiamGia > 0)
             {
