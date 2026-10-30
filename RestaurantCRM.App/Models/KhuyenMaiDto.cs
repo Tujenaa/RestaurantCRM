@@ -78,13 +78,13 @@ namespace RestaurantCRM.AdminApp.Models {
         public int? SoLuongToiThieu { get; set; } = 1;
 
         [JsonPropertyName("soLuongDaDung")]
-        public int SoLuongDaDung { get; set; } = 0;
+        public int? SoLuongDaDung { get; set; } = 0;
 
         [JsonPropertyName("soLuongToiDa")]
         public int? SoLuongToiDa { get; set; }
 
         [JsonPropertyName("choPhepCongDon")]
-        public bool ChoPhepCongDon { get; set; } = true;
+        public bool? ChoPhepCongDon { get; set; } = true;
 
         [JsonPropertyName("hinhThuc")]
         public string HinhThuc { get; set; }
