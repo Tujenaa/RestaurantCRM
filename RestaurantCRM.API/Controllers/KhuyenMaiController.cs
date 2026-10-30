@@ -54,7 +54,7 @@ namespace RestaurantCRM.API.Controllers
 
                 .Where(v => v.MaChuongTrinhNavigation != null
 
-                         && (v.ChoPhepCongDon == null || v.ChoPhepCongDon == true)
+                         
 
                          && (v.MaVoucher == null || !v.MaVoucher.StartsWith("[DA_HUY]_"))
 
@@ -96,12 +96,14 @@ namespace RestaurantCRM.API.Controllers
 
                     v.SoLuongToiThieu,
 
-                    v.ChoPhepCongDon,
+                    ChoPhepCongDon = v.ChoPhepCongDon ?? true,
 
                     v.MaChuongTrinhNavigation.NgayBatDau,
 
-                    v.MaChuongTrinhNavigation.NgayKetThuc
-
+                    v.MaChuongTrinhNavigation.NgayKetThuc,
+                    v.MaChuongTrinh,
+                    TrangThai = "Đang áp dụng",
+                    HinhThuc = v.PhanTramGiam.HasValue ? "Giảm " + v.PhanTramGiam.Value + "%" : "Giảm " + (v.TienGiam ?? 0) + " đ"
                 })
 
                 .ToListAsync();
@@ -120,7 +122,7 @@ namespace RestaurantCRM.API.Controllers
 
                 .Where(v => v.MaChuongTrinhNavigation != null
 
-                         && (v.ChoPhepCongDon == null || v.ChoPhepCongDon == true)
+                         
 
                          && (v.MaVoucher == null || !v.MaVoucher.StartsWith("[DA_HUY]_"))
 
@@ -162,12 +164,14 @@ namespace RestaurantCRM.API.Controllers
 
                     v.SoLuongToiThieu,
 
-                    v.ChoPhepCongDon,
+                    ChoPhepCongDon = v.ChoPhepCongDon ?? true,
 
                     v.MaChuongTrinhNavigation.NgayBatDau,
 
-                    v.MaChuongTrinhNavigation.NgayKetThuc
-
+                    v.MaChuongTrinhNavigation.NgayKetThuc,
+                    v.MaChuongTrinh,
+                    TrangThai = "Đang áp dụng",
+                    HinhThuc = v.PhanTramGiam.HasValue ? "Giảm " + v.PhanTramGiam.Value + "%" : "Giảm " + (v.TienGiam ?? 0) + " đ"
                 })
 
                 .ToListAsync();
@@ -188,7 +192,7 @@ namespace RestaurantCRM.API.Controllers
 
                          && !string.IsNullOrEmpty(v.MaVoucher)
 
-                         && (v.ChoPhepCongDon == null || v.ChoPhepCongDon == true)
+                         
 
                          && !v.MaVoucher.StartsWith("[DA_HUY]_")
 
@@ -230,12 +234,14 @@ namespace RestaurantCRM.API.Controllers
 
                     v.SoLuongToiThieu,
 
-                    v.ChoPhepCongDon,
+                    ChoPhepCongDon = v.ChoPhepCongDon ?? true,
 
                     v.MaChuongTrinhNavigation.NgayBatDau,
 
-                    v.MaChuongTrinhNavigation.NgayKetThuc
-
+                    v.MaChuongTrinhNavigation.NgayKetThuc,
+                    v.MaChuongTrinh,
+                    TrangThai = "Đang áp dụng",
+                    HinhThuc = v.PhanTramGiam.HasValue ? "Giảm " + v.PhanTramGiam.Value + "%" : "Giảm " + (v.TienGiam ?? 0) + " đ"
                 })
 
                 .ToListAsync();
@@ -290,7 +296,7 @@ namespace RestaurantCRM.API.Controllers
 
                 if (ct == null) return Ok(new { valid = false, message = "Chương trình khuyến mãi không tồn tại." });
 
-                if (vDon.ChoPhepCongDon == false || (vDon.MaVoucher != null && vDon.MaVoucher.StartsWith("[DA_HUY]_")))
+                if (vDon.MaVoucher != null && vDon.MaVoucher.StartsWith("[DA_HUY]_"))
 
                     return Ok(new { valid = false, message = "Mã voucher này đã bị ẩn hoặc hủy áp dụng." });
 
@@ -426,7 +432,7 @@ namespace RestaurantCRM.API.Controllers
 
                 if (ct == null) return Ok(new { valid = false, message = "Chương trình khuyến mãi không tồn tại." });
 
-                if (vLoai.ChoPhepCongDon == false || (vLoai.MaVoucher != null && vLoai.MaVoucher.StartsWith("[DA_HUY]_")))
+                if (vLoai.MaVoucher != null && vLoai.MaVoucher.StartsWith("[DA_HUY]_"))
 
                     return Ok(new { valid = false, message = "Mã voucher này đã bị ẩn hoặc hủy áp dụng." });
 
@@ -532,7 +538,7 @@ namespace RestaurantCRM.API.Controllers
 
                 if (ct == null) return Ok(new { valid = false, message = "Chương trình khuyến mãi không tồn tại." });
 
-                if (vMonItem.ChoPhepCongDon == false || (vMonItem.MaVoucher != null && vMonItem.MaVoucher.StartsWith("[DA_HUY]_")))
+                if (vMonItem.MaVoucher != null && vMonItem.MaVoucher.StartsWith("[DA_HUY]_"))
 
                     return Ok(new { valid = false, message = "Mã voucher này đã bị ẩn hoặc hủy áp dụng." });
 

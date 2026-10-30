@@ -238,7 +238,7 @@ namespace RestaurantCRM.API.Controllers
             var today = DateOnly.FromDateTime(DateTime.Now);
 
             // 1. Voucher toàn đơn (KM_THEO_DON_HANG)
-            var vDon = await _service.Query<KmTheoDonHang>()
+            var rawDon = await _service.Query<KmTheoDonHang>()
                 .Include(v => v.MaChuongTrinhNavigation)
                 .Include(v => v.HoaDon)
                 .OrderByDescending(v => v.MaKMDonHang)
@@ -252,28 +252,46 @@ namespace RestaurantCRM.API.Controllers
                     NgayKetThuc = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayKetThuc : null,
                     SoLuongDaDung = v.HoaDon.Count(h => h.TrangThai != "Cancelled"),
                     SoLuongToiDa = v.SoLuongToiThieu,
-                    TrangThai = (v.ChoPhepCongDon == false) ? "Đã kết thúc" :
-                                (v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_")) ? "Đã kết thúc" :
-                                (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.HoaDon.Count(h => h.TrangThai != "Cancelled") >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
-                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayKetThuc != null && today > v.MaChuongTrinhNavigation.NgayKetThuc) ? "Đã kết thúc" :
-                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayBatDau != null && today < v.MaChuongTrinhNavigation.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                    IsDeleted = v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_"),
                     v.PhanTramGiam,
                     v.TienGiam,
                     v.GiaTriDonToiThieu,
                     v.GiamToiDa,
-                    PhamViApDung = "TOAN_DON",
-                    MaLoaiMon = (string?)null,
-                    TenLoaiMon = (string?)null,
-                    MaMon = (string?)null,
-                    TenMon = (string?)null,
                     v.SoLuongToiThieu,
-                    v.ChoPhepCongDon,
-                    HinhThuc = v.PhanTramGiam.HasValue ? $"Giảm {v.PhanTramGiam.Value}%" : $"Giảm {v.TienGiam:N0} đ"
+                    v.ChoPhepCongDon
                 })
                 .ToListAsync();
 
+            var vDon = rawDon.Select(v => new
+            {
+                v.MaKmvoucher,
+                v.MaVoucher,
+                v.MaChuongTrinh,
+                v.TenChuongTrinh,
+                v.NgayBatDau,
+                v.NgayKetThuc,
+                v.SoLuongDaDung,
+                v.SoLuongToiDa,
+                TrangThai = v.IsDeleted ? "Đã kết thúc" :
+                            (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.SoLuongDaDung >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
+                            (v.NgayKetThuc != null && today > v.NgayKetThuc) ? "Đã kết thúc" :
+                            (v.NgayBatDau != null && today < v.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                v.PhanTramGiam,
+                v.TienGiam,
+                v.GiaTriDonToiThieu,
+                v.GiamToiDa,
+                PhamViApDung = "TOAN_DON",
+                MaLoaiMon = (string?)null,
+                TenLoaiMon = (string?)null,
+                MaMon = (string?)null,
+                TenMon = (string?)null,
+                v.SoLuongToiThieu,
+                ChoPhepCongDon = v.ChoPhepCongDon ?? true,
+                HinhThuc = v.PhanTramGiam.HasValue ? $"Giảm {v.PhanTramGiam.Value}%" : $"Giảm {(v.TienGiam ?? 0):N0} đ"
+            });
+
             // 2. Voucher theo loại món (KM_THEO_LOAI)
-            var vLoai = await _service.Query<KmTheoLoai>()
+            var rawLoai = await _service.Query<KmTheoLoai>()
                 .Include(v => v.MaChuongTrinhNavigation)
                 .Include(v => v.MaLoaiMonNavigation)
                 .Include(v => v.ChiTietHoaDon)
@@ -288,30 +306,50 @@ namespace RestaurantCRM.API.Controllers
                     NgayKetThuc = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayKetThuc : null,
                     SoLuongDaDung = v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled"),
                     SoLuongToiDa = v.SoLuongToiThieu,
-                    TrangThai = (v.ChoPhepCongDon == false) ? "Đã kết thúc" :
-                                (v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_")) ? "Đã kết thúc" :
-                                (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled") >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
-                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayKetThuc != null && today > v.MaChuongTrinhNavigation.NgayKetThuc) ? "Đã kết thúc" :
-                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayBatDau != null && today < v.MaChuongTrinhNavigation.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                    IsDeleted = v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_"),
                     v.PhanTramGiam,
                     v.TienGiam,
                     v.GiaTriDonToiThieu,
                     v.GiamToiDa,
-                    PhamViApDung = "THEO_LOAI",
                     v.MaLoaiMon,
                     TenLoaiMon = v.MaLoaiMonNavigation != null ? v.MaLoaiMonNavigation.TenLoaiMon : null,
-                    MaMon = (string?)null,
-                    TenMon = (string?)null,
                     v.SoLuongToiThieu,
-                    v.ChoPhepCongDon,
-                    HinhThuc = v.GiaTriDonToiThieu.HasValue && v.GiaTriDonToiThieu.Value > 0
-                        ? $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} nhóm {v.MaLoaiMonNavigation!.TenLoaiMon ?? v.MaLoaiMon} (món ≥ {v.GiaTriDonToiThieu:N0} đ)"
-                        : $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} nhóm {v.MaLoaiMonNavigation!.TenLoaiMon ?? v.MaLoaiMon}"
+                    v.ChoPhepCongDon
                 })
                 .ToListAsync();
 
+            var vLoai = rawLoai.Select(v => new
+            {
+                v.MaKmvoucher,
+                v.MaVoucher,
+                v.MaChuongTrinh,
+                v.TenChuongTrinh,
+                v.NgayBatDau,
+                v.NgayKetThuc,
+                v.SoLuongDaDung,
+                v.SoLuongToiDa,
+                TrangThai = v.IsDeleted ? "Đã kết thúc" :
+                            (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.SoLuongDaDung >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
+                            (v.NgayKetThuc != null && today > v.NgayKetThuc) ? "Đã kết thúc" :
+                            (v.NgayBatDau != null && today < v.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                v.PhanTramGiam,
+                v.TienGiam,
+                v.GiaTriDonToiThieu,
+                v.GiamToiDa,
+                PhamViApDung = "THEO_LOAI",
+                v.MaLoaiMon,
+                v.TenLoaiMon,
+                MaMon = (string?)null,
+                TenMon = (string?)null,
+                v.SoLuongToiThieu,
+                ChoPhepCongDon = v.ChoPhepCongDon ?? true,
+                HinhThuc = v.GiaTriDonToiThieu.HasValue && v.GiaTriDonToiThieu.Value > 0
+                    ? $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{(v.TienGiam ?? 0):N0} đ")} nhóm {v.TenLoaiMon ?? v.MaLoaiMon} (món ≥ {v.GiaTriDonToiThieu.Value:N0} đ)"
+                    : $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{(v.TienGiam ?? 0):N0} đ")} nhóm {v.TenLoaiMon ?? v.MaLoaiMon}"
+            });
+
             // 3. Voucher theo món ăn (KM_THEO_SP có MaVoucher)
-            var vMon = await _service.Query<KmTheoSp>()
+            var rawMon = await _service.Query<KmTheoSp>()
                 .Include(v => v.MaChuongTrinhNavigation)
                 .Include(v => v.MaMonNavigation)
                 .Include(v => v.ChiTietHoaDon)
@@ -327,25 +365,44 @@ namespace RestaurantCRM.API.Controllers
                     NgayKetThuc = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayKetThuc : null,
                     SoLuongDaDung = v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled"),
                     SoLuongToiDa = v.SoLuongToiThieu,
-                    TrangThai = (v.ChoPhepCongDon == false) ? "Đã kết thúc" :
-                                (v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_")) ? "Đã kết thúc" :
-                                (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled") >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
-                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayKetThuc != null && today > v.MaChuongTrinhNavigation.NgayKetThuc) ? "Đã kết thúc" :
-                                (v.MaChuongTrinhNavigation != null && v.MaChuongTrinhNavigation.NgayBatDau != null && today < v.MaChuongTrinhNavigation.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                    IsDeleted = v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_"),
                     v.PhanTramGiam,
                     v.TienGiam,
-                    GiaTriDonToiThieu = (double?)null,
                     v.GiamToiDa,
-                    PhamViApDung = "THEO_MON",
-                    MaLoaiMon = (string?)null,
-                    TenLoaiMon = (string?)null,
                     v.MaMon,
                     TenMon = v.MaMonNavigation != null ? v.MaMonNavigation.TenMon : null,
                     v.SoLuongToiThieu,
-                    v.ChoPhepCongDon,
-                    HinhThuc = $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{v.TienGiam:N0} đ")} món {v.MaMonNavigation!.TenMon ?? v.MaMon}"
+                    v.ChoPhepCongDon
                 })
                 .ToListAsync();
+
+            var vMon = rawMon.Select(v => new
+            {
+                v.MaKmvoucher,
+                v.MaVoucher,
+                v.MaChuongTrinh,
+                v.TenChuongTrinh,
+                v.NgayBatDau,
+                v.NgayKetThuc,
+                v.SoLuongDaDung,
+                v.SoLuongToiDa,
+                TrangThai = v.IsDeleted ? "Đã kết thúc" :
+                            (v.SoLuongToiThieu != null && v.SoLuongToiThieu > 0 && v.SoLuongDaDung >= v.SoLuongToiThieu.Value) ? "Đã kết thúc" :
+                            (v.NgayKetThuc != null && today > v.NgayKetThuc) ? "Đã kết thúc" :
+                            (v.NgayBatDau != null && today < v.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
+                v.PhanTramGiam,
+                v.TienGiam,
+                GiaTriDonToiThieu = (double?)null,
+                v.GiamToiDa,
+                PhamViApDung = "THEO_MON",
+                MaLoaiMon = (string?)null,
+                TenLoaiMon = (string?)null,
+                v.MaMon,
+                v.TenMon,
+                v.SoLuongToiThieu,
+                ChoPhepCongDon = v.ChoPhepCongDon ?? true,
+                HinhThuc = $"Giảm {(v.PhanTramGiam.HasValue ? $"{v.PhanTramGiam.Value}%" : $"{(v.TienGiam ?? 0):N0} đ")} món {v.TenMon ?? v.MaMon}"
+            });
 
             var all = vDon.Concat(vLoai).Concat(vMon).ToList();
             return Ok(all);

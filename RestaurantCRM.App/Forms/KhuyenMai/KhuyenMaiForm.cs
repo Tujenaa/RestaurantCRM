@@ -601,7 +601,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
             foreach (var v in filtered)
             {
                 string luotDungText = (v.SoLuongToiDa.HasValue && v.SoLuongToiDa.Value > 0)
-                    ? $"{v.SoLuongDaDung} / {v.SoLuongToiDa.Value} lượt"
+                    ? $"{v.SoLuongDaDung ?? 0} / {v.SoLuongToiDa.Value} lượt"
                     : "Không giới hạn";
 
                 int idx = _dgvVoucherDon.Rows.Add(
@@ -637,7 +637,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
             foreach (var v in filtered)
             {
                 string luotDungText = (v.SoLuongToiDa.HasValue && v.SoLuongToiDa.Value > 0)
-                    ? $"{v.SoLuongDaDung} / {v.SoLuongToiDa.Value} lượt"
+                    ? $"{v.SoLuongDaDung ?? 0} / {v.SoLuongToiDa.Value} lượt"
                     : "Không giới hạn";
 
                 int idx = _dgvVoucherLoai.Rows.Add(
@@ -674,7 +674,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
             foreach (var v in filtered)
             {
                 string luotDungText = (v.SoLuongToiDa.HasValue && v.SoLuongToiDa.Value > 0)
-                    ? $"{v.SoLuongDaDung} / {v.SoLuongToiDa.Value} lượt"
+                    ? $"{v.SoLuongDaDung ?? 0} / {v.SoLuongToiDa.Value} lượt"
                     : "Không giới hạn";
 
                 int idx = _dgvVoucherMon.Rows.Add(
