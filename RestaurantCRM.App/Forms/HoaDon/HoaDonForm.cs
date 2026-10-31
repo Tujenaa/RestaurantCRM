@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -28,7 +28,6 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             InitializeComponent();
             _hoaDonService = new HoaDonService();
             SetupGridColumns();
-            SetupHoverPreview();
 
             // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
             PageKit.BuildListPage(this, new ListPageSpec
@@ -44,6 +43,8 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 Grid = dgvHoaDon,
                 SecondaryActions = new[] { btnChiTiet }
             });
+
+            SetupHoverPreview();
         }
 
         private void SetupGridColumns()
@@ -372,7 +373,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 ShowHover(_hoverRow);   // hiện ngay, không chờ
             };
             // Rời một ô: nếu chuột không còn nằm trên dòng đơn nào thì ẩn ngay
-            dgvHoaDon.CellMouseLeave += (s, e) => BeginInvoke((Action)HideIfOffRow);
+            dgvHoaDon.CellMouseLeave += (s, e) => { if (IsHandleCreated && !IsDisposed) BeginInvoke((Action)HideIfOffRow); };
             dgvHoaDon.MouseMove += (s, e) =>
             {
                 if (_hoverCard.IsShown && dgvHoaDon.HitTest(e.X, e.Y).RowIndex < 0) HideHover();

@@ -49,7 +49,9 @@ public class VoucherViewModel
             var parts = new List<string>();
             if (GiaTriDonToiThieu.HasValue && GiaTriDonToiThieu.Value > 0)
             {
-                parts.Add($"Đơn từ {GiaTriDonToiThieu.Value:N0}đ");
+                parts.Add(PhamViApDung == "THEO_LOAI"
+                    ? $"Món từ {GiaTriDonToiThieu.Value:N0}đ"
+                    : $"Đơn từ {GiaTriDonToiThieu.Value:N0}đ");
             }
             if (GiamToiDa.HasValue && GiamToiDa.Value > 0)
             {
@@ -91,9 +93,23 @@ public class VoucherViewModel
         }
         else if (PhamViApDung == "THEO_LOAI")
         {
-            baseAmount = items?.Where(x => string.Equals(x.MaLoaiMon, MaLoaiMon, StringComparison.OrdinalIgnoreCase))
-                               .Sum(x => x.ThanhTien) ?? 0m;
-            if (baseAmount <= 0) return $"Cần có món thuộc nhóm {TenLoaiMon ?? MaLoaiMon} trong giỏ";
+            var catItems = items?.Where(x => string.Equals(x.MaLoaiMon, MaLoaiMon, StringComparison.OrdinalIgnoreCase)).ToList()
+                           ?? new List<GioHangItemViewModel>();
+            if (!catItems.Any()) return $"Cần có món thuộc nhóm {TenLoaiMon ?? MaLoaiMon} trong giỏ";
+
+            if (GiaTriDonToiThieu.HasValue && GiaTriDonToiThieu.Value > 0)
+            {
+                decimal minPrice = (decimal)GiaTriDonToiThieu.Value;
+                var eligibleCatItems = catItems.Where(x => x.DonGia >= minPrice).ToList();
+                if (!eligibleCatItems.Any())
+                    return $"Cần món thuộc nhóm {TenLoaiMon ?? MaLoaiMon} có giá từ {minPrice:N0}đ";
+                baseAmount = eligibleCatItems.Sum(x => x.ThanhTien);
+            }
+            else
+            {
+                baseAmount = catItems.Sum(x => x.ThanhTien);
+            }
+            return null;
         }
 
         if (GiaTriDonToiThieu.HasValue && GiaTriDonToiThieu.Value > 0 && baseAmount < (decimal)GiaTriDonToiThieu.Value)

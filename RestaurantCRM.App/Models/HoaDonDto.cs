@@ -175,6 +175,9 @@ namespace RestaurantCRM.AdminApp.Models {
 
         [JsonPropertyName("soLuong")]
         public int SoLuong { get; set; }
+
+        [JsonPropertyName("maVoucherMon")]
+        public string MaVoucherMon { get; set; }
     }
 
     public class CreateOrderResponseDto {
