@@ -28,7 +28,12 @@ public class DonHangService
             return (false, null, "Giỏ hàng đang trống, vui lòng chọn ít nhất 1 món ăn.");
         }
 
-        string customerId = string.IsNullOrWhiteSpace(maKhachHang) ? "KH01" : maKhachHang;
+        if (string.IsNullOrWhiteSpace(maKhachHang))
+        {
+            return (false, null, "Vui lòng đăng nhập tài khoản trước khi đặt hàng.");
+        }
+
+        string customerId = maKhachHang.Trim();
         string address = $"{customer.DiaChiGiao}, {customer.TinhThanh}".Trim().Trim(',');
 
         var payload = new
@@ -196,7 +201,12 @@ public class DonHangService
 
     public async Task<(bool Success, string Message)> CancelOrderAsync(string orderId, string? maKhachHang)
     {
-        string customerId = string.IsNullOrWhiteSpace(maKhachHang) ? "KH01" : maKhachHang;
+        if (string.IsNullOrWhiteSpace(maKhachHang))
+        {
+            return (false, "Vui lòng đăng nhập tài khoản để thực hiện hủy đơn.");
+        }
+
+        string customerId = maKhachHang.Trim();
 
         try
         {

@@ -1,26 +1,15 @@
 @model MonAnDanhSachViewModel
 @{
-    ViewData["Title"] = "Thực đơn món ngon — Lẩu Phố";
+    ViewData["Title"] = string.IsNullOrEmpty(Model.TenLoaiHienTai) 
+        ? "Thực đơn món ngon — Lẩu Phố" 
+        : $"{Model.TenLoaiHienTai} — Thực đơn Lẩu Phố";
     Layout = "/Shared/_Layout.cshtml";
+    
+    var startItem = Model.TotalDishes > 0 ? (Model.CurrentPage - 1) * Model.PageSize + 1 : 0;
+    var endItem = Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalDishes);
 }
 
 <div class="menu-page-container">
-    <!-- Hero Banner -->
-    <section class="menu-hero">
-        <div class="menu-hero__content">
-            <span class="menu-hero__eyebrow">✦ TINH HOA NỒI LẨU VIỆT</span>
-            <h1 class="menu-hero__title">Thực đơn Lẩu Phố</h1>
-            <p class="menu-hero__subtitle">
-                Hơn @Model.TongSoMon món lẩu và đồ nhúng tươi ngon thượng hạng. Đặt món giao tận nhà nóng hổi trong 30-45 phút!
-            </p>
-            <div class="menu-hero__badges">
-                <span class="hero-chip">🥬 Rau củ sạch trong ngày</span>
-                <span class="hero-chip">🥩 Thịt bò & hải sản tươi sống</span>
-                <span class="hero-chip">🥘 Nước lẩu gia truyền đậm vị</span>
-            </div>
-        </div>
-    </section>
-
     <!-- Toolbar: Category Filter -->
     <section class="menu-toolbar" id="menu-toolbar">
         <!-- Category Filter Tabs -->
@@ -30,12 +19,15 @@
                 {
                     bool isSelected = (string.IsNullOrEmpty(Model.LoaiDangChon) || Model.LoaiDangChon == "all")
                         ? (cat.MaLoaiMon == "all" || cat.TenLoaiMon == "Tất cả món")
-                        : (Model.LoaiDangChon == cat.MaLoaiMon || Model.LoaiDangChon == cat.TenLoaiMon);
+                        : (string.Equals(Model.LoaiDangChon, cat.MaLoaiMon, StringComparison.OrdinalIgnoreCase) || 
+                           string.Equals(Model.LoaiDangChon, cat.TenLoaiMon, StringComparison.OrdinalIgnoreCase));
 
                     <a class="category-pill @(isSelected ? "category-pill--active" : "")"
-                       href="javascript:void(0)"
-                       onclick="filterCategory(this, '@(cat.MaLoaiMon == "all" ? "all" : cat.MaLoaiMon)')"
-                       data-cat-id="@cat.MaLoaiMon"
+                       asp-controller="Menu" asp-action="Index"
+                       asp-route-loai="@(cat.MaLoaiMon == "all" ? null : cat.MaLoaiMon)"
+                       asp-route-q="@Model.TuKhoa"
+                       asp-route-sort="@Model.SortDangChon"
+                       asp-route-page="1"
                        title="Xem món loại: @cat.TenLoaiMon">
                         <span class="pill-name">@cat.TenLoaiMon</span>
                         @if (cat.SoLuongMon > 0)
@@ -45,6 +37,33 @@
                     </a>
                 }
             </div>
+        </div>
+
+        <!-- Filter Status Bar -->
+        <div class="menu-filter-status">
+            <div class="menu-filter-info">
+                @if (!string.IsNullOrEmpty(Model.TenLoaiHienTai))
+                {
+                    <span class="filter-label">Đang xem loại: <strong>@Model.TenLoaiHienTai</strong></span>
+                }
+                else
+                {
+                    <span class="filter-label">Tất cả món ăn</span>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Model.TuKhoa))
+                {
+                    <span class="filter-keyword">Từ khóa: "<em>@Model.TuKhoa</em>"</span>
+                }
+                <span class="filter-count">(@Model.TotalDishes món)</span>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.LoaiDangChon) && Model.LoaiDangChon != "all" || !string.IsNullOrWhiteSpace(Model.TuKhoa))
+            {
+                <a asp-controller="Menu" asp-action="Index" class="btn-clear-filter" title="Xóa tất cả bộ lọc">
+                    ✕ Xóa bộ lọc
+                </a>
+            }
         </div>
     </section>
 
@@ -56,7 +75,20 @@
                 <div class="menu-empty-state">
                     <div class="empty-icon">🍲</div>
                     <h3>Không tìm thấy món ăn phù hợp</h3>
-                    <p>Rất tiếc, không có món nào khớp với tiêu chí tìm kiếm "@Model.TuKhoa".</p>
+                    <p>
+                        @if (!string.IsNullOrWhiteSpace(Model.TuKhoa))
+                        {
+                            <span>Rất tiếc, không có món nào khớp với tiêu chí tìm kiếm "@Model.TuKhoa".</span>
+                        }
+                        else if (!string.IsNullOrEmpty(Model.TenLoaiHienTai))
+                        {
+                            <span>Danh mục "@Model.TenLoaiHienTai" hiện chưa có món ăn khả dụng.</span>
+                        }
+                        else
+                        {
+                            <span>Hiện tại thực đơn chưa có món ăn khả dụng.</span>
+                        }
+                    </p>
                     <a asp-controller="Menu" asp-action="Index" class="btn btn-secondary">Xem lại toàn bộ thực đơn</a>
                 </div>
             }
@@ -68,27 +100,70 @@
                 }
             }
         </div>
+
+        <!-- Pagination Controls -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="menu-pagination-wrapper">
+                <div class="pagination-info">
+                    Hiển thị món <strong>@startItem - @endItem</strong> trên tổng số <strong>@Model.TotalDishes</strong> món (Trang @Model.CurrentPage/@Model.TotalPages)
+                </div>
+
+                <nav class="menu-pagination" aria-label="Điều hướng phân trang thực đơn">
+                    @if (Model.HasPreviousPage)
+                    {
+                        <a class="page-btn page-btn--prev"
+                           asp-controller="Menu" asp-action="Index"
+                           asp-route-loai="@Model.LoaiDangChon"
+                           asp-route-q="@Model.TuKhoa"
+                           asp-route-sort="@Model.SortDangChon"
+                           asp-route-page="@(Model.CurrentPage - 1)"
+                           aria-label="Trang trước">
+                            &laquo; Trang trước
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="page-btn page-btn--disabled" aria-disabled="true">&laquo; Trang trước</span>
+                    }
+
+                    <div class="page-numbers">
+                        @for (int p = 1; p <= Model.TotalPages; p++)
+                        {
+                            if (p == Model.CurrentPage)
+                            {
+                                <span class="page-number page-number--active" aria-current="page">@p</span>
+                            }
+                            else
+                            {
+                                <a class="page-number"
+                                   asp-controller="Menu" asp-action="Index"
+                                   asp-route-loai="@Model.LoaiDangChon"
+                                   asp-route-q="@Model.TuKhoa"
+                                   asp-route-sort="@Model.SortDangChon"
+                                   asp-route-page="@p">@p</a>
+                            }
+                        }
+                    </div>
+
+                    @if (Model.HasNextPage)
+                    {
+                        <a class="page-btn page-btn--next"
+                           asp-controller="Menu" asp-action="Index"
+                           asp-route-loai="@Model.LoaiDangChon"
+                           asp-route-q="@Model.TuKhoa"
+                           asp-route-sort="@Model.SortDangChon"
+                           asp-route-page="@(Model.CurrentPage + 1)"
+                           aria-label="Trang sau">
+                            Trang sau &raquo;
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="page-btn page-btn--disabled" aria-disabled="true">Trang sau &raquo;</span>
+                    }
+                </nav>
+            </div>
+        }
     </section>
 </div>
-
-
-
-@section Scripts {
-    <script>
-        // Client-side category filter
-        const dishCards = document.querySelectorAll('.dish-card');
-
-        window.currentCategory = '@(string.IsNullOrEmpty(Model.LoaiDangChon) ? "all" : Model.LoaiDangChon)';
-
-        function filterCategory(btn, catId) {
-            window.currentCategory = catId;
-            document.querySelectorAll('.category-pill').forEach(el => el.classList.remove('category-pill--active'));
-            if (btn) btn.classList.add('category-pill--active');
-
-            dishCards.forEach(card => {
-                const cardCat = card.getAttribute('data-category') || '';
-                card.style.display = (catId === 'all' || cardCat === catId) ? '' : 'none';
-            });
-        }
-    </script>
-}

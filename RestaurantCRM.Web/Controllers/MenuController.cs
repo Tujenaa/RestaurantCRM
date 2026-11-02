@@ -18,30 +18,56 @@ public class MenuController : Controller
 
     [HttpGet("")]
     [HttpGet("Index")]
-    public async Task<IActionResult> Index([FromQuery] string? loai = null, [FromQuery] string? q = null, [FromQuery] string? sort = null)
+    public async Task<IActionResult> Index([FromQuery] string? loai = null, [FromQuery] string? q = null, [FromQuery] string? sort = null, [FromQuery] int page = 1)
     {
+        if (page < 1) page = 1;
+        const int pageSize = 8;
+
         var categories = await _monAnService.GetCategoriesAsync();
         var dishes = await _monAnService.GetAllAsync(loai, q, sort);
         var availableDishes = dishes.Where(d => d.ConHang).ToList();
 
-        // Cập nhật số sao trung bình thực tế cho từng món ăn
-        foreach (var d in availableDishes)
+        int totalDishes = availableDishes.Count;
+        int totalPages = (int)Math.Ceiling((double)totalDishes / pageSize);
+        if (totalPages < 1) totalPages = 1;
+        if (page > totalPages) page = totalPages;
+
+        var pagedDishes = availableDishes
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        // Cập nhật số sao trung bình thực tế chỉ cho 8 món hiển thị trên trang hiện tại
+        foreach (var d in pagedDishes)
         {
             var summary = await _phanHoiService.GetDishRatingSummaryAsync(d.MaMon);
             d.DiemDanhGiaTrungBinh = summary.AverageRating;
             d.SoLuongDanhGia = summary.ReviewCount;
         }
 
+        // Xác định tên danh mục đang chọn (nếu có)
+        string? tenLoaiHienTai = null;
+        if (!string.IsNullOrWhiteSpace(loai) && loai != "all")
+        {
+            var matchedCat = categories.FirstOrDefault(c => string.Equals(c.MaLoaiMon, loai, StringComparison.OrdinalIgnoreCase) || string.Equals(c.TenLoaiMon, loai, StringComparison.OrdinalIgnoreCase));
+            tenLoaiHienTai = matchedCat?.TenLoaiMon ?? loai;
+        }
+
         var viewModel = new MonAnDanhSachViewModel
         {
-            MonAns = availableDishes,
+            MonAns = pagedDishes,
             MonNoiBat = availableDishes.Take(4).ToList(),
             DanhSachLoaiMon = categories,
             LoaiMons = categories.Select(c => c.TenLoaiMon).ToList(),
             LoaiDangChon = loai,
+            TenLoaiHienTai = tenLoaiHienTai,
             TuKhoa = q,
             SortDangChon = sort,
-            MenuMode = true
+            MenuMode = true,
+            CurrentPage = page,
+            PageSize = pageSize,
+            TotalDishes = totalDishes,
+            TotalPages = totalPages
         };
 
         return View(viewModel);

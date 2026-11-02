@@ -63,10 +63,19 @@ public class MonAnDanhSachViewModel
     public IReadOnlyList<LoaiMonItemViewModel> DanhSachLoaiMon { get; set; } = Array.Empty<LoaiMonItemViewModel>();
     public IReadOnlyList<string> LoaiMons { get; set; } = Array.Empty<string>();
     public string? LoaiDangChon { get; set; }
+    public string? TenLoaiHienTai { get; set; }
     public string? TuKhoa { get; set; }
     public string? SortDangChon { get; set; }
     public bool MenuMode { get; set; }
-    public int TongSoMon => MonAns.Count;
+
+    // Thuộc tính phân trang (Pagination)
+    public int CurrentPage { get; set; } = 1;
+    public int PageSize { get; set; } = 8;
+    public int TotalDishes { get; set; } = 0;
+    public int TotalPages { get; set; } = 1;
+    public bool HasPreviousPage => CurrentPage > 1;
+    public bool HasNextPage => CurrentPage < TotalPages;
+    public int TongSoMon => TotalDishes > 0 ? TotalDishes : MonAns.Count;
 }
 
 public class MonAnChiTietViewModel

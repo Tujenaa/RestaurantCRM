@@ -9,21 +9,9 @@ public class MonAnService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<MonAnService> _logger;
 
-    private static readonly Dictionary<string, string> DefaultCategoryMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "LM001", "Lẩu" },
-        { "LM002", "Thịt & hải sản nhúng lẩu" },
-        { "LM003", "Rau, nấm & đậu hũ" },
-        { "LM004", "Mì, bún & cơm" },
-        { "LM005", "Đồ uống" },
-        { "LM006", "Tráng miệng" },
-        { "LM007", "Khai vị & món ăn kèm" },
-        { "LM008", "Viên, chả & đồ chế biến sẵn" }
-    };
-
-    // Cached state for synchronous access (chỉ lưu các món thực tế đã tải từ API)
+    // Cached state for synchronous access (chỉ lưu các món và danh mục thực tế đã tải từ API/DB)
     private List<MonAnViewModel> _cachedDishes = new();
-    private Dictionary<string, string> _cachedCategoryMap = new(DefaultCategoryMap, StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> _cachedCategoryMap = new(StringComparer.OrdinalIgnoreCase);
 
     public MonAnService(IHttpClientFactory httpClientFactory, ILogger<MonAnService> logger)
     {
@@ -66,13 +54,21 @@ public class MonAnService
 
             if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "all" && maLoai != "Tất cả")
             {
+                string targetLoai = maLoai;
+                // Nếu maLoai là tên loại, tìm mã loại tương ứng trong categoryMap
+                var matched = categoryMap.FirstOrDefault(kvp => string.Equals(kvp.Value, maLoai, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(matched.Key))
+                {
+                    targetLoai = matched.Key;
+                }
+
                 if (string.IsNullOrWhiteSpace(search))
                 {
-                    endpoint = $"/api/MonAn/TheoLoai/{Uri.EscapeDataString(maLoai)}";
+                    endpoint = $"/api/MonAn/TheoLoai/{Uri.EscapeDataString(targetLoai)}";
                 }
                 else
                 {
-                    endpoint = $"/api/MonAn?maLoai={Uri.EscapeDataString(maLoai)}&search={Uri.EscapeDataString(search)}";
+                    endpoint = $"/api/MonAn?maLoai={Uri.EscapeDataString(targetLoai)}&search={Uri.EscapeDataString(search)}";
                 }
             }
             else if (!string.IsNullOrWhiteSpace(search))

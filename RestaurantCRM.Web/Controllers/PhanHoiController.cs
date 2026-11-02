@@ -113,8 +113,8 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         if (model.CheDoDanhGia == "TungMon" && !string.IsNullOrWhiteSpace(model.MaMon))
         {
             var orderItem = orderDetail?.ChiTiet.FirstOrDefault(c => c.MaMon == model.MaMon);
-            var dish = monAnService.Find(model.MaMon) ?? await monAnService.GetByIdAsync(model.MaMon);
-            string tenMon = orderItem?.TenMon ?? dish?.TenMon ?? "Món ngon Lẩu Phố";
+            var dish = await monAnService.GetByIdAsync(model.MaMon) ?? monAnService.Find(model.MaMon);
+            string tenMon = orderItem?.TenMon ?? dish?.TenMon ?? "Món ăn";
 
             await phanHoiService.AddReviewAsync(model.MaMon, tenMon, model.DanhGia, model.NoiDung, model.MaDonHang, customerName, customerId);
             TempData["ThongBao"] = $"Cảm ơn bạn đã gửi đánh giá cho món '{tenMon}' trong đơn #{model.MaDonHang}!";
@@ -132,11 +132,7 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
             }
             else
             {
-                var firstDish = monAnService.GetAll().FirstOrDefault();
-                string maMon = firstDish?.MaMon ?? "M01";
-                string tenMon = firstDish?.TenMon ?? "Đơn hàng Lẩu Phố";
-                await phanHoiService.AddReviewAsync(maMon, tenMon, model.DanhGia, model.NoiDung, model.MaDonHang, customerName, customerId);
-                TempData["ThongBao"] = $"Cảm ơn bạn đã gửi đánh giá cho đơn hàng #{model.MaDonHang}!";
+                TempData["Loi"] = "Không tìm thấy danh sách món ăn trong đơn hàng này để gửi đánh giá.";
             }
         }
 
@@ -177,7 +173,7 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
     private async Task<PhanHoiViewModel> BuildModelAsync(PhanHoiViewModel model, string customerId, IReadOnlyList<DonHangViewModel> doneOrders)
     {
         model.DonHangs = doneOrders;
-        model.MonAns = monAnService.GetAll();
+        model.MonAns = await monAnService.GetAllAsync();
 
         if (string.IsNullOrEmpty(model.MaDonHang) && model.DonHangs.Count > 0)
         {

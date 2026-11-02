@@ -228,13 +228,13 @@ public class GioHangController : Controller
     public async Task<IActionResult> DatHang(CheckoutPageViewModel page)
     {
         var token = HttpContext.Session.GetString("Token");
-        if (string.IsNullOrEmpty(token))
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(token) || string.IsNullOrWhiteSpace(customerId))
         {
             TempData["ThongBao"] = "Vui lòng đăng nhập tài khoản trước khi tiến hành đặt hàng và thanh toán.";
             return RedirectToAction("DangNhap", "TaiKhoan");
         }
 
-        var customerId = HttpContext.Session.GetString("MaKhachHang");
         var model = page.DatHang;
         var cart = await _gioHangService.GetWithAvailabilityAsync(HttpContext.Session, customerId);
 
@@ -261,7 +261,7 @@ public class GioHangController : Controller
             return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model, AvailableVouchers = vouchers });
         }
 
-        string orderCustomerId = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId;
+        string orderCustomerId = customerId.Trim();
         var voucherCode = cart.MaVoucher;
 
         var orderedItems = cart.ItemsDaChon;

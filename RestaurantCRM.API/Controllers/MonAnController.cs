@@ -28,12 +28,13 @@ namespace RestaurantCRM.API.Controllers
                         .ThenInclude(c => c.MaHoaDonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                .Include(m => m.MaLoaiMonNavigation)
                 .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock"))
                 .AsNoTracking();
 
-            if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "Tất cả")
+            if (!string.IsNullOrWhiteSpace(maLoai) && maLoai != "all" && maLoai != "Tất cả")
             {
-                query = query.Where(m => m.MaLoaiMon == maLoai);
+                query = query.Where(m => m.MaLoaiMon == maLoai || (m.MaLoaiMonNavigation != null && m.MaLoaiMonNavigation.TenLoaiMon == maLoai));
             }
 
             var now = DateTime.Now;
@@ -98,7 +99,8 @@ namespace RestaurantCRM.API.Controllers
                         .ThenInclude(c => c.MaHoaDonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
-                .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock")))
+                .Include(m => m.MaLoaiMonNavigation)
+                .Where(m => (m.MaLoaiMon == maLoai || (m.MaLoaiMonNavigation != null && m.MaLoaiMonNavigation.TenLoaiMon == maLoai)) && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock")))
                 .AsNoTracking()
                 .ToListAsync();
             var activeLoaiPromos = await GetActiveLoaiPromosAsync(today);
@@ -144,6 +146,7 @@ namespace RestaurantCRM.API.Controllers
                         .ThenInclude(c => c.MaHoaDonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                .Include(m => m.MaLoaiMonNavigation)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)

@@ -126,12 +126,17 @@ public class PhanHoiService
     /// </summary>
     public async Task<bool> AddReviewAsync(string maMon, string tenMon, int rating, string noiDung, string? maDonHang = null, string? customerName = null, string? customerId = null)
     {
+        if (string.IsNullOrWhiteSpace(customerId) || string.IsNullOrWhiteSpace(maMon))
+        {
+            return false;
+        }
+
         try
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
             var payload = new
             {
-                MaKhachHang = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId,
+                MaKhachHang = customerId.Trim(),
                 MaMon = maMon,
                 MaHoaDon = maDonHang,
                 SoSao = Math.Clamp(rating, 1, 5),
@@ -157,12 +162,17 @@ public class PhanHoiService
     /// </summary>
     public async Task<bool> AddReplyAsync(string maDanhGia, string noiDung, string senderName = "Khách hàng", string? customerId = null)
     {
+        if (string.IsNullOrWhiteSpace(customerId) || string.IsNullOrWhiteSpace(maDanhGia))
+        {
+            return false;
+        }
+
         try
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
             var payload = new
             {
-                NguoiGuiId = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId,
+                NguoiGuiId = customerId.Trim(),
                 NoiDung = noiDung
             };
             var response = await client.PostAsJsonAsync($"/api/DanhGia/{maDanhGia}/Reply", payload);
