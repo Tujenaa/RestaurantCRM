@@ -8,7 +8,7 @@ using RestaurantCRM.AdminApp.Services;
 
 namespace RestaurantCRM.AdminApp.Forms.KhachHang
 {
-    /// <summary>Xem chi tiết khách hàng: thông tin liên hệ, số liệu mua hàng và lịch sử đơn hàng.</summary>
+    /// <summary>Xem hồ sơ khách hàng, lịch sử tương tác và các món thường mua.</summary>
     public class KhachHangChiTietDialog : CrmDialog
     {
         private readonly KhachHangService _service = new KhachHangService();
@@ -18,7 +18,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly Panel _profile = new Panel();
         private readonly TableLayoutPanel _stats = new TableLayoutPanel();
         private readonly DataGridView _orders = new DataGridView();
-        private readonly Label _lblOrders = new Label();
+        private readonly DataGridView _ratings = new DataGridView();
+        private readonly DataGridView _surveys = new DataGridView();
+        private readonly DataGridView _preferences = new DataGridView();
+        private readonly TabControl _historyTabs = new TabControl();
+        private readonly Label _emptyOrders = EmptyLabel("Khách hàng chưa có đơn hàng.");
+        private readonly Label _emptyRatings = EmptyLabel("Khách hàng chưa gửi đánh giá nào.");
+        private readonly Label _emptySurveys = EmptyLabel("Khách hàng chưa tham gia khảo sát nào.");
+        private readonly Label _emptyPreferences = EmptyLabel("Chưa có dữ liệu món đã mua.");
         private readonly Button _btnSua;
         private readonly Button _btnKhoa;
 
@@ -26,44 +33,48 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         public bool DataChanged { get; private set; }
 
         public KhachHangChiTietDialog(string maKhachHang)
-            : base("Chi tiết khách hàng", "Mã khách hàng: " + maKhachHang, 780, 520, null, "Đóng")
+            : base("Chi tiết khách hàng", "Mã khách hàng: " + maKhachHang, 1000, 560, null, "Đóng")
         {
             _ma = maKhachHang;
-            const int L = Gutter, W = 780 - Gutter * 2;
+            const int L = Gutter, W = 1000 - Gutter * 2;
 
             // Khối hồ sơ (tự vẽ)
-            _profile.SetBounds(L, 4, W, 152);
+            _profile.SetBounds(L, 4, W, 144);
             _profile.BackColor = Color.White;
             typeof(Panel).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(_profile, true, null);
             _profile.Paint += PaintProfile;
             Body.Controls.Add(_profile);
 
             // 4 ô số liệu
-            _stats.SetBounds(L - 4, 162, W + 8, 100);   // ô KPI cần ~92px để số không tràn
+            _stats.SetBounds(L - 4, 152, W + 8, 96);
             _stats.ColumnCount = 4; _stats.RowCount = 1; _stats.BackColor = Color.White;
             _stats.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             for (int i = 0; i < 4; i++) _stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
             Body.Controls.Add(_stats);
 
-            _lblOrders.SetBounds(L, 272, W, 22);
-            _lblOrders.Text = "Lịch sử đơn hàng";
-            _lblOrders.Font = new Font(ThemeManager.FontFamily, 10F, FontStyle.Bold);
-            _lblOrders.ForeColor = ThemeManager.Ink;
-            Body.Controls.Add(_lblOrders);
+            _historyTabs.SetBounds(L, 258, W, 272);
+            _historyTabs.Font = new Font(ThemeManager.FontFamily, 9F);
+            _historyTabs.Controls.Add(BuildTab("Đơn hàng", _orders, _emptyOrders));
+            _historyTabs.Controls.Add(BuildTab("Đánh giá", _ratings, _emptyRatings));
+            _historyTabs.Controls.Add(BuildTab("Khảo sát", _surveys, _emptySurveys));
+            _historyTabs.Controls.Add(BuildTab("Sở thích", _preferences, _emptyPreferences));
 
-            var g = _orders;
-            g.SetBounds(L, 300, W, 214);
-            g.AllowUserToAddRows = false; g.AllowUserToDeleteRows = false; g.AllowUserToResizeRows = false;
-            g.ReadOnly = true; g.RowHeadersVisible = false; g.MultiSelect = false;
-            g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            g.BackgroundColor = Color.White; g.BorderStyle = BorderStyle.None;
-            g.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            g.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ma", HeaderText = "Mã hóa đơn", FillWeight = 22 });
-            g.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày đặt", FillWeight = 28, DefaultCellStyle = { Format = "dd/MM/yyyy HH:mm" } });
-            g.Columns.Add(new DataGridViewTextBoxColumn { Name = "Tien", HeaderText = "Tổng tiền", FillWeight = 26, DefaultCellStyle = { Format = "#,##0 đ", Alignment = DataGridViewContentAlignment.MiddleRight } });
-            g.Columns.Add(new DataGridViewTextBoxColumn { Name = "TT", HeaderText = "Trạng thái", FillWeight = 24 });
-            Body.Controls.Add(g);
-            UiStyler.StyleGrid(g);
+            _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ma", HeaderText = "Mã hóa đơn", FillWeight = 22 });
+            _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày đặt", FillWeight = 28 });
+            _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Tien", HeaderText = "Tổng tiền", FillWeight = 26 });
+            _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "TT", HeaderText = "Trạng thái", FillWeight = 24 });
+            _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày đánh giá", FillWeight = 25 });
+            _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mon", HeaderText = "Món ăn", FillWeight = 28 });
+            _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao", HeaderText = "Số sao", FillWeight = 14 });
+            _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "NoiDung", HeaderText = "Nội dung", FillWeight = 60 });
+            _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "HienThi", HeaderText = "Trạng thái", FillWeight = 18 });
+            _ratings.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            _ratings.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            _surveys.Columns.Add(new DataGridViewTextBoxColumn { Name = "KhaoSat", HeaderText = "Khảo sát", FillWeight = 65 });
+            _surveys.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày trả lời", FillWeight = 35 });
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mon", HeaderText = "Món ăn", FillWeight = 70 });
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "SoLuong", HeaderText = "Số lượng đã mua", FillWeight = 30 });
+            Body.Controls.Add(_historyTabs);
 
             _btnSua = AddLeftButton("Sửa thông tin", ButtonSkin.Kind.Secondary);
             _btnKhoa = AddLeftButton("Khóa tài khoản", ButtonSkin.Kind.Secondary);
@@ -121,8 +132,76 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _orders.Rows.Clear();
             var list = _kh.LichSuHoaDon ?? new System.Collections.Generic.List<KhachHangHoaDonDto>();
             foreach (var d in list)
-                _orders.Rows.Add(d.MaHoaDon, (object)d.NgayDat, (object)(d.TongTien ?? 0), ThemeManager.CleanStatus(d.TrangThai));
-            _lblOrders.Text = list.Count == 0 ? "Lịch sử đơn hàng — khách chưa có đơn nào" : "Lịch sử đơn hàng (" + list.Count + ")";
+                _orders.Rows.Add(d.MaHoaDon, d.NgayDat.HasValue ? d.NgayDat.Value.ToString("dd/MM/yyyy HH:mm") : "—",
+                    (d.TongTien ?? 0).ToString("#,##0 đ"), ThemeManager.CleanStatus(d.TrangThai));
+            _historyTabs.TabPages[0].Text = "Đơn hàng (" + list.Count + ")";
+            _emptyOrders.Visible = list.Count == 0;
+
+            _ratings.Rows.Clear();
+            var reviews = _kh.LichSuDanhGia ?? new System.Collections.Generic.List<KhachHangDanhGiaDto>();
+            foreach (var d in reviews)
+            {
+                int stars = Math.Max(0, Math.Min(5, d.SoSao ?? 0));
+                _ratings.Rows.Add(
+                    d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—",
+                    string.IsNullOrWhiteSpace(d.TenMon) ? "Đánh giá dịch vụ" : d.TenMon,
+                    stars > 0 ? new string('★', stars) + " " + stars + "/5" : "—",
+                    string.IsNullOrWhiteSpace(d.NoiDung) ? "(Không có nhận xét bằng chữ)" : d.NoiDung,
+                    d.HienThi ? "Đang hiển thị" : "Đã ẩn");
+            }
+            _historyTabs.TabPages[1].Text = "Đánh giá (" + reviews.Count + ")";
+            _emptyRatings.Visible = reviews.Count == 0;
+
+            _surveys.Rows.Clear();
+            var surveys = _kh.LichSuKhaoSat ?? new System.Collections.Generic.List<KhachHangKhaoSatDto>();
+            foreach (var d in surveys)
+                _surveys.Rows.Add(string.IsNullOrWhiteSpace(d.TenKhaoSat) ? d.MaKhaoSat : d.TenKhaoSat,
+                    d.NgayTraLoi.HasValue ? d.NgayTraLoi.Value.ToString("dd/MM/yyyy HH:mm") : "—");
+            _historyTabs.TabPages[2].Text = "Khảo sát (" + surveys.Count + ")";
+            _emptySurveys.Visible = surveys.Count == 0;
+
+            _preferences.Rows.Clear();
+            var preferences = _kh.MonUaThich ?? new System.Collections.Generic.List<KhachHangMonUaThichDto>();
+            foreach (var d in preferences)
+                _preferences.Rows.Add(d.TenMon ?? d.MaMon ?? "Món ăn", d.SoLuongDaMua.ToString("N0"));
+            _historyTabs.TabPages[3].Text = "Sở thích (" + preferences.Count + ")";
+            _emptyPreferences.Visible = preferences.Count == 0;
+        }
+
+        private static Label EmptyLabel(string text)
+        {
+            return new Label
+            {
+                Text = text,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = ThemeManager.Muted,
+                BackColor = Color.White,
+                UseMnemonic = false
+            };
+        }
+
+        private TabPage BuildTab(string title, DataGridView grid, Label empty)
+        {
+            var page = new TabPage(title) { BackColor = Color.White, Padding = new Padding(4) };
+            empty.Visible = false;
+            grid.Dock = DockStyle.Fill;
+            grid.AllowUserToAddRows = false;
+            grid.AllowUserToDeleteRows = false;
+            grid.AllowUserToResizeRows = false;
+            grid.ReadOnly = true;
+            grid.RowHeadersVisible = false;
+            grid.MultiSelect = false;
+            grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            grid.BackgroundColor = Color.White;
+            grid.BorderStyle = BorderStyle.None;
+            grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            UiStyler.StyleGrid(grid);
+            page.Controls.Add(grid);
+            page.Controls.Add(empty);
+            empty.BringToFront();
+            return page;
         }
 
         private void AddStat(int col, string caption, string value, Color accent)

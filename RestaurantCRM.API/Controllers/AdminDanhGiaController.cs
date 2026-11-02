@@ -24,6 +24,58 @@ namespace RestaurantCRM.API.Controllers
             _service = service;
         }
 
+        // GET: api/AdminDanhGia/PhanTichMon - Tổng hợp đánh giá theo món ăn.
+        [HttpGet("PhanTichMon")]
+        public async Task<IActionResult> GetPhanTichMon()
+        {
+            var danhGias = await _service.Query<DanhGia>()
+                .Where(d => d.MaMon != null)
+                .Select(d => new
+                {
+                    d.MaMon,
+                    TenMon = d.MaMonNavigation != null ? d.MaMonNavigation.TenMon : null,
+                    d.SoSao,
+                    d.NoiDung,
+                    d.NgayDanhGia
+                })
+                .ToListAsync();
+
+            var ketQua = danhGias
+                .GroupBy(d => d.MaMon)
+                .Select(g =>
+                {
+                    var diem = g.Where(d => d.SoSao.HasValue && d.SoSao >= 1 && d.SoSao <= 5)
+                        .Select(d => d.SoSao!.Value)
+                        .ToList();
+                    return new
+                    {
+                        MaMon = g.Key,
+                        TenMon = g.Select(d => d.TenMon).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? g.Key,
+                        SoLuotDanhGia = g.Count(),
+                        DiemTrungBinh = diem.Count == 0 ? (double?)null : Math.Round(diem.Average(), 2),
+                        SoSao1 = diem.Count(s => s == 1),
+                        SoSao2 = diem.Count(s => s == 2),
+                        SoSao3 = diem.Count(s => s == 3),
+                        SoSao4 = diem.Count(s => s == 4),
+                        SoSao5 = diem.Count(s => s == 5),
+                        NhanXet = g.Where(d => !string.IsNullOrWhiteSpace(d.NoiDung))
+                            .OrderByDescending(d => d.NgayDanhGia)
+                            .Select(d => new
+                            {
+                                d.SoSao,
+                                d.NoiDung,
+                                d.NgayDanhGia
+                            })
+                            .ToList()
+                    };
+                })
+                .OrderByDescending(mon => mon.SoLuotDanhGia)
+                .ThenBy(mon => mon.TenMon)
+                .ToList();
+
+            return Ok(ketQua);
+        }
+
         // GET: api/AdminDanhGia?search=&trangThai=&soSao=
         //   trangThai: (bỏ trống) = chỉ phản hồi đang hiển thị (giữ như cũ cho Dashboard)
         //              TatCa | ChuaXuLy | DaXuLy | DaAn  (ChuaTraLoi / DaTraLoi giữ để tương thích)

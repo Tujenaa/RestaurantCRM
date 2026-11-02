@@ -108,6 +108,9 @@
     <Compile Include="Controls\PhanHoi\ChatBubble.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\PhanHoi\ReviewHoverCard.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Controls\Pagekit.cs" />
     <Compile Include="Controls\UcDataGridView.cs">
       <SubType>Component</SubType>
@@ -222,6 +225,9 @@
     </Compile>
     <Compile Include="Services\KhuyenMai\VoucherMarginCalculator.cs" />
     <Compile Include="Forms\PhanHoi\PhanHoiForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\PhanHoi\PhanTichDanhGiaDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\PhanHoi\PhanHoiForm.Designer.cs">

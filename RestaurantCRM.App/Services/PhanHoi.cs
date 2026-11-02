@@ -27,6 +27,12 @@ namespace RestaurantCRM.AdminApp.Services
             return await GetAsync<List<PhanHoiDto>>(Base + "?" + string.Join("&", q)) ?? new List<PhanHoiDto>();
         }
 
+        public async Task<List<PhanTichDanhGiaMonDto>> GetPhanTichMonAsync()
+        {
+            return await GetAsync<List<PhanTichDanhGiaMonDto>>(Base + "/PhanTichMon")
+                ?? new List<PhanTichDanhGiaMonDto>();
+        }
+
         public Task<PhanHoiDto> GetByIdAsync(string maDanhGia)
         {
             return GetAsync<PhanHoiDto>(Base + "/" + E(maDanhGia));
