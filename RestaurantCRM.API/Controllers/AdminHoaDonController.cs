@@ -77,7 +77,11 @@ namespace RestaurantCRM.API.Controllers
                     ? new { HoTen = hoaDon.MaKhachHangNavigation.HoTen, SoDienThoai = hoaDon.MaKhachHangNavigation.SoDienThoai } 
                     : new { HoTen = !string.IsNullOrEmpty(hoaDon.TenKhachHang) ? hoaDon.TenKhachHang : "Khách vãng lai", SoDienThoai = hoaDon.SoDienThoai ?? "" },
                 NhanVienPhuTrach = hoaDon.MaNhanVienNavigation != null ? hoaDon.MaNhanVienNavigation.HoTen : null,
-                KhuyenMai = hoaDon.MaKMDonHangNavigation?.MaChuongTrinhNavigation?.TenChuongTrinh,
+                KhuyenMai = hoaDon.MaKMDonHangNavigation != null
+                    ? (!string.IsNullOrWhiteSpace(hoaDon.MaKMDonHangNavigation.MaVoucher)
+                        ? $"[{hoaDon.MaKMDonHangNavigation.MaVoucher}] {hoaDon.MaKMDonHangNavigation.MaChuongTrinhNavigation?.TenChuongTrinh}".Trim()
+                        : hoaDon.MaKMDonHangNavigation.MaChuongTrinhNavigation?.TenChuongTrinh)
+                    : null,
                 ThanhToan = hoaDon.ThanhToan.Select(t => new { t.PhuongThuc, t.NgayThanhToan, t.SoTien, t.TrangThai }),
                 ChiTiet = hoaDon.ChiTietHoaDon.Select(c => new
                 {

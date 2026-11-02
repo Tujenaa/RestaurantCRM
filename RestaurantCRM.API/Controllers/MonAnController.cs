@@ -23,6 +23,9 @@ namespace RestaurantCRM.API.Controllers
             var query = _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.KmTheoSp)
+                    .ThenInclude(k => k.ChiTietHoaDon)
+                        .ThenInclude(c => c.MaHoaDonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .Where(m => m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock"))
@@ -36,14 +39,10 @@ namespace RestaurantCRM.API.Controllers
             var now = DateTime.Now;
             var today = DateOnly.FromDateTime(now);
             var dbList = await query.ToListAsync();
-            
+            var activeLoaiPromos = await GetActiveLoaiPromosAsync(today);
+
             var result = dbList.Select(m => {
-                var activeKm = m.KmTheoSp.FirstOrDefault(k => string.IsNullOrEmpty(k.MaVoucher) && k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
-                double donGia = m.DonGia ?? 0;
-                double giaSauGiam = donGia;
-                if (activeKm != null) {
-                    giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
-                }
+                double giaSauGiam = CalculateDonGiaSauGiam(m, activeLoaiPromos, today);
 
                 int soSuatKhaDung = 0;
                 if (m.DinhLuong != null && m.DinhLuong.Any())
@@ -69,7 +68,7 @@ namespace RestaurantCRM.API.Controllers
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = RemoveDiacritics(search);
-                result = result.Where(m => 
+                result = result.Where(m =>
                     RemoveDiacritics(m.TenMon ?? "").Contains(s)
                 ).ToList();
             }
@@ -94,19 +93,18 @@ namespace RestaurantCRM.API.Controllers
             var list = await _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.KmTheoSp)
+                    .ThenInclude(k => k.ChiTietHoaDon)
+                        .ThenInclude(c => c.MaHoaDonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .Where(m => m.MaLoaiMon == maLoai && (m.TrangThai == "Active" || m.TrangThai == "InStock" || (m.TrangThai != "Discontinued" && m.TrangThai != "Inactive" && m.TrangThai != "OutOfStock")))
                 .AsNoTracking()
                 .ToListAsync();
+            var activeLoaiPromos = await GetActiveLoaiPromosAsync(today);
 
             var result = list.Select(m => {
-                var activeKm = m.KmTheoSp.FirstOrDefault(k => string.IsNullOrEmpty(k.MaVoucher) && k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
-                double donGia = m.DonGia ?? 0;
-                double giaSauGiam = donGia;
-                if (activeKm != null) {
-                    giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
-                }
+                double giaSauGiam = CalculateDonGiaSauGiam(m, activeLoaiPromos, today);
 
                 int soSuatKhaDung = 0;
                 if (m.DinhLuong != null && m.DinhLuong.Any())
@@ -141,6 +139,9 @@ namespace RestaurantCRM.API.Controllers
             var monAn = await _service.Query<MonAn>()
                 .Include(m => m.KmTheoSp)
                     .ThenInclude(k => k.MaChuongTrinhNavigation)
+                .Include(m => m.KmTheoSp)
+                    .ThenInclude(k => k.ChiTietHoaDon)
+                        .ThenInclude(c => c.MaHoaDonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
@@ -150,12 +151,8 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound();
             }
 
-            var activeKm = monAn.KmTheoSp.FirstOrDefault(k => string.IsNullOrEmpty(k.MaVoucher) && k.MaChuongTrinhNavigation != null && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
-            double donGia = monAn.DonGia ?? 0;
-            double giaSauGiam = donGia;
-            if (activeKm != null) {
-                giaSauGiam = donGia - (activeKm.TienGiam ?? 0) - (donGia * (activeKm.PhanTramGiam ?? 0) / 100.0);
-            }
+            var activeLoaiPromos = await GetActiveLoaiPromosAsync(today);
+            double giaSauGiam = CalculateDonGiaSauGiam(monAn, activeLoaiPromos, today);
 
             int soSuatKhaDung = 0;
             if (monAn.DinhLuong != null && monAn.DinhLuong.Any())
@@ -183,6 +180,88 @@ namespace RestaurantCRM.API.Controllers
             });
         }
 
+        private async Task<List<KmTheoLoai>> GetActiveLoaiPromosAsync(DateOnly today)
+        {
+            return await _service.Query<KmTheoLoai>()
+                .Include(k => k.MaChuongTrinhNavigation)
+                .Include(k => k.ChiTietHoaDon)
+                    .ThenInclude(c => c.MaHoaDonNavigation)
+                .Where(k => k.MaChuongTrinhNavigation != null
+                         && (k.MaVoucher == null || !k.MaVoucher.StartsWith("[DA_HUY]_"))
+                         && ((k.PhanTramGiam.HasValue && k.PhanTramGiam > 0) || (k.TienGiam.HasValue && k.TienGiam > 0))
+                         && (!k.SoLuongToiThieu.HasValue || k.SoLuongToiThieu <= 0 || k.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count() < k.SoLuongToiThieu.Value)
+                         && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today)
+                         && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today))
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        private static double CalculateDonGiaSauGiam(MonAn m, List<KmTheoLoai> activeLoaiPromos, DateOnly today)
+        {
+            double donGia = m.DonGia ?? 0;
+            if (donGia <= 0) return 0;
+
+            double maxDiscount = 0;
+
+            if (m.KmTheoSp != null)
+            {
+                var validSpPromos = m.KmTheoSp.Where(k =>
+                    k.MaChuongTrinhNavigation != null &&
+                    (k.MaVoucher == null || !k.MaVoucher.StartsWith("[DA_HUY]_")) &&
+                    ((k.PhanTramGiam.HasValue && k.PhanTramGiam > 0) || (k.TienGiam.HasValue && k.TienGiam > 0)) &&
+                    (!k.SoLuongToiThieu.HasValue || k.SoLuongToiThieu <= 0 || k.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count() < k.SoLuongToiThieu.Value) &&
+                    (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today) &&
+                    (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today));
+
+                foreach (var k in validSpPromos)
+                {
+                    double disc = 0;
+                    if (k.PhanTramGiam.HasValue && k.PhanTramGiam.Value > 0)
+                        disc = donGia * k.PhanTramGiam.Value / 100.0;
+                    else if (k.TienGiam.HasValue && k.TienGiam.Value > 0)
+                        disc = k.TienGiam.Value;
+
+                    if (k.GiamToiDa.HasValue && k.GiamToiDa.Value > 0 && disc > k.GiamToiDa.Value)
+                        disc = k.GiamToiDa.Value;
+
+                    if (disc > maxDiscount) maxDiscount = disc;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(m.MaLoaiMon) && activeLoaiPromos != null)
+            {
+                foreach (var p in activeLoaiPromos.Where(x => x.MaLoaiMon == m.MaLoaiMon))
+                {
+                    if (p.GiaTriDonToiThieu.HasValue && donGia < p.GiaTriDonToiThieu.Value)
+                        continue;
+
+                    double disc = 0;
+                    if (p.PhanTramGiam.HasValue && p.PhanTramGiam.Value > 0)
+                        disc = donGia * p.PhanTramGiam.Value / 100.0;
+                    else if (p.TienGiam.HasValue && p.TienGiam.Value > 0)
+                        disc = p.TienGiam.Value;
+
+                    if (p.GiamToiDa.HasValue && p.GiamToiDa.Value > 0 && disc > p.GiamToiDa.Value)
+                        disc = p.GiamToiDa.Value;
+
+                    if (disc > maxDiscount) maxDiscount = disc;
+                }
+            }
+
+            double giaVon = m.DinhLuong != null
+                ? Math.Round(m.DinhLuong.Sum(dl => (double)dl.SoLuongCan * (dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0)), 0)
+                : 0;
+
+            double giaSauGiam = Math.Max(0, donGia - maxDiscount);
+            if (giaVon > 0 && giaSauGiam < giaVon)
+            {
+                maxDiscount = Math.Max(0, donGia - giaVon);
+                giaSauGiam = donGia - maxDiscount;
+            }
+
+            return giaSauGiam;
+        }
+
         private bool MonAnExists(string id)
         {
             return _service.Query<MonAn>().Any(e => e.MaMon == id);
@@ -207,7 +286,7 @@ namespace RestaurantCRM.API.Controllers
             foreach (var ch in u) text = text.Replace(ch, "u");
             foreach (var ch in y) text = text.Replace(ch, "y");
             foreach (var ch in d) text = text.Replace(ch, "d");
-            
+
             return text;
         }
     }

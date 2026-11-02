@@ -16,6 +16,7 @@ namespace RestaurantCRM.API.DTOs
     {
         public string MaMon { get; set; } = null!;
         public int SoLuong { get; set; }
+        public string? MaVoucherMon { get; set; }
     }
 
     public class CartCheckRequest

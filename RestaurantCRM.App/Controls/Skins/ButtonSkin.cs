@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -164,7 +164,7 @@ namespace RestaurantCRM.AdminApp.Controls
             if (glyph != null && ts.Width + iconW + 16 > b.Width) { glyph = null; iconW = 0; }
             int total = ts.Width + iconW;
             // Nút tự giãn mà vẫn thiếu chỗ (vd font lớn hơn dự kiến) -> nới rộng ở lượt vẽ sau
-            if (st.AutoFit && !st.Fitting && total + 28 > b.Width)
+            if (st.AutoFit && !st.Fitting && total + 28 > b.Width && b.IsHandleCreated)
                 b.BeginInvoke((Action)(() => Fit(b, st)));
             int pad = 12;
             int x;

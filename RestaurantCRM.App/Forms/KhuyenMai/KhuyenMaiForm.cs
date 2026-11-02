@@ -266,16 +266,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
             _dgvChuongTrinh.Columns.Add("NgayBatDau", "Bắt đầu");
             _dgvChuongTrinh.Columns.Add("NgayKetThuc", "Kết thúc");
             _dgvChuongTrinh.Columns.Add("TrangThai", "Trạng thái");
-            _dgvChuongTrinh.Columns.Add("SoLuongVoucher", "Số Voucher");
-            _dgvChuongTrinh.Columns.Add("SoLuongMonKm", "Số món KM");
+            _dgvChuongTrinh.Columns.Add("SoLuongVoucher", "Tổng số Voucher");
 
             _dgvChuongTrinh.Columns["MaChuongTrinh"].Width = 120;
             _dgvChuongTrinh.Columns["TenChuongTrinh"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-            _dgvChuongTrinh.Columns["NgayBatDau"].Width = 110;
-            _dgvChuongTrinh.Columns["NgayKetThuc"].Width = 110;
-            _dgvChuongTrinh.Columns["TrangThai"].Width = 120;
-            _dgvChuongTrinh.Columns["SoLuongVoucher"].Width = 100;
-            _dgvChuongTrinh.Columns["SoLuongMonKm"].Width = 100;
+            _dgvChuongTrinh.Columns["NgayBatDau"].Width = 115;
+            _dgvChuongTrinh.Columns["NgayKetThuc"].Width = 115;
+            _dgvChuongTrinh.Columns["TrangThai"].Width = 130;
+            _dgvChuongTrinh.Columns["SoLuongVoucher"].Width = 140;
 
             _dgvChuongTrinh.CellFormatting += Dgv_CellFormatting;
             PageKit.FitColumns(_dgvChuongTrinh);
@@ -580,8 +578,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
                     string.IsNullOrEmpty(ct.NgayBatDau) ? "-" : ct.NgayBatDau,
                     string.IsNullOrEmpty(ct.NgayKetThuc) ? "Vô thời hạn" : ct.NgayKetThuc,
                     ct.TrangThai,
-                    ct.SoLuongVoucher,
-                    ct.SoLuongMonKm
+                    ct.SoLuongVoucher
                 );
             }
         }

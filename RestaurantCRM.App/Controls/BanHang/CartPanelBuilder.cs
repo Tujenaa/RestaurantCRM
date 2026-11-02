@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -620,10 +620,10 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             RenderCartLines(cartService);
 
             decimal subTotal = cartService.SubTotal;
-            var (bestVoucher, bestDisc, nearVoucher, missingForNear) = calcService.FindBestVoucher(subTotal, allVouchers, cartService.Items);
+            var (bestVoucher, bestDisc) = calcService.FindBestVoucher(subTotal, allVouchers, cartService.Items);
             var (_, voucherDiscount, finalTotal) = calcService.CalculateTotals(cartService.Items, appliedVoucher);
 
-            UpdatePromoBox(subTotal, appliedVoucher, bestVoucher, bestDisc, nearVoucher, missingForNear, calcService);
+            UpdatePromoBox(subTotal, appliedVoucher, bestVoucher, bestDisc, calcService);
 
             _lblSubTotalValue.Text = $"{subTotal:N0} đ";
 
@@ -937,7 +937,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             return host;
         }
 
-        private void UpdatePromoBox(decimal subTotal, VoucherDto appliedVoucher, VoucherDto best, decimal bestDisc, VoucherDto near, decimal missing, OrderCalculationService calcService)
+        private void UpdatePromoBox(decimal subTotal, VoucherDto appliedVoucher, VoucherDto best, decimal bestDisc, OrderCalculationService calcService)
         {
             if (subTotal <= 0)
             {
@@ -981,17 +981,6 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 _lnkChangePromo.Text = "Chọn mã ▾";
                 _pnlPromoBox.FillColor = ThemeManager.PrimarySoft;
                 _pnlPromoBox.BorderColor = Color.FromArgb(247, 213, 192);
-            }
-            else if (near != null)
-            {
-                _lblPromoIcon.Text = "💡";
-                _lblPromoTitle.Text = $"+{missing:N0} đ";
-                _lblPromoTitle.ForeColor = ThemeManager.Amber;
-                _lblPromoSub.Text = $"Nhận mã [{near.MaVoucher}]";
-                SetVoucherApplied(false);
-                _lnkChangePromo.Text = "Xem mã ▾";
-                _pnlPromoBox.FillColor = Color.FromArgb(255, 251, 235);
-                _pnlPromoBox.BorderColor = Color.FromArgb(254, 243, 199);
             }
             else
             {

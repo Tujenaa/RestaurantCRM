@@ -191,7 +191,7 @@ public class GioHangService
 
         var voucher = session.GetString(VoucherKey);
         var subtotal = cart.Sum(x => x.ThanhTien);
-        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, cart, subtotal);
+        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, subtotal);
 
         return new GioHangViewModel
         {
@@ -255,7 +255,9 @@ public class GioHangService
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var vouchers = await response.Content.ReadFromJsonAsync<List<VoucherViewModel>>(options);
-                return vouchers ?? new List<VoucherViewModel>();
+                return (vouchers ?? new List<VoucherViewModel>())
+                    .Where(v => string.IsNullOrEmpty(v.PhamViApDung) || string.Equals(v.PhamViApDung, "TOAN_DON", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
         }
         catch (Exception ex)
@@ -296,6 +298,14 @@ public class GioHangService
                 var apiResult = await response.Content.ReadFromJsonAsync<KiemTraVoucherApiResponse>(options);
                 if (apiResult != null && apiResult.Valid)
                 {
+                    if (string.Equals(apiResult.PhamViApDung, "THEO_MON", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(apiResult.PhamViApDung, "THEO_LOAI", StringComparison.OrdinalIgnoreCase))
+                    {
+                        session.Remove(VoucherKey);
+                        session.Remove(VoucherInfoKey);
+                        return (false, "Các ưu đãi theo món và loại món đã được hệ thống tự động chọn mức giảm cao nhất áp thẳng vào giá món ăn. Tại giỏ hàng chỉ áp dụng voucher giảm theo toàn đơn hàng.", 0m);
+                    }
+
                     var savedCode = !string.IsNullOrWhiteSpace(apiResult.MaVoucher)
                         ? apiResult.MaVoucher
                         : (!string.IsNullOrWhiteSpace(apiResult.MaKmvoucher) ? apiResult.MaKmvoucher : clean);
@@ -314,13 +324,12 @@ public class GioHangService
                         MaMon = apiResult.MaMon
                     };
 
-                    // API không biết giỏ hàng -> tự tính giảm giá theo đúng phạm vi áp dụng
-                    var realDiscount = ComputeScopedDiscount(voucherInfo, cart.Items, subtotal);
+                    var realDiscount = ComputeScopedDiscount(voucherInfo, subtotal);
                     if (realDiscount <= 0)
                     {
                         session.Remove(VoucherKey);
                         session.Remove(VoucherInfoKey);
-                        return (false, BuildNotApplicableMessage(voucherInfo, subtotal, cart.Items), 0m);
+                        return (false, BuildNotApplicableMessage(voucherInfo, subtotal), 0m);
                     }
 
                     voucherInfo.LastCalculatedDiscount = realDiscount;
@@ -392,7 +401,7 @@ public class GioHangService
         return (true, null);
     }
 
-    private decimal CalculateDiscountForCart(ISession session, List<GioHangItemViewModel> items, decimal subtotal)
+    private decimal CalculateDiscountForCart(ISession session, decimal subtotal)
     {
         if (subtotal <= 0) return 0m;
 
@@ -402,7 +411,7 @@ public class GioHangService
             try
             {
                 var info = JsonSerializer.Deserialize<AppliedVoucherSessionData>(infoJson);
-                if (info != null) return ComputeScopedDiscount(info, items, subtotal);
+                if (info != null) return ComputeScopedDiscount(info, subtotal);
             }
             catch { }
         }
@@ -410,35 +419,13 @@ public class GioHangService
         return 0m;
     }
 
-    /// <summary>
-    /// Tính tiền giảm chỉ trên các dòng giỏ hàng thuộc phạm vi voucher:
-    /// TOAN_DON = cả giỏ, THEO_LOAI = món cùng loại, THEO_MON = đúng món đó.
-    /// </summary>
-    private static decimal GetScopedBase(AppliedVoucherSessionData info, List<GioHangItemViewModel> items, decimal subtotal)
+    private static decimal ComputeScopedDiscount(AppliedVoucherSessionData info, decimal subtotal)
     {
         var scope = string.IsNullOrWhiteSpace(info.PhamViApDung) ? "TOAN_DON" : info.PhamViApDung;
-        if (scope == "THEO_MON")
-        {
-            if (string.IsNullOrWhiteSpace(info.MaMon)) return 0m;
-            return items.Where(x => string.Equals(x.MaMon, info.MaMon, StringComparison.OrdinalIgnoreCase))
-                        .Sum(x => x.ThanhTien);
-        }
-        if (scope == "THEO_LOAI")
-        {
-            if (string.IsNullOrWhiteSpace(info.MaLoaiMon)) return 0m;
-            return items.Where(x => string.Equals(x.MaLoaiMon, info.MaLoaiMon, StringComparison.OrdinalIgnoreCase))
-                        .Sum(x => x.ThanhTien);
-        }
-        return subtotal;
-    }
-
-    private static decimal ComputeScopedDiscount(AppliedVoucherSessionData info, List<GioHangItemViewModel> items, decimal subtotal)
-    {
-        var baseAmount = GetScopedBase(info, items, subtotal);
-        if (baseAmount <= 0) return 0m;
+        if (scope != "TOAN_DON" || subtotal <= 0) return 0m;
 
         if (info.GiaTriDonToiThieu.HasValue && info.GiaTriDonToiThieu.Value > 0
-            && baseAmount < (decimal)info.GiaTriDonToiThieu.Value)
+            && subtotal < (decimal)info.GiaTriDonToiThieu.Value)
         {
             return 0m;
         }
@@ -446,7 +433,7 @@ public class GioHangService
         decimal disc = 0m;
         if (info.PhanTramGiam.HasValue && info.PhanTramGiam.Value > 0)
         {
-            disc = Math.Round(baseAmount * (decimal)info.PhanTramGiam.Value / 100m, 0);
+            disc = Math.Round(subtotal * (decimal)info.PhanTramGiam.Value / 100m, 0);
             if (info.GiamToiDa.HasValue && info.GiamToiDa.Value > 0 && disc > (decimal)info.GiamToiDa.Value)
             {
                 disc = (decimal)info.GiamToiDa.Value;
@@ -457,29 +444,16 @@ public class GioHangService
             disc = (decimal)info.TienGiam.Value;
         }
 
-        return Math.Min(disc, baseAmount);
+        return Math.Min(disc, subtotal);
     }
 
-    private static string BuildNotApplicableMessage(AppliedVoucherSessionData info, decimal subtotal, List<GioHangItemViewModel> items)
+    private static string BuildNotApplicableMessage(AppliedVoucherSessionData info, decimal subtotal)
     {
-        var baseAmount = GetScopedBase(info, items, subtotal);
-        if (baseAmount <= 0)
+        if (info.GiaTriDonToiThieu.HasValue && subtotal < (decimal)info.GiaTriDonToiThieu.Value)
         {
-            return info.PhamViApDung == "THEO_LOAI"
-                ? "Mã này chỉ áp dụng cho nhóm món nhất định. Giỏ hàng của bạn chưa có món thuộc nhóm đó."
-                : "Mã này chỉ áp dụng cho một món nhất định. Giỏ hàng của bạn chưa có món đó.";
-        }
-        if (info.GiaTriDonToiThieu.HasValue && baseAmount < (decimal)info.GiaTriDonToiThieu.Value)
-        {
-            return $"Mã này yêu cầu giá trị áp dụng tối thiểu {info.GiaTriDonToiThieu.Value:N0}đ (hiện có {baseAmount:N0}đ).";
+            return $"Mã này yêu cầu đơn hàng tối thiểu {info.GiaTriDonToiThieu.Value:N0}đ (hiện có {subtotal:N0}đ).";
         }
         return "Mã ưu đãi không áp dụng được cho giỏ hàng hiện tại.";
-    }
-
-    public static decimal CalculateDiscount(string code, decimal subtotal, List<GioHangItemViewModel>? items = null, MonAnService? monAnService = null)
-    {
-        // Legacy fallback
-        return 0m;
     }
 
     public void Clear(ISession session, string? customerId = null)

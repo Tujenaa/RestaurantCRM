@@ -21,9 +21,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             decimal currentSubTotal, 
             List<VoucherDto> vouchers, 
             VoucherDto currentApplied, 
-            IEnumerable<CartItem> cartItems = null,
-            CartService cartService = null,
-            Action onCartUpdated = null)
+            IEnumerable<CartItem> cartItems = null)
         {
             Text = "Chọn Voucher & Khuyến Mãi Hóa Đơn";
             StartPosition = FormStartPosition.CenterParent;
@@ -126,31 +124,13 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                     return;
                 }
 
-                // Nếu là voucher món hoặc loại món: kiểm tra và cho phép đổi trực tiếp
+                // Voucher theo món hoặc loại món đã được hệ thống tự động chọn mức cao nhất áp thẳng vào món
                 if (found.PhamViApDung == "THEO_MON" || found.PhamViApDung == "THEO_LOAI")
                 {
-                    var matched = found.PhamViApDung == "THEO_MON"
-                        ? currentCartList.Where(x => string.Equals(x.MaMon, found.MaMon, StringComparison.OrdinalIgnoreCase)).ToList()
-                        : currentCartList.Where(x => string.Equals(x.MaLoaiMon, found.MaLoaiMon, StringComparison.OrdinalIgnoreCase)).ToList();
-
-                    if (!matched.Any())
-                    {
-                        string target = found.PhamViApDung == "THEO_LOAI" ? $"nhóm '{found.TenLoaiMon ?? found.MaLoaiMon}'" : $"món '{found.TenMon ?? found.MaMon}'";
-                        MessageBox.Show(this, $"Mã '{found.MaVoucher}' chỉ áp dụng cho {target}. Giỏ hàng hiện chưa có món phù hợp.", "Không áp dụng được", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    if (matched.All(x => string.Equals(x.AppliedVoucherCode, found.MaVoucher, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        MessageBox.Show(this, $"Mã voucher '{found.MaVoucher}' đã được giảm trực tiếp vào đơn giá món ăn rồi (không áp trùng 2 lần).", "Đã áp dụng", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
-
-                    cartService?.ChangeDishVoucher(matched, found, calcService);
-                    onCartUpdated?.Invoke();
-                    MessageBox.Show(this, $"Đã đổi món ăn sang áp dụng ưu đãi voucher [{found.MaVoucher}].", "Đổi voucher thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    DialogResult = DialogResult.OK;
-                    Close();
+                    MessageBox.Show(this,
+                        $"Mã '{found.MaVoucher}' là ưu đãi theo {(found.PhamViApDung == "THEO_LOAI" ? "loại món" : "món ăn")}.\n" +
+                        "Các ưu đãi theo món và loại món được hệ thống tự động chọn mức giảm cao nhất và trừ thẳng vào đơn giá món ăn. Tại đây chỉ chọn voucher giảm theo toàn đơn hàng.",
+                        "Ưu đãi tự động theo món", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -167,7 +147,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             pnlInput.Controls.Add(btnApplyCode);
 
-            // Danh sách các voucher khả dụng
+            // Danh sách các voucher toàn đơn đủ điều kiện khả dụng
             var flow = new FlowLayoutPanel
             {
                 Location = new Point(0, 104),
@@ -179,12 +159,23 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             root.Controls.Add(flow);
 
-            var activeList = (vouchers ?? new List<VoucherDto>()).Where(v => v.TrangThai == "Đang áp dụng").ToList();
-            if (!activeList.Any())
+            var eligibleOrderVouchers = (vouchers ?? new List<VoucherDto>())
+                .Where(v => v.TrangThai == "Đang áp dụng" && v.PhamViApDung == "TOAN_DON")
+                .Select(v => new
+                {
+                    Voucher = v,
+                    Eval = calcService.EvaluateVoucher(v, currentSubTotal, currentCartList)
+                })
+                .Where(x => x.Eval.isEligible)
+                .OrderByDescending(x => x.Eval.discount)
+                .Select(x => x.Voucher)
+                .ToList();
+
+            if (!eligibleOrderVouchers.Any())
             {
                 flow.Controls.Add(new Label
                 {
-                    Text = "Hiện không có voucher nào đang diễn ra.",
+                    Text = "Hiện chưa có voucher toàn đơn nào đủ điều kiện áp dụng cho giỏ hàng này.",
                     ForeColor = ThemeManager.Muted,
                     Margin = new Padding(10),
                     AutoSize = true
@@ -192,25 +183,11 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             }
             else
             {
-                foreach (var v in activeList)
+                foreach (var v in eligibleOrderVouchers)
                 {
-                    bool isDishScope = v.PhamViApDung == "THEO_MON" || v.PhamViApDung == "THEO_LOAI";
-                    var matchedItems = isDishScope
-                        ? (v.PhamViApDung == "THEO_MON"
-                            ? currentCartList.Where(x => string.Equals(x.MaMon, v.MaMon, StringComparison.OrdinalIgnoreCase)).ToList()
-                            : currentCartList.Where(x => string.Equals(x.MaLoaiMon, v.MaLoaiMon, StringComparison.OrdinalIgnoreCase)).ToList())
-                        : new List<CartItem>();
-
-                    bool isAppliedDirectlyToDish = isDishScope && matchedItems.Any() 
-                        && matchedItems.All(x => string.Equals(x.AppliedVoucherCode, v.MaVoucher, StringComparison.OrdinalIgnoreCase));
-
-                    bool canSwitchToThisDishVoucher = isDishScope && matchedItems.Any() && !isAppliedDirectlyToDish;
-
-                    var (isEligible, discount, missing) = calcService.EvaluateVoucher(v, currentSubTotal, currentCartList);
-                    bool isCurrentOrderVoucher = !isDishScope && currentApplied != null 
+                    decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
+                    bool isCurrentOrderVoucher = currentApplied != null
                         && (currentApplied.MaVoucher == v.MaVoucher || currentApplied.MaKmvoucher == v.MaKmvoucher);
-
-                    bool cardActive = isAppliedDirectlyToDish || canSwitchToThisDishVoucher || isEligible;
 
                     var card = new RoundedPanel
                     {
@@ -218,26 +195,21 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                         Margin = new Padding(0, 0, 0, 8),
                         Radius = 8,
                         BorderWidth = 1,
-                        BorderColor = isCurrentOrderVoucher || isAppliedDirectlyToDish 
-                            ? Color.FromArgb(14, 124, 134) 
-                            : cardActive ? Color.FromArgb(203, 213, 225) : Color.FromArgb(226, 232, 240),
-                        FillColor = isCurrentOrderVoucher || isAppliedDirectlyToDish 
-                            ? Color.FromArgb(240, 253, 250) 
-                            : cardActive ? Color.White : Color.FromArgb(241, 245, 249)
+                        BorderColor = isCurrentOrderVoucher
+                            ? Color.FromArgb(14, 124, 134)
+                            : Color.FromArgb(203, 213, 225),
+                        FillColor = isCurrentOrderVoucher
+                            ? Color.FromArgb(240, 253, 250)
+                            : Color.White
                     };
-                    Color grayText = Color.FromArgb(148, 163, 184);
-
-                    string phamViTag = v.PhamViApDung == "THEO_LOAI" ? $" [Nhóm: {v.TenLoaiMon ?? v.MaLoaiMon}]"
-                                     : v.PhamViApDung == "THEO_MON" ? $" [Món: {v.TenMon ?? v.MaMon}]"
-                                     : " [Toàn đơn]";
 
                     var lblCode = new Label
                     {
-                        Text = $"🎟️ {v.MaVoucher}{phamViTag}",
+                        Text = $"🎟️ {v.MaVoucher} [Toàn đơn]",
                         Location = new Point(10, 8),
                         AutoSize = true,
                         Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                        ForeColor = cardActive ? Color.FromArgb(29, 78, 216) : grayText
+                        ForeColor = Color.FromArgb(29, 78, 216)
                     };
                     card.Controls.Add(lblCode);
 
@@ -247,145 +219,39 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                         Location = new Point(10, 30),
                         AutoSize = true,
                         Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                        ForeColor = cardActive ? Color.FromArgb(22, 163, 74) : grayText
+                        ForeColor = Color.FromArgb(22, 163, 74)
                     };
                     card.Controls.Add(lblDiscountDesc);
 
-                    decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
-                    string conditionText = isAppliedDirectlyToDish
-                        ? $"✓ Đang áp dụng trực tiếp cho: {string.Join(", ", matchedItems.Select(m => m.Name).Distinct())}"
-                        : canSwitchToThisDishVoucher
-                        ? $"Áp dụng cho: {string.Join(", ", matchedItems.Select(m => m.Name).Distinct())}"
-                        : (minOrder > 0 ? $"Đơn tối thiểu: {minOrder:N0} đ" : "Áp dụng cho mọi giá trị đơn");
-
+                    string conditionText = minOrder > 0 ? $"Đơn tối thiểu: {minOrder:N0} đ" : "Áp dụng cho mọi giá trị đơn";
                     var lblCondition = new Label
                     {
                         Text = conditionText,
                         Location = new Point(10, 52),
                         Size = new Size(270, 28),
                         Font = new Font("Segoe UI", 8F),
-                        ForeColor = isAppliedDirectlyToDish ? Color.FromArgb(22, 163, 74) : ThemeManager.Muted
+                        ForeColor = ThemeManager.Muted
                     };
                     card.Controls.Add(lblCondition);
 
-                    // Xử lý các loại nút bấm cho thẻ
-                    if (isAppliedDirectlyToDish)
+                    var btnSelect = new Button
                     {
-                        // 1. Voucher món/loại món này ĐÃ ĐƯỢC GIẢM TRỰC TIẾP vào món rồi -> không cho áp trùng lần 2!
-                        var btnApplied = new Button
-                        {
-                            Text = "Đang áp vào món",
-                            Location = new Point(296, 20),
-                            Size = new Size(130, 34),
-                            BackColor = Color.FromArgb(22, 163, 74),
-                            ForeColor = Color.White,
-                            FlatStyle = FlatStyle.Flat,
-                            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                            Cursor = Cursors.Default,
-                            Enabled = false
-                        };
-                        btnApplied.FlatAppearance.BorderSize = 0;
-                        card.Controls.Add(btnApplied);
-
-                        var lblNote = new Label
-                        {
-                            Text = "Đã trừ vào giá món",
-                            Location = new Point(296, 56),
-                            Size = new Size(130, 20),
-                            TextAlign = ContentAlignment.MiddleCenter,
-                            Font = new Font("Segoe UI", 7.5F, FontStyle.Italic),
-                            ForeColor = Color.FromArgb(22, 163, 74)
-                        };
-                        card.Controls.Add(lblNote);
-                    }
-                    else if (canSwitchToThisDishVoucher)
-                    {
-                        // 2. Voucher món/loại khác (ví dụ voucher giảm ít hơn, hoặc đổi qua lại) -> Cho phép bấm "Đổi sang mã này"
-                        var btnSwitch = new Button
-                        {
-                            Text = "Đổi sang mã này",
-                            Location = new Point(296, 20),
-                            Size = new Size(130, 34),
-                            BackColor = Color.FromArgb(249, 115, 22),
-                            ForeColor = Color.White,
-                            FlatStyle = FlatStyle.Flat,
-                            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                            Cursor = Cursors.Hand
-                        };
-                        btnSwitch.FlatAppearance.BorderSize = 0;
-                        btnSwitch.Click += (s, e) => {
-                            cartService?.ChangeDishVoucher(matchedItems, v, calcService);
-                            onCartUpdated?.Invoke();
-                            MessageBox.Show(this, 
-                                $"Đã chuyển món [{string.Join(", ", matchedItems.Select(m => m.Name).Distinct())}] sang áp dụng voucher [{v.MaVoucher}].", 
-                                "Đổi voucher thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            DialogResult = DialogResult.OK;
-                            Close();
-                        };
-                        card.Controls.Add(btnSwitch);
-
-                        var lblSwitchNote = new Label
-                        {
-                            Text = "Bấm để đổi ưu đãi món",
-                            Location = new Point(296, 56),
-                            Size = new Size(130, 20),
-                            TextAlign = ContentAlignment.MiddleCenter,
-                            Font = new Font("Segoe UI", 7.5F, FontStyle.Italic),
-                            ForeColor = Color.FromArgb(249, 115, 22)
-                        };
-                        card.Controls.Add(lblSwitchNote);
-                    }
-                    else if (isEligible)
-                    {
-                        // 3. Voucher toàn đơn hợp lệ
-                        var btnSelect = new Button
-                        {
-                            Text = isCurrentOrderVoucher ? "Đang chọn" : "Chọn mã",
-                            Location = new Point(316, 24),
-                            Size = new Size(110, 32),
-                            BackColor = isCurrentOrderVoucher ? Color.FromArgb(22, 163, 74) : Color.FromArgb(14, 124, 134),
-                            ForeColor = Color.White,
-                            FlatStyle = FlatStyle.Flat,
-                            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                            Cursor = Cursors.Hand
-                        };
-                        btnSelect.FlatAppearance.BorderSize = 0;
-                        btnSelect.Click += (s, e) => {
-                            SelectedVoucher = v;
-                            DialogResult = DialogResult.OK;
-                            Close();
-                        };
-                        card.Controls.Add(btnSelect);
-                    }
-                    else
-                    {
-                        // 4. Voucher chưa đủ điều kiện: xám, không bấm chọn được
-                        card.Cursor = Cursors.No;
-                        var btnDisabled = new Button
-                        {
-                            Text = "Chưa đủ ĐK",
-                            Location = new Point(316, 16),
-                            Size = new Size(110, 28),
-                            Enabled = false,
-                            BackColor = Color.FromArgb(226, 232, 240),
-                            ForeColor = grayText,
-                            FlatStyle = FlatStyle.Flat,
-                            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
-                        };
-                        btnDisabled.FlatAppearance.BorderSize = 0;
-                        card.Controls.Add(btnDisabled);
-
-                        var lblMissing = new Label
-                        {
-                            Text = missing > 0 ? $"Thiếu {missing:N0} đ" : "Chưa có món phù hợp",
-                            Location = new Point(286, 48),
-                            Size = new Size(140, 24),
-                            TextAlign = ContentAlignment.MiddleRight,
-                            Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                            ForeColor = grayText
-                        };
-                        card.Controls.Add(lblMissing);
-                    }
+                        Text = isCurrentOrderVoucher ? "Đang chọn" : "Chọn mã",
+                        Location = new Point(316, 24),
+                        Size = new Size(110, 32),
+                        BackColor = isCurrentOrderVoucher ? Color.FromArgb(22, 163, 74) : Color.FromArgb(14, 124, 134),
+                        ForeColor = Color.White,
+                        FlatStyle = FlatStyle.Flat,
+                        Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                        Cursor = Cursors.Hand
+                    };
+                    btnSelect.FlatAppearance.BorderSize = 0;
+                    btnSelect.Click += (s, e) => {
+                        SelectedVoucher = v;
+                        DialogResult = DialogResult.OK;
+                        Close();
+                    };
+                    card.Controls.Add(btnSelect);
 
                     flow.Controls.Add(card);
                 }
