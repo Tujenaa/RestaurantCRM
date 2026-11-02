@@ -23,12 +23,17 @@ public class MonAnViewModel
     // Computed properties for UI display
     public bool ConHang => (TrangThai == "Active" || TrangThai == "InStock") && SoLuong > 0;
 
+    public bool NgungKinhDoanh => string.Equals(TrangThai, "Discontinued", StringComparison.OrdinalIgnoreCase)
+                               || string.Equals(TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase);
+
+    public bool HetHang => !NgungKinhDoanh && (!ConHang || string.Equals(TrangThai, "OutOfStock", StringComparison.OrdinalIgnoreCase) || SoLuong <= 0);
+
     public string TrangThaiHienThi
     {
         get
         {
-            if (TrangThai == "Discontinued") return "Ngừng kinh doanh";
-            if (!ConHang || TrangThai == "OutOfStock" || SoLuong <= 0) return "Tạm hết hàng";
+            if (NgungKinhDoanh) return "Ngừng kinh doanh";
+            if (HetHang) return "Hết hàng";
             return "Đang kinh doanh";
         }
     }
@@ -37,8 +42,8 @@ public class MonAnViewModel
     {
         get
         {
-            if (TrangThai == "Discontinued") return "badge-discontinued";
-            if (!ConHang || TrangThai == "OutOfStock" || SoLuong <= 0) return "badge-outofstock";
+            if (NgungKinhDoanh) return "badge-discontinued";
+            if (HetHang) return "badge-outofstock";
             return "badge-instock";
         }
     }

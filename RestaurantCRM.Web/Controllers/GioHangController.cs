@@ -34,11 +34,17 @@ public class GioHangController : Controller
         }
 
         var customerId = HttpContext.Session.GetString("MaKhachHang");
-        var cart = _gioHangService.Get(HttpContext.Session, customerId);
+        var cart = await _gioHangService.GetWithAvailabilityAsync(HttpContext.Session, customerId);
         if (cart.Items.Count == 0) return RedirectToAction(nameof(Index));
+        if (cart.ItemsDaChon.Count == 0)
+        {
+            TempData["ThongBao"] = "Vui lòng chọn ít nhất 1 món còn hàng để đặt.";
+            TempData["IsError"] = true;
+            return RedirectToAction(nameof(Index));
+        }
 
-        // Kiểm tra tính khả dụng & số lượng món ăn ngay từ bước tiến hành đặt hàng
-        var availability = await _gioHangService.CheckCartAvailabilityAsync(cart.Items);
+        // Kiểm tra tính khả dụng & số lượng món ăn ngay từ bước tiến hành đặt hàng (chỉ các món được chọn)
+        var availability = await _gioHangService.CheckCartAvailabilityAsync(cart.ItemsDaChon);
         if (!availability.IsValid)
         {
             TempData["ThongBao"] = availability.ErrorMessage;
@@ -127,6 +133,46 @@ public class GioHangController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public IActionResult ChonMon(string maMon, bool chon)
+    {
+        if (!string.IsNullOrWhiteSpace(maMon))
+        {
+            _gioHangService.SetSelected(HttpContext.Session, maMon, chon);
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ChonTatCa(bool chon)
+    {
+        _gioHangService.SetAllSelected(HttpContext.Session, chon);
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult Xoa(string maMon)
+    {
+        if (!string.IsNullOrWhiteSpace(maMon))
+        {
+            _gioHangService.Remove(HttpContext.Session, maMon);
+            TempData["ThongBao"] = "Đã xóa món khỏi giỏ hàng.";
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult XoaMonKhongKhaDung()
+    {
+        _gioHangService.RemoveUnavailableItems(HttpContext.Session);
+        TempData["ThongBao"] = "Đã xóa các món hết hàng/ngừng kinh doanh khỏi giỏ hàng.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult CapNhat(CapNhatSoLuongViewModel model)
     {
         if (ModelState.IsValid)
@@ -175,11 +221,12 @@ public class GioHangController : Controller
 
         var customerId = HttpContext.Session.GetString("MaKhachHang");
         var model = page.DatHang;
-        var cart = _gioHangService.Get(HttpContext.Session, customerId);
+        var cart = await _gioHangService.GetWithAvailabilityAsync(HttpContext.Session, customerId);
 
-        if (cart.Items.Count == 0)
+        if (cart.ItemsDaChon.Count == 0)
         {
-            TempData["ThongBao"] = "Giỏ hàng đang trống, vui lòng chọn món trước khi đặt.";
+            TempData["ThongBao"] = "Vui lòng chọn ít nhất 1 món còn hàng trước khi đặt.";
+            TempData["IsError"] = true;
             return RedirectToAction(nameof(Index));
         }
 
@@ -190,7 +237,7 @@ public class GioHangController : Controller
         }
 
         // Kiểm tra lại tính khả dụng & tồn kho trước khi gửi tạo đơn
-        var availability = await _gioHangService.CheckCartAvailabilityAsync(cart.Items);
+        var availability = await _gioHangService.CheckCartAvailabilityAsync(cart.ItemsDaChon);
         if (!availability.IsValid)
         {
             ModelState.AddModelError("", availability.ErrorMessage ?? "Một số món trong giỏ hàng hiện không đủ số lượng để phục vụ.");
@@ -202,7 +249,8 @@ public class GioHangController : Controller
         string orderCustomerId = string.IsNullOrWhiteSpace(customerId) ? "KH01" : customerId;
         var voucherCode = cart.MaVoucher;
 
-        var result = await _donHangService.CreateOrderAsync(model, orderCustomerId, voucherCode, cart.Items);
+        var orderedItems = cart.ItemsDaChon;
+        var result = await _donHangService.CreateOrderAsync(model, orderCustomerId, voucherCode, orderedItems);
 
         if (!result.Success)
         {
@@ -212,7 +260,8 @@ public class GioHangController : Controller
             return View("Checkout", new CheckoutPageViewModel { GioHang = cart, DatHang = model, AvailableVouchers = vouchers });
         }
 
-        _gioHangService.Clear(HttpContext.Session, orderCustomerId);
+        // Chỉ xóa các món đã đặt; món chưa chọn vẫn được giữ lại trong giỏ
+        _gioHangService.RemoveItems(HttpContext.Session, orderedItems.Select(x => x.MaMon), orderCustomerId);
         TempData["DonHangMoi"] = result.OrderId;
 
         var isOnline = string.Equals(model.PhuongThucThanhToan, "transfer", StringComparison.OrdinalIgnoreCase)
@@ -228,7 +277,7 @@ public class GioHangController : Controller
     private async Task<GioHangPageViewModel> BuildPageAsync()
     {
         var customerId = HttpContext.Session.GetString("MaKhachHang");
-        var cart = _gioHangService.Get(HttpContext.Session, customerId);
+        var cart = await _gioHangService.GetWithAvailabilityAsync(HttpContext.Session, customerId);
         var vouchers = await _gioHangService.GetAvailableVouchersAsync();
         return new GioHangPageViewModel
         {

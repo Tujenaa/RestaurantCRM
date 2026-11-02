@@ -13,6 +13,7 @@ public class KhaoSatController(KhaoSatService api) : Controller
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        ViewBag.IsLoggedIn = !string.IsNullOrEmpty(MaKhachHang);
         var vm = new KhaoSatIndexViewModel();
         try
         {

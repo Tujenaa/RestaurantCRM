@@ -189,9 +189,18 @@ public class GioHangService
             }
         }
 
+        return BuildCart(session, cart);
+    }
+
+    /// <summary>
+    /// Dựng view model giỏ hàng và tính giảm giá voucher chỉ trên các món được chọn và còn khả dụng.
+    /// </summary>
+    private GioHangViewModel BuildCart(ISession session, List<GioHangItemViewModel> cart)
+    {
         var voucher = session.GetString(VoucherKey);
-        var subtotal = cart.Sum(x => x.ThanhTien);
-        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, cart, subtotal);
+        var selected = cart.Where(x => x.DuocChon && x.KhaDung).ToList();
+        var subtotal = selected.Sum(x => x.ThanhTien);
+        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, selected, subtotal);
 
         return new GioHangViewModel
         {
@@ -199,6 +208,70 @@ public class GioHangService
             MaVoucher = voucher,
             GiamGia = discount
         };
+    }
+
+    /// <summary>
+    /// Lấy giỏ hàng kèm trạng thái khả dụng mới nhất của từng món (hết hàng / ngừng kinh doanh) từ API.
+    /// </summary>
+    public async Task<GioHangViewModel> GetWithAvailabilityAsync(ISession session, string? customerId = null)
+    {
+        var cart = Get(session, customerId).Items;
+        foreach (var it in cart)
+        {
+            var dish = await _monAnService.GetByIdAsync(it.MaMon);
+            if (dish == null)
+            {
+                it.KhaDung = false;
+                it.TrangThaiMon = "Ngừng kinh doanh";
+            }
+            else
+            {
+                it.KhaDung = dish.ConHang;
+                it.TrangThaiMon = dish.ConHang ? null : (dish.NgungKinhDoanh ? "Ngừng kinh doanh" : "Hết hàng");
+            }
+        }
+        return BuildCart(session, cart);
+    }
+
+    public void SetSelected(ISession session, string maMon, bool chon)
+    {
+        var cart = Get(session).Items;
+        var item = cart.FirstOrDefault(x => string.Equals(x.MaMon, maMon, StringComparison.OrdinalIgnoreCase));
+        if (item is null) return;
+        item.DuocChon = chon;
+        Save(session, cart);
+    }
+
+    public void SetAllSelected(ISession session, bool chon)
+    {
+        var cart = Get(session).Items;
+        foreach (var it in cart) it.DuocChon = chon;
+        Save(session, cart);
+    }
+
+    /// <summary>
+    /// Xóa các món đã đặt khỏi giỏ hàng (giữ lại các món chưa chọn) và gỡ voucher đã dùng.
+    /// </summary>
+    public void RemoveItems(ISession session, IEnumerable<string> maMons, string? customerId = null)
+    {
+        var set = new HashSet<string>(maMons, StringComparer.OrdinalIgnoreCase);
+        var cart = Get(session, customerId).Items;
+        cart.RemoveAll(x => set.Contains(x.MaMon));
+
+        if (cart.Count == 0)
+        {
+            Clear(session, customerId);
+            return;
+        }
+
+        session.Remove(VoucherKey);
+        session.Remove(VoucherInfoKey);
+        session.SetString(CartKey, JsonSerializer.Serialize(cart));
+        customerId ??= session.GetString("MaKhachHang");
+        if (!string.IsNullOrWhiteSpace(customerId))
+        {
+            SaveCustomerCart(customerId, cart);
+        }
     }
 
     public void Add(ISession session, string maMon, int quantity)
@@ -219,7 +292,8 @@ public class GioHangService
                 DuongDanAnh = dish.DuongDanAnh,
                 BieuTuong = dish.BieuTuong,
                 DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia,
-                SoLuong = Math.Clamp(quantity, 1, maxQty)
+                SoLuong = Math.Clamp(quantity, 1, maxQty),
+                DuocChon = true
             });
         }
         else
@@ -227,20 +301,62 @@ public class GioHangService
             if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg")
                 item.DuongDanAnh = dish.DuongDanAnh;
             item.SoLuong = Math.Min(maxQty, item.SoLuong + Math.Clamp(quantity, 1, maxQty));
+            item.DuocChon = true;
         }
         Save(session, cart);
     }
 
+    public void Remove(ISession session, string maMon, string? customerId = null)
+    {
+        if (string.IsNullOrWhiteSpace(maMon)) return;
+        customerId ??= session.GetString("MaKhachHang");
+        var cart = Get(session, customerId).Items;
+        var countBefore = cart.Count;
+        cart.RemoveAll(x => string.Equals(x.MaMon, maMon, StringComparison.OrdinalIgnoreCase));
+        if (cart.Count < countBefore)
+        {
+            if (cart.Count == 0)
+            {
+                Clear(session, customerId);
+                return;
+            }
+            Save(session, cart);
+        }
+    }
+
+    public void RemoveUnavailableItems(ISession session, string? customerId = null)
+    {
+        customerId ??= session.GetString("MaKhachHang");
+        var cartModel = GetWithAvailabilityAsync(session, customerId).GetAwaiter().GetResult();
+        var unavail = cartModel.Items.Where(x => !x.KhaDung).Select(x => x.MaMon).ToList();
+        if (unavail.Count > 0)
+        {
+            RemoveItems(session, unavail, customerId);
+        }
+    }
+
     public void SetQuantity(ISession session, string maMon, int quantity)
     {
+        if (string.IsNullOrWhiteSpace(maMon)) return;
         var cart = Get(session).Items;
-        var item = cart.FirstOrDefault(x => x.MaMon == maMon);
+        var item = cart.FirstOrDefault(x => string.Equals(x.MaMon, maMon, StringComparison.OrdinalIgnoreCase));
         if (item is not null)
         {
             var dish = _monAnService.Find(maMon);
             int maxQty = (dish != null && dish.SoLuong > 0) ? Math.Min(99, dish.SoLuong) : 99;
-            if (quantity <= 0) cart.Remove(item);
-            else item.SoLuong = Math.Min(quantity, maxQty);
+            if (quantity <= 0)
+            {
+                cart.Remove(item);
+                if (cart.Count == 0)
+                {
+                    Clear(session);
+                    return;
+                }
+            }
+            else
+            {
+                item.SoLuong = Math.Min(quantity, maxQty);
+            }
         }
         Save(session, cart);
     }
@@ -255,7 +371,14 @@ public class GioHangService
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var vouchers = await response.Content.ReadFromJsonAsync<List<VoucherViewModel>>(options);
-                return vouchers ?? new List<VoucherViewModel>();
+                if (vouchers != null)
+                {
+                    return vouchers
+                        .OrderByDescending(v => v.NgayBatDau ?? DateOnly.MinValue)
+                        .ThenByDescending(v => v.MaKmvoucher)
+                        .ToList();
+                }
+                return new List<VoucherViewModel>();
             }
         }
         catch (Exception ex)
@@ -277,13 +400,14 @@ public class GioHangService
         }
 
         var clean = code.Trim().ToUpperInvariant();
-        var cart = Get(session, customerId);
+        var cart = await GetWithAvailabilityAsync(session, customerId);
         var subtotal = cart.TamTinh;
+        var selectedItems = cart.ItemsDaChon;
 
-        if (cart.Items.Count == 0)
+        if (selectedItems.Count == 0)
         {
             session.SetString(VoucherKey, clean);
-            return (true, $"Đã lưu mã {clean}. Hãy chọn thêm món ăn vào giỏ để nhận ưu đãi!", 0m);
+            return (true, $"Đã lưu mã {clean}. Hãy chọn món ăn trong giỏ để nhận ưu đãi!", 0m);
         }
 
         try
@@ -315,12 +439,12 @@ public class GioHangService
                     };
 
                     // API không biết giỏ hàng -> tự tính giảm giá theo đúng phạm vi áp dụng
-                    var realDiscount = ComputeScopedDiscount(voucherInfo, cart.Items, subtotal);
+                    var realDiscount = ComputeScopedDiscount(voucherInfo, selectedItems, subtotal);
                     if (realDiscount <= 0)
                     {
                         session.Remove(VoucherKey);
                         session.Remove(VoucherInfoKey);
-                        return (false, BuildNotApplicableMessage(voucherInfo, subtotal, cart.Items), 0m);
+                        return (false, BuildNotApplicableMessage(voucherInfo, subtotal, selectedItems), 0m);
                     }
 
                     voucherInfo.LastCalculatedDiscount = realDiscount;

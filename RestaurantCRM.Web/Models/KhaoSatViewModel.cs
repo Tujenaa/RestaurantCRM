@@ -17,7 +17,8 @@ public class CauHoiViewModel
     public string LoaiCauHoi { get; set; } = "";   // DB hiện chỉ có: Option | Text
     public List<TuyChonViewModel> TuyChon { get; set; } = new();
 
-    public bool IsTuDien => LoaiCauHoi.Equals("Text", StringComparison.OrdinalIgnoreCase);
+    public bool IsTuDien => LoaiCauHoi.Equals("Text", StringComparison.OrdinalIgnoreCase)
+                         || LoaiCauHoi.Equals("TuLuan", StringComparison.OrdinalIgnoreCase);
     public bool IsNhieu => false;   // schema chưa có loại chọn nhiều
 }
 

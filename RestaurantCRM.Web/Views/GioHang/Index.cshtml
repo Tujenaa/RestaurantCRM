@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Giỏ hàng — Lẩu Phố";
     Layout = "/Shared/_Layout.cshtml";
+    var selectedItems = Model.GioHang.ItemsDaChon;
+    var unavailCount = Model.GioHang.Items.Count(x => !x.KhaDung);
 }
 
 <div class="page-intro">
@@ -13,7 +15,7 @@
 {
     <div class="alert alert-danger" style="background:#ffebee; border:1.5px solid #ef9a9a; color:#c62828; padding:16px 20px; border-radius:14px; margin-bottom:24px; animation:fadeIn .2s;">
         <h4 style="margin:0 0 6px; font-size:15px; font-weight:800; display:flex; align-items:center; gap:8px;">
-            <span>⚠️</span> Giỏ hàng cần điều chỉnh số lượng hoặc món ăn
+            Giỏ hàng cần điều chỉnh số lượng hoặc món ăn
         </h4>
         <p style="margin:0; font-size:13.5px; line-height:1.5;">@errMsg</p>
     </div>
@@ -22,7 +24,7 @@
 @if (Model.GioHang.Items.Count == 0)
 {
     <div class="panel empty">
-        <div class="big">🛒</div>
+        <div class="big"></div>
         <h3>Giỏ hàng đang trống</h3>
         <p>Thêm vài món ngon từ thực đơn để bắt đầu đơn hàng nhé.</p>
         <a class="btn" asp-controller="Menu" asp-action="Index">Khám phá thực đơn ngay →</a>
@@ -32,36 +34,90 @@ else
 {
     <div class="layout">
         <section class="panel">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-                <h3 style="margin:0;">Món đã chọn (@Model.GioHang.Items.Count)</h3>
-                <span class="muted" style="font-size:13px;">Tổng @Model.GioHang.Items.Sum(x => x.SoLuong) phần</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap:12px; flex-wrap:wrap;">
+                <form asp-action="ChonTatCa" method="post" class="js-select-form" style="margin:0;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="chon" value="@(Model.GioHang.DaChonTatCa ? "false" : "true")" />
+                    <label class="cart-select-all">
+                        <input type="checkbox" class="cart-check js-auto-submit" @(Model.GioHang.DaChonTatCa ? "checked" : "") @(Model.GioHang.SoMonKhaDung == 0 ? "disabled" : "") aria-label="Chọn tất cả món" />
+                        Chọn tất cả (@selectedItems.Count/@Model.GioHang.SoMonKhaDung)
+                    </label>
+                </form>
+                <span class="muted" style="font-size:13px;">Đã chọn @selectedItems.Sum(x => x.SoLuong) phần · Trong giỏ @Model.GioHang.Items.Count món</span>
             </div>
+
+            @if (unavailCount > 0)
+            {
+                <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <div style="font-size:13px; color:#9a3412;">
+                        Có <strong>@unavailCount</strong> món trong giỏ hiện đang hết hàng hoặc ngừng kinh doanh.
+                    </div>
+                    <form asp-action="XoaMonKhongKhaDung" method="post" style="margin:0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn secondary small" style="color:#c62828; border-color:#ef9a9a; background:#fff; font-size:12px; padding:4px 10px; border-radius:6px; cursor:pointer;" title="Xóa tất cả món không khả dụng khỏi giỏ">
+                            Xóa món không khả dụng
+                        </button>
+                    </form>
+                </div>
+            }
 
             @foreach (var item in Model.GioHang.Items)
             {
-                <div class="cart-item">
+                var unavailable = !item.KhaDung;
+                var isSelected = item.DuocChon && item.KhaDung;
+                <div class="cart-item cart-item--selectable @(unavailable ? "cart-item--unavailable" : "")">
+                    <form asp-action="ChonMon" method="post" class="js-select-form" style="margin:0;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="maMon" value="@item.MaMon" />
+                        <input type="hidden" name="chon" value="@(isSelected ? "false" : "true")" />
+                        <input type="checkbox" class="cart-check js-auto-submit" @(isSelected ? "checked" : "") @(unavailable ? "disabled" : "")
+                               title="@(unavailable ? item.TrangThaiMon : "Chọn món này để đặt")" aria-label="Chọn @item.TenMon" />
+                    </form>
                     <div class="mini-art" style="overflow: hidden; padding: 0; background: #fdfaf6; border: 1px solid var(--line);">
                         <img src="@(string.IsNullOrWhiteSpace(item.DuongDanAnh) ? "/images/default.jpg" : item.DuongDanAnh)" alt="@item.TenMon" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" onerror="this.onerror=null;this.src='/images/default.jpg';" />
                     </div>
                     <div>
-                        <h4>@item.TenMon</h4>
-                        <small>@item.DonGia.ToString("N0")đ / phần</small>
-                        <div class="price cart-line-total">@item.ThanhTien.ToString("N0")đ</div>
+                        <h4>
+                            <a href="/Menu/ChiTiet/@item.MaMon" style="color:inherit;">@item.TenMon</a>
+                        </h4>
+                        @if (unavailable)
+                        {
+                            <span class="badge @(item.TrangThaiMon == "Ngừng kinh doanh" ? "badge-discontinued" : "badge-outofstock")" style="font-size:11px;">
+                                <span class="badge-dot"></span>@item.TrangThaiMon
+                            </span>
+                        }
+                        else
+                        {
+                            <small>@item.DonGia.ToString("N0")đ / phần</small>
+                            <div class="price cart-line-total">@item.ThanhTien.ToString("N0")đ</div>
+                        }
                     </div>
-                    <div>
-                        <form asp-action="CapNhat" method="post" class="qty">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="MaMon" value="@item.MaMon" />
-                            <button type="submit" name="SoLuong" value="@(item.SoLuong - 1)" aria-label="Giảm số lượng">−</button>
-                            <strong>@item.SoLuong</strong>
-                            <button type="submit" name="SoLuong" value="@(item.SoLuong + 1)" aria-label="Tăng số lượng">＋</button>
-                        </form>
-                        <form asp-action="CapNhat" method="post" style="margin-top: 4px;">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="MaMon" value="@item.MaMon" />
-                            <input type="hidden" name="SoLuong" value="0" />
-                            <button type="submit" class="remove">Xóa món</button>
-                        </form>
+                    <div class="cart-item-actions" style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                        @if (unavailable)
+                        {
+                            <form asp-action="Xoa" method="post" style="margin:0;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="maMon" value="@item.MaMon" />
+                                <button type="submit" class="btn secondary small" style="color:#c62828; border-color:#ef9a9a; background:#fff5f5; font-size:12px; padding:6px 14px; border-radius:8px; font-weight:600; cursor:pointer;" title="Xóa món này khỏi giỏ">
+                                    Xóa món
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="CapNhat" method="post" class="qty">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="MaMon" value="@item.MaMon" />
+                                <button type="submit" name="SoLuong" value="@(item.SoLuong - 1)" aria-label="Giảm số lượng">−</button>
+                                <strong>@item.SoLuong</strong>
+                                <button type="submit" name="SoLuong" value="@(item.SoLuong + 1)" aria-label="Tăng số lượng">＋</button>
+                            </form>
+                            <form asp-action="Xoa" method="post" style="margin-top:2px;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="maMon" value="@item.MaMon" />
+                                <button type="submit" class="remove" style="cursor:pointer; color:#a79a8d; font-size:12px;" title="Xóa món này">Xóa món</button>
+                            </form>
+                        }
                     </div>
                 </div>
             }
@@ -75,7 +131,7 @@ else
         <aside class="panel summary">
             <h3>Tóm tắt đơn hàng</h3>
             <div class="summary-line">
-                <span>Tạm tính tiền món</span>
+                <span>Tạm tính (@selectedItems.Count món đã chọn)</span>
                 <strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong>
             </div>
 
@@ -118,29 +174,34 @@ else
                     </div>
                 </form>
 
+                @{
+                    var subtotal = Model.GioHang.TamTinh;
+                    var allVouchers = (Model.AvailableVouchers ?? new List<RestaurantCRM.Web.Models.VoucherViewModel>())
+                        .OrderByDescending(v => v.GetIneligibleReason(subtotal, selectedItems) == null)
+                        .ThenByDescending(v => v.NgayBatDau ?? DateOnly.MinValue)
+                        .ThenByDescending(v => v.MaKmvoucher)
+                        .ToList();
+                    var top5Vouchers = allVouchers.Take(5).ToList();
+                }
                 <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Bấm để áp dụng nhanh mã ưu đãi:</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                    @{
-                        var subtotal = Model.GioHang.TamTinh;
-                        var vouchers = Model.AvailableVouchers ?? new List<RestaurantCRM.Web.Models.VoucherViewModel>();
-                    }
-                    @if (!vouchers.Any())
+                    @if (!top5Vouchers.Any())
                     {
-                        <div style="font-size: 11.5px; color: var(--muted); font-style: italic; padding: 4px 0;">
+                        <div style="font-size: 11.5px; color: var(--muted); font-style: italic; padding: 4px 0; grid-column: 1/-1;">
                             Hiện chưa có mã ưu đãi nào trong hệ thống.
                         </div>
                     }
                     else
                     {
-                        @foreach (var v in vouchers.OrderBy(x => x.GetIneligibleReason(subtotal, Model.GioHang.Items) != null))
+                        @foreach (var v in top5Vouchers)
                         {
-                            var reason = v.GetIneligibleReason(subtotal, Model.GioHang.Items);
+                            var reason = v.GetIneligibleReason(subtotal, selectedItems);
                             if (reason == null)
                             {
                                 <button type="button" class="chip-voucher" onclick="quickApplyVoucher('@v.DisplayCode')" 
                                         title="@v.TenChuongTrinh - @v.ConditionLabel"
                                         style="background:#e8f5e9; border:1px solid #c8e6c9; color:#2e7d32; font-size:11.5px; padding:4px 9px; border-radius:999px; cursor:pointer; font-weight:650;">
-                                    🎟️ @v.DisplayCode (@v.DiscountLabel)
+                                    @v.DisplayCode (@v.DiscountLabel)
                                 </button>
                             }
                             else
@@ -148,24 +209,160 @@ else
                                 <button type="button" class="chip-voucher" disabled aria-disabled="true"
                                         title="@v.TenChuongTrinh - @reason"
                                         style="background:#f1f1f1; border:1px solid #e0e0e0; color:#a8a8a8; font-size:11.5px; padding:4px 9px; border-radius:999px; cursor:not-allowed; filter:grayscale(1); opacity:.75;">
-                                    🎟️ @v.DisplayCode (@v.DiscountLabel)
+                                    @v.DisplayCode (@v.DiscountLabel)
                                     <span style="display:block; font-size:10px; font-weight:500;">@reason</span>
                                 </button>
                             }
                         }
                     }
                 </div>
+
+                @if (allVouchers.Count > 0)
+                {
+                    <button type="button" class="btn-open-voucher-modal" onclick="openVoucherModal()">
+                        Xem thêm tất cả ưu đãi (@allVouchers.Count mã) →
+                    </button>
+                }
             </div>
 
-            <a class="btn" asp-action="Checkout" style="display:block; text-align:center; padding:13px; font-size:15px;">Tiến hành đặt hàng →</a>
+            @if (selectedItems.Count > 0)
+            {
+                <a class="btn" asp-action="Checkout" style="display:block; text-align:center; padding:13px; font-size:15px;">Đặt @selectedItems.Count món đã chọn →</a>
+            }
+            else
+            {
+                <span class="btn is-disabled" aria-disabled="true" style="display:block; text-align:center; padding:13px; font-size:15px;">Chọn món để đặt hàng</span>
+            }
         </aside>
     </div>
+
+    @if (allVouchers != null && allVouchers.Count > 0)
+    {
+        var usableVouchers = allVouchers.Where(v => v.GetIneligibleReason(subtotal, selectedItems) == null).ToList();
+        var otherVouchers = allVouchers.Where(v => v.GetIneligibleReason(subtotal, selectedItems) != null).ToList();
+
+        <div class="voucher-modal" id="voucherModal" aria-hidden="true" role="dialog">
+            <div class="voucher-modal__backdrop" onclick="closeVoucherModal()"></div>
+            <div class="voucher-modal__dialog">
+                <div class="voucher-modal__header">
+                    <div>
+                        <h3 style="margin:0; font-size:17px; font-weight:800; display:flex; align-items:center; gap:8px;">
+                            Danh sách khuyến mãi & ưu đãi (@allVouchers.Count)
+                        </h3>
+                        <small class="muted" style="font-size:12px;">Ưu tiên các mã bạn có thể áp dụng cho giỏ hàng hiện tại</small>
+                    </div>
+                    <button type="button" class="voucher-modal__close" onclick="closeVoucherModal()" aria-label="Đóng">✕ Đóng</button>
+                </div>
+                <div class="voucher-modal__body">
+                    @if (usableVouchers.Count > 0)
+                    {
+                        <div>
+                            <div class="voucher-section-title" style="color:#15803d;">
+                                Mã có thể áp dụng ngay (@usableVouchers.Count)
+                            </div>
+                            <div class="voucher-list-cards">
+                                @foreach (var v in usableVouchers)
+                                {
+                                    var isApplied = string.Equals(Model.GioHang.MaVoucher, v.DisplayCode, StringComparison.OrdinalIgnoreCase);
+                                    <div class="voucher-card voucher-card--usable @(isApplied ? "voucher-card--applied" : "")">
+                                        <div class="voucher-card__left">
+                                            <div class="voucher-card__code">
+                                                <span>@v.DisplayCode</span>
+                                                <span class="badge badge-sale" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">@v.DiscountLabel</span>
+                                                @if (isApplied)
+                                                {
+                                                    <span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Đang áp dụng</span>
+                                                }
+                                            </div>
+                                            <div class="voucher-card__desc">@v.TenChuongTrinh</div>
+                                            <div class="voucher-card__condition">
+                                                @v.ConditionLabel
+                                                @if (v.NgayKetThuc.HasValue)
+                                                {
+                                                    <span> · HSD: @v.NgayKetThuc.Value.ToString("dd/MM/yyyy")</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="voucher-card__right">
+                                            @if (isApplied)
+                                            {
+                                                <button type="button" class="btn secondary small" onclick="removeCartVoucher(); closeVoucherModal();" style="color:var(--red); border-color:#ef9a9a;">
+                                                    Gỡ mã
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn small" onclick="quickApplyVoucher('@v.DisplayCode'); closeVoucherModal();" style="background:var(--green); border-color:var(--green); color:#fff; font-weight:700;">
+                                                    Áp dụng
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (otherVouchers.Count > 0)
+                    {
+                        <div style="margin-top: @(usableVouchers.Count > 0 ? "8px" : "0");">
+                            <div class="voucher-section-title" style="color:#64748b;">
+                                Các mã ưu đãi khác (@otherVouchers.Count)
+                            </div>
+                            <div class="voucher-list-cards">
+                                @foreach (var v in otherVouchers)
+                                {
+                                    var reason = v.GetIneligibleReason(subtotal, selectedItems);
+                                    <div class="voucher-card voucher-card--disabled">
+                                        <div class="voucher-card__left">
+                                            <div class="voucher-card__code">
+                                                <span>@v.DisplayCode</span>
+                                                <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;">@v.DiscountLabel</span>
+                                            </div>
+                                            <div class="voucher-card__desc">@v.TenChuongTrinh</div>
+                                            <div class="voucher-card__condition">
+                                                @v.ConditionLabel
+                                                @if (v.NgayKetThuc.HasValue)
+                                                {
+                                                    <span> · HSD: @v.NgayKetThuc.Value.ToString("dd/MM/yyyy")</span>
+                                                }
+                                            </div>
+                                            <div class="voucher-card__ineligible">
+                                                @reason
+                                            </div>
+                                        </div>
+                                        <div class="voucher-card__right">
+                                            <button type="button" class="btn secondary small" disabled style="opacity:.6; cursor:not-allowed; font-size:12px;">
+                                                Chưa đủ ĐK
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @section Scripts {
     <script>
-        function quickApplyVoucher(code) {
+        function saveScroll() {
             try { sessionStorage.setItem('restoreScrollY', String(window.scrollY || window.pageYOffset)); } catch (e) {}
+        }
+        // Tick / bỏ tick chọn món: tự gửi form và giữ vị trí cuộn
+        document.querySelectorAll('.js-auto-submit').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                const form = cb.closest('form');
+                if (!form) return;
+                saveScroll();
+                form.submit();
+            });
+        });
+        function quickApplyVoucher(code) {
+            saveScroll();
             const input = document.getElementById('cartVoucherInput');
             const form = document.getElementById('cartVoucherForm');
             if (input && form) {
@@ -174,7 +371,7 @@ else
             }
         }
         function removeCartVoucher() {
-            try { sessionStorage.setItem('restoreScrollY', String(window.scrollY || window.pageYOffset)); } catch (e) {}
+            saveScroll();
             const input = document.getElementById('cartVoucherInput');
             const form = document.getElementById('cartVoucherForm');
             if (input && form) {
@@ -182,5 +379,24 @@ else
                 form.submit();
             }
         }
+        function openVoucherModal() {
+            const modal = document.getElementById('voucherModal');
+            if (modal) {
+                modal.classList.add('voucher-modal--open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        function closeVoucherModal() {
+            const modal = document.getElementById('voucherModal');
+            if (modal) {
+                modal.classList.remove('voucher-modal--open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeVoucherModal();
+        });
     </script>
 }

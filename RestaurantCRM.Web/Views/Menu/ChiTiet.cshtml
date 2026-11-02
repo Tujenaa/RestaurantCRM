@@ -24,7 +24,7 @@
         <div class="dish-detail-grid">
             <!-- Left: Media Showcase -->
             <div class="dish-detail-media">
-                <div class="media-frame">
+                <div class="media-frame @(dish.ConHang ? "" : "is-unavailable-media")">
                     @if (!string.IsNullOrWhiteSpace(dish.DuongDanAnh))
                     {
                         <img src="@dish.DuongDanAnh" alt="@dish.TenMon" style="width: 100%; height: 100%; object-fit: cover; border-radius: 20px;" onerror="this.onerror=null; this.src='/images/default.jpg';" />
@@ -119,6 +119,10 @@
                                 </div>
                             </div>
                         }
+                        else if (dish.NgungKinhDoanh)
+                        {
+                            <span class="stock-number text-danger">Món đã ngừng kinh doanh</span>
+                        }
                         else
                         {
                             <span class="stock-number text-danger">Hiện tại đã hết hàng</span>
@@ -168,11 +172,25 @@
                 }
                 else
                 {
-                    <div class="dish-out-of-stock-card">
-                        <div>
-                            <h4>Món ăn hiện tạm hết hàng</h4>
-                            <p>Bếp đang chuẩn bị bổ sung nguyên liệu tươi mới. Quý khách vui lòng chọn món ăn khác hoặc quay lại sau ít phút.</p>
-                            <a asp-controller="Menu" asp-action="Index" class="btn btn-secondary">Xem các món khác trong thực đơn</a>
+                    var btnText = dish.NgungKinhDoanh ? "Ngừng kinh doanh" : "Hết hàng";
+                    <div class="dish-order-form">
+                        <div class="form-row-quantity disabled" style="opacity: 0.6; pointer-events: none;">
+                            <label class="qty-control-label">Chọn số lượng:</label>
+                            <div class="quantity-picker">
+                                <button type="button" class="btn-qty" disabled>−</button>
+                                <input type="number" value="0" class="input-qty" disabled />
+                                <button type="button" class="btn-qty" disabled>+</button>
+                            </div>
+                            <span class="qty-limit-note text-danger">(@btnText)</span>
+                        </div>
+
+                        <div class="order-action-buttons" style="margin-top: 16px;">
+                            <button type="button" class="btn btn-secondary disabled" disabled style="cursor: not-allowed; opacity: 0.7; font-weight: 600; padding: 12px 24px; min-width: 180px;">
+                                @btnText
+                            </button>
+                            <a asp-controller="Menu" asp-action="Index" class="btn btn-outline-cart">
+                                Xem các món khác
+                            </a>
                         </div>
                     </div>
                 }

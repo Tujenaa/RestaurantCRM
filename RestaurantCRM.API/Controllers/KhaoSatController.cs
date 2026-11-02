@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -37,12 +38,12 @@ namespace RestaurantCRM.API.Controllers
             {
                 khaoSat.MaKhaoSat,
                 khaoSat.TieuDe,
-                CauHoi = khaoSat.CauHoiKhaoSat.Select(c => new
+                CauHoi = AdminKhaoSatService.SapXep(khaoSat.CauHoiKhaoSat, c => c.MaCauHoi).Select(c => new
                 {
                     c.MaCauHoi,
                     c.NoiDungCauHoi,
                     c.LoaiCauHoi,
-                    TuyChon = c.TuyChonCauHoi.Select(t => new
+                    TuyChon = AdminKhaoSatService.SapXep(c.TuyChonCauHoi, t => t.MaTuyChon).Select(t => new
                     {
                         t.MaTuyChon,
                         t.NoiDungTuyChon
@@ -57,6 +58,18 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("TraLoi")]
         public async Task<IActionResult> SubmitTraLoi(SurveyAnswerRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.MaKhaoSat) || string.IsNullOrWhiteSpace(request.MaKhachHang))
+            {
+                return BadRequest("Thông tin khảo sát hoặc khách hàng không hợp lệ.");
+            }
+
+            var khaoSat = await _service.Query<KhaoSat>()
+                .FirstOrDefaultAsync(k => k.MaKhaoSat == request.MaKhaoSat && k.TrangThai == "Open");
+            if (khaoSat == null)
+            {
+                return BadRequest("Khảo sát không tồn tại hoặc đã đóng.");
+            }
+
             var daGui = await _service.Query<PhieuTraLoi>()
             .AnyAsync(p => p.MaKhaoSat == request.MaKhaoSat && p.MaKhachHang == request.MaKhachHang);
             if (daGui) return BadRequest("Bạn đã hoàn thành khảo sát này rồi.");
@@ -84,6 +97,14 @@ namespace RestaurantCRM.API.Controllers
                     };
                     _service.Add(cauTraLoi);
                 }
+            }
+
+            // Đánh dấu hoàn thành đối tượng khảo sát nếu khách hàng có trong danh sách
+            var doiTuong = await _service.Query<DoiTuongKhaoSat>()
+                .FirstOrDefaultAsync(d => d.MaKhaoSat == request.MaKhaoSat && d.MaKhachHang == request.MaKhachHang);
+            if (doiTuong != null)
+            {
+                doiTuong.DaHoanThanh = true;
             }
 
             await _service.SaveChangesAsync();
@@ -153,12 +174,12 @@ namespace RestaurantCRM.API.Controllers
             {
                 khaoSat.MaKhaoSat,
                 khaoSat.TieuDe,
-                CauHoi = khaoSat.CauHoiKhaoSat.Select(c => new
+                CauHoi = AdminKhaoSatService.SapXep(khaoSat.CauHoiKhaoSat, c => c.MaCauHoi).Select(c => new
                 {
                     c.MaCauHoi,
                     c.NoiDungCauHoi,
                     c.LoaiCauHoi,
-                    TuyChon = c.TuyChonCauHoi.Select(t => new { t.MaTuyChon, t.NoiDungTuyChon })
+                    TuyChon = AdminKhaoSatService.SapXep(c.TuyChonCauHoi, t => t.MaTuyChon).Select(t => new { t.MaTuyChon, t.NoiDungTuyChon })
                 })
             });
         }

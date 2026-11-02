@@ -145,7 +145,7 @@ namespace RestaurantCRM.API.Controllers
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
-            if (monAn == null || monAn.TrangThai == "Discontinued" || monAn.TrangThai == "Inactive" || monAn.TrangThai == "OutOfStock")
+            if (monAn == null)
             {
                 return NotFound();
             }
@@ -167,11 +167,6 @@ namespace RestaurantCRM.API.Controllers
                     return Math.Floor(ton / dl.SoLuongCan);
                 });
                 if (soSuatKhaDung < 0) soSuatKhaDung = 0;
-            }
-
-            if (soSuatKhaDung <= 0)
-            {
-                return NotFound();
             }
 
             return Ok(new {
