@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 
@@ -23,7 +23,7 @@ namespace RestaurantCRM.AdminApp.Controls
             EnableHeadersVisualStyles = false;
 
             // Header
-            ColumnHeadersHeight = 44;
+            ColumnHeadersHeight = 36;
             ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
             ColumnHeadersDefaultCellStyle.BackColor = ThemeManager.Paper;
@@ -35,7 +35,7 @@ namespace RestaurantCRM.AdminApp.Controls
             ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
 
             // Row
-            RowTemplate.Height = 48;
+            RowTemplate.Height = 38;
             AllowUserToResizeRows = false;
             Font = new Font("Segoe UI", 9F);
             DefaultCellStyle.Padding = new Padding(12, 0, 8, 0);

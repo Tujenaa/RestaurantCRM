@@ -44,7 +44,7 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
 
             // ── Bên phải: thẻ đăng nhập ────────────────────────────────
             var card = PageKit.NewCard();
-            card.Size = new Size(420, 520);
+            card.Size = new Size(420, 484);
             card.Location = new Point(500, (ClientSize.Height - card.Height) / 2 + 4);
             Controls.Add(card);
 
@@ -56,7 +56,7 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
                 Font = new Font("Segoe UI", 20F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 AutoSize = true,
-                Location = new Point(x - 3, 40),
+                Location = new Point(x - 3, 28),
                 BackColor = Color.Transparent
             };
             card.Controls.Add(lblTitle);
@@ -67,23 +67,23 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = ThemeManager.Muted,
                 AutoSize = true,
-                Location = new Point(x, 82),
+                Location = new Point(x, 68),
                 BackColor = Color.Transparent
             };
             card.Controls.Add(lblSub);
 
-            card.Controls.Add(MakeCaption("Tên đăng nhập", x, 124));
+            card.Controls.Add(MakeCaption("Tên đăng nhập", x, 106));
             _username = new TextBox();
-            card.Controls.Add(new LoginField(_username, ThemeManager.Glyph.Contact) { Location = new Point(x, 146), Size = new Size(w, 44) });
+            card.Controls.Add(new LoginField(_username, ThemeManager.Glyph.Contact) { Location = new Point(x, 128), Size = new Size(w, 42) });
 
-            card.Controls.Add(MakeCaption("Mật khẩu", x, 204));
+            card.Controls.Add(MakeCaption("Mật khẩu", x, 180));
             _password = new TextBox { UseSystemPasswordChar = true };
-            card.Controls.Add(new LoginField(_password, "\uE72E") { Location = new Point(x, 226), Size = new Size(w, 44) });
+            card.Controls.Add(new LoginField(_password, "\uE72E") { Location = new Point(x, 202), Size = new Size(w, 42) });
 
             _error = new Label
             {
                 Text = "",
-                Location = new Point(x, 278),
+                Location = new Point(x, 252),
                 Size = new Size(w, 36),
                 ForeColor = ThemeManager.Red,
                 Font = new Font("Segoe UI", 8.5F),
@@ -95,8 +95,8 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             var btnLogin = new Button
             {
                 Text = "Đăng nhập",
-                Location = new Point(x, 318),
-                Size = new Size(w, 46),
+                Location = new Point(x, 288),
+                Size = new Size(w, 42),
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold)
             };
             ButtonSkin.SetKind(btnLogin, ButtonSkin.Kind.Primary);
@@ -110,17 +110,17 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
                 Text = "ĐĂNG NHẬP NHANH  ·  MẬT KHẨU 123456",
                 Font = new Font("Segoe UI", 7F, FontStyle.Bold),
                 ForeColor = ThemeManager.Muted,
-                Location = new Point(x, 388),
+                Location = new Point(x, 354),
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
             card.Controls.Add(lblDemo);
 
             var demoAccounts = new[] {
-                ("admin",     "Admin"),
-                ("quanly01",  "Quản lý"),
-                ("thungan01", "Thu ngân"),
-                ("thungan02", "CSKH")
+                ("admin",     "Quản lý"),
+                ("sale01",  "Bán hàng"),
+                ("kho01", "Kho"),
+                ("crm01", "CSKH")
             };
             int cx = x;
             foreach (var acc in demoAccounts)
@@ -129,7 +129,7 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
                 var chip = new Button { Text = acc.Item2, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
                 ButtonSkin.SetKind(chip, ButtonSkin.Kind.Soft);
                 int cw = TextRenderer.MeasureText(acc.Item2, chip.Font).Width + 30;
-                chip.SetBounds(cx, 412, cw, 32);
+                chip.SetBounds(cx, 378, cw, 30);
                 cx += cw + 8;
                 chip.Click += (s, e) =>
                 {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -50,7 +50,7 @@ namespace RestaurantCRM.AdminApp.Controls
     /// </summary>
     public static class PageKit
     {
-        public const int ButtonHeight = 38;
+        public const int ButtonHeight = 34;
 
         public static void BuildListPage(Form form, ListPageSpec spec)
         {
@@ -73,11 +73,11 @@ namespace RestaurantCRM.AdminApp.Controls
             form.Controls.Clear();
 
             form.BackColor = ThemeManager.Bg;
-            form.Padding = new Padding(14, 6, 14, 10);
+            form.Padding = new Padding(12, 4, 12, 8);
             form.AutoScroll = false;
 
             // 3. Hàng đầu: tiêu đề + mô tả + nút
-            var header = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = ThemeManager.Bg };
+            var header = new Panel { Dock = DockStyle.Top, Height = 48, BackColor = ThemeManager.Bg };
             var actions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
@@ -86,7 +86,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
                 BackColor = ThemeManager.Bg,
-                Padding = new Padding(0, 14, 8, 0)
+                Padding = new Padding(0, 4, 4, 0)
             };
             if (spec.PrimaryActions != null)
                 foreach (var b in spec.PrimaryActions) { ButtonSkin.SetKind(b, ButtonSkin.Kind.Primary); FitButton(b); b.Margin = new Padding(8, 0, 0, 0); actions.Controls.Add(b); }
@@ -104,14 +104,14 @@ namespace RestaurantCRM.AdminApp.Controls
             if (title != null)
             {
                 title.Text = SkinUtil.CleanText(title.Text);
-                title.Font = new Font(ThemeManager.FontFamily, 17F, FontStyle.Bold);
+                title.Font = new Font(ThemeManager.FontFamily, 15F, FontStyle.Bold);
                 title.ForeColor = ThemeManager.Ink; title.BackColor = Color.Transparent;
                 title.AutoSize = true; title.UseMnemonic = false; title.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 header.Controls.Add(title);
             }
             if (sub != null)
             {
-                sub.Font = new Font(ThemeManager.FontFamily, 9F);
+                sub.Font = new Font(ThemeManager.FontFamily, 8.5F);
                 sub.ForeColor = ThemeManager.Muted; sub.BackColor = Color.Transparent;
                 sub.AutoSize = true; sub.UseMnemonic = false; sub.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 header.Controls.Add(sub);
@@ -119,10 +119,10 @@ namespace RestaurantCRM.AdminApp.Controls
             Action placeTitle = () =>
             {
                 bool embedded = !form.TopLevel;
-                if (title != null) { title.Visible = !embedded; title.Location = new Point(10, 8); }
-                if (sub != null) sub.Location = new Point(12, embedded ? 16 : (title == null ? 22 : 44));
-                header.Height = embedded ? 54 : (title == null ? 64 : 76);
-                actions.Padding = new Padding(0, embedded ? 4 : 14, 8, 0);
+                if (title != null) { title.Visible = !embedded; title.Location = new Point(8, 4); }
+                if (sub != null) sub.Location = new Point(8, embedded ? 10 : (title == null ? 14 : 32));
+                header.Height = embedded ? 38 : (title == null ? 46 : 60);
+                actions.Padding = new Padding(0, embedded ? 2 : 6, 4, 0);
             };
             // Mô tả dài thì cắt "..." thay vì đè lên các nút bên phải
             Action fitSub = () =>
@@ -130,7 +130,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 if (sub == null) return;
                 sub.AutoSize = false;
                 sub.AutoEllipsis = true;
-                sub.Height = 20;
+                sub.Height = 18;
                 sub.Width = Math.Max(80, actions.Left - sub.Left - 16);
             };
             placeTitle();
@@ -143,7 +143,7 @@ namespace RestaurantCRM.AdminApp.Controls
             Control kpiRow = null;
             if (spec.KpiLabels != null && spec.KpiLabels.Length > 0)
             {
-                var tl = new TableLayoutPanel { Dock = DockStyle.Top, Height = 104, ColumnCount = spec.KpiLabels.Length, RowCount = 1, BackColor = ThemeManager.Bg, Margin = new Padding(0), Padding = new Padding(0) };
+                var tl = new TableLayoutPanel { Dock = DockStyle.Top, Height = 84, ColumnCount = spec.KpiLabels.Length, RowCount = 1, BackColor = ThemeManager.Bg, Margin = new Padding(0), Padding = new Padding(0) };
                 tl.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
                 for (int i = 0; i < spec.KpiLabels.Length; i++)
                 {
@@ -155,7 +155,7 @@ namespace RestaurantCRM.AdminApp.Controls
             }
             else if (spec.KpiHost != null)
             {
-                var host = new Panel { Dock = DockStyle.Top, Height = 104, BackColor = ThemeManager.Bg };
+                var host = new Panel { Dock = DockStyle.Top, Height = 84, BackColor = ThemeManager.Bg };
                 spec.KpiHost.Dock = DockStyle.Fill;
                 spec.KpiHost.Margin = new Padding(0);
                 spec.KpiHost.Padding = new Padding(0);
@@ -167,20 +167,20 @@ namespace RestaurantCRM.AdminApp.Controls
             // 5. Thẻ trắng chứa bảng
             var card = NewCard();
             card.Dock = DockStyle.Fill;
-            card.Padding = new Padding(8 + 20, 4 + 8, 8 + 20, 4 + 8 + 10);
+            card.Padding = new Padding(16, 6, 16, 10);
 
-            var filterRow = new Panel { Dock = DockStyle.Top, Height = 62, BackColor = Color.White };
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.White, Padding = new Padding(0, 10, 0, 0) };
+            var filterRow = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = Color.White };
+            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.White, Padding = new Padding(0, 4, 0, 0) };
             if (spec.Search != null)
             {
-                var pill = new PillSearch(spec.Search, spec.SearchPlaceholder) { Width = 300, Margin = new Padding(0, 0, 10, 0) };
+                var pill = new PillSearch(spec.Search, spec.SearchPlaceholder) { Width = 280, Margin = new Padding(0, 0, 8, 0) };
                 flow.Controls.Add(pill);
             }
             if (spec.Filters != null)
                 foreach (var f in spec.Filters)
                 {
                     if (f.Combo == null) continue;
-                    var chip = new ComboChip(f.Combo, f.Caption != null ? f.Caption.Text : null) { Margin = new Padding(0, 0, 10, 0) };
+                    var chip = new ComboChip(f.Combo, f.Caption != null ? f.Caption.Text : null) { Margin = new Padding(0, 0, 8, 0) };
                     flow.Controls.Add(chip);
                     f.Combo.Visible = false;            // vẫn giữ trong form để DataSource hoạt động
                     filterRow.Controls.Add(f.Combo);
@@ -190,11 +190,11 @@ namespace RestaurantCRM.AdminApp.Controls
                 {
                     var b = c as Button;
                     if (b != null) { ButtonSkin.SetKind(b, ButtonSkin.Kind.Secondary); FitButton(b); }
-                    c.Margin = new Padding(0, 0, 10, 0);
+                    c.Margin = new Padding(0, 0, 8, 0);
                     flow.Controls.Add(c);
                 }
             filterRow.Controls.Add(flow);
-            // Ô tìm kiếm co lại (300 → 180px) khi thẻ hẹp để các chip lọc không bị cắt
+            // Ô tìm kiếm co lại khi thẻ hẹp để các chip lọc không bị cắt
             PillSearch searchPill = null;
             foreach (Control c in flow.Controls) if (c is PillSearch) searchPill = (PillSearch)c;
             if (searchPill != null)
@@ -203,7 +203,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 {
                     int others = 0;
                     foreach (Control c in flow.Controls) if (c != searchPill && c.Visible) others += c.Width + c.Margin.Horizontal;
-                    int w = Math.Max(180, Math.Min(300, flow.ClientSize.Width - others - searchPill.Margin.Horizontal - 4));
+                    int w = Math.Max(160, Math.Min(280, flow.ClientSize.Width - others - searchPill.Margin.Horizontal - 4));
                     if (searchPill.Width != w) searchPill.Width = w;
                 };
             }
@@ -211,7 +211,7 @@ namespace RestaurantCRM.AdminApp.Controls
             {
                 var cl = spec.CountLabel;
                 cl.AutoSize = false; cl.Dock = DockStyle.Right; cl.Width = 170;
-                cl.TextAlign = ContentAlignment.MiddleRight; cl.Padding = new Padding(0, 8, 2, 0);
+                cl.TextAlign = ContentAlignment.MiddleRight; cl.Padding = new Padding(0, 6, 2, 0);
                 cl.Font = new Font(ThemeManager.FontFamily, 8.5F); cl.ForeColor = ThemeManager.Muted; cl.BackColor = Color.White;
                 filterRow.Controls.Add(cl);
                 cl.BringToFront();
@@ -223,9 +223,9 @@ namespace RestaurantCRM.AdminApp.Controls
                              || (spec.DangerActions != null && spec.DangerActions.Length > 0) || spec.FooterInfo != null;
             if (hasFooter)
             {
-                footer = new Panel { Dock = DockStyle.Bottom, Height = 58, BackColor = Color.White };
+                footer = new Panel { Dock = DockStyle.Bottom, Height = 46, BackColor = Color.White };
                 footer.Paint += (s, e) => { using (var pen = new Pen(ThemeManager.Line)) e.Graphics.DrawLine(pen, 0, 0, footer.Width, 0); };
-                var fl = new FlowLayoutPanel { Dock = DockStyle.Left, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, BackColor = Color.White, Padding = new Padding(0, 12, 0, 0) };
+                var fl = new FlowLayoutPanel { Dock = DockStyle.Left, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, BackColor = Color.White, Padding = new Padding(0, 6, 0, 0) };
                 if (spec.SecondaryActions != null)
                     foreach (var b in spec.SecondaryActions) { ButtonSkin.SetKind(b, ButtonSkin.Kind.Secondary); FitButton(b); b.Margin = new Padding(0, 0, 8, 0); fl.Controls.Add(b); }
                 if (spec.DangerActions != null)
@@ -235,7 +235,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 {
                     var fi = spec.FooterInfo;
                     fi.AutoSize = false; fi.Dock = DockStyle.Fill; fi.TextAlign = ContentAlignment.MiddleRight;
-                    fi.Padding = new Padding(12, 6, 2, 0); fi.AutoEllipsis = true; fi.UseMnemonic = false;
+                    fi.Padding = new Padding(12, 4, 2, 0); fi.AutoEllipsis = true; fi.UseMnemonic = false;
                     fi.Font = new Font(ThemeManager.FontFamily, 8.5F); fi.ForeColor = ThemeManager.Muted; fi.BackColor = Color.White;
                     footer.Controls.Add(fi);
                     fi.BringToFront();
@@ -248,7 +248,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 g.Dock = DockStyle.Fill;
                 g.BackgroundColor = Color.White;
                 g.BorderStyle = BorderStyle.None;
-                UiStyler.StyleGrid(g);   // áp kiểu bảng ngay (dòng cao, header chữ hoa xám, pill trạng thái)
+                UiStyler.StyleGrid(g);   // áp kiểu bảng ngay (dòng gọn, header chữ hoa xám, pill trạng thái)
                 FitColumns(g);
                 card.Controls.Add(g);
             }
@@ -263,7 +263,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 side = NewCard();
                 side.Dock = DockStyle.Right;
                 side.Width = Math.Max(spec.SideWidth, spec.SidePanel.Width + 8 * 2 + 40 + 4);
-                side.Padding = new Padding(8 + 20, 4 + 18, 8 + 20, 4 + 8 + 16);
+                side.Padding = new Padding(16, 12, 16, 12);
                 spec.SidePanel.Dock = DockStyle.Fill;
                 spec.SidePanel.BackColor = Color.White;
                 side.Controls.Add(spec.SidePanel);
@@ -313,10 +313,10 @@ namespace RestaurantCRM.AdminApp.Controls
             };
         }
 
-        /// <summary>Đặt kích thước nút theo chữ (chiều cao chuẩn 38).</summary>
-        public static void FitButton(Button b, int min = 96)
+        /// <summary>Đặt kích thước nút theo chữ (chiều cao chuẩn 34).</summary>
+        public static void FitButton(Button b, int min = 84)
         {
-            b.Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold);
+            b.Font = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold);
             b.AutoSize = false;
             b.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             b.Height = ButtonHeight;
@@ -332,12 +332,12 @@ namespace RestaurantCRM.AdminApp.Controls
             if (title != null)
             {
                 title.Text = SkinUtil.CleanText(title.Text);
-                title.Font = new Font(ThemeManager.FontFamily, 15F, FontStyle.Bold);
+                title.Font = new Font(ThemeManager.FontFamily, 14F, FontStyle.Bold);
                 title.ForeColor = ThemeManager.Ink; title.BackColor = Color.Transparent; title.UseMnemonic = false;
             }
             if (subtitle != null)
             {
-                subtitle.Font = new Font(ThemeManager.FontFamily, 9F);
+                subtitle.Font = new Font(ThemeManager.FontFamily, 8.5F);
                 subtitle.ForeColor = ThemeManager.Muted; subtitle.BackColor = Color.Transparent;
             }
             if (primary != null) ButtonSkin.SetKind(primary, ButtonSkin.Kind.Primary);

@@ -317,10 +317,10 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 // hàng thẻ
                 int kw = (leftW - gap * 3) / 4;
                 for (int i = 0; i < kpis.Length; i++)
-                    kpis[i].SetBounds(x0 + i * (kw + gap), y0, kw, 136);
+                    kpis[i].SetBounds(x0 + i * (kw + gap), y0, kw, 120);
 
                 // biểu đồ
-                chart.SetBounds(x0, y0 + 136 + gap, leftW, 320);
+                chart.SetBounds(x0, y0 + 120 + gap, leftW, 290);
 
                 // hàng dưới
                 int rowY = chart.Bottom + gap;

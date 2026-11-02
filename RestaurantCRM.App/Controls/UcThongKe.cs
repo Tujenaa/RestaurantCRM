@@ -22,7 +22,7 @@ namespace RestaurantCRM.AdminApp.Controls
         public UcThongKe(string label, string value, string sub, string icon, Color accent)
         {
             _icon = icon; _accent = accent; _label = label; _value = value; _sub = sub;
-            Size = new Size(220, 128);
+            Size = new Size(220, 120);
             Margin = new Padding(0);
             Radius = 14;
             Shadow = 8;
@@ -46,33 +46,33 @@ namespace RestaurantCRM.AdminApp.Controls
             int x = card.X + 20;
 
             // Giá trị lớn
-            using (var f = new Font("Segoe UI", 19F, FontStyle.Bold))
-                TextRenderer.DrawText(g, _value ?? "", f, new Rectangle(x, card.Y + 16, card.Width - 76, 38),
+            using (var f = new Font("Segoe UI", 18F, FontStyle.Bold))
+                TextRenderer.DrawText(g, _value ?? "", f, new Rectangle(x, card.Y + 14, card.Width - 76, 32),
                     ThemeManager.Ink, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
 
-            // Nhãn nhỏ viết hoa
+            // Nhãn nhỏ viết hoa (cách số lớn 4px thoáng đãng)
             using (var f = new Font("Segoe UI", 7.5F, FontStyle.Bold))
-                TextRenderer.DrawText(g, (_label ?? "").ToUpper(), f, new Rectangle(x, card.Y + 56, card.Width - 40, 16),
+                TextRenderer.DrawText(g, (_label ?? "").ToUpper(), f, new Rectangle(x, card.Y + 50, card.Width - 40, 16),
                     ThemeManager.Muted, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
 
             // Icon nhỏ góc phải trong ô vuông màu nhạt
-            var badge = new Rectangle(card.Right - 52, card.Y + 16, 36, 36);
+            var badge = new Rectangle(card.Right - 52, card.Y + 14, 34, 34);
             using (var path = ThemeManager.RoundedRect(badge, 10))
             using (var br = new SolidBrush(ThemeManager.SoftFor(_accent)))
                 g.FillPath(br, path);
-            using (var f = new Font(ThemeManager.EmojiFont, 12F))
+            using (var f = new Font(ThemeManager.EmojiFont, 11.5F))
                 TextRenderer.DrawText(g, _icon, f, badge, _accent,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
 
             // Dòng chỉ báo: vòng tròn mũi tên + mô tả
-            int iy = card.Bottom - 34;
-            var circle = new Rectangle(x, iy, 20, 20);
+            int iy = card.Bottom - 28;
+            var circle = new Rectangle(x, iy, 18, 18);
             using (var pen = new Pen(_accent, 1.4f)) g.DrawEllipse(pen, circle);
-            using (var f = ThemeManager.Icon(7F))
+            using (var f = ThemeManager.Icon(6.5F))
                 TextRenderer.DrawText(g, ThemeManager.Glyph.Up, f, circle, _accent,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
             using (var f = new Font("Segoe UI", 8.5F, FontStyle.Bold))
-                TextRenderer.DrawText(g, _sub ?? "", f, new Rectangle(x + 28, iy, card.Width - 56, 20),
+                TextRenderer.DrawText(g, _sub ?? "", f, new Rectangle(x + 26, iy - 1, card.Width - 54, 20),
                     _accent, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
         }
     }

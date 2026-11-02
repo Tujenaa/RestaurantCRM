@@ -49,19 +49,19 @@ namespace RestaurantCRM.AdminApp.Forms
             for (int i = 0; i < columns.Length; i++) _table.Columns.Add("C" + i, typeof(string));
             foreach (string[] row in rows) _table.Rows.Add((object[])row);
 
-            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(22, 20, 22, 18), BackColor = ThemeManager.Bg };
+            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 12, 16, 12), BackColor = ThemeManager.Bg };
             Controls.Add(content);
 
             // ── Tiêu đề trang + nút tròn "+" ─────────────────────────────
-            var intro = new Panel { Dock = DockStyle.Top, Height = 74, BackColor = ThemeManager.Bg };
-            var titleLabel = new Label { Text = title, Font = new Font("Segoe UI", 17F, FontStyle.Bold), ForeColor = ThemeManager.Ink, AutoSize = true, Location = new Point(6, 2), BackColor = Color.Transparent, UseMnemonic = false };
-            var descLabel = new Label { Text = description, Font = new Font("Segoe UI", 9F), ForeColor = ThemeManager.Muted, AutoSize = true, Location = new Point(9, 40), BackColor = Color.Transparent, UseMnemonic = false };
+            var intro = new Panel { Dock = DockStyle.Top, Height = 48, BackColor = ThemeManager.Bg };
+            var titleLabel = new Label { Text = title, Font = new Font("Segoe UI", 15F, FontStyle.Bold), ForeColor = ThemeManager.Ink, AutoSize = true, Location = new Point(6, 2), BackColor = Color.Transparent, UseMnemonic = false };
+            var descLabel = new Label { Text = description, Font = new Font("Segoe UI", 8.5F), ForeColor = ThemeManager.Muted, AutoSize = true, Location = new Point(8, 26), BackColor = Color.Transparent, UseMnemonic = false };
             intro.Controls.Add(titleLabel); intro.Controls.Add(descLabel);
 
             // Nút chính "+ Thêm mới" (cùng kiểu với các màn danh sách khác)
             var btnAdd = new Button { Text = "+ Thêm mới", Anchor = AnchorStyles.Top | AnchorStyles.Right };
             ButtonSkin.SetKind(btnAdd, ButtonSkin.Kind.Primary);
-            PageKit.FitButton(btnAdd, 120);
+            PageKit.FitButton(btnAdd, 100);
             btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             Action placeIntro = () =>
             {
@@ -87,16 +87,16 @@ namespace RestaurantCRM.AdminApp.Forms
                 Shadow = 8,
                 FillColor = ThemeManager.Paper,
                 BorderColor = Color.FromArgb(120, ThemeManager.Line),
-                Padding = new Padding(8 + 18, 4 + 6, 8 + 18, 16 + 8)
+                Padding = new Padding(16, 6, 16, 10)
             };
             content.Controls.Add(card);
             content.Controls.Add(intro);
 
             // Thanh công cụ
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = ThemeManager.Paper };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = ThemeManager.Paper };
             card.Controls.Add(toolbar);
 
-            const int ctrlH = 36;
+            const int ctrlH = 32;
             int ctrlY = (toolbar.Height - ctrlH) / 2;
 
             // Ô tìm kiếm dạng pill

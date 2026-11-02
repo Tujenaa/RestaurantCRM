@@ -289,7 +289,7 @@ namespace RestaurantCRM.AdminApp.Helpers
             g.EnableHeadersVisualStyles = false;
 
             g.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            if (g.ColumnHeadersHeight < 44) g.ColumnHeadersHeight = 44;
+            if (g.ColumnHeadersHeight < 36) g.ColumnHeadersHeight = 36;
 
             var header = g.ColumnHeadersDefaultCellStyle;
             header.BackColor = ThemeManager.Paper;
@@ -314,14 +314,14 @@ namespace RestaurantCRM.AdminApp.Helpers
             g.AlternatingRowsDefaultCellStyle.SelectionBackColor = ThemeManager.PrimarySoft;
             g.AlternatingRowsDefaultCellStyle.SelectionForeColor = ThemeManager.Ink;
 
-            if (g.RowTemplate.Height < 46) g.RowTemplate.Height = 46;
+            if (g.RowTemplate.Height < 38) g.RowTemplate.Height = 38;
             foreach (DataGridViewRow row in g.Rows)
             {
-                if (row.Height < 46) row.Height = 46;
+                if (row.Height < 38) row.Height = 38;
             }
             g.RowsAdded += (s, e) => {
                 for (int i = e.RowIndex; i < e.RowIndex + e.RowCount && i < g.Rows.Count; i++)
-                    if (g.Rows[i].Height < 46) g.Rows[i].Height = 46;
+                    if (g.Rows[i].Height < 38) g.Rows[i].Height = 38;
             };
 
             // Header: chữ hoa nhỏ màu xám + đường kẻ mảnh; Ô trạng thái: pill màu
