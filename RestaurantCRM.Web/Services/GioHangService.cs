@@ -198,11 +198,9 @@ public class GioHangService
     private GioHangViewModel BuildCart(ISession session, List<GioHangItemViewModel> cart)
     {
         var voucher = session.GetString(VoucherKey);
-        var subtotal = cart.Sum(x => x.ThanhTien);
-        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, subtotal);
         var selected = cart.Where(x => x.DuocChon && x.KhaDung).ToList();
         var subtotal = selected.Sum(x => x.ThanhTien);
-        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, selected, subtotal);
+        var discount = string.IsNullOrWhiteSpace(voucher) ? 0m : CalculateDiscountForCart(session, subtotal);
 
         return new GioHangViewModel
         {
@@ -373,14 +371,11 @@ public class GioHangService
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var vouchers = await response.Content.ReadFromJsonAsync<List<VoucherViewModel>>(options);
-                if (vouchers != null)
-                {
-                    return vouchers
-                        .OrderByDescending(v => v.NgayBatDau ?? DateOnly.MinValue)
-                        .ThenByDescending(v => v.MaKmvoucher)
-                        .ToList();
-                }
-                return new List<VoucherViewModel>();
+                return (vouchers ?? new List<VoucherViewModel>())
+                    .Where(v => string.IsNullOrEmpty(v.PhamViApDung) || string.Equals(v.PhamViApDung, "TOAN_DON", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(v => v.NgayBatDau ?? DateOnly.MinValue)
+                    .ThenByDescending(v => v.MaKmvoucher)
+                    .ToList();
             }
         }
         catch (Exception ex)
@@ -449,12 +444,12 @@ public class GioHangService
                     };
 
                     // API không biết giỏ hàng -> tự tính giảm giá theo đúng phạm vi áp dụng
-                    var realDiscount = ComputeScopedDiscount(voucherInfo, selectedItems, subtotal);
+                    var realDiscount = ComputeScopedDiscount(voucherInfo, subtotal);
                     if (realDiscount <= 0)
                     {
                         session.Remove(VoucherKey);
                         session.Remove(VoucherInfoKey);
-                        return (false, BuildNotApplicableMessage(voucherInfo, subtotal, selectedItems), 0m);
+                        return (false, BuildNotApplicableMessage(voucherInfo, subtotal), 0m);
                     }
 
                     voucherInfo.LastCalculatedDiscount = realDiscount;
