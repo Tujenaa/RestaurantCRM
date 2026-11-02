@@ -173,6 +173,21 @@ public class GioHangController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public IActionResult XoaDaChon()
+    {
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        var cart = _gioHangService.Get(HttpContext.Session, customerId);
+        var selectedIds = cart.Items.Where(x => x.DuocChon).Select(x => x.MaMon).ToList();
+        if (selectedIds.Count > 0)
+        {
+            _gioHangService.RemoveItems(HttpContext.Session, selectedIds, customerId);
+            TempData["ThongBao"] = $"Đã xóa {selectedIds.Count} món đã chọn khỏi giỏ hàng.";
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult CapNhat(CapNhatSoLuongViewModel model)
     {
         if (ModelState.IsValid)

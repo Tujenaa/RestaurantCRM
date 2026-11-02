@@ -35,14 +35,25 @@ else
     <div class="layout">
         <section class="panel">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap:12px; flex-wrap:wrap;">
-                <form asp-action="ChonTatCa" method="post" class="js-select-form" style="margin:0;">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="chon" value="@(Model.GioHang.DaChonTatCa ? "false" : "true")" />
-                    <label class="cart-select-all">
-                        <input type="checkbox" class="cart-check js-auto-submit" @(Model.GioHang.DaChonTatCa ? "checked" : "") @(Model.GioHang.SoMonKhaDung == 0 ? "disabled" : "") aria-label="Chọn tất cả món" />
-                        Chọn tất cả (@selectedItems.Count/@Model.GioHang.SoMonKhaDung)
-                    </label>
-                </form>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <form asp-action="ChonTatCa" method="post" class="js-select-form" style="margin:0;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="chon" value="@(Model.GioHang.DaChonTatCa ? "false" : "true")" />
+                        <label class="cart-select-all">
+                            <input type="checkbox" class="cart-check js-auto-submit" @(Model.GioHang.DaChonTatCa ? "checked" : "") @(Model.GioHang.SoMonKhaDung == 0 ? "disabled" : "") aria-label="Chọn tất cả món" />
+                            Chọn tất cả (@selectedItems.Count/@Model.GioHang.SoMonKhaDung)
+                        </label>
+                    </form>
+                    @if (selectedItems.Count > 0)
+                    {
+                        <form asp-action="XoaDaChon" method="post" style="margin:0;" data-preserve-scroll>
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="remove" title="Xóa tất cả món đang chọn khỏi giỏ hàng">
+                                ✕ Xóa đã chọn (@selectedItems.Count)
+                            </button>
+                        </form>
+                    }
+                </div>
                 <span class="muted" style="font-size:13px;">Đã chọn @selectedItems.Sum(x => x.SoLuong) phần · Trong giỏ @Model.GioHang.Items.Count món</span>
             </div>
 
@@ -93,17 +104,7 @@ else
                         }
                     </div>
                     <div class="cart-item-actions" style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                        @if (unavailable)
-                        {
-                            <form asp-action="Xoa" method="post" style="margin:0;">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="maMon" value="@item.MaMon" />
-                                <button type="submit" class="btn secondary small" style="color:#c62828; border-color:#ef9a9a; background:#fff5f5; font-size:12px; padding:6px 14px; border-radius:8px; font-weight:600; cursor:pointer;" title="Xóa món này khỏi giỏ">
-                                    Xóa món
-                                </button>
-                            </form>
-                        }
-                        else
+                        @if (!unavailable)
                         {
                             <form asp-action="CapNhat" method="post" class="qty">
                                 @Html.AntiForgeryToken()
@@ -112,12 +113,12 @@ else
                                 <strong>@item.SoLuong</strong>
                                 <button type="submit" name="SoLuong" value="@(item.SoLuong + 1)" aria-label="Tăng số lượng">＋</button>
                             </form>
-                            <form asp-action="Xoa" method="post" style="margin-top:2px;">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="maMon" value="@item.MaMon" />
-                                <button type="submit" class="remove" style="cursor:pointer; color:#a79a8d; font-size:12px;" title="Xóa món này">Xóa món</button>
-                            </form>
                         }
+                        <form asp-action="Xoa" method="post" style="margin:0;" data-preserve-scroll>
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="maMon" value="@item.MaMon" />
+                            <button type="submit" class="remove" title="Xóa @item.TenMon khỏi giỏ hàng">✕ Xóa món</button>
+                        </form>
                     </div>
                 </div>
             }
