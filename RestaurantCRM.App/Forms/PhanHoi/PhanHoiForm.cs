@@ -37,18 +37,29 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private readonly Label _lblCount = new Label();
         private readonly Label _lblFooter = new Label();
         private readonly Label _kTong = new Label { Text = "Tổng phản hồi: —" };
-        private readonly Label _kCho = new Label { Text = "Chưa trả lời: —" };
+        private readonly Label _kCho = new Label { Text = "Chưa xử lý: —" };
         private readonly Label _kDiem = new Label { Text = "Điểm trung bình: —" };
         private readonly Label _kAn = new Label { Text = "Đã ẩn: —" };
         private readonly Button _btnLamMoi = new Button { Text = "Làm mới" };
+        // Đổi trạng thái xử lý 2 chiều: "✓ Đã xử lý" <-> "↺ Chưa xử lý"
+        private readonly Button _btnDaXem = new Button { Text = "✓ Đánh dấu đã xử lý" };
         private readonly Button _btnAnHien = new Button { Text = "Ẩn phản hồi" };
         private readonly Button _btnXoa = new Button { Text = "Xóa phản hồi" };
 
         // Khung chi tiết bên phải
-        private readonly Panel _detail = new Panel { Width = 320 };
+        private readonly Panel _detail = new Panel { Width = 340 };
         private readonly Panel _head = new Panel { Dock = DockStyle.Top, Height = 104 };
         private readonly Panel _thread = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
-        private readonly Panel _composer = new Panel { Dock = DockStyle.Bottom, Height = 150 };
+        private readonly Panel _composer = new Panel { Dock = DockStyle.Bottom, Height = 156 };
+        // Hiện thay khung soạn khi phản hồi đã được trả lời (mỗi phản hồi chỉ trả lời 1 lần)
+        private readonly Label _closedNote = new Label
+        {
+            Dock = DockStyle.Bottom,
+            Height = 36,
+            TextAlign = ContentAlignment.MiddleCenter,
+            UseMnemonic = false,
+            Text = "✓  Đã xử lý"
+        };
         private readonly TextBox _txtReply = new TextBox { Multiline = true, BorderStyle = BorderStyle.None, MaxLength = 2000, ScrollBars = ScrollBars.None };
         private readonly Label _replyHint = new Label { Text = "Nhập nội dung trả lời khách hàng...", AutoSize = true, UseMnemonic = false, Cursor = Cursors.IBeam };
         private readonly Panel _replyBox = new Panel();
@@ -74,7 +85,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             BuildGrid();
             BuildDetail();
 
-            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Chưa trả lời", "Đã trả lời", "Đã ẩn" });
+            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Chưa xử lý", "Đã xử lý", "Đã ẩn" });
             _cboTrangThai.SelectedIndex = 0;
 
             PageKit.BuildListPage(this, new ListPageSpec
@@ -88,11 +99,11 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 Filters = new[] { new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }) },
                 CountLabel = _lblCount,
                 Grid = _grid,
-                SecondaryActions = new[] { _btnAnHien },
+                SecondaryActions = new[] { _btnDaXem, _btnAnHien },
                 DangerActions = new[] { _btnXoa },
                 FooterInfo = _lblFooter,
                 SidePanel = _detail,
-                SideWidth = 390
+                SideWidth = 400
             });
 
             // Bảng hẹp vì có khung chi tiết bên phải: không xuống dòng, cột co được nhỏ
@@ -115,6 +126,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             };
 
             _btnLamMoi.Click += async (s, e) => await LoadDataAsync();
+            _btnDaXem.Click += (s, e) => DanhDauDaXem();
             _btnAnHien.Click += (s, e) => DoiAnHien();
             _btnXoa.Click += (s, e) => XoaPhanHoi();
             _btnGui.Click += async (s, e) => await GuiTraLoiAsync();
@@ -225,8 +237,13 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             _thread.Resize += (s, e) => LayoutThread();
 
+            _closedNote.Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold);
+            _closedNote.ForeColor = ThemeManager.Green;
+            _closedNote.BackColor = ThemeManager.GreenSoft;
+
             _detail.Controls.Add(_thread);
             _detail.Controls.Add(_composer);
+            _detail.Controls.Add(_closedNote);
             _detail.Controls.Add(_head);
             _detail.Controls.Add(_empty);
             _thread.BringToFront();
@@ -235,8 +252,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private void LayoutComposer()
         {
             int w = _composer.ClientSize.Width;
-            _replyBox.SetBounds(0, 14, w, 86);
-            int y = 14 + 86 + 10;
+            _replyBox.SetBounds(0, 12, w, 88);
+            int y = 12 + 88 + 10;
             _btnGui.Location = new Point(w - _btnGui.Width, y);
             _btnMau.Location = new Point(0, y);
             _lblDem.SetBounds(_btnMau.Right + 6, y, Math.Max(10, _btnGui.Left - _btnMau.Right - 14), _btnGui.Height);
@@ -307,7 +324,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         {
             var coSao = _all.Where(d => d.SoSao.HasValue && d.SoSao > 0).ToList();
             _kTong.Text = "Tổng phản hồi: " + _all.Count.ToString("N0");
-            _kCho.Text = "Chưa trả lời: " + _all.Count(d => d.TrangThaiHienThi == "Chưa trả lời").ToString("N0");
+            _kCho.Text = "Chưa xử lý: " + _all.Count(d => !d.LaDaXuLy).ToString("N0");
             _kDiem.Text = "Điểm trung bình: " + (coSao.Count == 0 ? "—" : coSao.Average(d => d.SoSao.Value).ToString("0.0") + " / 5");
             _kAn.Text = "Đã ẩn: " + _all.Count(d => !d.HienThi).ToString("N0");
         }
@@ -320,7 +337,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             var list = _all.Where(d =>
             {
-                if (tt != "Tất cả" && d.TrangThaiHienThi != tt) return false;
+                if (tt == "Đã ẩn") { if (d.HienThi) return false; }
+                else if (tt != "Tất cả" && d.TrangThaiHienThi != tt) return false;
                 if (q.Length == 0) return true;
                 return Has(d.MaDanhGia, q) || Has(d.TenKhachHang, q) || Has(d.TenMon, q) || Has(d.NoiDung, q) || Has(d.SoDienThoai, q);
             }).ToList();
@@ -370,14 +388,25 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _current = d;
             bool has = d != null;
             _empty.Visible = !has;
-            _head.Visible = has; _thread.Visible = has; _composer.Visible = has;
+            // Đã xử lý (hoặc đã trả lời 1 lần) => đóng khung soạn trả lời
+            bool dong = has && (d.LaDaXuLy || d.DaTraLoi);
+            _head.Visible = has; _thread.Visible = has;
+            _composer.Visible = has && !dong;
+            _closedNote.Visible = dong;
+            if (dong)
+                _closedNote.Text = d.DaTraLoi
+                    ? "✓  Đã trả lời"
+                    : "✓  Đã xử lý";
             if (has) _empty.SendToBack(); else _empty.BringToFront();
 
             _btnAnHien.Enabled = has;
+            _btnDaXem.Enabled = has;
+            _btnDaXem.Text = has && d.LaDaXuLy ? "↺ Chuyển về chưa xử lý" : "✓ Đánh dấu đã xử lý";
+            PageKit.FitButton(_btnDaXem, 120);
             _btnXoa.Enabled = has;
             _btnAnHien.Text = has && !d.HienThi ? "Hiện lại phản hồi" : "Ẩn phản hồi";
             _lblFooter.Text = has
-                ? (d.TenKhachHang ?? "Khách ẩn danh") + " · " + (d.TongSoTraLoi > 0 ? d.TongSoTraLoi + " câu trả lời" : "chưa trả lời")
+                ? (d.TenKhachHang ?? "Khách ẩn danh") + " · " + d.TrangThaiHienThi + (d.DaTraLoi ? " · đã trả lời" : "")
                 : "Chọn một phản hồi để xem và trả lời";
 
             if (doiDong) _txtReply.Text = "";
@@ -484,6 +513,17 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             var r = await _service.DeleteReplyAsync(d.MaDanhGia, t.MaTraLoi);
             if (IsDisposed) return;
             if (!r.Success) { Notify.Error(this, r.Message); return; }
+            await LoadDataAsync(d.MaDanhGia);
+        }
+
+        private async void DanhDauDaXem()
+        {
+            var d = _current;
+            if (d == null) return;
+            _btnDaXem.Enabled = false;
+            var r = await _service.SetProcessedAsync(d.MaDanhGia, !d.LaDaXuLy);
+            if (IsDisposed) return;
+            if (!r.Success) { _btnDaXem.Enabled = true; Notify.Error(this, r.Message); return; }
             await LoadDataAsync(d.MaDanhGia);
         }
 
