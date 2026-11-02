@@ -44,6 +44,19 @@ namespace RestaurantCRM.AdminApp.Services
             return DeleteAsync(Base + "/" + E(maDanhGia) + "/Reply/" + E(maTraLoi), "Đã xóa câu trả lời.");
         }
 
+        /// <summary>Admin đổi trạng thái xử lý (không cần trả lời khách).</summary>
+        public Task<ApiResult> SetProcessedAsync(string maDanhGia, bool daXuLy)
+        {
+            return PutAsync(Base + "/" + E(maDanhGia) + "/XuLy", new { DaXuLy = daXuLy },
+                daXuLy ? "Đã chuyển phản hồi sang Đã xử lý." : "Đã chuyển phản hồi về Chưa xử lý.");
+        }
+
+        /// <summary>Đánh dấu "Đã xem" => phản hồi chuyển sang Đã xử lý mà không cần trả lời.</summary>
+        public Task<ApiResult> MarkSeenAsync(string maDanhGia)
+        {
+            return PutAsync(Base + "/" + E(maDanhGia) + "/DaXem", new { }, "Đã chuyển phản hồi sang Đã xử lý.");
+        }
+
         public Task<ApiResult> SetVisibleAsync(string maDanhGia, bool hienThi)
         {
             return PutAsync(Base + "/" + E(maDanhGia) + "/TrangThai", new PhanHoiTrangThaiRequest { HienThi = hienThi },

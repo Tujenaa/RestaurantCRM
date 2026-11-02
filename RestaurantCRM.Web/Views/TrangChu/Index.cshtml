@@ -61,9 +61,7 @@
             <div class="category-slider" id="categorySlider">
                 @foreach (var cat in danhMuc)
                 {
-                    var anh = Model.MonAns.FirstOrDefault(d => d.MaLoaiMon == cat.MaLoaiMon && !string.IsNullOrWhiteSpace(d.DuongDanAnh))?.DuongDanAnh ?? anhMacDinh;
-                    <a class="category-tile" asp-controller="Menu" asp-action="Index" asp-route-loai="@cat.MaLoaiMon">
-                        <img src="@anh" alt="@cat.TenLoaiMon" loading="lazy" onerror="this.onerror=null; this.src='@anhMacDinh';" />
+                    <a class="category-tile" asp-controller="Menu" asp-action="Index" asp-route-loai="@cat.MaLoaiMon" title="@cat.TenLoaiMon">
                         <strong>@cat.TenLoaiMon</strong>
                         @if (cat.SoLuongMon > 0)
                         {

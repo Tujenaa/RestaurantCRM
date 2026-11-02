@@ -238,7 +238,8 @@ CREATE TABLE DANH_GIA (
     soSao INT,
     noiDung NVARCHAR(MAX),
     ngayDanhGia DATETIME,
-    trangThai BIT NOT NULL CONSTRAINT DF_DANH_GIA_trangThai DEFAULT 1  -- 1 = hiển thị, 0 = ẩn
+    trangThai BIT NOT NULL CONSTRAINT DF_DANH_GIA_trangThai DEFAULT 1,  -- 1 = hiển thị, 0 = ẩn
+    daXuLy BIT NOT NULL CONSTRAINT DF_DANH_GIA_daXuLy DEFAULT 0       -- 1 = nhân viên đã xử lý (đã xem / đã trả lời)
 );
 
 CREATE TABLE LICH_SU_TRANG_THAI (

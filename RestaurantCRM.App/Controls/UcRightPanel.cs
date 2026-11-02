@@ -25,8 +25,9 @@ namespace RestaurantCRM.AdminApp.Controls
         private List<ActivityItem> _items = new List<ActivityItem>();
         private bool _loading = true;
         private int _scroll;
-        private const int ItemH = 66;
+        private int _contentH;              // tổng chiều cao các dòng (tính lại mỗi lần vẽ)
         private const int HeaderH = 64;
+        private const TextFormatFlags WrapFlags = TextFormatFlags.WordBreak | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.TextBoxControl;
 
         public string Title { get; set; } = "Hoạt động gần đây";
 
@@ -51,14 +52,14 @@ namespace RestaurantCRM.AdminApp.Controls
         protected override void OnMouseWheel(MouseEventArgs e)
         {
             base.OnMouseWheel(e);
-            int contentH = _items.Count * ItemH;
             int viewH = CardRect.Height - HeaderH - 10;
-            int maxScroll = Math.Max(0, contentH - viewH);
+            int maxScroll = Math.Max(0, _contentH - viewH);
             _scroll = Math.Max(0, Math.Min(maxScroll, _scroll - e.Delta / 3));
             Invalidate();
         }
 
         protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); Focus(); }
+        protected override void OnResize(EventArgs e) { base.OnResize(e); Invalidate(); }
 
         private static string Ago(DateTime? t)
         {
@@ -100,15 +101,26 @@ namespace RestaurantCRM.AdminApp.Controls
             using (var fPill = new Font("Segoe UI", 7F, FontStyle.Bold))
             using (var linePen = new Pen(Color.FromArgb(244, 245, 249)))
             {
+                int x = card.X + 22;
+                int avSize = Math.Max(34, fAv.Height * 2);
+                int tx = x + avSize + 12;
+                int tw = Math.Max(40, card.Right - 20 - tx);
+                int timeH = fTime.Height;
+                int padY = 12;
+
+                int y = view.Y - _scroll;
                 for (int i = 0; i < _items.Count; i++)
                 {
                     var it = _items[i];
-                    int y = view.Y + i * ItemH - _scroll;
-                    if (y + ItemH < view.Y || y > view.Bottom) continue;
-                    int x = card.X + 22;
+                    // Đo nội dung để dòng cao vừa đủ, không bị cắt chữ khi màn hình phóng to
+                    int textH = TextRenderer.MeasureText(g, it.Text ?? "", fText, new Size(tw, int.MaxValue), WrapFlags).Height;
+                    int itemH = Math.Max(avSize + padY * 2, padY + timeH + 3 + textH + padY);
+                    int top = y;
+                    y += itemH;
+                    if (top + itemH < view.Y || top > view.Bottom) continue;
 
                     // avatar
-                    var av = new Rectangle(x, y + 14, 34, 34);
+                    var av = new Rectangle(x, top + padY + 2, avSize, avSize);
                     using (var br = new SolidBrush(ThemeManager.AvatarColor(it.Who))) g.FillEllipse(br, av);
                     TextRenderer.DrawText(g, ThemeManager.Initials(it.Who), fAv, av, Color.White,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
@@ -122,20 +134,18 @@ namespace RestaurantCRM.AdminApp.Controls
                         using (var br = new SolidBrush(sf)) g.FillEllipse(br, av.Right - 9, av.Y, 9, 9);
                     }
 
-                    int tx = av.Right + 12;
-                    int tw = card.Right - 20 - tx;
-                    TextRenderer.DrawText(g, Ago(it.Time), fTime, new Rectangle(tx, y + 12, tw, 14), ThemeManager.Muted,
+                    TextRenderer.DrawText(g, Ago(it.Time), fTime, new Rectangle(tx, top + padY, tw, timeH), ThemeManager.Muted,
                         TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-                    TextRenderer.DrawText(g, it.Text ?? "", fText, new Rectangle(tx, y + 27, tw, 34), ThemeManager.Ink2,
-                        TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    TextRenderer.DrawText(g, it.Text ?? "", fText, new Rectangle(tx, top + padY + timeH + 3, tw, textH), ThemeManager.Ink2, WrapFlags);
 
-                    if (i < _items.Count - 1) g.DrawLine(linePen, tx, y + ItemH - 1, card.Right - 20, y + ItemH - 1);
+                    if (i < _items.Count - 1) g.DrawLine(linePen, tx, top + itemH - 1, card.Right - 20, top + itemH - 1);
                 }
+                _contentH = y + _scroll - view.Y;
             }
             g.Restore(state);
 
             // gợi ý cuộn: mờ dần ở đáy
-            if (_items.Count * ItemH - _scroll > view.Height)
+            if (_contentH - _scroll > view.Height)
             {
                 var fade = new Rectangle(view.X, view.Bottom - 30, view.Width, 30);
                 using (var br = new LinearGradientBrush(fade, Color.FromArgb(0, Color.White), Color.White, LinearGradientMode.Vertical))

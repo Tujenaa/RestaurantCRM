@@ -9,7 +9,9 @@ namespace RestaurantCRM.API.Controllers
     /// <summary>
     /// Quản lý phản hồi / góp ý của khách hàng.
     /// CSDL đã bỏ bảng PHAN_HOI: phản hồi của khách chính là DANH_GIA, nhân viên trả lời lưu ở TRA_LOI_DANH_GIA.
-    /// Trạng thái xử lý: "Chưa trả lời" (chưa có dòng trả lời), "Đã trả lời", "Đã ẩn" (DANH_GIA.trangThai = 0).
+    /// Trạng thái xử lý: "Chưa xử lý" / "Đã xử lý" theo cột DANH_GIA.daXuLy.
+    /// Gửi trả lời tự chuyển sang Đã xử lý; admin có thể đổi trạng thái bất cứ lúc nào (kể cả chưa trả lời).
+    /// Ẩn / hiện trên website là thông tin riêng (DANH_GIA.trangThai). Mỗi phản hồi chỉ trả lời 1 lần.
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
@@ -24,7 +26,7 @@ namespace RestaurantCRM.API.Controllers
 
         // GET: api/AdminDanhGia?search=&trangThai=&soSao=
         //   trangThai: (bỏ trống) = chỉ phản hồi đang hiển thị (giữ như cũ cho Dashboard)
-        //              TatCa | ChuaTraLoi | DaTraLoi | DaAn
+        //              TatCa | ChuaXuLy | DaXuLy | DaAn  (ChuaTraLoi / DaTraLoi giữ để tương thích)
         //   search: tìm theo mã, tên khách hàng, tên món, nội dung
         [HttpGet]
         public async Task<IActionResult> GetAllDanhGia([FromQuery] string? search, [FromQuery] string? trangThai, [FromQuery] int? soSao)
@@ -36,9 +38,11 @@ namespace RestaurantCRM.API.Controllers
                 case "TatCa": break;
                 case "ChuaTraLoi": query = query.Where(d => d.TrangThai && !d.TraLoiDanhGia.Any()); break;
                 case "DaTraLoi": query = query.Where(d => d.TrangThai && d.TraLoiDanhGia.Any()); break;
+                case "ChuaXuLy": query = query.Where(d => !d.DaXuLy); break;
+                case "DaXuLy": query = query.Where(d => d.DaXuLy); break;
                 case "DaAn": query = query.Where(d => !d.TrangThai); break;
                 case "": query = query.Where(d => d.TrangThai); break;
-                default: return BadRequest("Trạng thái lọc không hợp lệ. Chấp nhận: TatCa, ChuaTraLoi, DaTraLoi, DaAn.");
+                default: return BadRequest("Trạng thái lọc không hợp lệ. Chấp nhận: TatCa, ChuaXuLy, DaXuLy, DaAn.");
             }
 
             if (soSao.HasValue)
@@ -72,7 +76,8 @@ namespace RestaurantCRM.API.Controllers
                     HienThi = d.TrangThai,
                     TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
                     TongSoTraLoi = d.TraLoiDanhGia.Count,
-                    TrangThaiXuLy = !d.TrangThai ? "Đã ẩn" : (d.TraLoiDanhGia.Any() ? "Đã trả lời" : "Chưa trả lời"),
+                    d.DaXuLy,
+                    TrangThaiXuLy = d.DaXuLy ? "Đã xử lý" : "Chưa xử lý",
                     HoiThoai = d.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
                         t.MaTraLoi,
@@ -107,7 +112,8 @@ namespace RestaurantCRM.API.Controllers
                     TenKhachHang = x.MaKhachHangNavigation != null ? x.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
                     SoDienThoai = x.MaKhachHangNavigation != null ? x.MaKhachHangNavigation.SoDienThoai : null,
                     TongSoTraLoi = x.TraLoiDanhGia.Count,
-                    TrangThaiXuLy = !x.TrangThai ? "Đã ẩn" : (x.TraLoiDanhGia.Any() ? "Đã trả lời" : "Chưa trả lời"),
+                    x.DaXuLy,
+                    TrangThaiXuLy = x.DaXuLy ? "Đã xử lý" : "Chưa xử lý",
                     HoiThoai = x.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
                         t.MaTraLoi,
@@ -135,6 +141,8 @@ namespace RestaurantCRM.API.Controllers
 
             if (request == null || string.IsNullOrWhiteSpace(request.NoiDung))
                 return BadRequest("Nội dung trả lời không được để trống.");
+            if (await _service.Query<TraLoiDanhGia>().AnyAsync(t => t.MaDanhGia == id))
+                return BadRequest("Phản hồi này đã được trả lời. Mỗi phản hồi chỉ trả lời 1 lần.");
             if (request.NoiDung.Trim().Length > 2000)
                 return BadRequest("Nội dung trả lời tối đa 2000 ký tự.");
             if (string.IsNullOrWhiteSpace(request.NguoiGuiId) ||
@@ -151,9 +159,40 @@ namespace RestaurantCRM.API.Controllers
             };
 
             _service.Add(traLoi);
+            danhGia.DaXuLy = true;
             await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi trả lời thành công.", maTraLoi = traLoi.MaTraLoi });
+        }
+
+        // PUT: api/AdminDanhGia/{id}/XuLy - Admin đổi trạng thái xử lý (Chưa xử lý <-> Đã xử lý), không cần trả lời
+        [HttpPut("{id}/XuLy")]
+        public async Task<IActionResult> CapNhatXuLy(string id, CapNhatXuLyRequest request)
+        {
+            var danhGia = await _service.FindAsync<DanhGia>(id);
+            if (danhGia == null) return NotFound("Không tìm thấy phản hồi.");
+            if (request == null) return BadRequest("Thiếu dữ liệu trạng thái.");
+
+            danhGia.DaXuLy = request.DaXuLy;
+            await _service.SaveChangesAsync();
+            return Ok(new { message = request.DaXuLy ? "Đã chuyển phản hồi sang Đã xử lý." : "Đã chuyển phản hồi về Chưa xử lý.", daXuLy = request.DaXuLy });
+        }
+
+        public class CapNhatXuLyRequest
+        {
+            public bool DaXuLy { get; set; }
+        }
+
+        // PUT: api/AdminDanhGia/{id}/DaXem - Đánh dấu đã xem => chuyển sang "Đã xử lý" mà không cần trả lời
+        [HttpPut("{id}/DaXem")]
+        public async Task<IActionResult> DanhDauDaXem(string id)
+        {
+            var danhGia = await _service.FindAsync<DanhGia>(id);
+            if (danhGia == null) return NotFound("Không tìm thấy phản hồi.");
+
+            danhGia.DaXuLy = true;
+            await _service.SaveChangesAsync();
+            return Ok(new { message = "Đã đánh dấu phản hồi là đã xử lý." });
         }
 
         // DELETE: api/AdminDanhGia/{id}/Reply/{maTraLoi} - Xóa một câu trả lời gửi nhầm

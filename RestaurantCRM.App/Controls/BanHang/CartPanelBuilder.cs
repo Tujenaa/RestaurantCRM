@@ -40,6 +40,9 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
         private InputBox _voucherBox;
         private bool _voucherApplied;
+        private TableLayoutPanel _promoInputRow;
+        private RowStyle _promoRowStyle;          // hàng chứa ô voucher trong footer
+        private int _promoHeightFull, _promoHeightCompact;
 
         // UI Controls
         private FlowLayoutPanel _cartLines;
@@ -99,8 +102,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 Padding = Padding.Empty
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, S(156)));  // thông tin đơn hàng
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));   // header giỏ hàng
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, S(128)));  // thông tin đơn hàng
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, S(34)));   // header giỏ hàng
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));    // danh sách món cuộn
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // footer cố định
 
@@ -136,11 +139,11 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(30)));   // tiêu đề
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(22)));   // nhãn
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));   // ô nhập
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(24)));   // nhãn
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));   // ô nhập
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(26)));   // tiêu đề
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(18)));   // nhãn
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(32)));   // ô nhập
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(20)));   // nhãn
+            t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(32)));   // ô nhập
 
             var title = new Label
             {
@@ -331,7 +334,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
             var promo = BuildPromoBox();
-            t.RowStyles.Add(new RowStyle(SizeType.Absolute, promo.Height + promo.Margin.Vertical));
+            _promoRowStyle = new RowStyle(SizeType.Absolute, promo.Height + promo.Margin.Vertical);
+            t.RowStyles.Add(_promoRowStyle);
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             t.RowStyles.Add(new RowStyle(SizeType.Absolute, S(13)));
@@ -396,24 +400,28 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         }
 
         /// <summary>
-        /// Ô voucher 2 tầng:
-        ///   [icon] Tiêu đề / dòng phụ ............ Chọn mã ▾
-        ///   [ ô nhập mã voucher ................ ] [Dùng]   (hoặc [Bỏ mã] khi đã áp mã)
+        /// Ô voucher gọn:
+        ///   Chưa áp mã: [icon] Tiêu đề / dòng phụ ........ Chọn mã ▾
+        ///               [ ô nhập mã voucher ........... ] [Dùng]
+        ///   Đã áp mã  : [✔] Mã [...] / Giảm ...  [Bỏ mã] Đổi mã ▾   (chỉ 1 hàng)
         /// </summary>
         private Control BuildPromoBox()
         {
             var fTitle = new Font("Segoe UI", 9F, FontStyle.Bold);
             var fSub = new Font("Segoe UI", 8F);
-            int pad = S(10);
-            int inputRowH = S(36);
+            int pad = S(8);
+            int inputRowH = S(30);
+            int inputGap = S(6);
             int textH = TextRenderer.MeasureText("Ag", fTitle).Height + TextRenderer.MeasureText("Ag", fSub).Height;
+            _promoHeightCompact = pad + textH + pad;
+            _promoHeightFull = _promoHeightCompact + inputGap + inputRowH;
 
             _pnlPromoBox = new RoundedPanel
             {
                 Dock = DockStyle.Fill,
-                Height = pad + textH + S(8) + inputRowH + pad,
+                Height = _promoHeightFull,
                 Margin = new Padding(0, S(4), 0, S(6)),
-                Padding = new Padding(pad, pad - S(2), pad, pad),
+                Padding = new Padding(S(10), pad, S(10), pad),
                 Radius = S(10),
                 BorderWidth = 1,
                 BorderColor = ThemeManager.Line,
@@ -441,7 +449,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 Text = "🎟️",
                 AutoSize = true,
                 Anchor = AnchorStyles.Left,
-                Font = new Font("Segoe UI Emoji", 12F),
+                Font = new Font("Segoe UI Emoji", 10.5F),
                 BackColor = Color.Transparent,
                 Margin = new Padding(0, 0, S(6), 0)
             };
@@ -491,8 +499,19 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             _lnkChangePromo.Click += (s, e) => SelectVoucherClicked?.Invoke();
             _lnkChangePromo.MouseEnter += (s, e) => _lnkChangePromo.ForeColor = ThemeManager.PrimaryDark;
             _lnkChangePromo.MouseLeave += (s, e) => _lnkChangePromo.ForeColor = ThemeManager.Primary;
-            grid.Controls.Add(_lnkChangePromo, 2, 0);
-            grid.SetRowSpan(_lnkChangePromo, 2);
+            var topActions = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                Anchor = AnchorStyles.Right,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            grid.Controls.Add(topActions, 2, 0);
+            grid.SetRowSpan(topActions, 2);
 
             // Hàng nhập mã
             var inputRow = new TableLayoutPanel
@@ -501,9 +520,10 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 BackColor = Color.Transparent,
                 ColumnCount = 2,
                 RowCount = 1,
-                Margin = new Padding(0, S(8), 0, 0),
+                Margin = new Padding(0, inputGap, 0, 0),
                 Padding = Padding.Empty
             };
+            _promoInputRow = inputRow;
             inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             inputRow.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -524,23 +544,11 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             _voucherBox = new InputBox(_txtQuickVoucher) { Dock = DockStyle.Fill, Margin = new Padding(0, 0, S(8), 0) };
             inputRow.Controls.Add(_voucherBox, 0, 0);
 
-            var actions = new FlowLayoutPanel
-            {
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
-                FlowDirection = FlowDirection.RightToLeft,
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent,
-                Margin = Padding.Empty,
-                Padding = Padding.Empty
-            };
-
             _btnQuickApply = new Button
             {
                 Text = "Dùng",
-                Size = new Size(S(72), inputRowH),
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Size = new Size(S(64), inputRowH),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = Padding.Empty
             };
@@ -550,18 +558,20 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             _btnPromoAction = new Button
             {
                 Text = "Bỏ mã",
-                Size = new Size(S(84), inputRowH),
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Size = new Size(S(64), S(26)),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = Padding.Empty,
+                Margin = new Padding(0, S(2), S(4), 0),
                 Visible = false
             };
             ButtonSkin.SetKind(_btnPromoAction, ButtonSkin.Kind.Soft);
             _btnPromoAction.Click += (s, e) => PromoActionClicked?.Invoke();
 
-            actions.Controls.Add(_btnQuickApply);
-            actions.Controls.Add(_btnPromoAction);
-            inputRow.Controls.Add(actions, 1, 0);
+            _btnQuickApply.Anchor = AnchorStyles.Right;
+            inputRow.Controls.Add(_btnQuickApply, 1, 0);
+
+            topActions.Controls.Add(_btnPromoAction);
+            topActions.Controls.Add(_lnkChangePromo);
 
             grid.Controls.Add(inputRow, 0, 2);
             grid.SetColumnSpan(inputRow, 3);
@@ -580,9 +590,17 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         private void LayoutPromoBox()
         {
             if (_pnlPromoBox == null) return;
-            _voucherBox.Visible = !_voucherApplied;
-            _btnQuickApply.Visible = !_voucherApplied;
+            _promoInputRow.Visible = !_voucherApplied;
             _btnPromoAction.Visible = _voucherApplied;
+
+            // Đã áp mã thì chỉ còn 1 hàng => thu nhỏ khung
+            int h = _voucherApplied ? _promoHeightCompact : _promoHeightFull;
+            if (_pnlPromoBox.Height != h) _pnlPromoBox.Height = h;
+            if (_promoRowStyle != null)
+            {
+                float rowH = h + _pnlPromoBox.Margin.Vertical;
+                if (Math.Abs(_promoRowStyle.Height - rowH) > 0.5f) _promoRowStyle.Height = rowH;
+            }
         }
 
         public void SetPayButtonEnabled(bool enabled)
@@ -694,7 +712,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         {
             var card = new RoundedPanel
             {
-                Size = new Size(width, S(70)),
+                Size = new Size(width, S(56)),
                 Margin = new Padding(0, 0, 0, S(6)),
                 Radius = S(8),
                 BorderWidth = 1,
@@ -702,12 +720,12 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 FillColor = CartCardBg
             };
 
-            int pad = S(10);
-            int btn = S(26);
+            int pad = S(9);
+            int btn = S(22);
             var btnDelete = new Button
             {
                 Text = ThemeManager.Glyph.Delete,
-                Location = new Point(width - pad - btn, S(7)),
+                Location = new Point(width - pad - btn, S(5)),
                 Size = new Size(btn, btn),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 FlatStyle = FlatStyle.Flat,
@@ -730,7 +748,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             card.Controls.Add(btnDelete);
 
             var qtyEditor = CreateInlineQuantityEditor(item);
-            qtyEditor.Location = new Point(btnDelete.Left - qtyEditor.Width - S(6), S(7));
+            qtyEditor.Location = new Point(btnDelete.Left - qtyEditor.Width - S(6), S(5));
             qtyEditor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             card.Controls.Add(qtyEditor);
 
@@ -739,7 +757,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var lblName = new Label
             {
                 Text = item.Name,
-                Location = new Point(pad, S(9)),
+                Location = new Point(pad, S(6)),
                 Size = new Size(Math.Max(S(80), qtyEditor.Left - pad - S(6)), nameH),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 AutoEllipsis = true,
@@ -796,7 +814,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         {
             var host = new Panel
             {
-                Size = new Size(S(112), S(26)),
+                Size = new Size(S(96), S(22)),
                 BackColor = Color.Transparent
             };
 
@@ -832,7 +850,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var numInput = new NumericUpDown
             {
                 Location = new Point(0, 0),
-                Size = new Size(S(54), S(26)),
+                Size = new Size(S(46), S(22)),
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 Minimum = 0,
                 Maximum = Math.Max(100, item.MaxStock),
@@ -843,8 +861,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var btnOk = new Button
             {
                 Text = "✓",
-                Location = new Point(S(56), 0),
-                Size = new Size(S(27), S(26)),
+                Location = new Point(S(48), 0),
+                Size = new Size(S(23), S(22)),
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 BackColor = _accent,
                 ForeColor = Color.White,
@@ -856,8 +874,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var btnCancel = new Button
             {
                 Text = "✕",
-                Location = new Point(S(85), 0),
-                Size = new Size(S(27), S(26)),
+                Location = new Point(S(73), 0),
+                Size = new Size(S(23), S(22)),
                 Font = new Font("Segoe UI", 8F, FontStyle.Bold),
                 BackColor = Color.FromArgb(241, 245, 249),
                 ForeColor = ThemeManager.Muted,

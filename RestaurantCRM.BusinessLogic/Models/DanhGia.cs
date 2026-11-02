@@ -21,6 +21,9 @@ public partial class DanhGia
 
     public bool TrangThai { get; set; } = true;
 
+    /// <summary>Nhân viên đã xử lý phản hồi (bấm "Đã xem" hoặc đã trả lời).</summary>
+    public bool DaXuLy { get; set; }
+
     public virtual HoaDon? MaHoaDonNavigation { get; set; }
 
     public virtual KhachHang? MaKhachHangNavigation { get; set; }

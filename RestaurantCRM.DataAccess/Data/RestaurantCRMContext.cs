@@ -303,6 +303,7 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.NoiDung).HasColumnName("noiDung");
             entity.Property(e => e.SoSao).HasColumnName("soSao");
             entity.Property(e => e.TrangThai).HasColumnName("trangThai");
+            entity.Property(e => e.DaXuLy).HasColumnName("daXuLy");
 
             entity.HasOne(d => d.MaHoaDonNavigation).WithMany(p => p.DanhGia)
                 .HasForeignKey(d => d.MaHoaDon)

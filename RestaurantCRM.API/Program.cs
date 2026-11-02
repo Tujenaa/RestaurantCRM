@@ -73,6 +73,24 @@ builder.Services.AddAuthentication(x =>
 
 var app = builder.Build();
 
+// Bổ sung cột DANH_GIA.daXuLy cho CSDL cũ (chạy 1 lần, an toàn khi cột đã có).
+// Phản hồi đã có câu trả lời được coi là đã xử lý.
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<RestaurantCRM.DataAccess.Data.RestaurantCrmContext>();
+    Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, @"
+IF COL_LENGTH('DANH_GIA', 'daXuLy') IS NULL
+BEGIN
+    ALTER TABLE DANH_GIA ADD daXuLy BIT NOT NULL CONSTRAINT DF_DANH_GIA_daXuLy DEFAULT 0;
+    EXEC('UPDATE DANH_GIA SET daXuLy = 1 WHERE EXISTS (SELECT 1 FROM TRA_LOI_DANH_GIA t WHERE t.maDanhGia = DANH_GIA.maDanhGia)');
+END");
+}
+catch (Exception ex)
+{
+    app.Logger.LogWarning(ex, "Không thể kiểm tra/bổ sung cột DANH_GIA.daXuLy");
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

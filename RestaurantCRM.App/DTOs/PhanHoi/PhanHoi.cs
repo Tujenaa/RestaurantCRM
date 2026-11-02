@@ -22,19 +22,16 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
         public string TenKhachHang { get; set; }
         public string SoDienThoai { get; set; }
         public int TongSoTraLoi { get; set; }
-        /// <summary>"Chưa trả lời" | "Đã trả lời" | "Đã ẩn".</summary>
+        /// <summary>"Chưa xử lý" | "Đã xử lý".</summary>
         public string TrangThaiXuLy { get; set; }
+        /// <summary>Trạng thái xử lý do admin chỉnh (gửi trả lời cũng tự đặt = true).</summary>
+        public bool DaXuLy { get; set; }
         public List<TraLoiPhanHoiDto> HoiThoai { get; set; } = new List<TraLoiPhanHoiDto>();
 
         public bool DaTraLoi { get { return TongSoTraLoi > 0 || (HoiThoai != null && HoiThoai.Count > 0); } }
-        public string TrangThaiHienThi
-        {
-            get
-            {
-                if (!string.IsNullOrWhiteSpace(TrangThaiXuLy)) return TrangThaiXuLy;
-                return !HienThi ? "Đã ẩn" : DaTraLoi ? "Đã trả lời" : "Chưa trả lời";
-            }
-        }
+        public bool LaDaXuLy { get { return DaXuLy; } }
+        /// <summary>Chỉ còn 2 trạng thái xử lý; ẩn/hiện trên website là thông tin riêng.</summary>
+        public string TrangThaiHienThi { get { return LaDaXuLy ? "Đã xử lý" : "Chưa xử lý"; } }
         public string DoiTuong { get { return string.IsNullOrWhiteSpace(TenMon) ? (string.IsNullOrWhiteSpace(MaHoaDon) ? "Dịch vụ chung" : "Đơn " + MaHoaDon) : TenMon; } }
     }
 
