@@ -59,34 +59,50 @@ namespace RestaurantCRM.AdminApp.Services.BanHang
 
             item.Quantity++;
             item.MaxStock = mon.SoLuongTon;
+            item.Price = effPrice;
+            item.PromoInfo = promoText;
+            item.AppliedVoucherCode = appliedVoucherCode;
+            item.DishDiscount = dishDiscount;
             return (true, null, false);
         }
 
         /// <summary>
-        /// Đổi voucher cho các món trong giỏ (hoặc gỡ voucher nếu newVoucher == null).
-        /// Cho phép chọn qua lại giữa các mã voucher món / loại món mà không bị trừ trùng lặp 2 lần.
+        /// Đồng bộ lại đơn giá khuyến mãi và mã ưu đãi tốt nhất (Tầng 1) cho các món đang có trong giỏ hàng
+        /// khi danh sách voucher / khuyến mãi trên hệ thống vừa thay đổi (ví dụ mã cũ hết hạn/bị ẩn, mã mới đôn lên).
         /// </summary>
-        public void ChangeDishVoucher(IEnumerable<CartItem> items, VoucherDto newVoucher, OrderCalculationService calcService)
+        public bool SyncPromotions(
+            IEnumerable<MonAnDto> allMonAn,
+            IEnumerable<VoucherDto> vouchers,
+            OrderCalculationService calcService)
         {
-            if (items == null || calcService == null) return;
-            foreach (var item in items)
+            if (calcService == null || !_cart.Any()) return false;
+            var monList = (allMonAn ?? Enumerable.Empty<MonAnDto>()).ToList();
+            bool changed = false;
+
+            foreach (var item in _cart)
             {
-                if (newVoucher == null)
+                var mon = monList.FirstOrDefault(m => m.MaMonAn == item.MaMon) ?? new MonAnDto
                 {
-                    item.AppliedVoucherCode = null;
-                    item.Price = item.BasePrice;
-                    item.PromoInfo = null;
-                    item.DishDiscount = 0m;
-                }
-                else
+                    MaMonAn = item.MaMon,
+                    TenMonAn = item.Name,
+                    Gia = item.BasePrice,
+                    MaLoaiMon = item.MaLoaiMon,
+                    GiaVonUocTinh = item.GiaVon,
+                    SoLuongTon = item.MaxStock
+                };
+
+                var (effPrice, promoText, disc, vCode) = calcService.GetDishPriceInfo(mon, vouchers);
+                if (item.Price != effPrice || item.PromoInfo != promoText || item.AppliedVoucherCode != vCode || item.DishDiscount != disc)
                 {
-                    var (effPrice, promoText, disc) = calcService.CalculateDishPriceWithVoucher(item.BasePrice, item.GiaVon, newVoucher);
-                    item.AppliedVoucherCode = newVoucher.MaVoucher;
                     item.Price = effPrice;
                     item.PromoInfo = promoText;
+                    item.AppliedVoucherCode = vCode;
                     item.DishDiscount = disc;
+                    changed = true;
                 }
             }
+
+            return changed;
         }
 
         /// <summary>

@@ -19,7 +19,7 @@ namespace RestaurantCRM.AdminApp.Services {
         public async Task<List<ChuongTrinhDto>> GetChuongTrinhListAsync() {
             try {
                 return await _httpClient.GetFromJsonAsync<List<ChuongTrinhDto>>("api/AdminKhuyenMai/ChuongTrinh") ?? new List<ChuongTrinhDto>();
-            } catch (Exception ex) {
+            } catch {
                 return new List<ChuongTrinhDto>();
             }
         }
@@ -63,7 +63,7 @@ namespace RestaurantCRM.AdminApp.Services {
                     try {
                         var json = await res.Content.ReadFromJsonAsync<JsonElement>();
                         if (json.TryGetProperty("message", out var m)) return (true, m.GetString());
-                    } catch (Exception ex) { }
+                    } catch { }
                     return (true, "Đã xóa chương trình.");
                 }
                 var err = await res.Content.ReadAsStringAsync();
@@ -73,11 +73,11 @@ namespace RestaurantCRM.AdminApp.Services {
             }
         }
 
-        // ================= VOUCHER HÓA ĐƠN =================
+        // ================= VOUCHER KHUYẾN MÃI =================
         public async Task<List<VoucherDto>> GetVoucherListAsync() {
             try {
                 return await _httpClient.GetFromJsonAsync<List<VoucherDto>>("api/AdminKhuyenMai/Voucher") ?? new List<VoucherDto>();
-            } catch (Exception ex) {
+            } catch {
                 return new List<VoucherDto>();
             }
         }
@@ -125,7 +125,9 @@ namespace RestaurantCRM.AdminApp.Services {
             double giaTriGiam,
             double? donToiThieu,
             double? giamToiDa,
-            int? soLuongVoucher = 20) {
+            int? soLuongVoucher = 20,
+            string maLoaiMon = null,
+            string maMon = null) {
             try {
                 var body = new {
                     maChuongTrinh = maCT,
@@ -134,7 +136,9 @@ namespace RestaurantCRM.AdminApp.Services {
                     giaTriGiam = giaTriGiam,
                     giaTriDonToiThieu = donToiThieu,
                     giamToiDa = giamToiDa,
-                    soLuongToiThieu = soLuongVoucher
+                    soLuongToiThieu = soLuongVoucher,
+                    maLoaiMon = maLoaiMon,
+                    maMon = maMon
                 };
                 var res = await _httpClient.PutAsJsonAsync($"api/AdminKhuyenMai/Voucher/{id}", body);
                 if (res.IsSuccessStatusCode) return (true, "Cập nhật voucher thành công.");
@@ -148,7 +152,7 @@ namespace RestaurantCRM.AdminApp.Services {
         public async Task<List<LoaiMonSelectDto>> GetLoaiMonListAsync() {
             try {
                 return await _httpClient.GetFromJsonAsync<List<LoaiMonSelectDto>>("api/AdminKhuyenMai/LoaiMon") ?? new List<LoaiMonSelectDto>();
-            } catch (Exception ex) {
+            } catch {
                 return new List<LoaiMonSelectDto>();
             }
         }
@@ -160,54 +164,11 @@ namespace RestaurantCRM.AdminApp.Services {
                     try {
                         var json = await res.Content.ReadFromJsonAsync<JsonElement>();
                         if (json.TryGetProperty("message", out var m)) return (true, m.GetString());
-                    } catch (Exception ex) { }
+                    } catch { }
                     return (true, "Đã xóa voucher.");
                 }
                 var err = await res.Content.ReadAsStringAsync();
                 return (false, string.IsNullOrEmpty(err) ? "Không thể xóa voucher." : err);
-            } catch (Exception ex) {
-                return (false, ex.Message);
-            }
-        }
-
-        // ================= KHUYẾN MÃI MÓN ĂN (TỰ ĐỘNG) =================
-        public async Task<List<KmMonDto>> GetKmMonListAsync() {
-            try {
-                return await _httpClient.GetFromJsonAsync<List<KmMonDto>>("api/AdminKhuyenMai/MonAn") ?? new List<KmMonDto>();
-            } catch (Exception ex) {
-                return new List<KmMonDto>();
-            }
-        }
-
-        public async Task<(bool Success, string Message)> CreateKmMonAsync(string maCT, string maMon, string loaiGiam, double giaTriGiam) {
-            try {
-                var body = new {
-                    maChuongTrinh = maCT,
-                    maMon = maMon,
-                    loaiGiam = loaiGiam,
-                    giaTriGiam = giaTriGiam
-                };
-                var res = await _httpClient.PostAsJsonAsync("api/AdminKhuyenMai/MonAn", body);
-                if (res.IsSuccessStatusCode) return (true, "Áp dụng khuyến mãi món thành công.");
-                var err = await res.Content.ReadAsStringAsync();
-                return (false, string.IsNullOrEmpty(err) ? "Lỗi khi áp dụng khuyến mãi cho món." : err);
-            } catch (Exception ex) {
-                return (false, ex.Message);
-            }
-        }
-
-        public async Task<(bool Success, string Message)> DeleteKmMonAsync(string id) {
-            try {
-                var res = await _httpClient.DeleteAsync($"api/AdminKhuyenMai/MonAn/{id}");
-                if (res.IsSuccessStatusCode) {
-                    try {
-                        var json = await res.Content.ReadFromJsonAsync<JsonElement>();
-                        if (json.TryGetProperty("message", out var m)) return (true, m.GetString());
-                    } catch (Exception ex) { }
-                    return (true, "Đã xóa khuyến mãi món.");
-                }
-                var err = await res.Content.ReadAsStringAsync();
-                return (false, string.IsNullOrEmpty(err) ? "Không thể xóa khuyến mãi món." : err);
             } catch (Exception ex) {
                 return (false, ex.Message);
             }
@@ -218,7 +179,7 @@ namespace RestaurantCRM.AdminApp.Services {
             try {
                 var list = await _httpClient.GetFromJsonAsync<List<MonAnSelectDto>>("api/AdminKhuyenMai/AvailableDishes");
                 if (list != null && list.Count > 0) return list;
-            } catch (Exception ex) { }
+            } catch { }
 
             try {
                 var adminDishes = await _httpClient.GetFromJsonAsync<List<MonAnDto>>("api/AdminMonAn");
@@ -236,7 +197,7 @@ namespace RestaurantCRM.AdminApp.Services {
                     }
                     if (result.Count > 0) return result;
                 }
-            } catch (Exception ex) { }
+            } catch { }
 
             return new List<MonAnSelectDto>();
         }

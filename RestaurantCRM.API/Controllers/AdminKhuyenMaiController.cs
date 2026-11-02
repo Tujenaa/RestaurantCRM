@@ -45,8 +45,7 @@ namespace RestaurantCRM.API.Controllers
                                 (k.NgayBatDau != null && today < k.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
                     SoLuongVoucher = k.KmTheoDonHang.Count 
                                    + k.KmTheoLoai.Count(l => !string.IsNullOrEmpty(l.MaVoucher)) 
-                                   + k.KmTheoSp.Count(s => !string.IsNullOrEmpty(s.MaVoucher)),
-                    SoLuongMonKm = k.KmTheoSp.Count
+                                   + k.KmTheoSp.Count(s => !string.IsNullOrEmpty(s.MaVoucher))
                 })
                 .ToListAsync();
 
@@ -122,15 +121,7 @@ namespace RestaurantCRM.API.Controllers
                 k.NgayKetThuc,
                 TrangThai = (k.NgayKetThuc != null && today > k.NgayKetThuc) ? "Đã kết thúc" :
                             (k.NgayBatDau != null && today < k.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
-                Vouchers = allVouchers,
-                MonAns = k.KmTheoSp.Select(sp => new
-                {
-                    sp.MaKmsp,
-                    sp.MaMon,
-                    TenMon = sp.MaMonNavigation != null ? sp.MaMonNavigation.TenMon : "",
-                    sp.PhanTramGiam,
-                    sp.TienGiam
-                })
+                Vouchers = allVouchers
             });
         }
 
@@ -304,7 +295,7 @@ namespace RestaurantCRM.API.Controllers
                     TenChuongTrinh = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.TenChuongTrinh : "",
                     NgayBatDau = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayBatDau : null,
                     NgayKetThuc = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayKetThuc : null,
-                    SoLuongDaDung = v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled"),
+                    SoLuongDaDung = v.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count(),
                     SoLuongToiDa = v.SoLuongToiThieu,
                     IsDeleted = v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_"),
                     v.PhanTramGiam,
@@ -363,7 +354,7 @@ namespace RestaurantCRM.API.Controllers
                     TenChuongTrinh = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.TenChuongTrinh : "",
                     NgayBatDau = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayBatDau : null,
                     NgayKetThuc = v.MaChuongTrinhNavigation != null ? v.MaChuongTrinhNavigation.NgayKetThuc : null,
-                    SoLuongDaDung = v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled"),
+                    SoLuongDaDung = v.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count(),
                     SoLuongToiDa = v.SoLuongToiThieu,
                     IsDeleted = v.MaVoucher != null && v.MaVoucher.StartsWith("[DA_HUY]_"),
                     v.PhanTramGiam,
@@ -431,15 +422,46 @@ namespace RestaurantCRM.API.Controllers
             if (req.GiaTriGiam <= 0)
                 return BadRequest("Giá trị giảm giá phải lớn hơn 0.");
 
+            if (req.LoaiGiam == "%" && (!req.GiamToiDa.HasValue || req.GiamToiDa.Value <= 0))
+                return BadRequest("Vui lòng nhập mức giảm tối đa (VNĐ) lớn hơn 0 khi giảm theo phần trăm.");
+
+            if (!req.SoLuongToiThieu.HasValue || req.SoLuongToiThieu.Value <= 0)
+                return BadRequest("Vui lòng nhập số lượng voucher áp dụng lớn hơn 0.");
+
             string phamVi = req.PhamViApDung?.ToUpper() ?? "TOAN_DON";
             if (phamVi == "THEO_LOAI" && string.IsNullOrWhiteSpace(req.MaLoaiMon))
                 return BadRequest("Vui lòng chọn loại món áp dụng cho voucher nhóm.");
+
+            if (phamVi == "THEO_LOAI" && (!req.GiaTriDonToiThieu.HasValue || req.GiaTriDonToiThieu.Value <= 0))
+                return BadRequest("Vui lòng nhập giá tối thiểu được giảm (VNĐ) lớn hơn 0 cho voucher nhóm món.");
+
+            if (phamVi == "TOAN_DON" && (!req.GiaTriDonToiThieu.HasValue || req.GiaTriDonToiThieu.Value <= 0))
+                return BadRequest("Vui lòng nhập giá trị đơn hàng tối thiểu (VNĐ) lớn hơn 0 cho voucher toàn đơn.");
 
             if (phamVi == "THEO_MON" && string.IsNullOrWhiteSpace(req.MaMon))
                 return BadRequest("Vui lòng chọn món ăn áp dụng cho voucher.");
 
             if (phamVi == "THEO_MON")
             {
+                var monCheck = await _service.Query<MonAn>()
+                    .Include(m => m.DinhLuong)
+                        .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                    .FirstOrDefaultAsync(m => m.MaMon == req.MaMon);
+
+                if (monCheck != null && monCheck.DonGia.HasValue)
+                {
+                    double giaVon = Math.Round(monCheck.DinhLuong.Sum(dl => (double)dl.SoLuongCan * (dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0)), 0);
+                    double donGia = monCheck.DonGia.Value;
+                    double tienGiam = req.LoaiGiam == "%"
+                        ? ((req.GiamToiDa.HasValue && req.GiamToiDa.Value > 0) ? Math.Min(donGia * req.GiaTriGiam / 100.0, req.GiamToiDa.Value) : donGia * req.GiaTriGiam / 100.0)
+                        : (req.GiamToiDa.HasValue && req.GiamToiDa.Value > 0 ? req.GiamToiDa.Value : req.GiaTriGiam);
+                    double sauGiam = Math.Max(0, donGia - tienGiam);
+                    if (giaVon > 0 && sauGiam < giaVon)
+                    {
+                        return BadRequest($"Mức giảm này khiến giá bán sau giảm ({sauGiam:N0} đ) thấp hơn giá vốn định lượng của món '{monCheck.TenMon}' ({giaVon:N0} đ). Vui lòng điều chỉnh lại.");
+                    }
+                }
+
                 var voucherSp = new KmTheoSp
                 {
                     MaKmsp = "VCH" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
@@ -448,8 +470,8 @@ namespace RestaurantCRM.API.Controllers
                     MaVoucher = maVoucherUpper,
                     PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
                     TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null,
-                    GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null),
-                    SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : 1,
+                    GiamToiDa = req.GiamToiDa > 0 ? req.GiamToiDa : null,
+                    SoLuongToiThieu = req.SoLuongToiThieu.Value,
                     ChoPhepCongDon = req.ChoPhepCongDon ?? true
                 };
 
@@ -465,11 +487,11 @@ namespace RestaurantCRM.API.Controllers
                     MaChuongTrinh = req.MaChuongTrinh,
                     MaLoaiMon = req.MaLoaiMon!,
                     MaVoucher = maVoucherUpper,
-                    GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null,
+                    GiaTriDonToiThieu = req.GiaTriDonToiThieu.Value,
                     PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
                     TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null,
-                    GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null),
-                    SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : 1,
+                    GiamToiDa = req.GiamToiDa > 0 ? req.GiamToiDa : null,
+                    SoLuongToiThieu = req.SoLuongToiThieu.Value,
                     ChoPhepCongDon = req.ChoPhepCongDon ?? true
                 };
 
@@ -484,11 +506,11 @@ namespace RestaurantCRM.API.Controllers
                     MaKMDonHang = "VCH" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
                     MaChuongTrinh = req.MaChuongTrinh,
                     MaVoucher = maVoucherUpper,
-                    GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null,
+                    GiaTriDonToiThieu = req.GiaTriDonToiThieu.Value,
                     PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
                     TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null,
-                    GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null),
-                    SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : 1,
+                    GiamToiDa = req.GiamToiDa > 0 ? req.GiamToiDa : null,
+                    SoLuongToiThieu = req.SoLuongToiThieu.Value,
                     ChoPhepCongDon = req.ChoPhepCongDon ?? true
                 };
 
@@ -504,12 +526,21 @@ namespace RestaurantCRM.API.Controllers
             if (req.GiaTriGiam <= 0)
                 return BadRequest("Giá trị giảm giá phải lớn hơn 0.");
 
+            if (req.LoaiGiam == "%" && (!req.GiamToiDa.HasValue || req.GiamToiDa.Value <= 0))
+                return BadRequest("Vui lòng nhập mức giảm tối đa (VNĐ) lớn hơn 0 khi giảm theo phần trăm.");
+
+            if (!req.SoLuongToiThieu.HasValue || req.SoLuongToiThieu.Value <= 0)
+                return BadRequest("Vui lòng nhập số lượng voucher áp dụng lớn hơn 0.");
+
             var maUpper = !string.IsNullOrWhiteSpace(req.MaVoucher) ? req.MaVoucher.Trim().ToUpper() : null;
 
             // 1. Kiểm tra KM_THEO_DON_HANG
             var vDon = await _service.Query<KmTheoDonHang>().FirstOrDefaultAsync(v => v.MaKMDonHang == id || v.MaVoucher == id);
             if (vDon != null)
             {
+                if (!req.GiaTriDonToiThieu.HasValue || req.GiaTriDonToiThieu.Value <= 0)
+                    return BadRequest("Vui lòng nhập giá trị đơn hàng tối thiểu (VNĐ) lớn hơn 0 cho voucher toàn đơn.");
+
                 if (maUpper != null && maUpper != vDon.MaVoucher)
                 {
                     var exists = await _service.Query<KmTheoDonHang>().AnyAsync(v => v.MaVoucher == maUpper && v.MaKMDonHang != vDon.MaKMDonHang)
@@ -527,9 +558,9 @@ namespace RestaurantCRM.API.Controllers
 
                 vDon.PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null;
                 vDon.TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null;
-                vDon.GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null;
-                vDon.GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null);
-                vDon.SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : null;
+                vDon.GiaTriDonToiThieu = req.GiaTriDonToiThieu.Value;
+                vDon.GiamToiDa = req.GiamToiDa > 0 ? req.GiamToiDa : null;
+                vDon.SoLuongToiThieu = req.SoLuongToiThieu.Value;
 
                 await _service.SaveChangesAsync();
                 return Ok(new { message = "Cập nhật voucher thành công.", data = vDon });
@@ -539,6 +570,9 @@ namespace RestaurantCRM.API.Controllers
             var vLoai = await _service.Query<KmTheoLoai>().FirstOrDefaultAsync(v => v.MaKMLoai == id || v.MaVoucher == id);
             if (vLoai != null)
             {
+                if (!req.GiaTriDonToiThieu.HasValue || req.GiaTriDonToiThieu.Value <= 0)
+                    return BadRequest("Vui lòng nhập giá tối thiểu được giảm (VNĐ) lớn hơn 0 cho voucher nhóm món.");
+
                 if (maUpper != null && maUpper != vLoai.MaVoucher)
                 {
                     var exists = await _service.Query<KmTheoDonHang>().AnyAsync(v => v.MaVoucher == maUpper)
@@ -558,9 +592,9 @@ namespace RestaurantCRM.API.Controllers
 
                 vLoai.PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null;
                 vLoai.TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null;
-                vLoai.GiaTriDonToiThieu = req.GiaTriDonToiThieu > 0 ? req.GiaTriDonToiThieu : null;
-                vLoai.GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null);
-                vLoai.SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : null;
+                vLoai.GiaTriDonToiThieu = req.GiaTriDonToiThieu.Value;
+                vLoai.GiamToiDa = req.GiamToiDa > 0 ? req.GiamToiDa : null;
+                vLoai.SoLuongToiThieu = req.SoLuongToiThieu.Value;
 
                 await _service.SaveChangesAsync();
                 return Ok(new { message = "Cập nhật voucher thành công.", data = vLoai });
@@ -587,10 +621,29 @@ namespace RestaurantCRM.API.Controllers
 
                 if (!string.IsNullOrWhiteSpace(req.MaMon)) vSp.MaMon = req.MaMon;
 
+                var monCheck = await _service.Query<MonAn>()
+                    .Include(m => m.DinhLuong)
+                        .ThenInclude(dl => dl.MaNguyenLieuNavigation)
+                    .FirstOrDefaultAsync(m => m.MaMon == vSp.MaMon);
+
+                if (monCheck != null && monCheck.DonGia.HasValue)
+                {
+                    double giaVon = Math.Round(monCheck.DinhLuong.Sum(dl => (double)dl.SoLuongCan * (dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0)), 0);
+                    double donGia = monCheck.DonGia.Value;
+                    double tienGiam = req.LoaiGiam == "%"
+                        ? ((req.GiamToiDa.HasValue && req.GiamToiDa.Value > 0) ? Math.Min(donGia * req.GiaTriGiam / 100.0, req.GiamToiDa.Value) : donGia * req.GiaTriGiam / 100.0)
+                        : (req.GiamToiDa.HasValue && req.GiamToiDa.Value > 0 ? req.GiamToiDa.Value : req.GiaTriGiam);
+                    double sauGiam = Math.Max(0, donGia - tienGiam);
+                    if (giaVon > 0 && sauGiam < giaVon)
+                    {
+                        return BadRequest($"Mức giảm này khiến giá bán sau giảm ({sauGiam:N0} đ) thấp hơn giá vốn định lượng của món '{monCheck.TenMon}' ({giaVon:N0} đ). Vui lòng điều chỉnh lại.");
+                    }
+                }
+
                 vSp.PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null;
                 vSp.TienGiam = req.LoaiGiam == "VND" ? (req.GiamToiDa > 0 ? req.GiamToiDa : req.GiaTriGiam) : null;
-                vSp.GiamToiDa = (req.LoaiGiam == "%" && req.GiamToiDa > 0) ? req.GiamToiDa : (req.GiamToiDa > 0 ? req.GiamToiDa : null);
-                vSp.SoLuongToiThieu = req.SoLuongToiThieu > 0 ? req.SoLuongToiThieu : null;
+                vSp.GiamToiDa = req.GiamToiDa > 0 ? req.GiamToiDa : null;
+                vSp.SoLuongToiThieu = req.SoLuongToiThieu.Value;
 
                 await _service.SaveChangesAsync();
                 return Ok(new { message = "Cập nhật voucher thành công.", data = vSp });
@@ -639,6 +692,7 @@ namespace RestaurantCRM.API.Controllers
             // 2. Kiểm tra KM_THEO_LOAI
             var vLoai = await _service.Query<KmTheoLoai>()
                 .Include(v => v.ChiTietHoaDon)
+                    .ThenInclude(c => c.MaHoaDonNavigation)
                 .FirstOrDefaultAsync(v => v.MaKMLoai == id || v.MaVoucher == id);
 
             if (vLoai != null)
@@ -646,7 +700,7 @@ namespace RestaurantCRM.API.Controllers
                 if (vLoai.ChiTietHoaDon.Any())
                 {
                     vLoai.ChoPhepCongDon = false;
-                    int daDung = vLoai.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                    int daDung = vLoai.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count();
                     vLoai.SoLuongToiThieu = Math.Max(1, daDung);
 
                     if (!string.IsNullOrEmpty(vLoai.MaVoucher) && !vLoai.MaVoucher.StartsWith("[DA_HUY]_"))
@@ -673,6 +727,7 @@ namespace RestaurantCRM.API.Controllers
             // 3. Kiểm tra KM_THEO_SP
             var vSp = await _service.Query<KmTheoSp>()
                 .Include(v => v.ChiTietHoaDon)
+                    .ThenInclude(c => c.MaHoaDonNavigation)
                 .FirstOrDefaultAsync(v => v.MaKmsp == id || v.MaVoucher == id);
 
             if (vSp != null)
@@ -680,7 +735,7 @@ namespace RestaurantCRM.API.Controllers
                 if (vSp.ChiTietHoaDon.Any())
                 {
                     vSp.ChoPhepCongDon = false;
-                    int daDung = vSp.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                    int daDung = vSp.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count();
                     vSp.SoLuongToiThieu = Math.Max(1, daDung);
 
                     if (!string.IsNullOrEmpty(vSp.MaVoucher) && !vSp.MaVoucher.StartsWith("[DA_HUY]_"))
@@ -708,106 +763,7 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // ==============================================================
-        // 3. QUẢN LÝ KHUYẾN MÃI THEO MÓN ĂN (TỰ ĐỘNG THEO SẢN PHẨM)
-        // ==============================================================
-
-        [HttpGet("MonAn")]
-        public async Task<IActionResult> GetAllKmMonAn()
-        {
-            var today = DateOnly.FromDateTime(DateTime.Now);
-
-            var list = await _service.Query<KmTheoSp>()
-                .Include(k => k.MaChuongTrinhNavigation)
-                .Include(k => k.MaMonNavigation)
-                .OrderByDescending(k => k.MaKmsp)
-                .Select(k => new
-                {
-                    k.MaKmsp,
-                    k.MaChuongTrinh,
-                    TenChuongTrinh = k.MaChuongTrinhNavigation != null ? k.MaChuongTrinhNavigation.TenChuongTrinh : "",
-                    NgayBatDau = k.MaChuongTrinhNavigation != null ? k.MaChuongTrinhNavigation.NgayBatDau : null,
-                    NgayKetThuc = k.MaChuongTrinhNavigation != null ? k.MaChuongTrinhNavigation.NgayKetThuc : null,
-                    TrangThai = (k.MaChuongTrinhNavigation != null && k.MaChuongTrinhNavigation.NgayKetThuc != null && today > k.MaChuongTrinhNavigation.NgayKetThuc) ? "Đã kết thúc" :
-                                (k.MaChuongTrinhNavigation != null && k.MaChuongTrinhNavigation.NgayBatDau != null && today < k.MaChuongTrinhNavigation.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
-                    k.MaMon,
-                    TenMon = k.MaMonNavigation != null ? k.MaMonNavigation.TenMon : "",
-                    DonGiaGoc = k.MaMonNavigation != null ? k.MaMonNavigation.DonGia : 0,
-                    k.PhanTramGiam,
-                    k.TienGiam,
-                    HinhThuc = k.PhanTramGiam.HasValue ? $"Giảm {k.PhanTramGiam.Value}%" : $"Giảm {k.TienGiam:N0} đ",
-                    DonGiaSauGiam = (k.MaMonNavigation != null && k.MaMonNavigation.DonGia.HasValue) ?
-                        (k.PhanTramGiam.HasValue ? (k.MaMonNavigation.DonGia.Value * (1 - k.PhanTramGiam.Value / 100.0)) :
-                         k.TienGiam.HasValue ? Math.Max(0, k.MaMonNavigation.DonGia.Value - k.TienGiam.Value) : k.MaMonNavigation.DonGia.Value) : 0
-                })
-                .ToListAsync();
-
-            return Ok(list);
-        }
-
-        [HttpPost("MonAn")]
-        public async Task<IActionResult> CreateKmMonAn([FromBody] KmMonCreateRequest req)
-        {
-            if (string.IsNullOrWhiteSpace(req.MaChuongTrinh))
-                return BadRequest("Vui lòng chọn chương trình khuyến mãi.");
-
-            if (string.IsNullOrWhiteSpace(req.MaMon))
-                return BadRequest("Vui lòng chọn món ăn cần áp dụng khuyến mãi.");
-
-            var ct = await _service.FindAsync<ChuongTrinhKhuyenMai>(req.MaChuongTrinh);
-            if (ct == null) return NotFound("Chương trình khuyến mãi không tồn tại.");
-
-            var mon = await _service.FindAsync<MonAn>(req.MaMon);
-            if (mon == null) return NotFound("Món ăn không tồn tại.");
-
-            var exists = await _service.Query<KmTheoSp>().AnyAsync(s => s.MaChuongTrinh == req.MaChuongTrinh && s.MaMon == req.MaMon);
-            if (exists)
-                return BadRequest($"Món '{mon.TenMon}' đã có trong chương trình này.");
-
-            if (req.GiaTriGiam <= 0)
-                return BadRequest("Giá trị giảm giá phải lớn hơn 0.");
-
-            var kmsp = new KmTheoSp
-            {
-                MaKmsp = "CTKM" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper(),
-                MaChuongTrinh = req.MaChuongTrinh,
-                MaMon = req.MaMon,
-                PhanTramGiam = req.LoaiGiam == "%" ? req.GiaTriGiam : null,
-                TienGiam = req.LoaiGiam == "VND" ? req.GiaTriGiam : null
-            };
-
-            _service.Add(kmsp);
-            await _service.SaveChangesAsync();
-
-            return Ok(new { message = $"Đã áp dụng ưu đãi cho món '{mon.TenMon}'.", data = kmsp });
-        }
-
-        [HttpDelete("MonAn/{id}")]
-        public async Task<IActionResult> DeleteKmMonAn(string id)
-        {
-            var kmsp = await _service.Query<KmTheoSp>()
-                .Include(k => k.ChiTietHoaDon)
-                .Include(k => k.MaMonNavigation)
-                .FirstOrDefaultAsync(k => k.MaKmsp == id);
-
-            if (kmsp == null) return NotFound("Không tìm thấy chi tiết khuyến mãi món.");
-
-            if (kmsp.ChiTietHoaDon.Any())
-            {
-                return Ok(new
-                {
-                    message = $"Ưu đãi món '{kmsp.MaMonNavigation?.TenMon ?? kmsp.MaMon}' đã có đơn hàng sử dụng. Hệ thống giữ thông tin để bảo toàn lịch sử hóa đơn.",
-                    softDeleted = true
-                });
-            }
-
-            _service.Remove(kmsp);
-            await _service.SaveChangesAsync();
-
-            return Ok(new { message = "Đã xóa khuyến mãi món thành công.", softDeleted = false });
-        }
-
-        // ==============================================================
-        // 4. DANH SÁCH MÓN ĂN ĐỂ CHỌN ÁP DỤNG KHUYẾN MÃI
+        // 3. DANH SÁCH MÓN ĂN & LOẠI MÓN ĐỂ CHỌN ÁP DỤNG KHUYẾN MÃI
         // ==============================================================
 
         [HttpGet("AvailableDishes")]
@@ -837,16 +793,6 @@ namespace RestaurantCRM.API.Controllers
             return Ok(result);
         }
 
-        // ==============================================================
-        // 5. LEGACY CONTROLLER COMPATIBILITY
-        // ==============================================================
-
-        [HttpGet("LoaiKhuyenMai")]
-        public IActionResult GetLoaiKhuyenMai() => Ok(new[] { "ToanDon", "TheoSanPham" });
-
-        [HttpGet("LoaiGiam")]
-        public IActionResult GetLoaiGiam() => Ok(new[] { "%", "VND" });
-
         [HttpGet("LoaiMon")]
         public async Task<IActionResult> GetLoaiMon()
         {
@@ -856,11 +802,5 @@ namespace RestaurantCRM.API.Controllers
                 .ToListAsync();
             return Ok(list);
         }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id) => await GetChuongTrinhById(id);
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id) => await DeleteChuongTrinh(id);
     }
 }

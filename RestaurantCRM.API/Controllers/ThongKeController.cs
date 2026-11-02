@@ -630,20 +630,20 @@ namespace RestaurantCRM.API.Controllers
                 // Theo quý của năm chọn
                 var ctNamNay = ctMon.Where(c => c.MaHoaDonNavigation.NgayDat.Value.Year == nam).ToList();
                 double mQ1 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 1)
-                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                                     .Sum(c => (c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))) * ((c.MaHoaDonNavigation != null && (c.MaHoaDonNavigation.TongTienHang ?? 0) > 0 && c.MaHoaDonNavigation.TongThanhToan.HasValue) ? (c.MaHoaDonNavigation.TongThanhToan.Value / c.MaHoaDonNavigation.TongTienHang.Value) : 1.0));
                 double mQ2 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 2)
-                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                                     .Sum(c => (c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))) * ((c.MaHoaDonNavigation != null && (c.MaHoaDonNavigation.TongTienHang ?? 0) > 0 && c.MaHoaDonNavigation.TongThanhToan.HasValue) ? (c.MaHoaDonNavigation.TongThanhToan.Value / c.MaHoaDonNavigation.TongTienHang.Value) : 1.0));
                 double mQ3 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 3)
-                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                                     .Sum(c => (c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))) * ((c.MaHoaDonNavigation != null && (c.MaHoaDonNavigation.TongTienHang ?? 0) > 0 && c.MaHoaDonNavigation.TongThanhToan.HasValue) ? (c.MaHoaDonNavigation.TongThanhToan.Value / c.MaHoaDonNavigation.TongTienHang.Value) : 1.0));
                 double mQ4 = ctNamNay.Where(c => getQuarter(c.MaHoaDonNavigation.NgayDat) == 4)
-                                     .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                                     .Sum(c => (c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))) * ((c.MaHoaDonNavigation != null && (c.MaHoaDonNavigation.TongTienHang ?? 0) > 0 && c.MaHoaDonNavigation.TongThanhToan.HasValue) ? (c.MaHoaDonNavigation.TongThanhToan.Value / c.MaHoaDonNavigation.TongTienHang.Value) : 1.0));
                 double mTongNamNay = mQ1 + mQ2 + mQ3 + mQ4;
 
                 // Theo 3 năm
                 double mNam1 = ctMon.Where(c => c.MaHoaDonNavigation.NgayDat.Value.Year == nam1)
-                                    .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                                    .Sum(c => (c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))) * ((c.MaHoaDonNavigation != null && (c.MaHoaDonNavigation.TongTienHang ?? 0) > 0 && c.MaHoaDonNavigation.TongThanhToan.HasValue) ? (c.MaHoaDonNavigation.TongThanhToan.Value / c.MaHoaDonNavigation.TongTienHang.Value) : 1.0));
                 double mNam2 = ctMon.Where(c => c.MaHoaDonNavigation.NgayDat.Value.Year == nam2)
-                                    .Sum(c => c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1)));
+                                    .Sum(c => (c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))) * ((c.MaHoaDonNavigation != null && (c.MaHoaDonNavigation.TongTienHang ?? 0) > 0 && c.MaHoaDonNavigation.TongThanhToan.HasValue) ? (c.MaHoaDonNavigation.TongThanhToan.Value / c.MaHoaDonNavigation.TongTienHang.Value) : 1.0));
                 double mNam3 = mTongNamNay;
 
                 double tongDoanhThuMon = mNam1 + mNam2 + mNam3;

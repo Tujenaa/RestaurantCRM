@@ -128,7 +128,7 @@ namespace RestaurantCRM.API.Controllers
 
                          && ((v.PhanTramGiam.HasValue && v.PhanTramGiam > 0) || (v.TienGiam.HasValue && v.TienGiam > 0))
 
-                         && (!v.SoLuongToiThieu.HasValue || v.SoLuongToiThieu <= 0 || v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled") < v.SoLuongToiThieu.Value)
+                         && (!v.SoLuongToiThieu.HasValue || v.SoLuongToiThieu <= 0 || v.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count() < v.SoLuongToiThieu.Value)
 
                          && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
 
@@ -198,7 +198,7 @@ namespace RestaurantCRM.API.Controllers
 
                          && ((v.PhanTramGiam.HasValue && v.PhanTramGiam > 0) || (v.TienGiam.HasValue && v.TienGiam > 0))
 
-                         && (!v.SoLuongToiThieu.HasValue || v.SoLuongToiThieu <= 0 || v.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled") < v.SoLuongToiThieu.Value)
+                         && (!v.SoLuongToiThieu.HasValue || v.SoLuongToiThieu <= 0 || v.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count() < v.SoLuongToiThieu.Value)
 
                          && (v.MaChuongTrinhNavigation.NgayBatDau == null || v.MaChuongTrinhNavigation.NgayBatDau <= today)
 
@@ -442,7 +442,7 @@ namespace RestaurantCRM.API.Controllers
 
                 {
 
-                    int daDung = vLoai.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                    int daDung = vLoai.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count();
 
                     if (daDung >= vLoai.SoLuongToiThieu.Value)
 
@@ -548,7 +548,7 @@ namespace RestaurantCRM.API.Controllers
 
                 {
 
-                    int daDung = vMonItem.ChiTietHoaDon.Count(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled");
+                    int daDung = vMonItem.ChiTietHoaDon.Where(c => c.MaHoaDonNavigation != null && c.MaHoaDonNavigation.TrangThai != "Cancelled").Select(c => c.MaHoaDon).Distinct().Count();
 
                     if (daDung >= vMonItem.SoLuongToiThieu.Value)
 

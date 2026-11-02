@@ -182,7 +182,6 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
         public void RenderProducts(
             IEnumerable<MonAnDto> allMonAn,
-            IEnumerable<KmMonDto> kmMonList,
             CartService cartService,
             OrderCalculationService calcService,
             IEnumerable<VoucherDto> vouchers = null)
@@ -237,7 +236,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             foreach (var mon in filtered)
             {
-                var card = CreateDishCard(mon, kmMonList, cartService, calcService, vouchers);
+                var card = CreateDishCard(mon, cartService, calcService, vouchers);
                 _productsPanel.Controls.Add(card);
             }
 
@@ -248,7 +247,6 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
         public void UpdateProductsInPlace(
             IEnumerable<MonAnDto> allMonAn,
-            IEnumerable<KmMonDto> kmMonList,
             CartService cartService,
             OrderCalculationService calcService,
             IEnumerable<VoucherDto> vouchers = null)
@@ -257,7 +255,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var currentCards = _productsPanel.Controls.OfType<RoundedPanel>().ToList();
             if (!currentCards.Any())
             {
-                RenderProducts(allMonAn, kmMonList, cartService, calcService, vouchers);
+                RenderProducts(allMonAn, cartService, calcService, vouchers);
                 return;
             }
 
@@ -298,12 +296,47 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 bool canAddMore = virtualRemaining > 0;
                 bool rawInStock = mon.SoLuongTon > 0;
 
-                var (effPrice, promoText, _, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
+                var (effPrice, promoText, _, _) = calcService.GetDishPriceInfo(mon, vouchers);
                 bool hasPromo = promoText != null;
 
                 card.BorderColor = rawInStock ? (hasPromo ? Color.FromArgb(254, 202, 202) : ThemeManager.Line) : Color.FromArgb(241, 245, 249);
                 card.FillColor = rawInStock ? Color.White : Color.FromArgb(248, 250, 252);
                 card.Cursor = canAddMore ? Cursors.Hand : Cursors.Default;
+
+                var lblTen = card.Controls["lblTen"] as Label;
+                if (lblTen != null)
+                {
+                    lblTen.Size = new Size(hasPromo ? 110 : 162, 34);
+                    lblTen.ForeColor = rawInStock ? ThemeManager.Ink : ThemeManager.Muted;
+                    lblTen.Cursor = canAddMore ? Cursors.Hand : Cursors.Default;
+                }
+
+                var lblSaleBadge = card.Controls["lblSaleBadge"] as Label;
+                if (lblSaleBadge != null)
+                {
+                    lblSaleBadge.Text = hasPromo ? $"🔥 {promoText}" : "";
+                    lblSaleBadge.Visible = hasPromo;
+                }
+
+                var lblGia = card.Controls["lblGia"] as Label;
+                if (lblGia != null)
+                {
+                    lblGia.Text = $"{effPrice:N0} đ";
+                    lblGia.ForeColor = rawInStock ? (hasPromo ? ThemeManager.Red : _accent) : ThemeManager.Muted;
+                    lblGia.Cursor = canAddMore ? Cursors.Hand : Cursors.Default;
+                }
+
+                var lblGiaGoc = card.Controls["lblGiaGoc"] as Label;
+                if (lblGiaGoc != null)
+                {
+                    bool showGiaGoc = hasPromo && effPrice < mon.Gia;
+                    lblGiaGoc.Text = $"{mon.Gia:N0} đ";
+                    if (lblGia != null)
+                    {
+                        lblGiaGoc.Location = new Point(lblGia.PreferredWidth + 12, 46);
+                    }
+                    lblGiaGoc.Visible = showGiaGoc;
+                }
 
                 var lblStock = card.Controls["lblStock"] as Label;
                 if (lblStock != null)
@@ -359,7 +392,6 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
         private Control CreateDishCard(
             MonAnDto mon,
-            IEnumerable<KmMonDto> kmMonList,
             CartService cartService,
             OrderCalculationService calcService,
             IEnumerable<VoucherDto> vouchers = null)
@@ -369,7 +401,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             bool canAddMore = virtualRemaining > 0;
             bool rawInStock = mon.SoLuongTon > 0;
 
-            var (effPrice, promoText, _, _) = calcService.GetDishPriceInfo(mon, vouchers, kmMonList);
+            var (effPrice, promoText, _, _) = calcService.GetDishPriceInfo(mon, vouchers);
             bool hasPromo = promoText != null;
 
             var card = new RoundedPanel
@@ -399,20 +431,19 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             };
             card.Controls.Add(lblTen);
 
-            if (hasPromo)
+            var lblSaleBadge = new Label
             {
-                var lblSaleBadge = new Label
-                {
-                    Text = $"🔥 {promoText}",
-                    Location = new Point(116, 6),
-                    Size = new Size(58, 20),
-                    Font = new Font("Segoe UI", 7F, FontStyle.Bold),
-                    ForeColor = ThemeManager.Red,
-                    BackColor = ThemeManager.RedSoft,
-                    TextAlign = ContentAlignment.MiddleCenter
-                };
-                card.Controls.Add(lblSaleBadge);
-            }
+                Name = "lblSaleBadge",
+                Text = hasPromo ? $"🔥 {promoText}" : "",
+                Location = new Point(116, 6),
+                Size = new Size(58, 20),
+                Font = new Font("Segoe UI", 7F, FontStyle.Bold),
+                ForeColor = ThemeManager.Red,
+                BackColor = ThemeManager.RedSoft,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Visible = hasPromo
+            };
+            card.Controls.Add(lblSaleBadge);
 
             var lblGia = new Label
             {
@@ -427,19 +458,18 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             };
             card.Controls.Add(lblGia);
 
-            if (hasPromo && effPrice < mon.Gia)
+            var lblGiaGoc = new Label
             {
-                var lblGiaGoc = new Label
-                {
-                    Text = $"{mon.Gia:N0} đ",
-                    Location = new Point(lblGia.PreferredWidth + 12, 46),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 8F, FontStyle.Strikeout),
-                    ForeColor = ThemeManager.Muted,
-                    BackColor = Color.Transparent
-                };
-                card.Controls.Add(lblGiaGoc);
-            }
+                Name = "lblGiaGoc",
+                Text = $"{mon.Gia:N0} đ",
+                Location = new Point(lblGia.PreferredWidth + 12, 46),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8F, FontStyle.Strikeout),
+                ForeColor = ThemeManager.Muted,
+                BackColor = Color.Transparent,
+                Visible = hasPromo && effPrice < mon.Gia
+            };
+            card.Controls.Add(lblGiaGoc);
 
             var lblStock = new Label
             {

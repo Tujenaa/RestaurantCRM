@@ -357,15 +357,16 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             left.Controls.Add(_pnlTargetContainer);
 
             // ===== Thẻ 4: Điều kiện áp dụng =====
-            _lblDonToiThieu = MakeLabel("Giá tối thiểu được giảm (VNĐ)");
-            _lblDonToiThieuHint = MakeHint("Chỉ món có đơn giá ≥ mức này mới được giảm (0đ = tất cả món)");
+            _lblDonToiThieu = MakeLabel("Giá tối thiểu được giảm (VNĐ) (*)");
+            _lblDonToiThieuHint = MakeHint("Chỉ món có đơn giá ≥ mức này mới được giảm (bắt buộc > 0)");
             _nudDonToiThieu = MakeNumeric();
+            _nudDonToiThieu.Minimum = 0;
             _nudDonToiThieu.Maximum = 100000000;
             _nudDonToiThieu.Increment = 10000;
-            _nudDonToiThieu.Value = 0;
+            _nudDonToiThieu.Value = 50000;
 
-            _lblSoLuongVoucher = MakeLabel("Số lượng voucher áp dụng");
-            _lblSoLuongVoucherHint = MakeHint("Tổng lượt khách được dùng mã (0 = không giới hạn)");
+            _lblSoLuongVoucher = MakeLabel("Số lượng voucher áp dụng (*)");
+            _lblSoLuongVoucherHint = MakeHint("Tổng số lượt khách được dùng mã (bắt buộc > 0)");
             _nudSoLuongVoucher = MakeNumeric();
             _nudSoLuongVoucher.Minimum = 0;
             _nudSoLuongVoucher.Maximum = 100000;
@@ -391,14 +392,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             _nudGiaTriGiam.Maximum = 100;
             _nudGiaTriGiam.Value = 10;
 
-            _lblGiamToiDa = MakeLabel("Giảm tối đa (VNĐ)");
+            _lblGiamToiDa = MakeLabel("Giảm tối đa (VNĐ) (*)");
             _nudGiamToiDa = MakeNumeric();
             _nudGiamToiDa.Maximum = 100000000;
             _nudGiamToiDa.Increment = 10000;
             _nudGiamToiDa.Value = 50000;
 
             _gridDiscount = MakeGrid(34f, 30f, 36f);
-            var grpLoai = MakeField(MakeLabel("Hình thức giảm"), _cboLoaiGiam, null);
+            var grpLoai = MakeField(MakeLabel("Hình thức giảm (*)"), _cboLoaiGiam, null);
             _grpGiaTriGiam = MakeField(_lblGiaTriGiam, _nudGiaTriGiam, null);
             _grpGiamToiDa = MakeField(_lblGiamToiDa, _nudGiamToiDa, null);
 
@@ -424,7 +425,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 UseMnemonic = false
             };
             var lblHeaderSub = new Label {
-                Text = "Điền lần lượt các mục bên dưới, sau đó nhấn Lưu",
+                Text = "Vui lòng nhập đầy đủ các thông tin bắt buộc (*) bên dưới, sau đó nhấn Lưu",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
                 ForeColor = Color.FromArgb(225, 232, 255),
@@ -499,9 +500,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _lblScopeHint.Text = "Giảm trực tiếp trên tổng hóa đơn khi đạt giá trị đơn tối thiểu.";
                 _pnlTargetContainer.Visible = false;
                 SetCondColumns(true);
-                _lblDonToiThieu.Text = "Đơn hàng tối thiểu (VNĐ)";
-                _lblDonToiThieuHint.Text = "Áp dụng khi tổng hóa đơn đạt từ mức này trở lên (0đ = mọi đơn)";
-                _lblSoLuongVoucherHint.Text = "Tổng lượt khách được dùng mã (0 = không giới hạn)";
+                _lblDonToiThieu.Text = "Đơn hàng tối thiểu (VNĐ) (*)";
+                _lblDonToiThieuHint.Text = "Áp dụng khi tổng hóa đơn đạt từ mức này trở lên (bắt buộc > 0)";
+                _lblSoLuongVoucherHint.Text = "Tổng số lượt khách được dùng mã (bắt buộc > 0)";
             } else if (_rbTheoLoai.Checked) {
                 _lblScopeHint.Text = "Giảm cho các món thuộc một loại món (ví dụ: Lẩu, Nước uống).";
                 _pnlTargetContainer.Visible = true;
@@ -509,9 +510,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _pnlCboLoaiMon.Visible = true;
                 _pnlCboMonAn.Visible = false;
                 SetCondColumns(true);
-                _lblDonToiThieu.Text = "Giá tối thiểu được giảm (VNĐ)";
-                _lblDonToiThieuHint.Text = "Chỉ món trong nhóm có đơn giá ≥ mức này mới được giảm (0đ = tất cả món)";
-                _lblSoLuongVoucherHint.Text = "Ví dụ: 20 lượt. Khi đủ số lượt dùng mã sẽ tự động ẩn";
+                _lblDonToiThieu.Text = "Giá tối thiểu được giảm (VNĐ) (*)";
+                _lblDonToiThieuHint.Text = "Chỉ món trong nhóm có đơn giá ≥ mức này mới được giảm (bắt buộc > 0)";
+                _lblSoLuongVoucherHint.Text = "Tổng số lượt áp dụng ưu đãi nhóm món (bắt buộc > 0)";
             } else if (_rbTheoMon.Checked) {
                 _lblScopeHint.Text = "Giảm giá trực tiếp cho một món ăn cụ thể.";
                 _pnlTargetContainer.Visible = true;
@@ -519,7 +520,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _pnlCboLoaiMon.Visible = false;
                 _pnlCboMonAn.Visible = true;
                 SetCondColumns(false);
-                _lblSoLuongVoucherHint.Text = "Tổng số lượt ưu đãi cho món này (0 = không giới hạn lượt dùng)";
+                _lblSoLuongVoucherHint.Text = "Tổng số lượt ưu đãi cho món ăn này (bắt buộc > 0)";
             }
         }
 
@@ -544,14 +545,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _gridDiscount.ColumnStyles[2] = new ColumnStyle(SizeType.Percent, 36f);
                 _grpGiaTriGiam.Visible = true;
                 _lblGiaTriGiam.Text = "Mức giảm (%) (*)";
-                _lblGiamToiDa.Text = "Giảm tối đa (VNĐ)";
+                _lblGiamToiDa.Text = "Giảm tối đa (VNĐ) (*)";
                 _nudGiaTriGiam.Maximum = 100;
             } else {
                 _gridDiscount.ColumnStyles[0] = new ColumnStyle(SizeType.Percent, 45f);
                 _gridDiscount.ColumnStyles[1] = new ColumnStyle(SizeType.Absolute, 0f);
                 _gridDiscount.ColumnStyles[2] = new ColumnStyle(SizeType.Percent, 55f);
                 _grpGiaTriGiam.Visible = false;
-                _lblGiamToiDa.Text = "Mức giảm tối đa (VNĐ) (*)";
+                _lblGiamToiDa.Text = "Số tiền giảm (VNĐ) (*)";
                 _nudGiamToiDa.Maximum = 100000000;
             }
             _gridDiscount.ResumeLayout();
@@ -603,7 +604,12 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _cboLoaiMon.ValueMember = "MaLoaiMon";
                 _cboLoaiMon.DataSource = _loaiMonList;
                 if (_loaiMonList != null && _loaiMonList.Count > 0) {
-                    _cboLoaiMon.SelectedIndex = 0;
+                    if (_voucherToEdit != null && !string.IsNullOrEmpty(_voucherToEdit.MaLoaiMon)) {
+                        var idx = _loaiMonList.FindIndex(x => x.MaLoaiMon == _voucherToEdit.MaLoaiMon);
+                        _cboLoaiMon.SelectedIndex = idx >= 0 ? idx : 0;
+                    } else {
+                        _cboLoaiMon.SelectedIndex = 0;
+                    }
                 }
 
                 // Bind Món ăn
@@ -611,7 +617,12 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                 _cboMonAn.ValueMember = "MaMon";
                 _cboMonAn.DataSource = _dishList;
                 if (_dishList != null && _dishList.Count > 0) {
-                    _cboMonAn.SelectedIndex = 0;
+                    if (_voucherToEdit != null && !string.IsNullOrEmpty(_voucherToEdit.MaMon)) {
+                        var idx = _dishList.FindIndex(x => x.MaMon == _voucherToEdit.MaMon);
+                        _cboMonAn.SelectedIndex = idx >= 0 ? idx : 0;
+                    } else {
+                        _cboMonAn.SelectedIndex = 0;
+                    }
                 }
             } catch (Exception ex) {
                 MessageBox.Show(this, "Lỗi khi tải dữ liệu khởi tạo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -621,7 +632,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
         private async Task SaveAsync() {
             var selectedCt = _cboChuongTrinh.SelectedItem as ComboBoxItem;
             if (selectedCt == null || string.IsNullOrEmpty(selectedCt.Value)) {
-                MessageBox.Show(this, "Vui lòng chọn một chương trình khuyến mãi đang hoạt động để tạo voucher.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Vui lòng chọn một chương trình khuyến mãi đang hoạt động để tạo voucher.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _cboChuongTrinh.Focus();
                 return;
             }
 
@@ -633,23 +645,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
 
             var maVoucher = _txtMaVoucher.Text.Trim();
             if (string.IsNullOrEmpty(maVoucher)) {
-                MessageBox.Show(this, "Vui lòng nhập mã Voucher.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Vui lòng nhập Mã voucher (*).", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _txtMaVoucher.Focus();
-                return;
-            }
-
-            string loaiGiam = _cboLoaiGiam.SelectedIndex == 0 ? "%" : "VND";
-            double giaTriGiam = loaiGiam == "%" ? (double)_nudGiaTriGiam.Value : (double)_nudGiamToiDa.Value;
-            double? giamToiDa = _nudGiamToiDa.Value > 0 ? (double?)_nudGiamToiDa.Value : null;
-
-            if (loaiGiam == "%" && _nudGiaTriGiam.Value <= 0) {
-                MessageBox.Show(this, "Vui lòng nhập mức giảm (%) lớn hơn 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                _nudGiaTriGiam.Focus();
-                return;
-            }
-            if (loaiGiam == "VND" && _nudGiamToiDa.Value <= 0) {
-                MessageBox.Show(this, "Vui lòng nhập mức giảm tối đa (VNĐ) lớn hơn 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                _nudGiamToiDa.Focus();
                 return;
             }
 
@@ -657,29 +654,83 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
             string maLoaiMon = null;
             string maMon = null;
             double? donToiThieu = null;
-            int soLuongVoucher = (int)_nudSoLuongVoucher.Value;
 
             if (_rbTheoLoai.Checked) {
                 phamVi = "THEO_LOAI";
                 var selectedLoai = _cboLoaiMon.SelectedItem as LoaiMonSelectDto;
-                if (selectedLoai == null) {
-                    MessageBox.Show(this, "Vui lòng chọn loại món áp dụng cho voucher nhóm.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (selectedLoai == null || string.IsNullOrWhiteSpace(selectedLoai.MaLoaiMon)) {
+                    MessageBox.Show(this, "Vui lòng chọn Loại món áp dụng (*) cho voucher nhóm.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _cboLoaiMon.Focus();
+                    return;
+                }
+                if (_nudDonToiThieu.Value <= 0) {
+                    MessageBox.Show(this, "Vui lòng nhập Giá tối thiểu được giảm (VNĐ) lớn hơn 0 cho voucher theo loại món.", "Thiếu thông tin điều kiện", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _nudDonToiThieu.Focus();
                     return;
                 }
                 maLoaiMon = selectedLoai.MaLoaiMon;
-                donToiThieu = _nudDonToiThieu.Value > 0 ? (double?)_nudDonToiThieu.Value : null;
+                donToiThieu = (double)_nudDonToiThieu.Value;
             } else if (_rbTheoMon.Checked) {
                 phamVi = "THEO_MON";
                 var dish = _cboMonAn.SelectedItem as MonAnSelectDto;
-                if (dish == null) {
-                    MessageBox.Show(this, "Vui lòng chọn món ăn cần áp dụng ưu đãi.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (dish == null || string.IsNullOrWhiteSpace(dish.MaMon)) {
+                    MessageBox.Show(this, "Vui lòng chọn Món ăn áp dụng (*) cho voucher.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _cboMonAn.Focus();
                     return;
                 }
                 maMon = dish.MaMon;
             } else {
-                // TOAN_DON
                 phamVi = "TOAN_DON";
-                donToiThieu = _nudDonToiThieu.Value > 0 ? (double?)_nudDonToiThieu.Value : null;
+                if (_nudDonToiThieu.Value <= 0) {
+                    MessageBox.Show(this, "Vui lòng nhập Đơn hàng tối thiểu (VNĐ) lớn hơn 0 cho voucher toàn đơn.", "Thiếu thông tin điều kiện", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _nudDonToiThieu.Focus();
+                    return;
+                }
+                donToiThieu = (double)_nudDonToiThieu.Value;
+            }
+
+            if (_nudSoLuongVoucher.Value <= 0) {
+                MessageBox.Show(this, "Vui lòng nhập Số lượng voucher áp dụng (*) lớn hơn 0.", "Thiếu thông tin điều kiện", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _nudSoLuongVoucher.Focus();
+                return;
+            }
+            int soLuongVoucher = (int)_nudSoLuongVoucher.Value;
+
+            string loaiGiam = _cboLoaiGiam.SelectedIndex == 0 ? "%" : "VND";
+            if (loaiGiam == "%") {
+                if (_nudGiaTriGiam.Value <= 0) {
+                    MessageBox.Show(this, "Vui lòng nhập Mức giảm (%) (*) lớn hơn 0.", "Thiếu thông tin mức giảm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _nudGiaTriGiam.Focus();
+                    return;
+                }
+                if (_nudGiamToiDa.Value <= 0) {
+                    MessageBox.Show(this, "Vui lòng nhập Giảm tối đa (VNĐ) (*) lớn hơn 0 khi giảm theo phần trăm.", "Thiếu thông tin mức giảm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _nudGiamToiDa.Focus();
+                    return;
+                }
+            } else {
+                if (_nudGiamToiDa.Value <= 0) {
+                    MessageBox.Show(this, "Vui lòng nhập Số tiền giảm (VNĐ) (*) lớn hơn 0.", "Thiếu thông tin mức giảm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _nudGiamToiDa.Focus();
+                    return;
+                }
+            }
+
+            double giaTriGiam = loaiGiam == "%" ? (double)_nudGiaTriGiam.Value : (double)_nudGiamToiDa.Value;
+            double? giamToiDa = (double)_nudGiamToiDa.Value;
+
+            if (phamVi == "THEO_MON" && _cboMonAn.SelectedItem is MonAnSelectDto selectedDish && (selectedDish.GiaVonUocTinh ?? 0) > 0) {
+                var margin = VoucherMarginCalculator.Calculate(
+                    selectedDish.DonGia ?? 0,
+                    selectedDish.GiaVonUocTinh ?? 0,
+                    _cboLoaiGiam.SelectedIndex,
+                    giaTriGiam,
+                    giamToiDa ?? 0);
+
+                if (margin.Health == MarginHealth.NegativeMargin) {
+                    MessageBox.Show(this, margin.WarningText, "Cảnh báo âm giá vốn", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
             }
 
             _btnSave.Enabled = false;
@@ -696,7 +747,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai {
                         giaTriGiam,
                         donToiThieu,
                         giamToiDa,
-                        soLuongVoucher);
+                        soLuongVoucher,
+                        maLoaiMon,
+                        maMon);
                 } else {
                     (ok, msg) = await _service.CreateVoucherAsync(
                         selectedCt.Value,
