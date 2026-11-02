@@ -56,9 +56,9 @@ public class MenuController : Controller
         }
 
         var dish = await _monAnService.GetByIdAsync(id);
-        if (dish == null || !dish.ConHang)
+        if (dish == null)
         {
-            TempData["ThongBao"] = "Món ăn yêu cầu hiện đang tạm hết hàng hoặc ngừng kinh doanh.";
+            TempData["ThongBao"] = "Không tìm thấy món ăn yêu cầu.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -91,7 +91,7 @@ public class MenuController : Controller
         }
 
         var dish = await _monAnService.GetByIdAsync(id);
-        if (dish == null || !dish.ConHang)
+        if (dish == null)
         {
             return NotFound();
         }

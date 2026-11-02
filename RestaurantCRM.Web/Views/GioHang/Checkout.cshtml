@@ -18,7 +18,7 @@
 @if (!ViewData.ModelState.IsValid || ViewBag.ErrorMessage != null)
 {
     <div class="alert alert-danger" style="background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:16px 20px; border-radius:14px; margin-bottom:24px;">
-        <h4 style="margin:0 0 6px; font-size:15px; font-weight:800;">⚠️ Đặt hàng không thành công</h4>
+        <h4 style="margin:0 0 6px; font-size:15px; font-weight:800;">Đặt hàng không thành công</h4>
         @if (ViewBag.ErrorMessage != null)
         {
             <p style="margin:0; font-size:13.5px;">@ViewBag.ErrorMessage</p>
@@ -62,7 +62,7 @@
                             <strong>Địa chỉ hiện tại</strong>
                             @if (coDiaChiMacDinh)
                             {
-                                <div style="color: #666; font-size: 13px; margin-top: 3px;">📍 @diaChiMacDinh</div>
+                                <div style="color: #666; font-size: 13px; margin-top: 3px;">@diaChiMacDinh</div>
                             }
                             else
                             {
@@ -118,23 +118,23 @@
         <h3 style="margin-top:24px;">Phương thức thanh toán</h3>
         <label class="choice" style="margin-bottom:10px;">
             <input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="cod" id="payCod" checked />
-            <span>💵 <strong>Thanh toán tiền mặt khi nhận hàng (COD)</strong></span>
+            <span><strong>Thanh toán tiền mặt khi nhận hàng (COD)</strong></span>
         </label>
         <label class="choice" style="margin-bottom:16px;">
             <input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="transfer" id="payOnline" />
-            <span>💳 <strong>Thanh toán Online / Chuyển khoản / Thẻ ngân hàng</strong></span>
+            <span><strong>Thanh toán Online / Chuyển khoản / Thẻ ngân hàng</strong></span>
         </label>
 
         <!-- Online Payment Container -->
         <div id="onlinePaymentPanel" style="display:none; background:#fbf7ef; border:1.5px solid #d4c3b3; border-radius:16px; padding:20px; margin-bottom:20px; animation:fadeIn .2s;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px dashed #d4c3b3; padding-bottom:10px;">
-                <strong style="color:var(--dark); font-size:15px;">🏦 Cổng thanh toán trực tuyến Lẩu Phố</strong>
+                <strong style="color:var(--dark); font-size:15px;">Cổng thanh toán trực tuyến Lẩu Phố</strong>
             </div>
 
             <!-- Tab Selection -->
             <div style="display:flex; gap:8px; margin-bottom:16px;">
-                <button type="button" class="btn small" id="btnTabCard" style="flex:1;" onclick="switchPayTab('card')">💳 Thẻ ngân hàng / ATM</button>
-                <button type="button" class="btn secondary small" id="btnTabQr" style="flex:1;" onclick="switchPayTab('qr')">📲 Quét mã VietQR</button>
+                <button type="button" class="btn small" id="btnTabCard" style="flex:1;" onclick="switchPayTab('card')">Thẻ ngân hàng / ATM</button>
+                <button type="button" class="btn secondary small" id="btnTabQr" style="flex:1;" onclick="switchPayTab('qr')">Quét mã VietQR</button>
             </div>
 
             <!-- Card Sub-panel -->
@@ -172,7 +172,7 @@
                     </div>
                 </div>
                 <p style="margin:0; font-size:12px; color:#5c6f84; background:#e8f0fe; padding:8px 12px; border-radius:8px;">
-                    🔒 Nhấn <b>"Thanh toán ngay"</b> bên dưới, hệ thống sẽ tự động xác thực và kích hoạt đơn hàng.
+                    Nhấn <b>"Thanh toán ngay"</b> bên dưới, hệ thống sẽ tự động xác thực và kích hoạt đơn hàng.
                 </p>
             </div>
 
@@ -181,7 +181,7 @@
                 <div style="background:white; border:1px solid #d4c3b3; border-radius:12px; padding:16px; display:inline-block; max-width:280px; margin-bottom:10px;">
                     <div style="font-weight:800; font-size:14px; color:#c6402b; margin-bottom:6px;">NHÀ HÀNG LẨU PHỐ</div>
                     <div style="width:180px; height:180px; margin:0 auto; background:#fff; display:grid; place-items:center; border:2px dashed #c6402b; border-radius:8px; font-size:13px; font-weight:700;">
-                        📲 VIETQR<br/><small style="color:var(--muted);">Mã thanh toán tự động</small>
+                        VIETQR<br/><small style="color:var(--muted);">Mã thanh toán tự động</small>
                     </div>
                     <div style="font-size:13px; font-weight:700; margin-top:8px;">STK: 9999 8888 6688 · MB Bank</div>
                     <div style="font-size:12px; color:var(--muted);">Số tiền: <b style="color:var(--red);">@Model.GioHang.TongThanhToan.ToString("N0")đ</b></div>
@@ -200,9 +200,9 @@
 
     <!-- Side Order Summary -->
     <aside class="panel summary">
-        <h3>Kiểm tra đơn hàng (@Model.GioHang.Items.Count món)</h3>
+        <h3>Kiểm tra đơn hàng (@Model.GioHang.ItemsDaChon.Count món)</h3>
         <div style="max-height: 280px; overflow-y: auto; margin-bottom: 14px; padding-right: 4px;">
-            @foreach (var item in Model.GioHang.Items)
+            @foreach (var item in Model.GioHang.ItemsDaChon)
             {
                 <div class="summary-line" style="margin: 8px 0;">
                     <span>@item.TenMon × <strong>@item.SoLuong</strong></span>
@@ -240,29 +240,35 @@
                     </div>
                 </div>
             </form>
+            @{
+                var subtotal = Model.GioHang.TamTinh;
+                var checkoutItems = Model.GioHang.ItemsDaChon;
+                var allVouchers = (Model.AvailableVouchers ?? new List<RestaurantCRM.Web.Models.VoucherViewModel>())
+                    .OrderByDescending(v => v.GetIneligibleReason(subtotal, checkoutItems) == null)
+                    .ThenByDescending(v => v.NgayBatDau ?? DateOnly.MinValue)
+                    .ThenByDescending(v => v.MaKmvoucher)
+                    .ToList();
+                var top5Vouchers = allVouchers.Take(5).ToList();
+            }
             <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Bấm để áp dụng nhanh mã ưu đãi:</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                @{
-                    var subtotal = Model.GioHang.TamTinh;
-                    var vouchers = Model.AvailableVouchers ?? new List<RestaurantCRM.Web.Models.VoucherViewModel>();
-                }
-                @if (!vouchers.Any())
+                @if (!top5Vouchers.Any())
                 {
-                    <div style="font-size: 11px; color: var(--muted); font-style: italic;">
+                    <div style="font-size: 11px; color: var(--muted); font-style: italic; grid-column: 1/-1;">
                         Hiện chưa có mã ưu đãi khả dụng.
                     </div>
                 }
                 else
                 {
-                    @foreach (var v in vouchers.OrderBy(x => x.GetIneligibleReason(subtotal, Model.GioHang.Items) != null))
+                    @foreach (var v in top5Vouchers)
                     {
-                        var reason = v.GetIneligibleReason(subtotal, Model.GioHang.Items);
+                        var reason = v.GetIneligibleReason(subtotal, checkoutItems);
                         if (reason == null)
                         {
                             <button type="button" class="chip-voucher" onclick="quickApplyCheckoutVoucher('@v.DisplayCode')" 
                                     title="@v.TenChuongTrinh - @v.ConditionLabel"
                                     style="background:#fcf2eb; border:1px solid #f1c5b4; color:#a34820; font-size:11px; padding:3px 8px; border-radius:999px; cursor:pointer; font-weight:600;">
-                                🎟️ @v.DisplayCode (@v.DiscountLabel)
+                                @v.DisplayCode (@v.DiscountLabel)
                             </button>
                         }
                         else
@@ -270,13 +276,20 @@
                             <button type="button" class="chip-voucher" disabled aria-disabled="true"
                                     title="@v.TenChuongTrinh - @reason"
                                     style="background:#f1f1f1; border:1px solid #e0e0e0; color:#a8a8a8; font-size:11px; padding:3px 8px; border-radius:999px; cursor:not-allowed; filter:grayscale(1); opacity:.75;">
-                                🎟️ @v.DisplayCode (@v.DiscountLabel)
+                                @v.DisplayCode (@v.DiscountLabel)
                                 <span style="display:block; font-size:10px; font-weight:500;">@reason</span>
                             </button>
                         }
                     }
                 }
             </div>
+
+            @if (allVouchers.Count > 0)
+            {
+                <button type="button" class="btn-open-voucher-modal" onclick="openCheckoutVoucherModal()">
+                    Xem thêm tất cả ưu đãi (@allVouchers.Count mã) →
+                </button>
+            }
         </div>
 
         <div class="summary-line total" style="align-items:flex-end;">
@@ -296,6 +309,116 @@
     </aside>
 </div>
 
+@if (allVouchers != null && allVouchers.Count > 0)
+{
+    var usableVouchers = allVouchers.Where(v => v.GetIneligibleReason(subtotal, checkoutItems) == null).ToList();
+    var otherVouchers = allVouchers.Where(v => v.GetIneligibleReason(subtotal, checkoutItems) != null).ToList();
+
+    <div class="voucher-modal" id="checkoutVoucherModal" aria-hidden="true" role="dialog">
+        <div class="voucher-modal__backdrop" onclick="closeCheckoutVoucherModal()"></div>
+        <div class="voucher-modal__dialog">
+            <div class="voucher-modal__header">
+                <div>
+                    <h3 style="margin:0; font-size:17px; font-weight:800; display:flex; align-items:center; gap:8px;">
+                        Danh sách khuyến mãi & ưu đãi (@allVouchers.Count)
+                    </h3>
+                    <small class="muted" style="font-size:12px;">Ưu tiên các mã bạn có thể áp dụng cho đơn hàng</small>
+                </div>
+                <button type="button" class="voucher-modal__close" onclick="closeCheckoutVoucherModal()" aria-label="Đóng">✕ Đóng</button>
+            </div>
+            <div class="voucher-modal__body">
+                @if (usableVouchers.Count > 0)
+                {
+                    <div>
+                        <div class="voucher-section-title" style="color:#15803d;">
+                            Mã có thể áp dụng ngay (@usableVouchers.Count)
+                        </div>
+                        <div class="voucher-list-cards">
+                            @foreach (var v in usableVouchers)
+                            {
+                                var isApplied = string.Equals(Model.GioHang.MaVoucher, v.DisplayCode, StringComparison.OrdinalIgnoreCase);
+                                <div class="voucher-card voucher-card--usable @(isApplied ? "voucher-card--applied" : "")">
+                                    <div class="voucher-card__left">
+                                        <div class="voucher-card__code">
+                                            <span>@v.DisplayCode</span>
+                                            <span class="badge badge-sale" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">@v.DiscountLabel</span>
+                                            @if (isApplied)
+                                            {
+                                                <span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Đang áp dụng</span>
+                                            }
+                                        </div>
+                                        <div class="voucher-card__desc">@v.TenChuongTrinh</div>
+                                        <div class="voucher-card__condition">
+                                            @v.ConditionLabel
+                                            @if (v.NgayKetThuc.HasValue)
+                                            {
+                                                <span> · HSD: @v.NgayKetThuc.Value.ToString("dd/MM/yyyy")</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="voucher-card__right">
+                                        @if (isApplied)
+                                        {
+                                            <button type="button" class="btn secondary small" onclick="removeCheckoutVoucher(); closeCheckoutVoucherModal();" style="color:var(--red); border-color:#ef9a9a;">
+                                                Gỡ mã
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn small" onclick="quickApplyCheckoutVoucher('@v.DisplayCode'); closeCheckoutVoucherModal();" style="background:var(--green); border-color:var(--green); color:#fff; font-weight:700;">
+                                                Áp dụng
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (otherVouchers.Count > 0)
+                {
+                    <div style="margin-top: @(usableVouchers.Count > 0 ? "8px" : "0");">
+                        <div class="voucher-section-title" style="color:#64748b;">
+                            Các mã ưu đãi khác (@otherVouchers.Count)
+                        </div>
+                        <div class="voucher-list-cards">
+                            @foreach (var v in otherVouchers)
+                            {
+                                var reason = v.GetIneligibleReason(subtotal, checkoutItems);
+                                <div class="voucher-card voucher-card--disabled">
+                                    <div class="voucher-card__left">
+                                        <div class="voucher-card__code">
+                                            <span>@v.DisplayCode</span>
+                                            <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;">@v.DiscountLabel</span>
+                                        </div>
+                                        <div class="voucher-card__desc">@v.TenChuongTrinh</div>
+                                        <div class="voucher-card__condition">
+                                            @v.ConditionLabel
+                                            @if (v.NgayKetThuc.HasValue)
+                                            {
+                                                <span> · HSD: @v.NgayKetThuc.Value.ToString("dd/MM/yyyy")</span>
+                                            }
+                                        </div>
+                                        <div class="voucher-card__ineligible">
+                                            @reason
+                                        </div>
+                                    </div>
+                                    <div class="voucher-card__right">
+                                        <button type="button" class="btn secondary small" disabled style="opacity:.6; cursor:not-allowed; font-size:12px;">
+                                            Chưa đủ ĐK
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
     <script>
@@ -313,7 +436,7 @@
             if (payOnline && payOnline.checked) {
                 if (onlinePanel) onlinePanel.style.display = 'block';
                 if (btnSubmitOrder) {
-                    btnSubmitOrder.innerHTML = '💳 Thanh toán ngay @Model.GioHang.TongThanhToan.ToString("N0")đ →';
+                    btnSubmitOrder.innerHTML = 'Thanh toán ngay @Model.GioHang.TongThanhToan.ToString("N0")đ →';
                 }
             } else {
                 if (onlinePanel) onlinePanel.style.display = 'none';
@@ -356,6 +479,28 @@
                 form.submit();
             }
         }
+
+        function openCheckoutVoucherModal() {
+            const modal = document.getElementById('checkoutVoucherModal');
+            if (modal) {
+                modal.classList.add('voucher-modal--open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeCheckoutVoucherModal() {
+            const modal = document.getElementById('checkoutVoucherModal');
+            if (modal) {
+                modal.classList.remove('voucher-modal--open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeCheckoutVoucherModal();
+        });
 
         if (payCod && payOnline) {
             payCod.addEventListener('change', togglePaymentMethod);

@@ -131,7 +131,7 @@ public class MonAnService
                 if (apiDish != null)
                 {
                     var vm = MapToViewModel(apiDish, categoryMap);
-                    return vm.ConHang ? vm : null;
+                    return vm;
                 }
             }
         }
@@ -256,7 +256,7 @@ public class MonAnService
                 _cachedDishes.Add(item);
             }
         }
-        return item != null && item.ConHang ? item : null;
+        return item;
     }
 }
 

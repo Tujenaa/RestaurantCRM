@@ -1,7 +1,7 @@
 @model MonAnViewModel
 
 <div class="quickview-body">
-    <div class="quickview-media">
+    <div class="quickview-media @(Model.ConHang ? "" : "is-unavailable-media")">
         @if (!string.IsNullOrWhiteSpace(Model.DuongDanAnh))
         {
             <img src="@Model.DuongDanAnh" alt="@Model.TenMon" style="width: 100%; height: 100%; min-height: 320px; object-fit: cover;" onerror="this.onerror=null; this.src='/images/default.jpg';" />
@@ -85,11 +85,15 @@
         }
         else
         {
+            var qvBtnText = Model.NgungKinhDoanh ? "Ngừng kinh doanh" : "Hết hàng";
             <div class="quickview-unavailable-alert">
-                <p>Món ăn này hiện đang tạm hết nguyên liệu phục vụ. Quý khách vui lòng chọn món ăn khác trong thực đơn.</p>
-                <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="btn btn-view-full">
-                    Xem thông tin chi tiết món
-                </a>
+                <p>@(Model.NgungKinhDoanh ? "Món ăn này đã ngừng kinh doanh." : "Món ăn này hiện đang tạm hết nguyên liệu phục vụ.") Quý khách vui lòng chọn món ăn khác trong thực đơn.</p>
+                <div class="quickview-actions" style="margin-top:12px; display:flex; gap:10px;">
+                    <button type="button" class="btn btn-secondary disabled" disabled style="cursor: not-allowed; opacity: 0.7; font-weight: 600; padding: 10px 18px;">@qvBtnText</button>
+                    <a asp-controller="Menu" asp-action="ChiTiet" asp-route-id="@Model.MaMon" class="btn btn-view-full">
+                        Xem trang chi tiết
+                    </a>
+                </div>
             </div>
         }
     </div>

@@ -71,7 +71,8 @@
                 }
                 else
                 {
-                    <button class="btn-add-cart disabled" type="button" disabled>Hết món</button>
+                    var btnCardText = Model.NgungKinhDoanh ? "Ngừng kinh doanh" : "Hết hàng";
+                    <button class="btn-add-cart disabled" type="button" disabled style="cursor: not-allowed;">@btnCardText</button>
                 }
             </div>
         </div>
