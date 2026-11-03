@@ -30,5 +30,7 @@ public partial class DanhGia
 
     public virtual MonAn? MaMonNavigation { get; set; }
 
+    public virtual ICollection<ChiTietDanhGia> ChiTietDanhGia { get; set; } = new List<ChiTietDanhGia>();
+
     public virtual ICollection<TraLoiDanhGia> TraLoiDanhGia { get; set; } = new List<TraLoiDanhGia>();
 }

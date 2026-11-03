@@ -28,17 +28,30 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("PhanTichMon")]
         public async Task<IActionResult> GetPhanTichMon()
         {
-            var danhGias = await _service.Query<DanhGia>()
+            var ctDanhGias = await _service.Query<ChiTietDanhGia>()
+                .Select(ct => new
+                {
+                    ct.MaMon,
+                    TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
+                    SoSao = (int?)ct.SoSao,
+                    ct.NoiDung,
+                    NgayDanhGia = ct.MaDanhGiaNavigation.NgayDanhGia
+                })
+                .ToListAsync();
+
+            var legacyDanhGias = await _service.Query<DanhGia>()
                 .Where(d => d.MaMon != null)
                 .Select(d => new
                 {
                     d.MaMon,
-                    TenMon = d.MaMonNavigation != null ? d.MaMonNavigation.TenMon : null,
+                    TenMon = d.MaMonNavigation != null ? d.MaMonNavigation.TenMon : (d.MaMon != null ? d.MaMon : "Đánh giá chung đơn hàng"),
                     d.SoSao,
                     d.NoiDung,
                     d.NgayDanhGia
                 })
                 .ToListAsync();
+
+            var danhGias = ctDanhGias.Concat(legacyDanhGias).ToList();
 
             var ketQua = danhGias
                 .GroupBy(d => d.MaMon)
@@ -84,6 +97,10 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> GetAllDanhGia([FromQuery] string? search, [FromQuery] string? trangThai, [FromQuery] int? soSao)
         {
             var query = _service.Query<DanhGia>().AsQueryable();
+
+            // Chỉ lấy các phản hồi có nội dung ý kiến đóng góp hoặc đánh giá cấp đơn hàng (MaMon == null)
+            // Bỏ qua các dòng món ăn chỉ chấm sao không có nội dung chữ để danh sách Admin không bị rác/trùng lặp
+            query = query.Where(d => !string.IsNullOrEmpty(d.NoiDung) || d.MaMon == null);
 
             switch ((trangThai ?? "").Trim())
             {
@@ -156,7 +173,7 @@ namespace RestaurantCRM.API.Controllers
                     x.MaKhachHang,
                     x.MaHoaDon,
                     x.MaMon,
-                    TenMon = x.MaMonNavigation != null ? x.MaMonNavigation.TenMon : null,
+                    TenMon = x.MaMonNavigation != null ? x.MaMonNavigation.TenMon : (x.MaMon != null ? x.MaMon : "Đánh giá chung đơn hàng"),
                     x.SoSao,
                     x.NoiDung,
                     x.NgayDanhGia,

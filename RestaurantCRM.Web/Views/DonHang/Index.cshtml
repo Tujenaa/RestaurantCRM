@@ -128,9 +128,18 @@
                         Mua lại đơn này
                     </button>
                 </form>
-                <a class="btn secondary small" asp-controller="PhanHoi" asp-action="DanhGia" asp-route-maDonHang="@order.MaDonHang" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
-                    Đánh giá đơn hàng
-                </a>
+                @if (order.DaDanhGia)
+                {
+                    <a class="btn secondary small" asp-controller="PhanHoi" asp-action="ChiTiet" asp-route-maHoaDon="@order.MaDonHang" style="background:#e0f2fe; border-color:#bae6fd; color:#0369a1; font-weight:600;">
+                        Xem đánh giá
+                    </a>
+                }
+                else
+                {
+                    <a class="btn secondary small" asp-controller="PhanHoi" asp-action="DanhGia" asp-route-maDonHang="@order.MaDonHang" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
+                        Đánh giá đơn hàng
+                    </a>
+                }
             }
             else if (order.TrangThaiLoc == "cancel")
             {

@@ -1,0 +1,175 @@
+@model ChiTietDanhGiaDonHangViewModel
+@{
+    ViewData["Title"] = $"Chi tiết đánh giá đơn hàng #{Model.MaHoaDon} — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+
+    var ratingText = Model.DanhGiaChung switch
+    {
+        5 => "Rất hài lòng",
+        4 => "Hài lòng",
+        3 => "Bình thường",
+        2 => "Chưa hài lòng",
+        _ => "Rất không hài lòng"
+    };
+}
+
+<div class="page-intro" style="max-width:780px; margin:0 auto 24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <a asp-action="Index" style="text-decoration:none; color:var(--muted); font-size:13.5px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+            ← Xem lịch sử đánh giá
+        </a>
+        <a asp-controller="DonHang" asp-action="ChiTiet" asp-route-id="@Model.MaHoaDon" style="text-decoration:none; color:var(--ink); font-size:13.5px; font-weight:600;">
+            Chi tiết đơn hàng #@Model.MaHoaDon →
+        </a>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+            <h1 class="page-title" style="font-size:24px; margin:0 0 4px;">Đánh giá đơn hàng #@Model.MaHoaDon</h1>
+            <p style="color:var(--muted); font-size:13.5px; margin:0;">
+                Gửi lúc @(Model.NgayGui?.ToString("dd/MM/yyyy · HH:mm") ?? "")
+            </p>
+        </div>
+        <div>
+            <a asp-action="ChinhSua" asp-route-maHoaDon="@Model.MaHoaDon" class="btn" style="padding:9px 18px; font-size:13.5px; font-weight:700; border-radius:10px;">
+                Chỉnh sửa đánh giá
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (TempData["ThongBao"] != null)
+{
+    <div class="alert alert-success" style="max-width:780px; margin:0 auto 20px; background:#e8f5e9; border:1px solid #a5d6a7; color:#2e7d32; padding:12px 18px; border-radius:12px; font-weight:500;">
+        @TempData["ThongBao"]
+    </div>
+}
+@if (TempData["Loi"] != null)
+{
+    <div class="alert alert-danger" style="max-width:780px; margin:0 auto 20px; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:12px 18px; border-radius:12px; font-weight:500;">
+        @TempData["Loi"]
+    </div>
+}
+
+<div style="max-width:780px; margin:0 auto 40px; display:flex; flex-direction:column; gap:20px;">
+    <!-- Thẻ mức độ hài lòng chung -->
+    <div class="panel" style="background:#ffffff; border:1px solid var(--line); border-radius:16px; padding:24px 28px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div>
+                <span style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">
+                    Mức độ hài lòng chung
+                </span>
+                <div style="font-size:17px; font-weight:750; color:var(--ink); margin-top:2px;">
+                    Đơn hàng #@Model.MaHoaDon
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div class="stars" style="color:#f59e0b; font-size:22px; letter-spacing:3px;">
+                    @String.Concat(Enumerable.Repeat("★", Model.DanhGiaChung))@String.Concat(Enumerable.Repeat("☆", 5 - Model.DanhGiaChung))
+                </div>
+                <span style="font-weight:700; color:#b45309; font-size:13px;">@ratingText (@Model.DanhGiaChung/5)</span>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.NoiDungChung))
+        {
+            <div style="padding:14px 18px; background:#faf7f5; border-radius:12px; border-left:4px solid var(--red); color:var(--ink); font-size:14.5px; line-height:1.6;">
+                @Model.NoiDungChung
+            </div>
+        }
+        else
+        {
+            <div style="padding:12px 16px; background:#f8fafc; border-radius:10px; color:var(--muted); font-size:13.5px; font-style:italic;">
+                (Khách hàng đã chấm @Model.DanhGiaChung★ cho đơn hàng và không để lại bình luận văn bản)
+            </div>
+        }
+    </div>
+
+    <!-- Danh sách đánh giá chi tiết từng món -->
+    @if (Model.ChiTietMon.Count > 0)
+    {
+        <div class="panel" style="background:#ffffff; border:1px solid var(--line); border-radius:16px; padding:24px 28px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h3 style="margin:0; font-size:16px; font-weight:750; color:var(--ink);">
+                    Đánh giá từng món ăn (@Model.ChiTietMon.Count món)
+                </h3>
+                <span style="font-size:12px; color:var(--muted); font-weight:600;">Lưu trữ tại CHI_TIET_DANH_GIA</span>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                @foreach (var dish in Model.ChiTietMon)
+                {
+                    <div style="background:#fafafa; border:1px solid var(--line); border-radius:12px; padding:14px 16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;">
+                            <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                                <img src="@(string.IsNullOrWhiteSpace(dish.DuongDanAnh) ? "/images/default.jpg" : dish.DuongDanAnh)"
+                                     alt="@dish.TenMon"
+                                     style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;"
+                                     onerror="this.onerror=null;this.src='/images/default.jpg';" />
+                                <div>
+                                    <h4 style="margin:0; font-size:14.5px; font-weight:700; color:var(--ink);">
+                                        @dish.TenMon
+                                    </h4>
+                                    <small style="color:var(--muted); font-size:12px;">
+                                        Mã món: @dish.MaMon
+                                    </small>
+                                </div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="color:#f59e0b; font-size:18px; letter-spacing:2px;">
+                                    @String.Concat(Enumerable.Repeat("★", dish.SoSao))@String.Concat(Enumerable.Repeat("☆", 5 - dish.SoSao))
+                                </div>
+                                <span style="font-weight:700; color:#b45309; font-size:12px;">@dish.SoSao★</span>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(dish.NoiDung))
+                        {
+                            <div style="margin-top:8px; padding:10px 14px; background:#ffffff; border-radius:8px; border:1px solid #edf2f7; font-size:13.5px; color:var(--ink); line-height:1.5;">
+                                @dish.NoiDung
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="margin-top:6px; font-size:12.5px; color:var(--muted); font-style:italic;">
+                                (Chấm @dish.SoSao★ · Không có nhận xét văn bản)
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Phản hồi từ nhà hàng -->
+    @if (Model.TraLois.Count > 0)
+    {
+        <div class="panel" style="background:#fffbf7; border:1px solid #fed7aa; border-radius:16px; padding:22px 26px;">
+            <div style="margin-bottom:14px;">
+                <h3 style="margin:0; font-size:15.5px; font-weight:750; color:#c2410c;">Phản hồi từ Nhà hàng Lẩu Phố</h3>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                @foreach (var reply in Model.TraLois)
+                {
+                    <div style="background:#ffffff; border:1px solid #ffedd5; border-radius:10px; padding:12px 16px;">
+                        <div style="font-size:14px; color:var(--ink); line-height:1.5;">
+                            @reply.NoiDung
+                        </div>
+                        <div style="font-size:12px; color:var(--muted); margin-top:4px;">
+                            Người phản hồi: <strong>@(string.IsNullOrEmpty(reply.NguoiTraLoi) ? "Ban Quản Trị Lẩu Phố" : reply.NguoiTraLoi)</strong> · @reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Thanh tác vụ cuối trang -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-top:6px;">
+        <a asp-action="Index" class="btn secondary" style="padding:10px 20px; font-size:14px; font-weight:600; border-radius:10px;">
+            ← Về lịch sử đánh giá
+        </a>
+        <a asp-action="ChinhSua" asp-route-maHoaDon="@Model.MaHoaDon" class="btn" style="padding:10px 24px; font-size:14px; font-weight:700; border-radius:10px;">
+            Chỉnh sửa đánh giá này
+        </a>
+    </div>
+</div>

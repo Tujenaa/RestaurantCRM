@@ -26,7 +26,7 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
     }
 
     [HttpGet]
-    public async Task<IActionResult> DanhGia([FromQuery] string? maDonHang = null, [FromQuery] string? maMon = null)
+    public async Task<IActionResult> DanhGia([FromQuery] string? maDonHang = null)
     {
         var token = HttpContext.Session.GetString("Token");
         var customerId = HttpContext.Session.GetString("MaKhachHang");
@@ -44,18 +44,48 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
             return RedirectToAction("Index", "DonHang");
         }
 
-        // Nếu mã đơn truyền vào không thuộc đơn hoàn tất của khách, mặc định lấy đơn đầu tiên
-        if (string.IsNullOrEmpty(maDonHang) || !doneOrders.Any(o => o.MaDonHang == maDonHang))
+        // Nếu mã đơn truyền vào đã được đánh giá rồi: chuyển sang xem chi tiết đánh giá
+        if (!string.IsNullOrEmpty(maDonHang))
         {
-            maDonHang = doneOrders[0].MaDonHang;
+            var targetOrder = doneOrders.FirstOrDefault(o => o.MaDonHang == maDonHang);
+            if (targetOrder != null && targetOrder.DaDanhGia)
+            {
+                TempData["ThongBao"] = $"Đơn hàng #{maDonHang} đã được đánh giá trước đó.";
+                return RedirectToAction(nameof(ChiTiet), new { maHoaDon = maDonHang });
+            }
         }
 
-        var model = await BuildModelAsync(new PhanHoiViewModel
+        // Danh sách các đơn chưa từng được đánh giá
+        var unreviewedOrders = doneOrders.Where(o => !o.DaDanhGia).ToList();
+        if (unreviewedOrders.Count == 0)
+        {
+            TempData["ThongBao"] = "Tất cả các đơn hàng đã hoàn tất của bạn đều đã được đánh giá. Cảm ơn bạn!";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (string.IsNullOrEmpty(maDonHang) || !unreviewedOrders.Any(o => o.MaDonHang == maDonHang))
+        {
+            maDonHang = unreviewedOrders[0].MaDonHang;
+        }
+
+        var orderDetail = await donHangService.GetOrderDetailAsync(maDonHang);
+
+        var model = new PhanHoiViewModel
         {
             MaDonHang = maDonHang,
-            MaMon = maMon,
-            CheDoDanhGia = string.IsNullOrEmpty(maMon) ? "DonHang" : "TungMon"
-        }, customerId, doneOrders);
+            DanhGia = 5,
+            NoiDung = "",
+            DonHangHienTai = orderDetail,
+            DonHangs = unreviewedOrders,
+            ChiTietMonDanhGia = (orderDetail?.ChiTiet ?? new()).Select(c => new DishReviewInputItem
+            {
+                MaMon = c.MaMon,
+                TenMon = c.TenMon,
+                DuongDanAnh = c.DuongDanAnh,
+                DanhGia = 5,
+                NoiDung = ""
+            }).ToList()
+        };
 
         return View(model);
     }
@@ -66,7 +96,6 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
     {
         var token = HttpContext.Session.GetString("Token");
         var customerId = HttpContext.Session.GetString("MaKhachHang");
-        var customerName = HttpContext.Session.GetString("HoTen") ?? "Khách hàng Lẩu Phố";
 
         if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(customerId))
         {
@@ -80,7 +109,7 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
             ModelState.AddModelError(nameof(model.MaDonHang), "Vui lòng chọn đơn hàng bạn muốn đánh giá.");
         }
 
-        // Kiểm tra đơn hàng có thực sự thuộc khách hàng và đã hoàn tất không
+        // 1. Kiểm tra đơn hàng có thực sự thuộc khách hàng và đã hoàn tất không
         var doneOrders = await donHangService.GetOrdersForCustomerAsync(customerId, "done");
         var matchedOrder = doneOrders.FirstOrDefault(o => o.MaDonHang == model.MaDonHang);
         if (matchedOrder == null)
@@ -88,55 +117,157 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
             ModelState.AddModelError(nameof(model.MaDonHang), "Đơn hàng không hợp lệ hoặc chưa hoàn tất.");
         }
 
-        if (string.IsNullOrWhiteSpace(model.NoiDung))
+        // 2. Chặn đánh giá lại lần 2: Đơn hàng chỉ được đánh giá 1 lần duy nhất qua form tạo mới
+        bool daDanhGia = await phanHoiService.IsOrderReviewedAsync(model.MaDonHang);
+        if (daDanhGia)
         {
-            ModelState.AddModelError(nameof(model.NoiDung), "Vui lòng nhập nội dung đánh giá của bạn.");
-        }
-
-        // Tùy theo chế độ: "TungMon" (chọn 1 món cụ thể) hay "DonHang" (tất cả các món trong đơn hàng)
-        if (model.CheDoDanhGia == "TungMon")
-        {
-            if (string.IsNullOrWhiteSpace(model.MaMon))
-            {
-                ModelState.AddModelError(nameof(model.MaMon), "Vui lòng chọn món ăn muốn đánh giá.");
-            }
+            TempData["ThongBao"] = $"Đơn hàng #{model.MaDonHang} đã có đánh giá. Bạn có thể xem hoặc chỉnh sửa tại đây.";
+            return RedirectToAction(nameof(ChiTiet), new { maHoaDon = model.MaDonHang });
         }
 
         if (!ModelState.IsValid)
         {
-            var reloadModel = await BuildModelAsync(model, customerId, doneOrders);
-            return View("DanhGia", reloadModel);
+            model.DonHangs = doneOrders.Where(o => !o.DaDanhGia).ToList();
+            model.DonHangHienTai = await donHangService.GetOrderDetailAsync(model.MaDonHang!);
+            if (model.ChiTietMonDanhGia.Count == 0 && model.DonHangHienTai != null)
+            {
+                model.ChiTietMonDanhGia = (model.DonHangHienTai.ChiTiet ?? new()).Select(c => new DishReviewInputItem
+                {
+                    MaMon = c.MaMon,
+                    TenMon = c.TenMon,
+                    DuongDanAnh = c.DuongDanAnh,
+                    DanhGia = 5,
+                    NoiDung = ""
+                }).ToList();
+            }
+            return View("DanhGia", model);
         }
 
-        DonHangViewModel? orderDetail = await donHangService.GetOrderDetailAsync(model.MaDonHang!);
+        // Gửi batch đánh giá đơn hàng: Master (DANH_GIA) + Detail (CHI_TIET_DANH_GIA)
+        var result = await phanHoiService.SubmitOrderReviewBatchAsync(
+            customerId,
+            model.MaDonHang!,
+            model.DanhGia,
+            model.NoiDung,
+            model.ChiTietMonDanhGia
+        );
 
-        if (model.CheDoDanhGia == "TungMon" && !string.IsNullOrWhiteSpace(model.MaMon))
+        if (result.Success)
         {
-            var orderItem = orderDetail?.ChiTiet.FirstOrDefault(c => c.MaMon == model.MaMon);
-            var dish = await monAnService.GetByIdAsync(model.MaMon) ?? monAnService.Find(model.MaMon);
-            string tenMon = orderItem?.TenMon ?? dish?.TenMon ?? "Món ăn";
-
-            await phanHoiService.AddReviewAsync(model.MaMon, tenMon, model.DanhGia, model.NoiDung, model.MaDonHang, customerName, customerId);
-            TempData["ThongBao"] = $"Cảm ơn bạn đã gửi đánh giá cho món '{tenMon}' trong đơn #{model.MaDonHang}!";
+            TempData["ThongBao"] = $"Cảm ơn bạn đã gửi đánh giá cho đơn hàng #{model.MaDonHang}!";
+            return RedirectToAction(nameof(ChiTiet), new { maHoaDon = model.MaDonHang });
         }
         else
         {
-            // Chế độ đánh giá cho toàn bộ đơn hàng
-            if (orderDetail != null && orderDetail.ChiTiet.Count > 0)
-            {
-                foreach (var item in orderDetail.ChiTiet)
-                {
-                    await phanHoiService.AddReviewAsync(item.MaMon, item.TenMon, model.DanhGia, model.NoiDung, model.MaDonHang, customerName, customerId);
-                }
-                TempData["ThongBao"] = $"Cảm ơn bạn đã đánh giá toàn bộ {orderDetail.ChiTiet.Count} món trong đơn hàng #{model.MaDonHang}!";
-            }
-            else
-            {
-                TempData["Loi"] = "Không tìm thấy danh sách món ăn trong đơn hàng này để gửi đánh giá.";
-            }
+            TempData["Loi"] = result.Message;
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ChiTiet(string maHoaDon)
+    {
+        var token = HttpContext.Session.GetString("Token");
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(customerId))
+        {
+            TempData["ThongBao"] = "Vui lòng đăng nhập để xem chi tiết đánh giá.";
+            return RedirectToAction("DangNhap", "TaiKhoan", new { returnUrl = Request.Path + Request.QueryString });
         }
 
-        return RedirectToAction(nameof(Index));
+        if (string.IsNullOrEmpty(maHoaDon))
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        var detail = await phanHoiService.GetOrderReviewDetailAsync(maHoaDon);
+        if (detail == null)
+        {
+            TempData["Loi"] = $"Chưa tìm thấy đánh giá cho đơn hàng #{maHoaDon}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(detail);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ChinhSua(string maHoaDon)
+    {
+        var token = HttpContext.Session.GetString("Token");
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(customerId))
+        {
+            TempData["ThongBao"] = "Vui lòng đăng nhập để chỉnh sửa đánh giá.";
+            return RedirectToAction("DangNhap", "TaiKhoan", new { returnUrl = Request.Path + Request.QueryString });
+        }
+
+        if (string.IsNullOrEmpty(maHoaDon))
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        var detail = await phanHoiService.GetOrderReviewDetailAsync(maHoaDon);
+        if (detail == null)
+        {
+            TempData["Loi"] = $"Chưa có đánh giá cho đơn hàng #{maHoaDon} để chỉnh sửa.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var orderDetail = await donHangService.GetOrderDetailAsync(maHoaDon);
+
+        var model = new PhanHoiViewModel
+        {
+            MaDonHang = maHoaDon,
+            DanhGia = detail.SoSaoChung,
+            NoiDung = detail.NoiDungChung ?? "",
+            DonHangHienTai = orderDetail,
+            ChiTietMonDanhGia = detail.ChiTietMon.Select(m => new DishReviewInputItem
+            {
+                MaMon = m.MaMon,
+                TenMon = m.TenMon,
+                DuongDanAnh = m.DuongDanAnh,
+                DanhGia = m.SoSao,
+                NoiDung = m.NoiDung ?? ""
+            }).ToList()
+        };
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChinhSua(PhanHoiViewModel model)
+    {
+        var token = HttpContext.Session.GetString("Token");
+        var customerId = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(customerId))
+        {
+            TempData["ThongBao"] = "Vui lòng đăng nhập để cập nhật đánh giá.";
+            return RedirectToAction("DangNhap", "TaiKhoan");
+        }
+
+        if (string.IsNullOrWhiteSpace(model.MaDonHang))
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        var result = await phanHoiService.UpdateOrderReviewBatchAsync(
+            customerId,
+            model.MaDonHang,
+            model.DanhGia,
+            model.NoiDung,
+            model.ChiTietMonDanhGia
+        );
+
+        if (result.Success)
+        {
+            TempData["ThongBao"] = $"Cập nhật đánh giá cho đơn hàng #{model.MaDonHang} thành công!";
+            return RedirectToAction(nameof(ChiTiet), new { maHoaDon = model.MaDonHang });
+        }
+
+        TempData["Loi"] = result.Message;
+        model.DonHangHienTai = await donHangService.GetOrderDetailAsync(model.MaDonHang);
+        return View(model);
     }
 
     [HttpPost]
@@ -159,8 +290,15 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
             return Redirect(returnUrl ?? Url.Action(nameof(Index))!);
         }
 
-        await phanHoiService.AddReplyAsync(maDanhGia, noiDung.Trim(), customerName, customerId);
-        TempData["ThongBao"] = "Đã gửi phản hồi thành công!";
+        bool success = await phanHoiService.AddReplyAsync(maDanhGia, noiDung, customerName, customerId);
+        if (success)
+        {
+            TempData["ThongBao"] = "Phản hồi của bạn đã được gửi thành công!";
+        }
+        else
+        {
+            TempData["Loi"] = "Không thể gửi phản hồi lúc này. Vui lòng thử lại sau.";
+        }
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
@@ -168,23 +306,5 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         }
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private async Task<PhanHoiViewModel> BuildModelAsync(PhanHoiViewModel model, string customerId, IReadOnlyList<DonHangViewModel> doneOrders)
-    {
-        model.DonHangs = doneOrders;
-        model.MonAns = await monAnService.GetAllAsync();
-
-        if (string.IsNullOrEmpty(model.MaDonHang) && model.DonHangs.Count > 0)
-        {
-            model.MaDonHang = model.DonHangs[0].MaDonHang;
-        }
-
-        if (!string.IsNullOrEmpty(model.MaDonHang))
-        {
-            model.DonHangHienTai = await donHangService.GetOrderDetailAsync(model.MaDonHang);
-        }
-
-        return model;
     }
 }

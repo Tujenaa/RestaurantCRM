@@ -47,7 +47,14 @@
                         <div style="display:flex; gap:6px;">
                             @if (Model.TrangThaiLoc == "done")
                             {
+                                @if (Model.DaDanhGia)
+                            {
+                                <a href="/PhanHoi/ChiTiet?maHoaDon=@Model.MaDonHang" class="btn secondary small" style="padding: 4px 10px; font-size:12px; background:#e0f2fe; border-color:#bae6fd; color:#0369a1;">Xem đánh giá</a>
+                            }
+                            else
+                            {
                                 <a href="/PhanHoi/DanhGia?maDonHang=@Model.MaDonHang&maMon=@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px; background:#fff7ed; border-color:#fed7aa; color:#c2410c;">Đánh giá món</a>
+                            }
                             }
                             <a href="/Menu/ChiTiet/@item.MaMon" class="btn secondary small" style="padding: 4px 10px; font-size:12px;">Chi tiết món</a>
                         </div>
@@ -106,9 +113,18 @@
 
             @if (Model.TrangThaiLoc == "done")
             {
-                <a asp-controller="PhanHoi" asp-action="DanhGia" asp-route-maDonHang="@Model.MaDonHang" class="btn secondary" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
-                    Đánh giá đơn hàng này
-                </a>
+                @if (Model.DaDanhGia)
+                {
+                    <a asp-controller="PhanHoi" asp-action="ChiTiet" asp-route-maHoaDon="@Model.MaDonHang" class="btn secondary" style="background:#e0f2fe; border-color:#bae6fd; color:#0369a1; font-weight:600;">
+                        Xem đánh giá đơn hàng
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="PhanHoi" asp-action="DanhGia" asp-route-maDonHang="@Model.MaDonHang" class="btn secondary" style="background:#fff7ed; border-color:#fed7aa; color:#c2410c; font-weight:600;">
+                        Đánh giá đơn hàng này
+                    </a>
+                }
             }
         </div>
     </section>

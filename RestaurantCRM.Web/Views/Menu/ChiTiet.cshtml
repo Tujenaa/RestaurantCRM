@@ -279,7 +279,14 @@
                                     </div>
                                 </div>
 
-                                <p style="margin:10px 0; color:#334155; line-height:1.6; font-size:14px;">@review.NoiDung</p>
+                                @if (!string.IsNullOrWhiteSpace(review.NoiDung))
+                                {
+                                    <p style="margin:10px 0; color:#334155; line-height:1.6; font-size:14px;">@review.NoiDung</p>
+                                }
+                                else
+                                {
+                                    <p style="margin:8px 0; color:var(--muted); font-style:italic; font-size:13.5px;">Khách hàng đã chấm @review.DanhGia★ và không để lại bình luận văn bản.</p>
+                                }
 
                                 <!-- Hội thoại phản hồi của nhà hàng / khách hàng (xếp mới -> cũ) -->
                                 @if (review.TraLois != null && review.TraLois.Count > 0)

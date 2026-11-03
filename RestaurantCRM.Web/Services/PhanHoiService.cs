@@ -122,6 +122,183 @@ public class PhanHoiService
     }
 
     /// <summary>
+    /// Kiểm tra xem đơn hàng đã được đánh giá chưa
+    /// </summary>
+    public async Task<bool> IsOrderReviewedAsync(string? maHoaDon)
+    {
+        if (string.IsNullOrWhiteSpace(maHoaDon))
+        {
+            return false;
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/DanhGia/KiemTraDonHang/{Uri.EscapeDataString(maHoaDon)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var res = await response.Content.ReadFromJsonAsync<ApiKiemTraDto>();
+                return res?.daDanhGia ?? false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Không thể kiểm tra trạng thái đánh giá của đơn #{MaHoaDon}: {Message}", maHoaDon, ex.Message);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Lấy chi tiết toàn bộ đánh giá của 1 đơn hàng (Master & Detail)
+    /// </summary>
+    public async Task<ChiTietDanhGiaDonHangViewModel?> GetOrderReviewDetailAsync(string maHoaDon)
+    {
+        if (string.IsNullOrWhiteSpace(maHoaDon)) return null;
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var response = await client.GetAsync($"/api/DanhGia/DonHang/{Uri.EscapeDataString(maHoaDon)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var dto = await response.Content.ReadFromJsonAsync<ApiOrderReviewDetailDto>();
+                if (dto != null)
+                {
+                    return new ChiTietDanhGiaDonHangViewModel
+                    {
+                        MaDanhGia = dto.MaDanhGia ?? "",
+                        MaHoaDon = dto.MaHoaDon ?? maHoaDon,
+                        MaKhachHang = dto.MaKhachHang ?? "",
+                        TenKhachHang = dto.TenKhachHang ?? "Khách hàng",
+                        SoSaoChung = dto.SoSaoChung,
+                        NoiDungChung = dto.NoiDungChung,
+                        NgayDanhGia = dto.NgayDanhGia,
+                        ChiTietMon = (dto.ChiTietMon ?? new()).Select(ct => new ChiTietMonDanhGiaItemViewModel
+                        {
+                            MaChiTietDanhGia = ct.MaChiTietDanhGia ?? "",
+                            MaMon = ct.MaMon ?? "",
+                            TenMon = ct.TenMon ?? "Món ngon Lẩu Phố",
+                            DuongDanAnh = ct.DuongDanAnh,
+                            SoSao = ct.SoSao,
+                            NoiDung = ct.NoiDung
+                        }).ToList(),
+                        HoiThoai = (dto.HoiThoai ?? new()).Select(t => new TraLoiDanhGiaViewModel
+                        {
+                            MaTraLoi = t.MaTraLoi ?? "",
+                            NoiDung = t.NoiDung ?? "",
+                            NgayGui = t.NgayGui ?? DateTime.Now,
+                            NguoiTraLoi = t.NguoiTraLoi ?? "Nhân viên Lẩu Phố"
+                        }).ToList()
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Lỗi khi lấy chi tiết đánh giá đơn #{MaHoaDon} từ API", maHoaDon);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gửi đánh giá trọn gói cho toàn bộ đơn hàng (chuẩn Master-Detail)
+    /// </summary>
+    public async Task<(bool Success, string Message)> SubmitOrderReviewBatchAsync(
+        string customerId,
+        string maHoaDon,
+        int orderRating,
+        string? orderComment,
+        List<DishReviewInputItem>? dishReviews)
+    {
+        if (string.IsNullOrWhiteSpace(customerId) || string.IsNullOrWhiteSpace(maHoaDon))
+        {
+            return (false, "Thông tin đơn hàng hoặc khách hàng không hợp lệ.");
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var payload = new
+            {
+                MaKhachHang = customerId.Trim(),
+                MaHoaDon = maHoaDon.Trim(),
+                SoSaoChung = Math.Clamp(orderRating, 1, 5),
+                NoiDungChung = string.IsNullOrWhiteSpace(orderComment) ? null : orderComment.Trim(),
+                ChiTietMon = dishReviews?.Select(d => new
+                {
+                    MaMon = d.MaMon,
+                    SoSao = Math.Clamp(d.DanhGia, 1, 5),
+                    NoiDung = string.IsNullOrWhiteSpace(d.NoiDung) ? null : d.NoiDung.Trim()
+                }).ToList()
+            };
+
+            var response = await client.PostAsJsonAsync("/api/DanhGia/DonHang", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Đánh giá đơn hàng thành công!");
+            }
+
+            var errContent = await response.Content.ReadAsStringAsync();
+            return (false, string.IsNullOrWhiteSpace(errContent) ? "Không thể gửi đánh giá. Vui lòng thử lại sau." : errContent);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gửi đánh giá trọn gói đơn hàng #{MaHoaDon}", maHoaDon);
+            return (false, "Đã xảy ra lỗi kết nối khi gửi đánh giá. Vui lòng thử lại sau.");
+        }
+    }
+
+    /// <summary>
+    /// Cập nhật chỉnh sửa đánh giá trọn gói cho toàn bộ đơn hàng
+    /// </summary>
+    public async Task<(bool Success, string Message)> UpdateOrderReviewBatchAsync(
+        string customerId,
+        string maHoaDon,
+        int orderRating,
+        string? orderComment,
+        List<DishReviewInputItem>? dishReviews)
+    {
+        if (string.IsNullOrWhiteSpace(customerId) || string.IsNullOrWhiteSpace(maHoaDon))
+        {
+            return (false, "Thông tin đơn hàng hoặc khách hàng không hợp lệ.");
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var payload = new
+            {
+                MaKhachHang = customerId.Trim(),
+                MaHoaDon = maHoaDon.Trim(),
+                SoSaoChung = Math.Clamp(orderRating, 1, 5),
+                NoiDungChung = string.IsNullOrWhiteSpace(orderComment) ? null : orderComment.Trim(),
+                ChiTietMon = dishReviews?.Select(d => new
+                {
+                    MaMon = d.MaMon,
+                    SoSao = Math.Clamp(d.DanhGia, 1, 5),
+                    NoiDung = string.IsNullOrWhiteSpace(d.NoiDung) ? null : d.NoiDung.Trim()
+                }).ToList()
+            };
+
+            var response = await client.PutAsJsonAsync("/api/DanhGia/DonHang", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Cập nhật đánh giá thành công!");
+            }
+
+            var errContent = await response.Content.ReadAsStringAsync();
+            return (false, string.IsNullOrWhiteSpace(errContent) ? "Không thể cập nhật đánh giá. Vui lòng thử lại sau." : errContent);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi cập nhật đánh giá đơn hàng #{MaHoaDon}", maHoaDon);
+            return (false, "Đã xảy ra lỗi kết nối khi cập nhật đánh giá. Vui lòng thử lại sau.");
+        }
+    }
+
+    /// <summary>
     /// Thêm đánh giá món ăn
     /// </summary>
     public async Task<bool> AddReviewAsync(string maMon, string tenMon, int rating, string noiDung, string? maDonHang = null, string? customerName = null, string? customerId = null)
@@ -191,7 +368,7 @@ public class PhanHoiService
         {
             MaDanhGia = dto.MaDanhGia ?? "",
             MaMon = dto.MaMon ?? "",
-            TenMon = dto.TenMon ?? "Món ngon Lẩu Phố",
+            TenMon = dto.TenMon ?? (string.IsNullOrEmpty(dto.MaMon) ? "Đánh giá chung đơn hàng" : "Món ngon Lẩu Phố"),
             MaDonHang = dto.MaHoaDon,
             TenKhachHang = dto.TenKhachHang ?? "Khách hàng",
             DanhGia = dto.SoSao ?? 5,
@@ -208,6 +385,35 @@ public class PhanHoiService
                     NgayGui = t.NgayGui ?? DateTime.Now
                 }).ToList()
         };
+    }
+
+    private class ApiKiemTraDto
+    {
+        public string? maHoaDon { get; set; }
+        public bool daDanhGia { get; set; }
+    }
+
+    private class ApiOrderReviewDetailDto
+    {
+        public string? MaDanhGia { get; set; }
+        public string? MaHoaDon { get; set; }
+        public string? MaKhachHang { get; set; }
+        public string? TenKhachHang { get; set; }
+        public int SoSaoChung { get; set; }
+        public string? NoiDungChung { get; set; }
+        public DateTime? NgayDanhGia { get; set; }
+        public List<ApiDishReviewDetailDto>? ChiTietMon { get; set; }
+        public List<ApiTraLoiDto>? HoiThoai { get; set; }
+    }
+
+    private class ApiDishReviewDetailDto
+    {
+        public string? MaChiTietDanhGia { get; set; }
+        public string? MaMon { get; set; }
+        public string? TenMon { get; set; }
+        public string? DuongDanAnh { get; set; }
+        public int SoSao { get; set; }
+        public string? NoiDung { get; set; }
     }
 
     private class ApiDanhGiaDto

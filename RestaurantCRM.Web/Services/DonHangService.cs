@@ -124,6 +124,25 @@ public class DonHangService
                     }
                 }
 
+                                // Cập nhật trạng thái đã đánh giá cho các đơn hàng
+                try
+                {
+                    var revRes = await client.GetAsync($"/api/DanhGia/DaDanhGia/{Uri.EscapeDataString(customerId)}");
+                    if (revRes.IsSuccessStatusCode)
+                    {
+                        var revList = await revRes.Content.ReadFromJsonAsync<List<string>>();
+                        if (revList != null && revList.Count > 0)
+                        {
+                            var revSet = new HashSet<string>(revList, StringComparer.OrdinalIgnoreCase);
+                            foreach (var o in orders)
+                            {
+                                o.DaDanhGia = revSet.Contains(o.MaDonHang);
+                            }
+                        }
+                    }
+                }
+                catch { }
+
                 return FilterOrders(orders, filter);
             }
         }
@@ -150,7 +169,7 @@ public class DonHangService
                 if (dto != null)
                 {
                     var statusLoc = MapStatusLoc(dto.TrangThai);
-                    return new DonHangViewModel
+                    var result = new DonHangViewModel
                     {
                         MaDonHang = dto.MaHoaDon,
                         NgayDat = dto.NgayDat,
@@ -188,6 +207,19 @@ public class DonHangService
                             };
                         }).ToList()
                     };
+
+                    try
+                    {
+                        var chkRes = await client.GetAsync($"/api/DanhGia/KiemTraDonHang/{Uri.EscapeDataString(orderId)}");
+                        if (chkRes.IsSuccessStatusCode)
+                        {
+                            var chkDto = await chkRes.Content.ReadFromJsonAsync<ApiKiemTraDto>();
+                            result.DaDanhGia = chkDto?.daDanhGia ?? false;
+                        }
+                    }
+                    catch { }
+
+                    return result;
                 }
             }
         }
@@ -322,4 +354,11 @@ internal class ApiOrderDetailItemDto
     public double DonGiaSauGiam { get; set; }
     public double TienGiamMon { get; set; }
     public double ThanhTien { get; set; }
+}
+
+
+internal class ApiKiemTraDto
+{
+    public string? maHoaDon { get; set; }
+    public bool daDanhGia { get; set; }
 }
