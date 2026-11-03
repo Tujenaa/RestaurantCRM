@@ -47,7 +47,7 @@ namespace RestaurantCRM.API.Controllers
             }
 
             var khachHangs = await query
-                .OrderBy(k => k.MaKhachHang)
+                .OrderByDescending(k => k.MaKhachHang)
                 .Select(k => new
                 {
                     k.MaKhachHang,

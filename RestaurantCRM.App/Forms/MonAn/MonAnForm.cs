@@ -275,7 +275,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 else if (selectedTrangThai == "Ngừng kinh doanh") matchStatus = isNgungKd;
 
                 return matchKeyword && matchLoai && matchStatus;
-            }).ToList();
+            }).OrderByDescending(m => m.MaMonAn).ToList();
 
             // Lưu lại vị trí cuộn ngang (X), vị trí cuộn dọc (Y), và dòng đang chọn
             int verticalScroll = -1;

@@ -72,7 +72,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 (!string.IsNullOrEmpty(p.MaNhanVien) && p.MaNhanVien.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(p.TenNhanVien) && p.TenNhanVien.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(p.GhiChu) && p.GhiChu.ToLower().Contains(keyword))
-            ).ToList();
+            ).OrderByDescending(p => p.NgayNhap ?? DateTime.MinValue).ToList();
 
             dgvPhieuNhap.DataSource = null;
             dgvPhieuNhap.DataSource = filtered;

@@ -413,10 +413,10 @@ namespace RestaurantCRM.AdminApp.Forms
             {
                 foreach (var r in rows) _table.Rows.Add(r);
             }
-            // Mặc định sắp xếp tăng dần theo cột Mã (C0) để hiển thị KS01, KS02... hoặc KH01, KH02...
+            // Mặc định sắp xếp giảm dần theo cột Mã (C0) để hiển thị bản ghi mới nhất lên đầu
             if (_table.Columns.Count > 0)
             {
-                _table.DefaultView.Sort = "[C0] ASC";
+                _table.DefaultView.Sort = "[C0] DESC";
             }
         }
 

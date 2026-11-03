@@ -48,7 +48,7 @@ namespace RestaurantCRM.API.Controllers
             }
 
             var nhanViens = await query
-                .OrderBy(n => n.MaNhanVien)
+                .OrderByDescending(n => n.MaNhanVien)
                 .ToListAsync();
 
             var result = nhanViens.Select(n => new NhanVienDto

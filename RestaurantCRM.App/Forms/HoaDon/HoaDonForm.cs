@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -252,10 +252,10 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                         return true;
                 }
             })
-            // Sắp xếp mã đơn tăng dần theo số (DH1, DH2, ..., DH10)
-            .OrderBy(x => CodePrefix(x.MaHoaDon))
-            .ThenBy(x => CodeNumber(x.MaHoaDon))
-            .ThenBy(x => x.MaHoaDon)
+            // Sắp xếp đơn hàng mới nhất lên đầu (từ mới đến cũ)
+            .OrderByDescending(x => x.NgayDat ?? DateTime.MinValue)
+            .ThenByDescending(x => CodeNumber(x.MaHoaDon))
+            .ThenByDescending(x => x.MaHoaDon)
             .ToList();
 
             HideHover();

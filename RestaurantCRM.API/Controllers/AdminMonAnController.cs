@@ -21,7 +21,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetMonAns()
         {
-            var dsMonAn = await _service.Query<MonAn>()
+            var dsMonAn = await _service.Query<MonAn>().OrderByDescending(m => m.MaMon)
                 .Include(m => m.MaLoaiMonNavigation)
                 .Include(m => m.DinhLuong)
                     .ThenInclude(dl => dl.MaNguyenLieuNavigation)

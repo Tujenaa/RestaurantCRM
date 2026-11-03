@@ -97,7 +97,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 string.IsNullOrEmpty(keyword) ||
                 (!string.IsNullOrEmpty(lm.TenLoaiMon) && lm.TenLoaiMon.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(lm.MaLoaiMon) && lm.MaLoaiMon.ToLower().Contains(keyword))
-            ).ToList();
+            ).OrderByDescending(lm => lm.MaLoaiMon).ToList();
 
             dgvLoaiMon.DataSource = null;
             dgvLoaiMon.DataSource = filtered;

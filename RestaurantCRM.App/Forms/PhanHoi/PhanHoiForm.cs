@@ -355,7 +355,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 else if (tt != "Tất cả" && d.TrangThaiHienThi != tt) return false;
                 if (q.Length == 0) return true;
                 return Has(d.MaDanhGia, q) || Has(d.TenKhachHang, q) || Has(d.TenMon, q) || Has(d.NoiDung, q) || Has(d.SoDienThoai, q);
-            }).ToList();
+            }).OrderByDescending(d => d.NgayDanhGia ?? DateTime.MinValue).ToList();
 
             _grid.SuspendLayout();
             _grid.Rows.Clear();
