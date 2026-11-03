@@ -75,7 +75,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 (!string.IsNullOrEmpty(n.Email) && n.Email.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(n.DiaChi) && n.DiaChi.ToLower().Contains(keyword)) ||
                 (!string.IsNullOrEmpty(n.TrangThaiHienThi) && n.TrangThaiHienThi.ToLower().Contains(keyword))
-            ).ToList();
+            ).OrderByDescending(n => n.MaNhaCungCap).ToList();
 
             dgvNhaCungCap.DataSource = null;
             dgvNhaCungCap.DataSource = filtered;

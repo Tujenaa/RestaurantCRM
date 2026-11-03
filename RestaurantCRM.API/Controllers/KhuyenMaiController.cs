@@ -437,7 +437,6 @@ namespace RestaurantCRM.API.Controllers
                     return Ok(new { valid = false, message = "Mã voucher này đã bị ẩn hoặc hủy áp dụng." });
 
 
-
                 if (vLoai.SoLuongToiThieu.HasValue && vLoai.SoLuongToiThieu.Value > 0)
 
                 {

@@ -32,7 +32,7 @@ namespace RestaurantCRM.API.Controllers
                     query = query.Where(n => n.TrangThai == trangThai);
                 }
             }
-            var nhaCungCaps = await query.ToListAsync();
+            var nhaCungCaps = await query.OrderByDescending(n => n.MaNhaCungCap).ToListAsync();
             return Ok(nhaCungCaps);
         }
 

@@ -176,7 +176,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 if (gt != null && gt != "Tất cả" && !string.Equals(k.GioiTinh, gt, StringComparison.OrdinalIgnoreCase)) return false;
                 if (q.Length == 0) return true;
                 return Contains(k.MaKhachHang, q) || Contains(k.HoTen, q) || Contains(k.SoDienThoai, q) || Contains(k.Email, q);
-            }).ToList();
+            }).OrderByDescending(k => k.MaKhachHang).ToList();
 
             _grid.SuspendLayout();
             _grid.Rows.Clear();

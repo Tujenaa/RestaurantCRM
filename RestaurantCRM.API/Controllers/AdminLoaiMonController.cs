@@ -20,7 +20,7 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<LoaiMon>>> GetLoaiMons()
         {
-            return await _service.Query<LoaiMon>().ToListAsync();
+            return await _service.Query<LoaiMon>().OrderByDescending(l => l.MaLoaiMon).ToListAsync();
         }
 
         // GET: api/AdminLoaiMon/{id} - Lấy thông tin chi tiết một loại món.
