@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
 {
@@ -27,12 +28,27 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
         /// <summary>Trạng thái xử lý do admin chỉnh (gửi trả lời cũng tự đặt = true).</summary>
         public bool DaXuLy { get; set; }
         public List<TraLoiPhanHoiDto> HoiThoai { get; set; } = new List<TraLoiPhanHoiDto>();
+        /// <summary>Đánh giá từng món của đơn (bảng CHI_TIET_DANH_GIA).</summary>
+        public List<DanhGiaMonDto> ChiTietMon { get; set; } = new List<DanhGiaMonDto>();
+
+        /// <summary>Số món bị chấm thấp (≤ 2 sao).</summary>
+        public int SoMonBiChe { get { return ChiTietMon == null ? 0 : ChiTietMon.Count(m => m.SoSao > 0 && m.SoSao <= 2); } }
+        /// <summary>Cần chú ý: điểm chung 1–2 sao hoặc có món bị chấm thấp.</summary>
+        public bool CanChuY { get { return (SoSao.HasValue && SoSao.Value > 0 && SoSao.Value <= 2) || SoMonBiChe > 0; } }
 
         public bool DaTraLoi { get { return TongSoTraLoi > 0 || (HoiThoai != null && HoiThoai.Count > 0); } }
         public bool LaDaXuLy { get { return DaXuLy; } }
         /// <summary>Chỉ còn 2 trạng thái xử lý; ẩn/hiện trên website là thông tin riêng.</summary>
         public string TrangThaiHienThi { get { return LaDaXuLy ? "Đã xử lý" : "Chưa xử lý"; } }
         public string DoiTuong { get { return string.IsNullOrWhiteSpace(TenMon) ? (string.IsNullOrWhiteSpace(MaHoaDon) ? "Dịch vụ chung" : "Đơn " + MaHoaDon) : TenMon; } }
+    }
+
+    public class DanhGiaMonDto
+    {
+        public string MaMon { get; set; }
+        public string TenMon { get; set; }
+        public int SoSao { get; set; }
+        public string NoiDung { get; set; }
     }
 
     public class TraLoiPhanHoiDto

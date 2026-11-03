@@ -41,7 +41,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private readonly Label _kTong = new Label { Text = "Tổng phản hồi: —" };
         private readonly Label _kCho = new Label { Text = "Chưa xử lý: —" };
         private readonly Label _kDiem = new Label { Text = "Điểm trung bình: —" };
-        private readonly Label _kAn = new Label { Text = "Đã ẩn: —" };
+        private readonly Label _kAn = new Label { Text = "Cần chú ý: —" };
         private readonly Button _btnLamMoi = new Button { Text = "Làm mới" };
         // Đổi trạng thái xử lý 2 chiều: "✓ Đã xử lý" <-> "↺ Chưa xử lý"
         private readonly Button _btnDaXem = new Button { Text = "✓ Đánh dấu đã xử lý" };
@@ -92,7 +92,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             ButtonSkin.SetKind(_btnPhanTich, ButtonSkin.Kind.Secondary);
             PageKit.FitButton(_btnPhanTich, 116);
 
-            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Chưa xử lý", "Đã xử lý", "Đã ẩn" });
+            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Cần chú ý", "Chưa xử lý", "Đã xử lý", "Đã ẩn" });
             _cboTrangThai.SelectedIndex = 0;
 
             PageKit.BuildListPage(this, new ListPageSpec
@@ -117,7 +117,12 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
             foreach (DataGridViewColumn c in _grid.Columns)
                 c.MinimumWidth = c.Name == "NoiDung" ? 120 : c.Name == "SoSao" ? 92
-                    : c.Name == "TrangThai" ? 104 : c.Name == "HienThi" ? 100 : 56;
+                    : c.Name == "TrangThai" ? 104 : c.Name == "HienThi" ? 100 : c.Name == "ChuY" ? 34 : 56;
+            if (_grid.Columns["ChuY"] != null)
+            {
+                _grid.Columns["ChuY"].Width = 34;
+                _grid.Columns["ChuY"].FillWeight = 12;
+            }
 
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
@@ -126,6 +131,11 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             // Sao luôn màu vàng (UiStyler đặt lại màu chữ chung của bảng nên phải gán khi định dạng ô)
             _grid.CellFormatting += (s, e) =>
             {
+                if (e.ColumnIndex >= 0 && _grid.Columns[e.ColumnIndex].Name == "ChuY")
+                {
+                    e.CellStyle.ForeColor = e.CellStyle.SelectionForeColor = ThemeManager.Red;
+                    e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
                 if (e.ColumnIndex >= 0 && _grid.Columns[e.ColumnIndex].Name == "SoSao")
                 {
                     var d = e.RowIndex >= 0 ? _grid.Rows[e.RowIndex].Tag as PhanHoiDto : null;
@@ -157,6 +167,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             g.ReadOnly = true; g.MultiSelect = false; g.RowHeadersVisible = false; g.AutoGenerateColumns = false;
             g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
+            var chuY = AddCol("ChuY", "⚠", 34);
+            chuY.ToolTipText = "Cần chú ý: chấm 1–2 sao hoặc có món bị chấm thấp";
+            chuY.SortMode = DataGridViewColumnSortMode.NotSortable;
             var sao = AddCol("SoSao", "Đánh giá", 96);
             sao.ToolTipText = "Bấm tiêu đề cột để sắp xếp theo số sao";
             sao.DefaultCellStyle.ForeColor = ThemeManager.Amber;
@@ -339,7 +352,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _kTong.Text = "Tổng phản hồi: " + _all.Count.ToString("N0");
             _kCho.Text = "Chưa xử lý: " + _all.Count(d => !d.LaDaXuLy).ToString("N0");
             _kDiem.Text = "Điểm trung bình: " + (coSao.Count == 0 ? "—" : coSao.Average(d => d.SoSao.Value).ToString("0.0") + " / 5");
-            _kAn.Text = "Đã ẩn: " + _all.Count(d => !d.HienThi).ToString("N0");
+            _kAn.Text = "Cần chú ý: " + _all.Count(d => d.CanChuY && !d.LaDaXuLy).ToString("N0");
         }
 
         private void ApplyFilter(string chonMa = null)
@@ -352,17 +365,23 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             var list = _all.Where(d =>
             {
                 if (tt == "Đã ẩn") { if (d.HienThi) return false; }
+                else if (tt == "Cần chú ý") { if (!d.CanChuY) return false; }
                 else if (tt != "Tất cả" && d.TrangThaiHienThi != tt) return false;
                 if (q.Length == 0) return true;
-                return Has(d.MaDanhGia, q) || Has(d.TenKhachHang, q) || Has(d.TenMon, q) || Has(d.NoiDung, q) || Has(d.SoDienThoai, q);
-            }).OrderByDescending(d => d.NgayDanhGia ?? DateTime.MinValue).ToList();
+                return Has(d.MaDanhGia, q) || Has(d.TenKhachHang, q) || Has(d.TenMon, q) || Has(d.NoiDung, q) || Has(d.SoDienThoai, q)
+                    || (d.ChiTietMon != null && d.ChiTietMon.Any(m => Has(m.TenMon, q) || Has(m.NoiDung, q)));
+            })
+            // Ưu tiên: chưa xử lý + cần chú ý → chưa xử lý → đã xử lý; trong mỗi nhóm mới nhất lên trước
+            .OrderBy(d => d.LaDaXuLy ? 2 : (d.CanChuY ? 0 : 1))
+            .ThenByDescending(d => d.NgayDanhGia ?? DateTime.MinValue)
+            .ToList();
 
             _grid.SuspendLayout();
             _grid.Rows.Clear();
             int chon = -1;
             foreach (var d in list)
             {
-                int i = _grid.Rows.Add(Sao(d.SoSao ?? 0), MotDong(d.NoiDung), (object)d.NgayDanhGia,
+                int i = _grid.Rows.Add(d.CanChuY ? "⚠" : "", Sao(d.SoSao ?? 0), MotDong(d.NoiDung), (object)d.NgayDanhGia,
                     d.HienThi ? "Đang hiển thị" : "Đã ẩn", d.TrangThaiHienThi);
                 _grid.Rows[i].Tag = d;
                 if (!d.HienThi) _grid.Rows[i].DefaultCellStyle.ForeColor = ThemeManager.Muted;
@@ -447,6 +466,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                     Body = string.IsNullOrWhiteSpace(d.NoiDung) ? "(Khách chỉ chấm sao, không để lại nội dung)" : d.NoiDung,
                     Mine = false
                 });
+                if (d.ChiTietMon != null && d.ChiTietMon.Count > 0)
+                    _thread.Controls.Add(new DanhGiaMonList(d.ChiTietMon));
                 foreach (var t in d.HoiThoai ?? new List<TraLoiPhanHoiDto>())
                 {
                     var traLoi = t;
@@ -487,7 +508,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             foreach (Control c in _thread.Controls)
             {
                 var b = c as ChatBubble;
+                var mon = c as DanhGiaMonList;
                 if (b != null) b.LayoutFor(w);
+                else if (mon != null) mon.LayoutFor(w);
                 else c.Width = w;
                 c.Location = new Point(0, y);
                 y += c.Height + 10;

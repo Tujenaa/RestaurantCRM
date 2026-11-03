@@ -108,6 +108,9 @@
     <Compile Include="Controls\PhanHoi\ChatBubble.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\PhanHoi\DanhGiaMonList.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Controls\PhanHoi\ReviewHoverCard.cs">
       <SubType>Form</SubType>
     </Compile>

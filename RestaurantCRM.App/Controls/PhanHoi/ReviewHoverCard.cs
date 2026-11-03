@@ -18,8 +18,10 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
         private readonly Label _meta = new Label();
         private readonly Label _stars = new Label();
         private readonly RichTextBox _comment = new RichTextBox();
-        private readonly Timer _hideTimer = new Timer { Interval = 260 };
+        // Theo dõi chuột khi thẻ đang hiện: rời dòng đánh giá là ẩn ngay (giống thẻ xem nhanh đơn hàng)
+        private readonly Timer _watch = new Timer { Interval = 60 };
         private bool _shown;
+        private int _shownRow = -1;
         private bool _gridDisposed;
 
         [DllImport("user32.dll")]
@@ -88,24 +90,11 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             _comment.DetectUrls = false;
             Controls.Add(_comment);
 
-            _hideTimer.Tick += (s, e) =>
-            {
-                _hideTimer.Stop();
-                if (!_gridDisposed && (_grid.RectangleToScreen(_grid.ClientRectangle).Contains(Cursor.Position)
-                    || Bounds.Contains(Cursor.Position))) return;
-                HideCard();
-            };
+            _watch.Tick += (s, e) => SyncWithCursor();
 
-            MouseEnter += (s, e) => CancelHide();
-            MouseLeave += (s, e) => ScheduleHide();
-            foreach (Control c in Controls)
-            {
-                c.MouseEnter += (s, e) => CancelHide();
-                c.MouseLeave += (s, e) => ScheduleHide();
-            }
-
-            _grid.CellMouseEnter += GridCellMouseEnter;
-            _grid.MouseLeave += (s, e) => ScheduleHide();
+            _grid.CellMouseEnter += (s, e) => { if (e.RowIndex >= 0) ShowRow(e.RowIndex); else HideCard(); };
+            _grid.MouseMove += (s, e) => SyncWithCursor();
+            _grid.MouseLeave += (s, e) => SyncWithCursor();
             _grid.Scroll += (s, e) => HideCard();
             _grid.Disposed += (s, e) => { _gridDisposed = true; HideCard(); Dispose(); };
         }
@@ -133,15 +122,38 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             using (var brush = new SolidBrush(ThemeManager.Primary)) e.Graphics.FillRectangle(brush, 0, 0, Width, 4);
         }
 
-        private void GridCellMouseEnter(object sender, DataGridViewCellEventArgs e)
+        /// <summary>Chuột đang ở dòng nào thì hiện đúng dòng đó; không ở dòng nào (hoặc đè lên thẻ) thì ẩn ngay.</summary>
+        private void SyncWithCursor()
         {
-            if (e.RowIndex < 0 || e.RowIndex >= _grid.Rows.Count) return;
-            var review = _grid.Rows[e.RowIndex].Tag as PhanHoiDto;
-            if (review == null) return;
+            if (_gridDisposed || IsDisposed) return;
+            var cursor = Cursor.Position;
+            var form = _grid.FindForm();
+            bool active = form != null && Form.ActiveForm == form;
+            var pt = _grid.PointToClient(cursor);
+            int row = _grid.ClientRectangle.Contains(pt) ? _grid.HitTest(pt.X, pt.Y).RowIndex : -1;
 
-            CancelHide();
+            if (!_grid.Visible || !active || row < 0 || (_shown && Bounds.Contains(cursor)))
+            {
+                HideCard();
+                return;
+            }
+            if (!_shown || row != _shownRow) ShowRow(row);
+        }
+
+        private void ShowRow(int rowIndex)
+        {
+            if (_gridDisposed || rowIndex < 0 || rowIndex >= _grid.Rows.Count) return;
+            var form = _grid.FindForm();
+            if (form == null || Form.ActiveForm != form) return;
+            var review = _grid.Rows[rowIndex].Tag as PhanHoiDto;
+            if (review == null) { HideCard(); return; }
+            if (_shown && rowIndex == _shownRow) return;
             _title.Text = review.DoiTuong;
-            _meta.Text = "Ngày gửi: " + (review.NgayDanhGia.HasValue ? review.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—");
+            _meta.Text = "Ngày gửi: " + (review.NgayDanhGia.HasValue ? review.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—")
+                + (review.ChiTietMon != null && review.ChiTietMon.Count > 0
+                    ? "  ·  " + review.ChiTietMon.Count + " món" + (review.SoMonBiChe > 0 ? " · " + review.SoMonBiChe + " món bị chê" : "")
+                    : "");
+            _meta.ForeColor = review.CanChuY ? ThemeManager.Red : ThemeManager.Muted;
             int stars = Math.Max(0, Math.Min(5, review.SoSao ?? 0));
             _stars.Text = new string('★', stars) + new string('☆', 5 - stars)
                 + (review.SoSao.HasValue ? "  " + review.SoSao.Value + " / 5" : "  Chưa có số sao");
@@ -150,7 +162,7 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             _state.ForeColor = review.HienThi ? ThemeManager.Green : ThemeManager.Muted;
             _state.BackColor = review.HienThi ? ThemeManager.GreenSoft : ThemeManager.Surface2;
 
-            var row = _grid.GetRowDisplayRectangle(e.RowIndex, true);
+            var row = _grid.GetRowDisplayRectangle(rowIndex, true);
             var rowScreen = _grid.RectangleToScreen(row);
             var cursor = Cursor.Position;
             var working = Screen.FromPoint(cursor).WorkingArea;
@@ -166,22 +178,15 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             SetWindowPos(Handle, HwndTopmost, x, y, CardWidth, CardHeight,
                 SwpNoActivate | SwpNoOwnerZOrder | SwpShowWindow);
             _shown = true;
+            _shownRow = rowIndex;
+            _watch.Start();
             Invalidate();
-        }
-
-        private void ScheduleHide()
-        {
-            if (_shown) _hideTimer.Start();
-        }
-
-        private void CancelHide()
-        {
-            _hideTimer.Stop();
         }
 
         public void HideCard()
         {
-            _hideTimer.Stop();
+            _watch.Stop();
+            _shownRow = -1;
             if (!_shown) return;
             _shown = false;
             if (IsHandleCreated) ShowWindow(Handle, SwHide);
@@ -189,7 +194,7 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) _hideTimer.Dispose();
+            if (disposing) _watch.Dispose();
             base.Dispose(disposing);
         }
     }

@@ -147,6 +147,13 @@ namespace RestaurantCRM.API.Controllers
                     TongSoTraLoi = d.TraLoiDanhGia.Count,
                     d.DaXuLy,
                     TrangThaiXuLy = d.DaXuLy ? "Đã xử lý" : "Chưa xử lý",
+                    ChiTietMon = d.ChiTietDanhGia.OrderBy(ct => ct.SoSao).Select(ct => new
+                    {
+                        ct.MaMon,
+                        TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
+                        ct.SoSao,
+                        ct.NoiDung
+                    }).ToList(),
                     HoiThoai = d.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
                         t.MaTraLoi,
@@ -183,6 +190,13 @@ namespace RestaurantCRM.API.Controllers
                     TongSoTraLoi = x.TraLoiDanhGia.Count,
                     x.DaXuLy,
                     TrangThaiXuLy = x.DaXuLy ? "Đã xử lý" : "Chưa xử lý",
+                    ChiTietMon = x.ChiTietDanhGia.OrderBy(ct => ct.SoSao).Select(ct => new
+                    {
+                        ct.MaMon,
+                        TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
+                        ct.SoSao,
+                        ct.NoiDung
+                    }).ToList(),
                     HoiThoai = x.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
                         t.MaTraLoi,
