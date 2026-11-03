@@ -44,17 +44,17 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             {
                 Dock = DockStyle.Fill,
                 BackColor = ThemeManager.Bg,
-                Padding = new Padding(12, 10, 10, 10)
+                Padding = new Padding(10, 6, 8, 8)
             };
 
             var topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 84,
+                Height = 72,
                 BackColor = ThemeManager.Bg
             };
 
-            var header = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = ThemeManager.Bg };
+            var header = new Panel { Dock = DockStyle.Top, Height = 30, BackColor = ThemeManager.Bg };
             var lblTitle = new Label
             {
                 Text = "Thực đơn món ăn",
@@ -94,11 +94,11 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
         private Control BuildFilterBar()
         {
-            var bar = new Panel { Dock = DockStyle.Top, Height = 42, BackColor = ThemeManager.Bg };
+            var bar = new Panel { Dock = DockStyle.Top, Height = 38, BackColor = ThemeManager.Bg };
 
             var pnlSearch = new RoundedPanel
             {
-                Size = new Size(240, 36),
+                Size = new Size(240, 32),
                 Location = new Point(0, 2),
                 Radius = 8,
                 BorderWidth = 1,

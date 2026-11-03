@@ -12,6 +12,7 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
   </PropertyGroup>
@@ -106,6 +107,9 @@
     <Compile Include="Controls\BaoCao\SalesLineChartRenderer.cs" />
     <Compile Include="Controls\PhanHoi\ChatBubble.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\PhanHoi\ReviewHoverCard.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Controls\Pagekit.cs" />
     <Compile Include="Controls\UcDataGridView.cs">
@@ -221,6 +225,9 @@
     </Compile>
     <Compile Include="Services\KhuyenMai\VoucherMarginCalculator.cs" />
     <Compile Include="Forms\PhanHoi\PhanHoiForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\PhanHoi\PhanTichDanhGiaDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\PhanHoi\PhanHoiForm.Designer.cs">

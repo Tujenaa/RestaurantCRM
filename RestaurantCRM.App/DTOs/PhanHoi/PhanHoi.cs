@@ -54,4 +54,25 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
     {
         public bool HienThi { get; set; }
     }
+
+    public class PhanTichDanhGiaMonDto
+    {
+        public string MaMon { get; set; }
+        public string TenMon { get; set; }
+        public int SoLuotDanhGia { get; set; }
+        public double? DiemTrungBinh { get; set; }
+        public int SoSao1 { get; set; }
+        public int SoSao2 { get; set; }
+        public int SoSao3 { get; set; }
+        public int SoSao4 { get; set; }
+        public int SoSao5 { get; set; }
+        public List<PhanTichNhanXetDto> NhanXet { get; set; } = new List<PhanTichNhanXetDto>();
+    }
+
+    public class PhanTichNhanXetDto
+    {
+        public int? SoSao { get; set; }
+        public string NoiDung { get; set; }
+        public DateTime? NgayDanhGia { get; set; }
+    }
 }

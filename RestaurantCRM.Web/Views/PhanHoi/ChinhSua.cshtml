@@ -1,0 +1,216 @@
+@model PhanHoiViewModel
+@{
+    ViewData["Title"] = $"Chỉnh sửa đánh giá đơn hàng #{Model.MaDonHang} — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+
+    var dishes = Model.ChiTietMonDanhGia ?? new List<DishReviewInputItem>();
+}
+
+<div class="page-intro" style="max-width:760px; margin:0 auto 24px; text-align:center;">
+    <div style="margin-bottom:10px;">
+        <a asp-action="ChiTiet" asp-route-maHoaDon="@Model.MaDonHang" style="text-decoration:none; color:var(--muted); font-size:13.5px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+            ← Quay lại chi tiết đánh giá
+        </a>
+    </div>
+    <h1 class="page-title" style="font-size:26px; margin-bottom:6px;">Chỉnh sửa đánh giá</h1>
+    <p style="color:var(--muted); font-size:14.5px; margin:0;">
+        Cập nhật lại mức độ hài lòng và nhận xét của bạn cho đơn hàng #@Model.MaDonHang.
+    </p>
+</div>
+
+@if (TempData["ThongBao"] != null)
+{
+    <div class="alert alert-success" style="max-width:760px; margin:0 auto 20px; background:#e8f5e9; border:1px solid #a5d6a7; color:#2e7d32; padding:12px 18px; border-radius:12px; font-weight:500;">
+        @TempData["ThongBao"]
+    </div>
+}
+@if (TempData["Loi"] != null)
+{
+    <div class="alert alert-danger" style="max-width:760px; margin:0 auto 20px; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:12px 18px; border-radius:12px; font-weight:500;">
+        @TempData["Loi"]
+    </div>
+}
+
+<div style="max-width:760px; margin:0 auto 40px;">
+    <form class="panel review-form-card" asp-action="ChinhSua" method="post" style="box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding:28px 32px; border-radius:18px; border:1px solid var(--line); background:#ffffff;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="MaDonHang" />
+        <div asp-validation-summary="All" class="validation" style="color:#d32f2f; margin-bottom:16px;"></div>
+
+        <!-- Thông tin đơn hàng đang chỉnh sửa -->
+        <div style="margin-bottom:22px; padding:14px 18px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <span style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase;">Đơn hàng chỉnh sửa</span>
+                <div style="font-size:16px; font-weight:750; color:var(--ink); margin-top:2px;">
+                    Đơn hàng #@Model.MaDonHang
+                </div>
+            </div>
+            @if (Model.DonHangHienTai != null)
+            {
+                <div style="text-align:right; font-size:13px; color:var(--muted);">
+                    Ngày đặt: <strong>@Model.DonHangHienTai.NgayDat.ToString("dd/MM/yyyy")</strong><br />
+                    Tổng tiền: <strong style="color:var(--red);">@Model.DonHangHienTai.TongThanhToan.ToString("N0")đ</strong>
+                </div>
+            }
+        </div>
+
+        <!-- Mức độ hài lòng chung -->
+        <div style="margin-bottom:24px; text-align:center; padding:20px; background:#faf7f5; border-radius:14px; border:1px solid #f5ebe6;">
+            <label style="font-weight:700; display:block; margin-bottom:10px; font-size:15px; color:var(--ink);">
+                Bạn cảm thấy đơn hàng này như thế nào?
+            </label>
+
+            <div class="rating" id="ratingStars" role="group" aria-label="Chọn số sao" style="display:inline-flex; justify-content:center; gap:8px; font-size:36px; cursor:pointer; margin-bottom:6px;">
+                @for (var i = 1; i <= 5; i++)
+                {
+                    <button type="button" class="@(i <= Model.DanhGia ? "on" : "")" data-rating="@i" aria-label="@i sao" style="background:none; border:none; cursor:pointer; font-size:38px; line-height:1; padding:0; color:@(i <= Model.DanhGia ? "#f59e0b" : "#d1d5db"); transition:transform 0.15s ease;">★</button>
+                }
+            </div>
+            <input type="hidden" asp-for="DanhGia" id="DanhGia" value="@Model.DanhGia" />
+            <div id="ratingLabel" style="font-weight:700; color:#b45309; font-size:14.5px;">
+                @(Model.DanhGia == 5 ? "Rất hài lòng" : Model.DanhGia == 4 ? "Hài lòng" : Model.DanhGia == 3 ? "Bình thường" : Model.DanhGia == 2 ? "Chưa hài lòng" : "Rất không hài lòng")
+            </div>
+        </div>
+
+        <!-- Nhận xét chung -->
+        <div class="field" style="margin-bottom:24px;">
+            <label asp-for="NoiDung" style="font-weight:700; display:block; margin-bottom:6px; font-size:14px; color:var(--ink);">
+                Chia sẻ nhận xét chung về đơn hàng <span style="font-size:12.5px; font-weight:normal; color:var(--muted);">(không bắt buộc)</span>
+            </label>
+            <textarea asp-for="NoiDung" rows="3" placeholder="Hãy cho Lẩu Phố biết cảm nhận của bạn về hương vị món ăn, tốc độ phục vụ hoặc cách đóng gói (không bắt buộc)..." style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line); font-family:inherit; font-size:14px; line-height:1.5; resize:vertical; background:#ffffff;"></textarea>
+            <span asp-validation-for="NoiDung" class="validation" style="color:#d32f2f; font-size:12px;"></span>
+        </div>
+
+        <!-- Đánh giá từng món ăn trong đơn (nếu có) -->
+        @if (dishes.Count > 0)
+        {
+            <div style="margin-bottom:26px; border-top:1px solid var(--line); padding-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <div>
+                        <strong style="font-size:14.5px; color:var(--ink); display:block;">Đánh giá món ăn trong đơn</strong>
+                        <small style="color:var(--muted); font-size:12.5px;">Chấm điểm sao và nhận xét chi tiết từng món (không bắt buộc)</small>
+                    </div>
+                    <span style="font-size:12px; font-weight:700; color:var(--muted);">@dishes.Count món</span>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    @for (var i = 0; i < dishes.Count; i++)
+                    {
+                        var item = dishes[i];
+                        <div style="background:#fafafa; border:1px solid var(--line); border-radius:12px; padding:12px 16px;">
+                            <input type="hidden" name="ChiTietMonDanhGia[@i].MaMon" value="@item.MaMon" />
+                            <input type="hidden" name="ChiTietMonDanhGia[@i].TenMon" value="@item.TenMon" />
+                            <input type="hidden" name="ChiTietMonDanhGia[@i].DuongDanAnh" value="@item.DuongDanAnh" />
+                            <input type="hidden" name="ChiTietMonDanhGia[@i].DanhGia" id="dish_rating_val_@i" value="@item.DanhGia" />
+
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                                <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                                    @if (!string.IsNullOrEmpty(item.DuongDanAnh))
+                                    {
+                                        <img src="@item.DuongDanAnh" alt="@item.TenMon" style="width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" />
+                                    }
+                                    <span style="font-size:14px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        @item.TenMon
+                                    </span>
+                                </div>
+
+                                <!-- Rating sao từng món -->
+                                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                    <div class="dish-stars" data-index="@i" style="display:inline-flex; gap:2px; font-size:22px; cursor:pointer;">
+                                        @for (var s = 1; s <= 5; s++)
+                                        {
+                                            <button type="button" class="dish-star-btn @(s <= item.DanhGia ? "on" : "")" data-dish-index="@i" data-rating="@s" style="background:none; border:none; cursor:pointer; font-size:22px; line-height:1; padding:0; color:@(s <= item.DanhGia ? "#f59e0b" : "#d1d5db");">★</button>
+                                        }
+                                    </div>
+                                    <span id="dish_rating_lbl_@i" style="font-weight:700; color:#b45309; font-size:12.5px; min-width:32px; text-align:right;">@item.DanhGia★</span>
+                                </div>
+                            </div>
+
+                            <!-- Ô nhập nhận xét riêng cho từng món -->
+                            <div style="margin-top:10px;">
+                                <input type="text"
+                                       name="ChiTietMonDanhGia[@i].NoiDung"
+                                       value="@item.NoiDung"
+                                       placeholder="Nhận xét hương vị, cách chế biến món @item.TenMon (không bắt buộc)..."
+                                       style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px; background:#ffffff; font-family:inherit; box-sizing:border-box;" />
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div style="display:flex; gap:12px; align-items:center; padding-top:8px;">
+            <button class="btn" type="submit" style="flex:1; padding:13px; font-size:15px; font-weight:700; border-radius:10px;">
+                Lưu thay đổi
+            </button>
+            <a asp-action="ChiTiet" asp-route-maHoaDon="@Model.MaDonHang" class="btn secondary" style="padding:13px 20px; font-size:14.5px; font-weight:600; border-radius:10px;">
+                Hủy
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
+    <script>
+        const ratingLabels = {
+            1: 'Rất không hài lòng',
+            2: 'Chưa hài lòng',
+            3: 'Bình thường',
+            4: 'Hài lòng',
+            5: 'Rất hài lòng'
+        };
+
+        const stars = document.querySelectorAll('#ratingStars button');
+        const hiddenInput = document.getElementById('DanhGia');
+        const label = document.getElementById('ratingLabel');
+
+        stars.forEach(star => {
+            star.addEventListener('click', function () {
+                const val = parseInt(this.getAttribute('data-rating'));
+                hiddenInput.value = val;
+                if (label && ratingLabels[val]) {
+                    label.textContent = ratingLabels[val];
+                }
+                stars.forEach((s, idx) => {
+                    if (idx < val) {
+                        s.style.color = '#f59e0b';
+                        s.classList.add('on');
+                    } else {
+                        s.style.color = '#d1d5db';
+                        s.classList.remove('on');
+                    }
+                });
+            });
+        });
+
+        // Event listener cho từng món
+        document.querySelectorAll('.dish-star-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const dishIndex = this.getAttribute('data-dish-index');
+                const rating = parseInt(this.getAttribute('data-rating'));
+                const valInput = document.getElementById('dish_rating_val_' + dishIndex);
+                const lbl = document.getElementById('dish_rating_lbl_' + dishIndex);
+
+                if (valInput) valInput.value = rating;
+                if (lbl) lbl.textContent = rating + '★';
+
+                const parentContainer = this.closest('.dish-stars');
+                if (parentContainer) {
+                    const siblingBtns = parentContainer.querySelectorAll('.dish-star-btn');
+                    siblingBtns.forEach((b, idx) => {
+                        if (idx < rating) {
+                            b.style.color = '#f59e0b';
+                            b.classList.add('on');
+                        } else {
+                            b.style.color = '#d1d5db';
+                            b.classList.remove('on');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}
+

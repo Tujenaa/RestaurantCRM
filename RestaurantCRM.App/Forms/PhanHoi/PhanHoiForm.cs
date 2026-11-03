@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Controls;
+using RestaurantCRM.AdminApp.Controls.PhanHoi;
 using RestaurantCRM.AdminApp.DTOs.PhanHoi;
 using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Services;
@@ -36,6 +37,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly Label _lblCount = new Label();
         private readonly Label _lblFooter = new Label();
+        private readonly Button _btnPhanTich = new Button { Text = "Phân tích món" };
         private readonly Label _kTong = new Label { Text = "Tổng phản hồi: —" };
         private readonly Label _kCho = new Label { Text = "Chưa xử lý: —" };
         private readonly Label _kDiem = new Label { Text = "Điểm trung bình: —" };
@@ -73,6 +75,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             UseMnemonic = false,
             Text = "Chọn một phản hồi trong danh sách\nđể xem nội dung và trả lời khách hàng."
         };
+        private ReviewHoverCard _hoverCard;
 
         public PhanHoiForm()
         {
@@ -84,6 +87,10 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             BuildGrid();
             BuildDetail();
+            _hoverCard = new ReviewHoverCard(_grid);
+            _btnPhanTich.Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold);
+            ButtonSkin.SetKind(_btnPhanTich, ButtonSkin.Kind.Secondary);
+            PageKit.FitButton(_btnPhanTich, 116);
 
             _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Chưa xử lý", "Đã xử lý", "Đã ẩn" });
             _cboTrangThai.SelectedIndex = 0;
@@ -92,7 +99,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             {
                 Title = new Label { Text = "Phản hồi khách hàng" },
                 Subtitle = new Label { Text = "Đọc góp ý, trả lời khách và theo dõi trạng thái xử lý." },
-                HeaderActions = new Control[] { _btnLamMoi },
+                HeaderActions = new Control[] { _btnLamMoi, _btnPhanTich },
                 KpiLabels = new[] { _kTong, _kCho, _kDiem, _kAn },
                 Search = _txtSearch,
                 SearchPlaceholder = "Tìm theo mã, khách hàng, món ăn, nội dung...",
@@ -109,7 +116,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             // Bảng hẹp vì có khung chi tiết bên phải: không xuống dòng, cột co được nhỏ
             _grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
             foreach (DataGridViewColumn c in _grid.Columns)
-                c.MinimumWidth = c.Name == "NoiDung" ? 120 : c.Name == "SoSao" ? 92 : c.Name == "TrangThai" ? 104 : 56;
+                c.MinimumWidth = c.Name == "NoiDung" ? 120 : c.Name == "SoSao" ? 92
+                    : c.Name == "TrangThai" ? 104 : c.Name == "HienThi" ? 100 : 56;
 
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
@@ -126,6 +134,11 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             };
 
             _btnLamMoi.Click += async (s, e) => await LoadDataAsync();
+            _btnPhanTich.Click += (s, e) =>
+            {
+                _hoverCard.HideCard();
+                using (var dlg = new PhanTichDanhGiaDialog(_service)) dlg.ShowDialog(this);
+            };
             _btnDaXem.Click += (s, e) => DanhDauDaXem();
             _btnAnHien.Click += (s, e) => DoiAnHien();
             _btnXoa.Click += (s, e) => XoaPhanHoi();
@@ -144,15 +157,14 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             g.ReadOnly = true; g.MultiSelect = false; g.RowHeadersVisible = false; g.AutoGenerateColumns = false;
             g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
-            AddCol("Ma", "Mã", 58);
-            AddCol("KhachHang", "Khách hàng", 130);
             var sao = AddCol("SoSao", "Đánh giá", 96);
             sao.ToolTipText = "Bấm tiêu đề cột để sắp xếp theo số sao";
             sao.DefaultCellStyle.ForeColor = ThemeManager.Amber;
             sao.DefaultCellStyle.SelectionForeColor = ThemeManager.Amber;
             AddCol("NoiDung", "Nội dung", 260);
             AddCol("Ngay", "Ngày gửi", 88).DefaultCellStyle.Format = "dd/MM/yyyy";
-            AddCol("TrangThai", "Trạng thái", 112);
+            AddCol("HienThi", "Trạng thái hiển thị", 100);
+            AddCol("TrangThai", "Xử lý", 108);
         }
 
         private DataGridViewColumn AddCol(string name, string header, int width)
@@ -298,6 +310,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         public async Task LoadDataAsync(string chonMa = null)
         {
             if (_loading) return;
+            _hoverCard.HideCard();
             _loading = true;
             _btnLamMoi.Enabled = false;
             _lblCount.Text = "Đang tải...";
@@ -331,6 +344,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
         private void ApplyFilter(string chonMa = null)
         {
+            _hoverCard.HideCard();
             if (chonMa == null) chonMa = SelectedDto()?.MaDanhGia;
             string q = (_txtSearch.Text ?? "").Trim().ToLowerInvariant();
             string tt = _cboTrangThai.SelectedItem as string ?? "Tất cả";
@@ -348,8 +362,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             int chon = -1;
             foreach (var d in list)
             {
-                int i = _grid.Rows.Add(d.MaDanhGia, string.IsNullOrWhiteSpace(d.TenKhachHang) ? "Khách ẩn danh" : d.TenKhachHang,
-                    Sao(d.SoSao ?? 0), MotDong(d.NoiDung), (object)d.NgayDanhGia, d.TrangThaiHienThi);
+                int i = _grid.Rows.Add(Sao(d.SoSao ?? 0), MotDong(d.NoiDung), (object)d.NgayDanhGia,
+                    d.HienThi ? "Đang hiển thị" : "Đã ẩn", d.TrangThaiHienThi);
                 _grid.Rows[i].Tag = d;
                 if (!d.HienThi) _grid.Rows[i].DefaultCellStyle.ForeColor = ThemeManager.Muted;
                 if (chonMa != null && d.MaDanhGia == chonMa) chon = i;

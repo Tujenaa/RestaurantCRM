@@ -66,11 +66,12 @@ namespace RestaurantCRM.API.Controllers
             return Ok(khachHangs);
         }
 
-        // GET: api/AdminKhachHang/{id} - Chi tiết khách hàng kèm lịch sử đơn hàng và số liệu tổng hợp.
+        // GET: api/AdminKhachHang/{id} - Chi tiết khách hàng kèm lịch sử tương tác và sở thích món.
         [HttpGet("{id}")]
         public async Task<IActionResult> GetKhachHang(string id)
         {
             var khachHang = await _service.Query<KhachHang>()
+                .AsSplitQuery()
                 .Where(k => k.MaKhachHang == id)
                 .Select(k => new
                 {
@@ -86,6 +87,29 @@ namespace RestaurantCRM.API.Controllers
                     TongChiTieu = k.HoaDon.Where(d => d.TrangThai == "Completed").Sum(d => d.TongThanhToan) ?? 0,
                     SoDanhGia = k.DanhGia.Count(),
                     SoKhaoSatDaTraLoi = k.PhieuTraLoi.Count(),
+                    LichSuDanhGia = k.DanhGia
+                        .OrderByDescending(d => d.NgayDanhGia)
+                        .Select(d => new
+                        {
+                            d.MaDanhGia,
+                            d.MaMon,
+                            TenMon = d.MaMonNavigation != null ? d.MaMonNavigation.TenMon : null,
+                            d.SoSao,
+                            d.NoiDung,
+                            d.NgayDanhGia,
+                            HienThi = d.TrangThai
+                        })
+                        .ToList(),
+                    LichSuKhaoSat = k.PhieuTraLoi
+                        .OrderByDescending(p => p.NgayTraLoi)
+                        .Select(p => new
+                        {
+                            p.MaPhieuTraLoi,
+                            p.MaKhaoSat,
+                            TenKhaoSat = p.MaKhaoSatNavigation != null ? p.MaKhaoSatNavigation.TieuDe : null,
+                            p.NgayTraLoi
+                        })
+                        .ToList(),
                     LichSuHoaDon = k.HoaDon
                         .OrderByDescending(d => d.NgayDat)
                         .Select(d => new
@@ -104,7 +128,52 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khách hàng.");
             }
 
-            return Ok(khachHang);
+            // Sở thích món được suy ra từ số lượng thực mua trong hóa đơn đã hoàn tất.
+            var chiTietDaMua = await _service.Query<ChiTietHoaDon>()
+                .Where(ct => ct.MaHoaDonNavigation != null
+                    && ct.MaHoaDonNavigation.MaKhachHang == id
+                    && ct.MaHoaDonNavigation.TrangThai == "Completed"
+                    && ct.SoLuong > 0
+                    && ct.MaMon != null)
+                .Select(ct => new
+                {
+                    ct.MaMon,
+                    TenMon = ct.TenMon ?? (ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : null),
+                    SoLuong = ct.SoLuong ?? 0
+                })
+                .ToListAsync();
+
+            var monUaThich = chiTietDaMua
+                .GroupBy(ct => ct.MaMon)
+                .Select(g => new
+                {
+                    MaMon = g.Key,
+                    TenMon = g.Select(ct => ct.TenMon).FirstOrDefault(ten => !string.IsNullOrWhiteSpace(ten)) ?? g.Key,
+                    SoLuongDaMua = g.Sum(ct => ct.SoLuong)
+                })
+                .OrderByDescending(mon => mon.SoLuongDaMua)
+                .ThenBy(mon => mon.TenMon)
+                .ToList();
+
+            return Ok(new
+            {
+                khachHang.MaKhachHang,
+                khachHang.HoTen,
+                khachHang.SoDienThoai,
+                khachHang.Email,
+                khachHang.NgaySinh,
+                khachHang.GioiTinh,
+                khachHang.DiaChi,
+                khachHang.TrangThai,
+                khachHang.SoDonHang,
+                khachHang.TongChiTieu,
+                khachHang.SoDanhGia,
+                khachHang.SoKhaoSatDaTraLoi,
+                khachHang.LichSuHoaDon,
+                khachHang.LichSuDanhGia,
+                khachHang.LichSuKhaoSat,
+                MonUaThich = monUaThich
+            });
         }
 
         // POST: api/AdminKhachHang - Thêm khách hàng mới.

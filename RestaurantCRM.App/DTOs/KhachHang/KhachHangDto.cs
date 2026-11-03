@@ -41,6 +41,9 @@ namespace RestaurantCRM.AdminApp.DTOs.KhachHang
         public int SoDanhGia { get; set; }
         public int SoKhaoSatDaTraLoi { get; set; }
         public List<KhachHangHoaDonDto> LichSuHoaDon { get; set; } = new List<KhachHangHoaDonDto>();
+        public List<KhachHangDanhGiaDto> LichSuDanhGia { get; set; } = new List<KhachHangDanhGiaDto>();
+        public List<KhachHangKhaoSatDto> LichSuKhaoSat { get; set; } = new List<KhachHangKhaoSatDto>();
+        public List<KhachHangMonUaThichDto> MonUaThich { get; set; } = new List<KhachHangMonUaThichDto>();
     }
 
     public class KhachHangHoaDonDto
@@ -49,6 +52,32 @@ namespace RestaurantCRM.AdminApp.DTOs.KhachHang
         public DateTime? NgayDat { get; set; }
         public double? TongTien { get; set; }
         public string TrangThai { get; set; }
+    }
+
+    public class KhachHangDanhGiaDto
+    {
+        public string MaDanhGia { get; set; }
+        public string MaMon { get; set; }
+        public string TenMon { get; set; }
+        public int? SoSao { get; set; }
+        public string NoiDung { get; set; }
+        public DateTime? NgayDanhGia { get; set; }
+        public bool HienThi { get; set; }
+    }
+
+    public class KhachHangKhaoSatDto
+    {
+        public string MaPhieuTraLoi { get; set; }
+        public string MaKhaoSat { get; set; }
+        public string TenKhaoSat { get; set; }
+        public DateTime? NgayTraLoi { get; set; }
+    }
+
+    public class KhachHangMonUaThichDto
+    {
+        public string MaMon { get; set; }
+        public string TenMon { get; set; }
+        public int SoLuongDaMua { get; set; }
     }
 
     /// <summary>Dữ liệu gửi lên khi thêm / sửa khách hàng.</summary>

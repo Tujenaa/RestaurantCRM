@@ -18,6 +18,7 @@ public class DonHangViewModel
     public int BuocHienTai { get; set; }
     public string TrangThaiLoc { get; set; } = "active";
     public bool CanCancel => TrangThai == "Pending" || TrangThai == "Đang chờ xác nhận";
+    public bool DaDanhGia { get; set; } = false;
     public List<DonHangChiTietViewModel> ChiTiet { get; set; } = new();
 }
 
@@ -31,6 +32,7 @@ public class DonHangChiTietViewModel
     public decimal DonGiaSauGiam { get; set; }
     public decimal TienGiamMon { get; set; }
     public decimal ThanhTien { get; set; }
+    public bool DaDanhGia { get; set; } = false;
 
     // Legacy compatibility property
     public decimal DonGia
@@ -60,6 +62,12 @@ public class DatHangViewModel
     [StringLength(255)]
     public string DiaChiGiao { get; set; } = "";
 
+    public string DiaChi
+    {
+        get => DiaChiGiao;
+        set => DiaChiGiao = value;
+    }
+
     [Required(ErrorMessage = "Vui lòng chọn tỉnh hoặc thành phố.")]
     public string TinhThanh { get; set; } = "TP. Hồ Chí Minh";
 
@@ -71,4 +79,6 @@ public class DatHangViewModel
 
     [StringLength(500)]
     public string? GhiChu { get; set; }
+
+    public string? MaVoucher { get; set; }
 }

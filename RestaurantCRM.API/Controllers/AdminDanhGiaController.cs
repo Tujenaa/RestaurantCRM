@@ -24,6 +24,71 @@ namespace RestaurantCRM.API.Controllers
             _service = service;
         }
 
+        // GET: api/AdminDanhGia/PhanTichMon - Tổng hợp đánh giá theo món ăn.
+        [HttpGet("PhanTichMon")]
+        public async Task<IActionResult> GetPhanTichMon()
+        {
+            var ctDanhGias = await _service.Query<ChiTietDanhGia>()
+                .Select(ct => new
+                {
+                    ct.MaMon,
+                    TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
+                    SoSao = (int?)ct.SoSao,
+                    ct.NoiDung,
+                    NgayDanhGia = ct.MaDanhGiaNavigation.NgayDanhGia
+                })
+                .ToListAsync();
+
+            var legacyDanhGias = await _service.Query<DanhGia>()
+                .Where(d => d.MaMon != null)
+                .Select(d => new
+                {
+                    d.MaMon,
+                    TenMon = d.MaMonNavigation != null ? d.MaMonNavigation.TenMon : (d.MaMon != null ? d.MaMon : "Đánh giá chung đơn hàng"),
+                    d.SoSao,
+                    d.NoiDung,
+                    d.NgayDanhGia
+                })
+                .ToListAsync();
+
+            var danhGias = ctDanhGias.Concat(legacyDanhGias).ToList();
+
+            var ketQua = danhGias
+                .GroupBy(d => d.MaMon)
+                .Select(g =>
+                {
+                    var diem = g.Where(d => d.SoSao.HasValue && d.SoSao >= 1 && d.SoSao <= 5)
+                        .Select(d => d.SoSao!.Value)
+                        .ToList();
+                    return new
+                    {
+                        MaMon = g.Key,
+                        TenMon = g.Select(d => d.TenMon).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? g.Key,
+                        SoLuotDanhGia = g.Count(),
+                        DiemTrungBinh = diem.Count == 0 ? (double?)null : Math.Round(diem.Average(), 2),
+                        SoSao1 = diem.Count(s => s == 1),
+                        SoSao2 = diem.Count(s => s == 2),
+                        SoSao3 = diem.Count(s => s == 3),
+                        SoSao4 = diem.Count(s => s == 4),
+                        SoSao5 = diem.Count(s => s == 5),
+                        NhanXet = g.Where(d => !string.IsNullOrWhiteSpace(d.NoiDung))
+                            .OrderByDescending(d => d.NgayDanhGia)
+                            .Select(d => new
+                            {
+                                d.SoSao,
+                                d.NoiDung,
+                                d.NgayDanhGia
+                            })
+                            .ToList()
+                    };
+                })
+                .OrderByDescending(mon => mon.SoLuotDanhGia)
+                .ThenBy(mon => mon.TenMon)
+                .ToList();
+
+            return Ok(ketQua);
+        }
+
         // GET: api/AdminDanhGia?search=&trangThai=&soSao=
         //   trangThai: (bỏ trống) = chỉ phản hồi đang hiển thị (giữ như cũ cho Dashboard)
         //              TatCa | ChuaXuLy | DaXuLy | DaAn  (ChuaTraLoi / DaTraLoi giữ để tương thích)
@@ -32,6 +97,10 @@ namespace RestaurantCRM.API.Controllers
         public async Task<IActionResult> GetAllDanhGia([FromQuery] string? search, [FromQuery] string? trangThai, [FromQuery] int? soSao)
         {
             var query = _service.Query<DanhGia>().AsQueryable();
+
+            // Chỉ lấy các phản hồi có nội dung ý kiến đóng góp hoặc đánh giá cấp đơn hàng (MaMon == null)
+            // Bỏ qua các dòng món ăn chỉ chấm sao không có nội dung chữ để danh sách Admin không bị rác/trùng lặp
+            query = query.Where(d => !string.IsNullOrEmpty(d.NoiDung) || d.MaMon == null);
 
             switch ((trangThai ?? "").Trim())
             {
@@ -104,7 +173,7 @@ namespace RestaurantCRM.API.Controllers
                     x.MaKhachHang,
                     x.MaHoaDon,
                     x.MaMon,
-                    TenMon = x.MaMonNavigation != null ? x.MaMonNavigation.TenMon : null,
+                    TenMon = x.MaMonNavigation != null ? x.MaMonNavigation.TenMon : (x.MaMon != null ? x.MaMon : "Đánh giá chung đơn hàng"),
                     x.SoSao,
                     x.NoiDung,
                     x.NgayDanhGia,

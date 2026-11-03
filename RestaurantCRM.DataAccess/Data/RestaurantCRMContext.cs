@@ -28,6 +28,8 @@ public partial class RestaurantCrmContext : DbContext
 
     public virtual DbSet<DanhGia> DanhGia { get; set; }
 
+    public virtual DbSet<ChiTietDanhGia> ChiTietDanhGia { get; set; }
+
     public virtual DbSet<DinhLuong> DinhLuong { get; set; }
 
     public virtual DbSet<DoiTuongKhaoSat> DoiTuongKhaoSat { get; set; }
@@ -316,6 +318,40 @@ public partial class RestaurantCrmContext : DbContext
             entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.DanhGia)
                 .HasForeignKey(d => d.MaMon)
                 .HasConstraintName("FK__DANH_GIA__maMon__6C190EBB");
+        });
+
+        modelBuilder.Entity<ChiTietDanhGia>(entity =>
+        {
+            entity.HasKey(e => e.MaChiTietDanhGia);
+
+            entity.ToTable("CHI_TIET_DANH_GIA");
+
+            entity.Property(e => e.MaChiTietDanhGia)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maChiTietDanhGia");
+
+            entity.Property(e => e.MaDanhGia)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maDanhGia");
+
+            entity.Property(e => e.MaMon)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maMon");
+
+            entity.Property(e => e.SoSao).HasColumnName("soSao");
+            entity.Property(e => e.NoiDung).HasColumnName("noiDung");
+
+            entity.HasOne(d => d.MaDanhGiaNavigation).WithMany(p => p.ChiTietDanhGia)
+                .HasForeignKey(d => d.MaDanhGia)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__CHI_TIET_D__maDan");
+
+            entity.HasOne(d => d.MaMonNavigation).WithMany()
+                .HasForeignKey(d => d.MaMon)
+                .HasConstraintName("FK__CHI_TIET_D__maMon");
         });
 
         modelBuilder.Entity<DoiTuongKhaoSat>(entity =>

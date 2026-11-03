@@ -316,11 +316,22 @@ INSERT INTO THANH_TOAN (maThanhToan, maHoaDon, phuongThuc, trangThai, ngayThanhT
   ('TT092', 'HD261026-092', N'Ví điện tử', N'Pending', '2026-11-22T16:43:00', 0);
 GO
 -- DANH_GIA: 4 dòng
-INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia, trangThai) VALUES
-  ('DG001', 'KH24', 'HD260903-005', 'MA011', 4, N'Món ngon, giá hợp lý.', '2026-02-14T12:59:00', 1),
-  ('DG002', 'KH20', 'HD260905-008', 'MA016', 5, N'Nhân viên thân thiện, không gian sạch sẽ.', '2026-11-14T19:19:00', 1),
-  ('DG003', 'KH15', 'HD260906-010', 'MA002', 4, N'Đóng gói cẩn thận, giao đúng giờ.', '2026-06-09T20:45:00', 1),
-  ('DG004', 'KH14', 'HD260909-015', 'MA004', 5, N'Nguyên liệu tươi, phục vụ nhanh.', '2026-07-25T09:59:00', 1);
+INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia, trangThai, daXuLy) VALUES
+  ('DG001', 'KH24', 'HD260903-005', 'MA011', 4, N'Món ngon, giá hợp lý.', '2026-02-14T12:59:00', 1, 1),
+  ('DG002', 'KH20', 'HD260905-008', 'MA016', 5, N'Nhân viên thân thiện, không gian sạch sẽ.', '2026-11-14T19:19:00', 1, 1),
+  ('DG003', 'KH15', 'HD260906-010', 'MA002', 4, N'Đóng gói cẩn thận, giao đúng giờ.', '2026-06-09T20:45:00', 1, 1),
+  ('DG004', 'KH14', 'HD260909-015', 'MA004', 5, N'Nguyên liệu tươi, phục vụ nhanh.', '2026-07-25T09:59:00', 1, 1);
+GO
+-- CHI_TIET_DANH_GIA: 8 dòng
+INSERT INTO CHI_TIET_DANH_GIA (maChiTietDanhGia, maDanhGia, maMon, soSao, noiDung) VALUES
+  ('CTDG0001', 'DG001', 'MA032', 4, N'Món được chế biến ngon, nguyên liệu tươi.'),
+  ('CTDG0002', 'DG001', 'MA008', 3, N'Món ở mức ổn, có thể điều chỉnh thêm khẩu vị.'),
+  ('CTDG0003', 'DG002', 'MA001', 5, N'Món được chế biến ngon, nguyên liệu tươi.'),
+  ('CTDG0004', 'DG002', 'MA026', 5, N'Món được chế biến ngon, nguyên liệu tươi.'),
+  ('CTDG0005', 'DG003', 'MA030', 4, N'Món được chế biến ngon, nguyên liệu tươi.'),
+  ('CTDG0006', 'DG003', 'MA011', 3, N'Món ở mức ổn, có thể điều chỉnh thêm khẩu vị.'),
+  ('CTDG0007', 'DG004', 'MA005', 5, N'Món được chế biến ngon, nguyên liệu tươi.'),
+  ('CTDG0008', 'DG004', 'MA025', 5, N'Món được chế biến ngon, nguyên liệu tươi.');
 GO
 -- LICH_SU_TRANG_THAI: 31 dòng
 INSERT INTO LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu) VALUES
