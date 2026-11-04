@@ -97,6 +97,24 @@ else
                                 <span class="badge-dot"></span>@item.TrangThaiMon
                             </span>
                         }
+                        else if (item.CoKhuyenMai)
+                        {
+                            <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 3px;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <strong style="color: var(--primary); font-size: 14.5px;">@item.DonGiaSauGiam.ToString("N0")đ</strong>
+                                    <span style="font-size: 12.5px; text-decoration: line-through; color: #9ca3af;">@item.DonGiaGoc.ToString("N0")đ</span>
+                                    <span class="badge" style="background: #fee2e2; color: #dc2626; font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 700; border: 1px solid #fecaca;">
+                                        -@item.PhanTramGiam% (Giảm @item.ChietKhau.ToString("N0")đ/phần)
+                                    </span>
+                                </div>
+                                <div class="price cart-line-total" style="margin-top: 2px;">
+                                    @item.ThanhTien.ToString("N0")đ
+                                    <span style="font-size: 11.5px; font-weight: 500; color: #16a34a; margin-left: 6px;">
+                                        (Tiết kiệm: -@item.TongChietKhau.ToString("N0")đ)
+                                    </span>
+                                </div>
+                            </div>
+                        }
                         else
                         {
                             <small>@item.DonGia.ToString("N0")đ / phần</small>
@@ -131,8 +149,19 @@ else
 
         <aside class="panel summary">
             <h3>Tóm tắt đơn hàng</h3>
+            @if (Model.GioHang.TongChietKhauMon > 0)
+            {
+                <div class="summary-line">
+                    <span>Tổng tiền món (gốc)</span>
+                    <span style="text-decoration: line-through; color: var(--muted);">@Model.GioHang.TongTienGoc.ToString("N0")đ</span>
+                </div>
+                <div class="summary-line">
+                    <span>Chiết khấu món / loại món</span>
+                    <strong class="discount-value" style="color: #dc2626;">−@Model.GioHang.TongChietKhauMon.ToString("N0")đ</strong>
+                </div>
+            }
             <div class="summary-line">
-                <span>Tạm tính (@selectedItems.Count món đã chọn)</span>
+                <span>Tạm tính tiền hàng (@selectedItems.Count món)</span>
                 <strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong>
             </div>
 
@@ -147,9 +176,9 @@ else
             <div class="summary-line total" style="align-items:flex-end;">
                 <span>Tổng cộng</span>
                 <div style="text-align: right;">
-                    @if (Model.GioHang.GiamGia > 0)
+                    @if (Model.GioHang.GiamGia > 0 || Model.GioHang.TongChietKhauMon > 0)
                     {
-                        var originalTotal = Model.GioHang.TongThanhToan + Model.GioHang.GiamGia;
+                        var originalTotal = Model.GioHang.TongTienGoc + Model.GioHang.PhiGiaoHang;
                         <div style="text-decoration: line-through; color: var(--muted); font-size: 14px; margin-bottom: 2px;">
                             @originalTotal.ToString("N0")đ
                         </div>

@@ -28,8 +28,8 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
         {
             Text = "Xác nhận & Kiểm tra chi tiết đơn hàng";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(580, 680);
-            MinimumSize = new Size(520, 600);
+            Size = new Size(580, 715);
+            MinimumSize = new Size(520, 640);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -128,34 +128,50 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             {
                 HeaderText = "Món ăn",
                 DataPropertyName = "Name",
-                Width = 220,
+                Width = 145,
                 DefaultCellStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = ThemeManager.Ink }
+            });
+            dgv.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                HeaderText = "Giá gốc",
+                DataPropertyName = "BasePriceText",
+                Width = 78,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+            dgv.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                HeaderText = "Chiết khấu",
+                DataPropertyName = "DiscountText",
+                Width = 82,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, ForeColor = Color.FromArgb(220, 38, 38) }
             });
             dgv.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Đơn giá",
                 DataPropertyName = "PriceText",
-                Width = 95,
+                Width = 78,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight }
             });
             dgv.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "SL",
                 DataPropertyName = "Quantity",
-                Width = 55,
+                Width = 40,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 9F, FontStyle.Bold) }
             });
             dgv.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Thành tiền",
                 DataPropertyName = "SubTotalText",
-                Width = 135,
+                Width = 98,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = ThemeManager.Primary }
             });
 
             var displayList = items.Select(x => new
             {
                 Name = x.Name,
+                BasePriceText = $"{x.BasePrice:N0} đ",
+                DiscountText = (x.BasePrice > x.Price) ? $"-{(x.BasePrice - x.Price):N0} đ" : "—",
                 PriceText = $"{x.Price:N0} đ",
                 Quantity = x.Quantity,
                 SubTotalText = $"{x.Price * x.Quantity:N0} đ"
@@ -167,7 +183,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var pnlSummary = new RoundedPanel
             {
                 Location = new Point(0, 426),
-                Size = new Size(524, 134),
+                Size = new Size(524, 150),
                 Radius = 8,
                 BorderWidth = 1,
                 BorderColor = ThemeManager.Line,
@@ -201,14 +217,25 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                 sumY += 24;
             };
 
+            decimal dishDiscounts = items.Sum(x => Math.Max(0, (x.BasePrice - x.Price) * x.Quantity));
+            decimal originalTotal = items.Sum(x => (x.BasePrice > 0 ? x.BasePrice : x.Price) * x.Quantity);
+
             int totalQty = items.Sum(x => x.Quantity);
-            addSummaryRow($"Tiền món ({items.Count} món · {totalQty} phần):", $"{subTotal:N0} đ", ThemeManager.Ink, false);
+            if (dishDiscounts > 0)
+            {
+                addSummaryRow($"Tiền món gốc ({items.Count} món · {totalQty} phần):", $"{originalTotal:N0} đ", ThemeManager.Muted, false);
+                addSummaryRow("Chiết khấu món / loại món:", $"-{dishDiscounts:N0} đ", Color.FromArgb(220, 38, 38), false);
+            }
+            else
+            {
+                addSummaryRow($"Tiền món ({items.Count} món · {totalQty} phần):", $"{subTotal:N0} đ", ThemeManager.Ink, false);
+            }
 
             if (appliedVoucher != null && voucherDiscount > 0)
             {
                 addSummaryRow($"Voucher ưu đãi [{appliedVoucher.MaVoucher}]:", $"-{voucherDiscount:N0} đ", ThemeManager.Green, false);
             }
-            else
+            else if (dishDiscounts <= 0)
             {
                 addSummaryRow("Khuyến mãi / Voucher:", "0 đ", ThemeManager.Muted, false);
             }
@@ -223,7 +250,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var btnConfirm = new Button
             {
                 Text = "✓  Tạo đơn hàng",
-                Location = new Point(274, 576),
+                Location = new Point(274, 590),
                 Size = new Size(250, 44),
                 BackColor = ThemeManager.Primary,
                 ForeColor = Color.White,
@@ -241,7 +268,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             var btnCancel = new Button
             {
                 Text = "Quay lại sửa đơn",
-                Location = new Point(0, 576),
+                Location = new Point(0, 590),
                 Size = new Size(260, 44),
                 BackColor = Color.White,
                 ForeColor = ThemeManager.Ink,

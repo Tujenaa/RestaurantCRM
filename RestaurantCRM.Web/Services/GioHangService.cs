@@ -177,15 +177,21 @@ public class GioHangService
 
         foreach (var it in cart)
         {
-            if (string.IsNullOrWhiteSpace(it.DuongDanAnh) || it.DuongDanAnh == "/images/default.jpg")
+            var d = _monAnService.Find(it.MaMon);
+            if (d != null)
             {
-                var d = _monAnService.Find(it.MaMon);
-                if (d != null && !string.IsNullOrWhiteSpace(d.DuongDanAnh))
-                    it.DuongDanAnh = d.DuongDanAnh;
-            }
-            if (string.IsNullOrWhiteSpace(it.MaLoaiMon))
-            {
-                it.MaLoaiMon = _monAnService.Find(it.MaMon)?.MaLoaiMon;
+                if (string.IsNullOrWhiteSpace(it.DuongDanAnh) || it.DuongDanAnh == "/images/default.jpg")
+                {
+                    if (!string.IsNullOrWhiteSpace(d.DuongDanAnh))
+                        it.DuongDanAnh = d.DuongDanAnh;
+                }
+                if (string.IsNullOrWhiteSpace(it.MaLoaiMon))
+                {
+                    it.MaLoaiMon = d.MaLoaiMon;
+                }
+                it.DonGiaGoc = d.DonGia;
+                it.DonGiaSauGiam = (d.DonGiaSauGiam > 0 && d.DonGiaSauGiam < d.DonGia) ? d.DonGiaSauGiam : d.DonGia;
+                it.DonGia = it.DonGiaSauGiam;
             }
         }
 
@@ -228,6 +234,13 @@ public class GioHangService
             {
                 it.KhaDung = dish.ConHang;
                 it.TrangThaiMon = dish.ConHang ? null : (dish.NgungKinhDoanh ? "Ngừng kinh doanh" : "Hết hàng");
+                it.DonGiaGoc = dish.DonGia;
+                it.DonGiaSauGiam = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia;
+                it.DonGia = it.DonGiaSauGiam;
+                if (!string.IsNullOrWhiteSpace(dish.DuongDanAnh))
+                    it.DuongDanAnh = dish.DuongDanAnh;
+                if (!string.IsNullOrWhiteSpace(dish.MaLoaiMon))
+                    it.MaLoaiMon = dish.MaLoaiMon;
             }
         }
         return BuildCart(session, cart);
@@ -282,6 +295,9 @@ public class GioHangService
         var item = cart.FirstOrDefault(x => x.MaMon == maMon);
         int maxQty = dish.SoLuong > 0 ? Math.Min(99, dish.SoLuong) : 99;
 
+        decimal donGiaGoc = dish.DonGia;
+        decimal donGiaSauGiam = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia;
+
         if (item is null)
         {
             cart.Add(new GioHangItemViewModel
@@ -291,7 +307,9 @@ public class GioHangService
                 TenMon = dish.TenMon,
                 DuongDanAnh = dish.DuongDanAnh,
                 BieuTuong = dish.BieuTuong,
-                DonGia = (dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia,
+                DonGiaGoc = donGiaGoc,
+                DonGiaSauGiam = donGiaSauGiam,
+                DonGia = donGiaSauGiam,
                 SoLuong = Math.Clamp(quantity, 1, maxQty),
                 DuocChon = true
             });
@@ -300,6 +318,9 @@ public class GioHangService
         {
             if (string.IsNullOrWhiteSpace(item.DuongDanAnh) || item.DuongDanAnh == "/images/default.jpg")
                 item.DuongDanAnh = dish.DuongDanAnh;
+            item.DonGiaGoc = donGiaGoc;
+            item.DonGiaSauGiam = donGiaSauGiam;
+            item.DonGia = donGiaSauGiam;
             item.SoLuong = Math.Min(maxQty, item.SoLuong + Math.Clamp(quantity, 1, maxQty));
             item.DuocChon = true;
         }

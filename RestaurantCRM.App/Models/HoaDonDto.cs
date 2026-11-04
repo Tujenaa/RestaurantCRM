@@ -46,13 +46,32 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("soLuong")]
         public int SoLuong { get; set; }
 
+        [JsonPropertyName("donGiaGoc")]
+        public double? DonGiaGoc { get; set; }
+
         [JsonPropertyName("donGiaSauGiam")]
         public double? DonGiaSauGiam { get; set; }
+
+        [JsonPropertyName("tienGiamMon")]
+        public double? TienGiamMon { get; set; }
 
         [JsonPropertyName("thanhTien")]
         public double? ThanhTien { get; set; }
 
-        public string DonGiaHienThi => (DonGiaSauGiam ?? 0).ToString("N0") + " đ";
+        // Đơn giá hiển thị trên hóa đơn: Luôn là ĐƠN GIÁ GỐC theo quy chuẩn hóa đơn
+        public string DonGiaHienThi => ((DonGiaGoc.HasValue && DonGiaGoc.Value > 0) ? DonGiaGoc.Value : (DonGiaSauGiam ?? 0)).ToString("N0") + " đ";
+
+        // Chiết khấu được trừ trên món ăn này
+        public double ChietKhauTinhToan => (TienGiamMon.HasValue && TienGiamMon.Value > 0)
+            ? TienGiamMon.Value
+            : Math.Max(0, ((DonGiaGoc ?? DonGiaSauGiam ?? 0) - (DonGiaSauGiam ?? 0)) * SoLuong);
+
+        public string ChietKhauHienThi => ChietKhauTinhToan > 0
+            ? "-" + ChietKhauTinhToan.ToString("N0") + " đ"
+            : "—";
+
+        public string DonGiaSauGiamHienThi => (DonGiaSauGiam ?? 0).ToString("N0") + " đ";
+
         public string ThanhTienHienThi => (ThanhTien ?? 0).ToString("N0") + " đ";
     }
 

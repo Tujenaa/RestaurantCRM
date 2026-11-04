@@ -227,7 +227,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
         // ================= TAB 2: SỞ THÍCH ẨM THỰC (MÓN ƯA CHUỘNG) =================
         private void BuildTabSoThich()
         {
-            var tab = new TabPage("Sở thích ẩm thực (Món ưa chuộng)") { BackColor = ThemeManager.Bg };
+            var tab = new TabPage("Sở thích ẩm thực") { BackColor = ThemeManager.Bg };
 
             var split = new TableLayoutPanel
             {

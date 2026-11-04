@@ -286,8 +286,21 @@ namespace RestaurantCRM.AdminApp.Controls
             // Tiền
             if (_detail != null)
             {
-                MoneyRow(g, ref y, "Tiền món ăn", (_detail.TongTienHang ?? 0).ToString("N0") + " đ", ThemeManager.Ink2);
-                MoneyRow(g, ref y, "Giảm voucher", "-" + (_detail.TienGiamVoucher ?? 0).ToString("N0") + " đ", ThemeManager.Green);
+                double chietKhauMon = _detail.ChiTiet != null ? _detail.ChiTiet.Sum(c => c.ChietKhauTinhToan) : 0;
+                double tongGoc = _detail.ChiTiet != null
+                    ? _detail.ChiTiet.Sum(c => ((c.DonGiaGoc.HasValue && c.DonGiaGoc.Value > 0) ? c.DonGiaGoc.Value : (c.DonGiaSauGiam ?? 0)) * c.SoLuong)
+                    : (_detail.TongTienHang ?? 0);
+
+                if (chietKhauMon > 0)
+                {
+                    MoneyRow(g, ref y, "Tiền món (gốc)", tongGoc.ToString("N0") + " đ", ThemeManager.Muted);
+                    MoneyRow(g, ref y, "Chiết khấu món", "-" + chietKhauMon.ToString("N0") + " đ", ThemeManager.Red);
+                }
+                MoneyRow(g, ref y, "Tiền hàng", (_detail.TongTienHang ?? 0).ToString("N0") + " đ", ThemeManager.Ink2);
+                if ((_detail.TienGiamVoucher ?? 0) > 0)
+                {
+                    MoneyRow(g, ref y, "Giảm voucher", "-" + (_detail.TienGiamVoucher ?? 0).ToString("N0") + " đ", ThemeManager.Green);
+                }
             }
             double tong = _detail?.TongThanhToan ?? _summary.TongThanhToan ?? 0;
             TextRenderer.DrawText(g, "Tổng thanh toán", _fValueBold, new Point(Pad, y + 6), ThemeManager.Ink, Flags);

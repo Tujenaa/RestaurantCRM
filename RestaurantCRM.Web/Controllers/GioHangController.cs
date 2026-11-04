@@ -30,7 +30,7 @@ public class GioHangController : Controller
         if (string.IsNullOrEmpty(token))
         {
             TempData["ThongBao"] = "Vui lòng đăng nhập tài khoản trước khi tiến hành đặt hàng và thanh toán.";
-            return RedirectToAction("DangNhap", "TaiKhoan");
+            return RedirectToAction("DangNhap", "TaiKhoan", new { returnUrl = "/GioHang/Checkout" });
         }
 
         var customerId = HttpContext.Session.GetString("MaKhachHang");
@@ -232,7 +232,7 @@ public class GioHangController : Controller
         if (string.IsNullOrEmpty(token) || string.IsNullOrWhiteSpace(customerId))
         {
             TempData["ThongBao"] = "Vui lòng đăng nhập tài khoản trước khi tiến hành đặt hàng và thanh toán.";
-            return RedirectToAction("DangNhap", "TaiKhoan");
+            return RedirectToAction("DangNhap", "TaiKhoan", new { returnUrl = "/GioHang/Checkout" });
         }
 
         var model = page.DatHang;
@@ -244,6 +244,8 @@ public class GioHangController : Controller
             TempData["IsError"] = true;
             return RedirectToAction(nameof(Index));
         }
+
+        ViewBag.DiaChiMacDinh = HttpContext.Session.GetString("DiaChiGiaoHang") ?? "";
 
         if (!ModelState.IsValid)
         {
@@ -283,7 +285,7 @@ public class GioHangController : Controller
                     || string.Equals(model.PhuongThucThanhToan, "online", StringComparison.OrdinalIgnoreCase);
 
         TempData["ThongBao"] = isOnline
-            ? $"🎉 Đã thanh toán online thành công! Mã đơn của bạn là #{result.OrderId}. Nhà hàng đang chuẩn bị món ăn và tiến hành giao ngay!"
+            ? $"🎉 Đã ghi nhận đơn chuyển khoản thành công! Mã đơn của bạn là #{result.OrderId}. Nhà hàng đang chuẩn bị món ăn và tiến hành giao ngay!"
             : $"Đặt hàng thành công! Mã đơn của bạn là #{result.OrderId}. Bạn sẽ thanh toán khi nhận hàng (COD).";
 
         return RedirectToAction("Index", "DonHang");

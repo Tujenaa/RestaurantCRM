@@ -86,10 +86,12 @@ namespace RestaurantCRM.API.Controllers
                 ChiTiet = hoaDon.ChiTietHoaDon.Select(c => new
                 {
                     c.MaMon,
-                    TenMon = c.MaMonNavigation?.TenMon,
+                    TenMon = c.MaMonNavigation?.TenMon ?? c.TenMon,
                     c.SoLuong,
+                    DonGiaGoc = c.DonGiaGoc ?? c.DonGiaSauGiam ?? 0,
                     c.DonGiaSauGiam,
-                    c.ThanhTien
+                    TienGiamMon = c.TienGiamMon ?? Math.Max(0, ((c.DonGiaGoc ?? c.DonGiaSauGiam ?? 0) - (c.DonGiaSauGiam ?? 0)) * (c.SoLuong ?? 1)),
+                    ThanhTien = c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))
                 })
             };
 

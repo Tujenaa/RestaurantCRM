@@ -34,16 +34,35 @@
                     <div>
                         <h4 style="margin: 0 0 4px; font-size: 15px;">@item.TenMon</h4>
                         <small class="muted">Mã: @item.MaMon · Số lượng: <strong>@item.SoLuong</strong></small>
-                        <div style="font-size: 13px; color: var(--muted); margin-top: 2px;">
-                            Đơn giá: @((item.DonGiaSauGiam > 0 ? item.DonGiaSauGiam : item.DonGiaGoc).ToString("N0"))đ
-                            @if (item.DonGiaSauGiam > 0 && item.DonGiaSauGiam < item.DonGiaGoc)
+                        @{
+                            var donGiaGoc = item.DonGiaGoc > 0 ? item.DonGiaGoc : (item.DonGiaSauGiam > 0 ? item.DonGiaSauGiam : item.DonGia);
+                            var chietKhauMon = item.TienGiamMon > 0 
+                                ? item.TienGiamMon 
+                                : Math.Max(0, (donGiaGoc - item.DonGiaSauGiam) * item.SoLuong);
+                        }
+                        <div style="font-size: 13px; color: var(--muted); margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                            <div>
+                                Đơn giá gốc: <strong>@donGiaGoc.ToString("N0")đ</strong>
+                            </div>
+                            @if (chietKhauMon > 0)
                             {
-                                <span style="text-decoration: line-through; font-size: 11px; margin-left: 4px;">@item.DonGiaGoc.ToString("N0")đ</span>
+                                <div style="color: #dc2626; font-size: 12px; font-weight: 600;">
+                                    Chiết khấu: −@chietKhauMon.ToString("N0")đ
+                                    @if (item.DonGiaSauGiam > 0 && item.DonGiaSauGiam < donGiaGoc)
+                                    {
+                                        <span style="font-weight: 400; color: #6b7280; margin-left: 4px;">
+                                            (giá sau giảm: @item.DonGiaSauGiam.ToString("N0")đ/phần)
+                                        </span>
+                                    }
+                                </div>
                             }
                         </div>
                     </div>
-                    <div style="text-align: right; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-                        <span class="price" style="font-size: 16px;">@((item.DonGiaSauGiam > 0 ? item.DonGiaSauGiam * item.SoLuong : item.DonGiaGoc * item.SoLuong).ToString("N0"))đ</span>
+                    <div style="text-align: right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                        <span class="price" style="font-size: 16px;">@item.ThanhTien.ToString("N0")đ</span>
+                        <span style="font-size: 11px; color: #888;">
+                            (@item.SoLuong × @donGiaGoc.ToString("N0")đ@(chietKhauMon > 0 ? $" − {chietKhauMon:N0}đ" : ""))
+                        </span>
                         <div style="display:flex; gap:6px;">
                             @if (Model.TrangThaiLoc == "done")
                             {
@@ -145,6 +164,21 @@
         </div>
 
         <h3>Chi phí thanh toán</h3>
+        @{
+            var tongTienGoc = Model.ChiTiet.Sum(c => (c.DonGiaGoc > 0 ? c.DonGiaGoc : (c.DonGiaSauGiam > 0 ? c.DonGiaSauGiam : c.DonGia)) * c.SoLuong);
+            var tongChietKhauMon = Model.ChiTiet.Sum(c => c.TienGiamMon > 0 ? c.TienGiamMon : Math.Max(0, ((c.DonGiaGoc > 0 ? c.DonGiaGoc : c.DonGiaSauGiam) - c.DonGiaSauGiam) * c.SoLuong));
+        }
+        @if (tongChietKhauMon > 0)
+        {
+            <div class="summary-line">
+                <span>Tổng tiền gốc</span>
+                <span style="text-decoration: line-through; color: var(--muted);">@tongTienGoc.ToString("N0")đ</span>
+            </div>
+            <div class="summary-line">
+                <span>Chiết khấu món / loại món</span>
+                <strong style="color: #dc2626;">−@tongChietKhauMon.ToString("N0")đ</strong>
+            </div>
+        }
         <div class="summary-line">
             <span>Tiền hàng</span>
             <strong>@(Model.TongTienHang > 0 ? Model.TongTienHang.ToString("N0") : Model.TongThanhToan.ToString("N0"))đ</strong>

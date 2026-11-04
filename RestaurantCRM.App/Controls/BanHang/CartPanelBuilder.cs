@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -643,15 +643,31 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             UpdatePromoBox(subTotal, appliedVoucher, bestVoucher, bestDisc, calcService);
 
-            _lblSubTotalValue.Text = $"{subTotal:N0} đ";
+            decimal dishDiscounts = cartService.Items.Sum(x => Math.Max(0, (x.BasePrice - x.Price) * x.Quantity));
+            decimal originalSubTotal = cartService.Items.Sum(x => (x.BasePrice > 0 ? x.BasePrice : x.Price) * x.Quantity);
 
-            bool hasDiscount = appliedVoucher != null && voucherDiscount > 0;
-            _lblDiscountCaption.Visible = hasDiscount;
-            _lblDiscountValue.Visible = hasDiscount;
-            if (hasDiscount)
+            if (dishDiscounts > 0)
             {
-                _lblDiscountCaption.Text = $"Giảm giá ({appliedVoucher.MaVoucher})";
-                _lblDiscountValue.Text = $"-{voucherDiscount:N0} đ";
+                _lblSubTotalValue.Text = $"{originalSubTotal:N0} đ";
+                decimal totalDiscount = voucherDiscount + dishDiscounts;
+                _lblDiscountCaption.Visible = true;
+                _lblDiscountValue.Visible = true;
+                string vText = appliedVoucher != null ? $" + Voucher {appliedVoucher.MaVoucher}" : "";
+                _lblDiscountCaption.Text = $"Chiết khấu (Món/Loại{vText})";
+                _lblDiscountValue.Text = $"-{totalDiscount:N0} đ";
+            }
+            else
+            {
+                _lblSubTotalValue.Text = $"{subTotal:N0} đ";
+
+                bool hasDiscount = appliedVoucher != null && voucherDiscount > 0;
+                _lblDiscountCaption.Visible = hasDiscount;
+                _lblDiscountValue.Visible = hasDiscount;
+                if (hasDiscount)
+                {
+                    _lblDiscountCaption.Text = $"Giảm giá ({appliedVoucher.MaVoucher})";
+                    _lblDiscountValue.Text = $"-{voucherDiscount:N0} đ";
+                }
             }
 
             _lblTotalValue.Text = $"{finalTotal:N0} đ";
@@ -775,9 +791,16 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             int lineH = TextRenderer.MeasureText("Ag", fTotal).Height + S(2);
             int lineY = card.Height - pad - lineH + S(2);
 
-            string unitPriceText = $"{item.Price:N0} đ × {item.Quantity}";
+            string unitPriceText;
             if (item.Price < item.BasePrice)
-                unitPriceText += $"  (gốc {item.BasePrice:N0} đ)";
+            {
+                decimal chietKhau = item.BasePrice - item.Price;
+                unitPriceText = $"{item.Price:N0} đ (gốc {item.BasePrice:N0} đ, CK -{chietKhau:N0} đ) × {item.Quantity}";
+            }
+            else
+            {
+                unitPriceText = $"{item.Price:N0} đ × {item.Quantity}";
+            }
             var lblPrice = new Label
             {
                 Text = unitPriceText,

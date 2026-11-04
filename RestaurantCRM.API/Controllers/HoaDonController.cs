@@ -198,14 +198,23 @@ namespace RestaurantCRM.API.Controllers
 
                 var initialStatus = !string.IsNullOrEmpty(resolvedMaNhanVien) ? "Confirmed" : "Pending";
 
+                var tenKhachHang = string.IsNullOrWhiteSpace(request.TenKhachHang) ? "Khách mua mang đi" : request.TenKhachHang.Trim();
+                if (tenKhachHang.Length > 100) tenKhachHang = tenKhachHang.Substring(0, 100);
+
+                var soDienThoai = request.SoDienThoai?.Trim();
+                if (soDienThoai != null && soDienThoai.Length > 15) soDienThoai = soDienThoai.Substring(0, 15);
+
+                var diaChiGiao = string.IsNullOrWhiteSpace(request.DiaChiGiao) ? "Bán mang đi tại quầy" : request.DiaChiGiao.Trim();
+                if (diaChiGiao.Length > 255) diaChiGiao = diaChiGiao.Substring(0, 255);
+
                 var hoaDon = new HoaDon
                 {
                     MaHoaDon = maHoaDon,
                     MaKhachHang = string.IsNullOrWhiteSpace(request.MaKhachHang) ? null : request.MaKhachHang,
                     MaNhanVien = resolvedMaNhanVien,
-                    TenKhachHang = string.IsNullOrWhiteSpace(request.TenKhachHang) ? "Khách mua mang đi" : request.TenKhachHang,
-                    SoDienThoai = request.SoDienThoai,
-                    DiaChiGiao = string.IsNullOrWhiteSpace(request.DiaChiGiao) ? "Bán mang đi tại quầy" : request.DiaChiGiao,
+                    TenKhachHang = tenKhachHang,
+                    SoDienThoai = soDienThoai,
+                    DiaChiGiao = diaChiGiao,
                     NgayDat = DateTime.Now,
                     TrangThai = initialStatus,
                     TongTienHang = 0,
@@ -505,7 +514,7 @@ namespace RestaurantCRM.API.Controllers
 
                 if (isOnline)
                 {
-                    phuongThucTen = "Chuyển khoản ngân hàng (VietQR / Online)";
+                    phuongThucTen = "Chuyển khoản (QR / Ngân hàng)";
                     trangThaiThanhToan = "Paid";
                     ngayThanhToan = DateTime.Now;
                 }
@@ -524,9 +533,14 @@ namespace RestaurantCRM.API.Controllers
                     ngayThanhToan = null;
                 }
 
+                if (!string.IsNullOrEmpty(phuongThucTen) && phuongThucTen.Length > 30)
+                {
+                    phuongThucTen = phuongThucTen.Substring(0, 30);
+                }
+
                 var thanhToan = new ThanhToan
                 {
-                    MaThanhToan = "TT" + DateTime.Now.Ticks.ToString().Substring(8, 6),
+                    MaThanhToan = "TT" + DateTime.Now.ToString("yyMMddHHmmss") + Random.Shared.Next(10, 99).ToString(),
                     MaHoaDon = maHoaDon,
                     PhuongThuc = phuongThucTen,
                     TrangThai = trangThaiThanhToan,
@@ -835,10 +849,10 @@ namespace RestaurantCRM.API.Controllers
                     TenMon = c.MaMonNavigation?.TenMon ?? c.TenMon,
                     DuongDanAnh = c.MaMonNavigation?.DuongDanAnh,
                     c.SoLuong,
-                    c.DonGiaGoc,
+                    DonGiaGoc = c.DonGiaGoc ?? c.DonGiaSauGiam ?? 0,
                     c.DonGiaSauGiam,
-                    c.TienGiamMon,
-                    c.ThanhTien
+                    TienGiamMon = c.TienGiamMon ?? Math.Max(0, ((c.DonGiaGoc ?? c.DonGiaSauGiam ?? 0) - (c.DonGiaSauGiam ?? 0)) * (c.SoLuong ?? 1)),
+                    ThanhTien = c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))
                 })
             };
 

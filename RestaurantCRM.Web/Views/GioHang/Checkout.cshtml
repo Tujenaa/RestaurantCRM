@@ -122,71 +122,35 @@
         </label>
         <label class="choice" style="margin-bottom:16px;">
             <input asp-for="DatHang.PhuongThucThanhToan" type="radio" value="transfer" id="payOnline" />
-            <span><strong>Thanh toán Online / Chuyển khoản / Thẻ ngân hàng</strong></span>
+            <span><strong>Chuyển khoản (QR / Ngân hàng)</strong></span>
         </label>
 
-        <!-- Online Payment Container -->
+        <!-- Khung thông tin thanh toán chuyển khoản tinh gọn (đồng nhất với App) -->
         <div id="onlinePaymentPanel" style="display:none; background:#fbf7ef; border:1.5px solid #d4c3b3; border-radius:16px; padding:20px; margin-bottom:20px; animation:fadeIn .2s;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px dashed #d4c3b3; padding-bottom:10px;">
-                <strong style="color:var(--dark); font-size:15px;">Cổng thanh toán trực tuyến Lẩu Phố</strong>
+                <strong style="color:var(--dark); font-size:15px;">Thông tin chuyển khoản (QR / Ngân hàng)</strong>
+                <span style="font-size:12px; background:#e8f5e9; color:#2e7d32; font-weight:700; padding:3px 8px; border-radius:6px;">Xác nhận tự động</span>
             </div>
 
-            <!-- Tab Selection -->
-            <div style="display:flex; gap:8px; margin-bottom:16px;">
-                <button type="button" class="btn small" id="btnTabCard" style="flex:1;" onclick="switchPayTab('card')">Thẻ ngân hàng / ATM</button>
-                <button type="button" class="btn secondary small" id="btnTabQr" style="flex:1;" onclick="switchPayTab('qr')">Quét mã VietQR</button>
-            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:center; padding:10px 0;">
+                <div style="background:white; border:1px solid #d4c3b3; border-radius:12px; padding:14px; text-align:center; min-width:200px;">
+                    <div style="font-weight:800; font-size:13px; color:#c6402b; margin-bottom:6px;">NHÀ HÀNG LẨU PHỐ</div>
+                    <div style="width:160px; height:160px; margin:0 auto; background:#fafafa; display:grid; place-items:center; border:2px dashed #c6402b; border-radius:8px; font-size:13px; font-weight:700;">
+                        VIETQR<br/><small style="color:var(--muted); font-size:11px;">Quét để thanh toán</small>
+                    </div>
+                    <div style="font-size:11.5px; color:var(--muted); margin-top:6px;">Quét mã VietQR 24/7</div>
+                </div>
 
-            <!-- Card Sub-panel -->
-            <div id="payCardSection">
-                <div class="field" style="margin-bottom:12px;">
-                    <label style="font-size:12px; font-weight:700;">Ngân hàng phát hành thẻ</label>
-                    <select id="cardBankSelect" style="width:100%; border-radius:10px; padding:8px 12px; background:white;">
-                        <option value="VCB">Vietcombank - Ngân hàng Ngoại thương</option>
-                        <option value="MB">MB Bank - Ngân hàng Quân Đội</option>
-                        <option value="TCB">Techcombank - Ngân hàng Kỹ Thương</option>
-                        <option value="VPB">VPBank - Ngân hàng Việt Nam Thịnh Vượng</option>
-                        <option value="ACB">ACB - Ngân hàng Á Châu</option>
-                        <option value="CTG">VietinBank - Ngân hàng Công Thương</option>
-                        <option value="VISA">Visa / Mastercard quốc tế</option>
-                    </select>
+                <div style="flex:1; min-width:240px; font-size:13.5px; line-height:1.7;">
+                    <div style="margin-bottom:6px;"><b>Ngân hàng:</b> MB Bank (Ngân hàng Quân Đội)</div>
+                    <div style="margin-bottom:6px;"><b>Số tài khoản:</b> <code style="font-size:14px; font-weight:800; color:#c6402b; background:#fff; padding:2px 8px; border-radius:6px; border:1px solid #e0d0c0;">9999 8888 6688</code></div>
+                    <div style="margin-bottom:6px;"><b>Chủ tài khoản:</b> <span style="text-transform:uppercase; font-weight:700;">NHÀ HÀNG LẨU PHỐ</span></div>
+                    <div style="margin-bottom:6px;"><b>Số tiền:</b> <b style="color:var(--red); font-size:15px;">@Model.GioHang.TongThanhToan.ToString("N0")đ</b></div>
+                    <div style="margin-bottom:10px;"><b>Nội dung:</b> <span style="color:#5c6f84; font-size:12.5px;">Tên hoặc SĐT người nhận</span></div>
+                    <p style="margin:0; font-size:12px; color:#5c6f84; background:#e8f0fe; padding:8px 12px; border-radius:8px; line-height:1.4;">
+                        Sau khi chuyển khoản, bấm nút <b>"Xác nhận & Hoàn tất đặt hàng"</b> bên dưới để hoàn thành.
+                    </p>
                 </div>
-                <div class="field" style="margin-bottom:12px;">
-                    <label style="font-size:12px; font-weight:700;">Số thẻ thanh toán</label>
-                    <input type="text" id="demoCardNumber" value="9704 2200 8899 3366" placeholder="9704 xxxx xxxx xxxx" maxlength="19" style="background:white; font-family:monospace; font-size:14px; font-weight:700;" />
-                </div>
-                <div class="two" style="gap:12px; margin-bottom:12px;">
-                    <div class="field">
-                        <label style="font-size:12px; font-weight:700;">Tên in trên thẻ</label>
-                        <input type="text" id="demoCardHolder" value="NGUYEN VAN AN" placeholder="NGUYEN VAN A" style="background:white; text-transform:uppercase; font-size:13px;" />
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <div class="field" style="flex:1;">
-                            <label style="font-size:12px; font-weight:700;">Hết hạn</label>
-                            <input type="text" value="08/29" placeholder="MM/YY" maxlength="5" style="background:white; text-align:center; font-size:13px;" />
-                        </div>
-                        <div class="field" style="flex:1;">
-                            <label style="font-size:12px; font-weight:700;">CVV</label>
-                            <input type="password" value="888" placeholder="•••" maxlength="3" style="background:white; text-align:center; font-size:13px;" />
-                        </div>
-                    </div>
-                </div>
-                <p style="margin:0; font-size:12px; color:#5c6f84; background:#e8f0fe; padding:8px 12px; border-radius:8px;">
-                    Nhấn <b>"Thanh toán ngay"</b> bên dưới, hệ thống sẽ tự động xác thực và kích hoạt đơn hàng.
-                </p>
-            </div>
-
-            <!-- QR Sub-panel -->
-            <div id="payQrSection" style="display:none; text-align:center; padding:10px 0;">
-                <div style="background:white; border:1px solid #d4c3b3; border-radius:12px; padding:16px; display:inline-block; max-width:280px; margin-bottom:10px;">
-                    <div style="font-weight:800; font-size:14px; color:#c6402b; margin-bottom:6px;">NHÀ HÀNG LẨU PHỐ</div>
-                    <div style="width:180px; height:180px; margin:0 auto; background:#fff; display:grid; place-items:center; border:2px dashed #c6402b; border-radius:8px; font-size:13px; font-weight:700;">
-                        VIETQR<br/><small style="color:var(--muted);">Mã thanh toán tự động</small>
-                    </div>
-                    <div style="font-size:13px; font-weight:700; margin-top:8px;">STK: 9999 8888 6688 · MB Bank</div>
-                    <div style="font-size:12px; color:var(--muted);">Số tiền: <b style="color:var(--red);">@Model.GioHang.TongThanhToan.ToString("N0")đ</b></div>
-                </div>
-                <div style="font-size:12px; color:var(--muted);">Sau khi chuyển khoản, bấm nút <b>"Thanh toán ngay"</b> bên dưới để hoàn tất đơn hàng.</div>
             </div>
         </div>
 
@@ -204,14 +168,44 @@
         <div style="max-height: 280px; overflow-y: auto; margin-bottom: 14px; padding-right: 4px;">
             @foreach (var item in Model.GioHang.ItemsDaChon)
             {
-                <div class="summary-line" style="margin: 8px 0;">
-                    <span>@item.TenMon × <strong>@item.SoLuong</strong></span>
-                    <strong>@item.ThanhTien.ToString("N0")đ</strong>
+                <div class="summary-line" style="margin: 8px 0; align-items: flex-start;">
+                    <div>
+                        <div>@item.TenMon × <strong>@item.SoLuong</strong></div>
+                        @if (item.CoKhuyenMai)
+                        {
+                            <div style="font-size: 11.5px; color: #dc2626; margin-top: 2px;">
+                                <span style="text-decoration: line-through; color: #9ca3af; margin-right: 4px;">@item.DonGiaGoc.ToString("N0")đ</span>
+                                <strong>@item.DonGiaSauGiam.ToString("N0")đ</strong>
+                                <span style="background: #fee2e2; padding: 1px 4px; border-radius: 3px; font-weight: 600; margin-left: 4px;">
+                                    -@item.PhanTramGiam%
+                                </span>
+                            </div>
+                        }
+                    </div>
+                    <div style="text-align: right;">
+                        <strong>@item.ThanhTien.ToString("N0")đ</strong>
+                        @if (item.CoKhuyenMai)
+                        {
+                            <div style="font-size: 10.5px; color: #16a34a;">-@item.TongChietKhau.ToString("N0")đ</div>
+                        }
+                    </div>
                 </div>
             }
         </div>
 
-        <div class="summary-line" style="border-top: 1px solid var(--line); padding-top: 12px;">
+        @if (Model.GioHang.TongChietKhauMon > 0)
+        {
+            <div class="summary-line" style="border-top: 1px solid var(--line); padding-top: 10px;">
+                <span>Tổng tiền gốc</span>
+                <span style="text-decoration: line-through; color: var(--muted);">@Model.GioHang.TongTienGoc.ToString("N0")đ</span>
+            </div>
+            <div class="summary-line">
+                <span>Chiết khấu món / loại món</span>
+                <strong style="color: #dc2626;">−@Model.GioHang.TongChietKhauMon.ToString("N0")đ</strong>
+            </div>
+        }
+
+        <div class="summary-line" style="@(Model.GioHang.TongChietKhauMon <= 0 ? "border-top: 1px solid var(--line); padding-top: 12px;" : "")">
             <span>Tạm tính tiền hàng</span>
             <strong>@Model.GioHang.TamTinh.ToString("N0")đ</strong>
         </div>
@@ -422,41 +416,23 @@
 @section Scripts {
     <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
     <script>
-        // Online payment toggle & tabs
+        // Online payment toggle
         const payCod = document.getElementById('payCod');
         const payOnline = document.getElementById('payOnline');
         const onlinePanel = document.getElementById('onlinePaymentPanel');
         const btnSubmitOrder = document.getElementById('btnSubmitOrder');
-        const payCardSection = document.getElementById('payCardSection');
-        const payQrSection = document.getElementById('payQrSection');
-        const btnTabCard = document.getElementById('btnTabCard');
-        const btnTabQr = document.getElementById('btnTabQr');
 
         function togglePaymentMethod() {
             if (payOnline && payOnline.checked) {
                 if (onlinePanel) onlinePanel.style.display = 'block';
                 if (btnSubmitOrder) {
-                    btnSubmitOrder.innerHTML = 'Thanh toán ngay @Model.GioHang.TongThanhToan.ToString("N0")đ →';
+                    btnSubmitOrder.innerHTML = 'Xác nhận & Hoàn tất đặt hàng →';
                 }
             } else {
                 if (onlinePanel) onlinePanel.style.display = 'none';
                 if (btnSubmitOrder) {
                     btnSubmitOrder.innerHTML = 'Xác nhận & Gửi đơn hàng (COD) →';
                 }
-            }
-        }
-
-        function switchPayTab(tab) {
-            if (tab === 'card') {
-                if (payCardSection) payCardSection.style.display = 'block';
-                if (payQrSection) payQrSection.style.display = 'none';
-                if (btnTabCard) { btnTabCard.className = 'btn small'; }
-                if (btnTabQr) { btnTabQr.className = 'btn secondary small'; }
-            } else {
-                if (payCardSection) payCardSection.style.display = 'none';
-                if (payQrSection) payQrSection.style.display = 'block';
-                if (btnTabCard) { btnTabCard.className = 'btn secondary small'; }
-                if (btnTabQr) { btnTabQr.className = 'btn small'; }
             }
         }
 
@@ -505,6 +481,7 @@
         if (payCod && payOnline) {
             payCod.addEventListener('change', togglePaymentMethod);
             payOnline.addEventListener('change', togglePaymentMethod);
+            togglePaymentMethod();
         }
 
         // Address selection radio handling

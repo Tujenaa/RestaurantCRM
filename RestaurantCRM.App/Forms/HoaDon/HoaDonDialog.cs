@@ -30,33 +30,43 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
             dgvChiTiet.Columns.Add(new DataGridViewTextBoxColumn {
                 DataPropertyName = "MaMon",
                 HeaderText = "Mã Món",
-                Width = 110
+                Width = 90
             });
 
             dgvChiTiet.Columns.Add(new DataGridViewTextBoxColumn {
                 DataPropertyName = "TenMon",
                 HeaderText = "Tên Món Ăn",
-                Width = 260
+                Width = 230
             });
 
             dgvChiTiet.Columns.Add(new DataGridViewTextBoxColumn {
                 DataPropertyName = "SoLuong",
                 HeaderText = "Số Lượng",
-                Width = 100,
+                Width = 80,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             });
 
             dgvChiTiet.Columns.Add(new DataGridViewTextBoxColumn {
                 DataPropertyName = "DonGiaHienThi",
-                HeaderText = "Đơn Giá",
-                Width = 130,
+                HeaderText = "Đơn Giá (Gốc)",
+                Width = 125,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            dgvChiTiet.Columns.Add(new DataGridViewTextBoxColumn {
+                DataPropertyName = "ChietKhauHienThi",
+                HeaderText = "Chiết Khấu",
+                Width = 115,
+                DefaultCellStyle = new DataGridViewCellStyle {
+                    Alignment = DataGridViewContentAlignment.MiddleRight,
+                    ForeColor = Color.FromArgb(220, 38, 38)
+                }
             });
 
             dgvChiTiet.Columns.Add(new DataGridViewTextBoxColumn {
                 DataPropertyName = "ThanhTienHienThi",
                 HeaderText = "Thành Tiền",
-                Width = 140,
+                Width = 135,
                 DefaultCellStyle = new DataGridViewCellStyle {
                     Alignment = DataGridViewContentAlignment.MiddleRight,
                     Font = new Font("Segoe UI", 9F, FontStyle.Bold),
@@ -145,7 +155,16 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
                     : $"Khuyến mãi: {_detail.KhuyenMai}";
 
                 // Tiền
-                lblTienHang.Text = $"Tiền món ăn: {(_detail.TongTienHang ?? 0):N0} đ";
+                double tongChietKhauMon = _detail.ChiTiet != null ? _detail.ChiTiet.Sum(c => c.ChietKhauTinhToan) : 0;
+                double tongTienGoc = _detail.ChiTiet != null
+                    ? _detail.ChiTiet.Sum(c => ((c.DonGiaGoc.HasValue && c.DonGiaGoc.Value > 0) ? c.DonGiaGoc.Value : (c.DonGiaSauGiam ?? 0)) * c.SoLuong)
+                    : (_detail.TongTienHang ?? 0);
+
+                if (tongChietKhauMon > 0) {
+                    lblTienHang.Text = $"Tiền món: {tongTienGoc:N0} đ (CK: -{tongChietKhauMon:N0} đ)";
+                } else {
+                    lblTienHang.Text = $"Tiền món ăn: {(_detail.TongTienHang ?? 0):N0} đ";
+                }
                 lblTienGiam.Text = $"Giảm voucher: -{(_detail.TienGiamVoucher ?? 0):N0} đ";
                 lblTongThanhToan.Text = $"Tổng thanh toán: {(_detail.TongThanhToan ?? 0):N0} đ";
 
