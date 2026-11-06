@@ -581,14 +581,14 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         {
             var d = _current;
             if (d == null) return;
-            string hoi = "Xóa vĩnh viễn phản hồi " + d.MaDanhGia + " của " + (d.TenKhachHang ?? "khách hàng") + "?"
-                         + (d.TongSoTraLoi > 0 ? "\n" + d.TongSoTraLoi + " câu trả lời đi kèm cũng bị xóa." : "")
-                         + "\nThao tác này không hoàn tác được. Nếu chỉ muốn gỡ khỏi website, hãy chọn Ẩn phản hồi.";
-            if (!Notify.Confirm(this, hoi, "Xóa phản hồi", true)) return;
+            string hoi = "Bạn có chắc chắn muốn gỡ bỏ phản hồi " + d.MaDanhGia + " của " + (d.TenKhachHang ?? "khách hàng") + " khỏi website?\n\n"
+                         + "Lưu ý: Phản hồi sẽ được ẩn khỏi website công khai, nhưng toàn bộ nội dung và lịch sử trả lời vẫn được bảo lưu an toàn trong hệ thống.";
+            if (!Notify.Confirm(this, hoi, "Ẩn phản hồi khỏi website", true)) return;
             _btnXoa.Enabled = false;
             var r = await _service.DeleteAsync(d.MaDanhGia);
             if (IsDisposed) return;
             if (!r.Success) { _btnXoa.Enabled = true; Notify.Error(this, r.Message); return; }
+            Notify.Info(this, r.Message ?? "Đã ẩn phản hồi khỏi website thành công.");
             _current = null;
             await LoadDataAsync();
         }

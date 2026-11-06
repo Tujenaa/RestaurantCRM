@@ -114,18 +114,26 @@ namespace RestaurantCRM.AdminApp.Forms.VaiTro
                 return;
             }
 
-            if (MessageBox.Show($"Bạn có chắc chắn muốn xóa vai trò '{id}'?", "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            // Xác nhận bước 1
+            if (MessageBox.Show($"Bạn có chắc chắn muốn xóa vai trò '{id}'?", "Xác nhận xóa vai trò (Bước 1/2)", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            // Xác nhận bước 2 (Double confirmation)
+            string msgHard = $"⚠️ XÁC NHẬN LẦN CUỐI:\n"
+                + $"Thao tác này sẽ XÓA VĨNH VIỄN vai trò '{id}' khỏi hệ thống và KHÔNG THỂ HOÀN TÁC!\n\n"
+                + "Bạn có CHẮC CHẮN muốn xóa vĩnh viễn không?";
+            if (MessageBox.Show(msgHard, "Cảnh báo xóa vĩnh viễn (Bước 2/2)", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            var result = await _service.DeleteAsync(id);
+            if (result.Success)
             {
-                var result = await _service.DeleteAsync(id);
-                if (result.Success)
-                {
-                    MessageBox.Show("Đã xóa vai trò thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadData();
-                }
-                else
-                {
-                    MessageBox.Show(result.Message, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+                MessageBox.Show(result.Message ?? "Đã xóa vĩnh viễn vai trò thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadData();
+            }
+            else
+            {
+                MessageBox.Show(result.Message, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

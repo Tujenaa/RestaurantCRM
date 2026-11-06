@@ -281,7 +281,7 @@ namespace RestaurantCRM.API.Controllers
             });
         }
 
-        // DELETE: api/AdminKhachHang/{id} - Xóa khách hàng (chỉ khi chưa phát sinh dữ liệu liên quan).
+        // DELETE: api/AdminKhachHang/{id} - Khóa tài khoản nếu có dữ liệu liên quan, xóa vĩnh viễn nếu chưa có.
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteKhachHang(string id)
         {
@@ -297,21 +297,48 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khách hàng.");
             }
 
-            if (khachHang.HoaDon.Any() || khachHang.DanhGia.Any() || khachHang.PhieuTraLoi.Any())
-            {
-                return BadRequest("Khách hàng này đã phát sinh dữ liệu (đơn hàng, đánh giá hoặc phiếu khảo sát) nên không thể xóa. Vui lòng dùng chức năng 'Khóa tài khoản' thay thế.");
-            }
+            bool hasRelatedData = khachHang.HoaDon.Any() || khachHang.DanhGia.Any() || khachHang.PhieuTraLoi.Any() || khachHang.DoiTuongKhaoSat.Any();
 
-            // Khách chỉ được mời khảo sát (chưa trả lời) -> xóa dòng đối tượng khảo sát để không vướng khóa ngoại
-            if (khachHang.DoiTuongKhaoSat.Any())
+            if (hasRelatedData)
             {
-                _service.RemoveRange(khachHang.DoiTuongKhaoSat);
+                khachHang.TrangThai = "Locked";
+                await _service.SaveChangesAsync();
+                return Ok(new
+                {
+                    message = "Khách hàng đã có dữ liệu giao dịch liên quan (hóa đơn, khảo sát hoặc đánh giá). Hệ thống đã tự động chuyển sang trạng thái tạm khóa tài khoản để bảo toàn dữ liệu lịch sử.",
+                    isLocked = true
+                });
             }
 
             _service.Remove(khachHang);
             await _service.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new
+            {
+                message = "Đã xóa vĩnh viễn khách hàng khỏi hệ thống thành công.",
+                isLocked = false
+            });
+        }
+
+        // PUT: api/AdminKhachHang/{id}/DoiMatKhau - Đổi/đặt lại mật khẩu cho khách hàng từ quản trị
+        [HttpPut("{id}/DoiMatKhau")]
+        public async Task<IActionResult> DoiMatKhau(string id, [FromBody] AdminDoiMatKhauKhachHangRequest request)
+        {
+            var khachHang = await _service.FindAsync<KhachHang>(id);
+            if (khachHang == null)
+            {
+                return NotFound("Không tìm thấy khách hàng.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request?.MatKhauMoi) || request.MatKhauMoi.Trim().Length < 6)
+            {
+                return BadRequest("Mật khẩu mới phải có tối thiểu 6 ký tự.");
+            }
+
+            khachHang.MatKhau = BCrypt.Net.BCrypt.HashPassword(request.MatKhauMoi.Trim());
+            await _service.SaveChangesAsync();
+
+            return Ok(new { message = "Đổi mật khẩu cho khách hàng thành công." });
         }
 
         // ── Hàm hỗ trợ ───────────────────────────────────────────────────────

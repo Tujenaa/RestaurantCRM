@@ -305,28 +305,23 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new { message = request.HienThi ? "Đã hiển thị lại phản hồi." : "Đã ẩn phản hồi.", hienThi = request.HienThi });
         }
 
-        // DELETE: api/AdminDanhGia/{id} - Xóa phản hồi (và các câu trả lời liên quan)
+        // DELETE: api/AdminDanhGia/{id} - Ẩn phản hồi khỏi website (Bảo lưu dữ liệu lịch sử phản hồi và câu trả lời)
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDanhGia(string id)
         {
-            var danhGia = await _service.Query<DanhGia>()
-                .Include(d => d.TraLoiDanhGia)
-                .FirstOrDefaultAsync(d => d.MaDanhGia == id);
-
+            var danhGia = await _service.FindAsync<DanhGia>(id);
             if (danhGia == null)
             {
                 return NotFound("Không tìm thấy phản hồi.");
             }
 
-            if (danhGia.TraLoiDanhGia.Any())
-            {
-                _service.RemoveRange(danhGia.TraLoiDanhGia);
-            }
-
-            _service.Remove(danhGia);
+            // Bảo toàn dữ liệu: chuyển trạng thái sang ẩn và đánh dấu đã xử lý
+            danhGia.TrangThai = false;
+            danhGia.DaXuLy = true;
+            _service.Update(danhGia);
             await _service.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { message = "Đã ẩn phản hồi khỏi website thành công (dữ liệu được lưu trữ an toàn trong hệ thống)." });
         }
     }
 }

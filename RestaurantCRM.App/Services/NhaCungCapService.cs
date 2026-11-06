@@ -71,5 +71,31 @@ namespace RestaurantCRM.AdminApp.Services {
                 return (false, "Lỗi kết nối API: " + ex.Message);
             }
         }
+
+        public async Task<(bool Success, string Message, bool IsHidden)> ToggleStatusAsync(string id) {
+            try {
+                var response = await _httpClient.PutAsync($"api/AdminNhaCungCap/{id}/toggle-status", null);
+                if (response.IsSuccessStatusCode) {
+                    var str = await response.Content.ReadAsStringAsync();
+                    string msg = "Thao tác thành công!";
+                    bool isHidden = false;
+                    try {
+                        using (var doc = System.Text.Json.JsonDocument.Parse(str)) {
+                            if (doc.RootElement.TryGetProperty("message", out var msgProp)) {
+                                msg = msgProp.GetString();
+                            }
+                            if (doc.RootElement.TryGetProperty("isHidden", out var hidProp)) {
+                                isHidden = hidProp.GetBoolean();
+                            }
+                        }
+                    } catch { }
+                    return (true, msg, isHidden);
+                }
+                var err = await response.Content.ReadAsStringAsync();
+                return (false, string.IsNullOrWhiteSpace(err) ? "Thao tác thất bại từ máy chủ." : err.Trim('"', '\r', '\n'), false);
+            } catch (Exception ex) {
+                return (false, "Lỗi kết nối API: " + ex.Message, false);
+            }
+        }
     }
 }

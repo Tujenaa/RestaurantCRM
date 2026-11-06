@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Controls;
@@ -28,6 +28,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly Label _emptyPreferences = EmptyLabel("Chưa có dữ liệu món đã mua.");
         private readonly Button _btnSua;
         private readonly Button _btnKhoa;
+        private readonly Button _btnDoiMatKhau;
 
         /// <summary>true nếu người dùng đã sửa / khóa trong hộp thoại (danh sách cần tải lại).</summary>
         public bool DataChanged { get; private set; }
@@ -78,7 +79,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
 
             _btnSua = AddLeftButton("Sửa thông tin", ButtonSkin.Kind.Secondary);
             _btnKhoa = AddLeftButton("Khóa tài khoản", ButtonSkin.Kind.Secondary);
-            _btnSua.Enabled = _btnKhoa.Enabled = false;
+            _btnDoiMatKhau = AddLeftButton("Đổi mật khẩu", ButtonSkin.Kind.Secondary);
+            _btnSua.Enabled = _btnKhoa.Enabled = _btnDoiMatKhau.Enabled = false;
             _btnSua.Click += async (s, e) =>
             {
                 if (_kh == null) return;
@@ -96,6 +98,11 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 if (!r.Success) { _btnKhoa.Enabled = true; Notify.Error(this, r.Message); return; }
                 DataChanged = true;
                 await LoadAsync();
+            };
+            _btnDoiMatKhau.Click += async (s, e) =>
+            {
+                if (_kh == null) return;
+                await KhachHangForm.HienThiDoiMatKhauDialog(_kh.MaKhachHang, _kh.HoTen, this);
             };
 
             Shown += async (s, e) => await LoadAsync();
@@ -116,7 +123,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             }
             if (IsDisposed || _kh == null) return;
 
-            _btnSua.Enabled = _btnKhoa.Enabled = true;
+            _btnSua.Enabled = _btnKhoa.Enabled = _btnDoiMatKhau.Enabled = true;
             _btnKhoa.Text = _kh.BiKhoa ? "Mở khóa" : "Khóa tài khoản";
             _profile.Invalidate();
 

@@ -142,19 +142,26 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy nguyên vật liệu.");
             }
 
-            if (nl.DinhLuong.Any())
+            bool hasHistory = nl.DinhLuong.Any() || nl.ChiTietPhieuNhap.Any();
+            if (hasHistory)
             {
-                return BadRequest("Không thể xóa nguyên liệu này vì đang được dùng trong công thức món ăn.");
+                if (string.Equals(nl.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest("Nguyên liệu này đã ở trạng thái 'Ngừng sử dụng' và có dữ liệu lịch sử liên quan (nhập kho hoặc công thức). Hệ thống bảo lưu toàn bộ dữ liệu lịch sử và không xóa khỏi cơ sở dữ liệu.");
+                }
+
+                // Tự động chuyển trạng thái sang Inactive (Ngừng sử dụng)
+                nl.TrangThai = "Inactive";
+                _service.Update(nl);
+                await _service.SaveChangesAsync();
+
+                return Ok(new { Message = "Nguyên liệu đã có lịch sử nhập kho hoặc đang nằm trong công thức món ăn. Hệ thống đã tự động chuyển sang trạng thái 'Ngừng sử dụng' để bảo toàn dữ liệu tồn kho." });
             }
 
-            if (nl.ChiTietPhieuNhap.Any())
-            {
-                return BadRequest("Không thể xóa nguyên liệu này vì đã có lịch sử nhập kho.");
-            }
-
+            // Nếu chưa từng phát sinh dữ liệu: Xóa vĩnh viễn
             _service.Remove(nl);
             await _service.SaveChangesAsync();
-            return Ok(new { Message = "Đã xóa nguyên liệu thành công." });
+            return Ok(new { Message = "Đã xóa vĩnh viễn nguyên liệu khỏi hệ thống." });
         }
     }
 }

@@ -234,7 +234,7 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new { message = thongBao, trangThai = moi });
         }
 
-        // DELETE: api/AdminKhaoSat/{id} - Xóa khảo sát (chỉ khi chưa có phiếu trả lời)
+        // DELETE: api/AdminKhaoSat/{id} - Xóa khảo sát (tự động đóng nếu đã có phiếu trả lời, hoặc xóa vĩnh viễn nếu chưa có)
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -244,11 +244,20 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khảo sát.");
             }
 
-            // CHECK của KHAO_SAT không có giá trị 'Deleted' nên không xóa mềm được.
-            // Khảo sát đã có phiếu trả lời phải giữ lại để còn thống kê -> chỉ cho đóng.
-            if (await _service.Query<PhieuTraLoi>().AnyAsync(p => p.MaKhaoSat == id))
+            bool hasAnswers = await _service.Query<PhieuTraLoi>().AnyAsync(p => p.MaKhaoSat == id);
+            if (hasAnswers)
             {
-                return BadRequest("Khảo sát đã có phiếu trả lời nên không thể xóa (cần giữ dữ liệu thống kê). Hãy đóng khảo sát thay thế.");
+                if (khaoSat.TrangThai == DaDong)
+                {
+                    return BadRequest("Khảo sát này đã ở trạng thái 'Đóng' và đã có người tham gia trả lời. Hệ thống bảo lưu toàn bộ dữ liệu thống kê và không xóa khỏi cơ sở dữ liệu.");
+                }
+
+                // Tự động đóng khảo sát
+                khaoSat.TrangThai = DaDong;
+                _service.Update(khaoSat);
+                await _service.SaveChangesAsync();
+
+                return Ok(new { message = "Khảo sát đã có người tham gia trả lời. Hệ thống đã tự động Đóng khảo sát để bảo toàn dữ liệu thống kê.", trangThai = DaDong });
             }
 
             var cauHois = await _service.Query<CauHoiKhaoSat>().Include(c => c.TuyChonCauHoi).Where(c => c.MaKhaoSat == id).ToListAsync();
@@ -264,7 +273,7 @@ namespace RestaurantCRM.API.Controllers
             _service.Remove(khaoSat);
             await _service.SaveChangesAsync();
 
-            return Ok(new { message = "Xóa khảo sát thành công." });
+            return Ok(new { message = "Đã xóa vĩnh viễn khảo sát khỏi hệ thống." });
         }
 
         // ── CÂU HỎI ──────────────────────────────────────────────────────────

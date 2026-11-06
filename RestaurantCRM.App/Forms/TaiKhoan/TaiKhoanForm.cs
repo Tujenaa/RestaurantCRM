@@ -117,7 +117,21 @@ namespace RestaurantCRM.AdminApp.Forms.TaiKhoan
                 return;
             }
 
-            if (MessageBox.Show($"Bạn có chắc chắn muốn xóa/vô hiệu hóa tài khoản '{id}' ({nv?.HoTen})?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            // Nếu tài khoản nhân viên đã ở trạng thái Inactive (đã tạm khóa)
+            if (nv != null && string.Equals(nv.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    $"Tài khoản của nhân viên '{nv.HoTen}' ({id}) đã ở trạng thái TẠM KHÓA.\n\nTheo quy định hệ thống, dữ liệu tài khoản nhân viên được bảo lưu toàn bộ để phục vụ đối soát và kiểm toán lịch sử.",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Nếu đang Active -> Xác nhận thực hiện TẠM KHÓA (chuyển sang Inactive)
+            string confirmMsg = $"Bạn có chắc chắn muốn TẠM KHÓA tài khoản nhân viên '{id}' ({nv?.HoTen})?\n\n"
+                + "Tài khoản sẽ được chuyển sang trạng thái Tạm khóa (Inactive) và nhân viên sẽ không thể đăng nhập vào hệ thống nữa.\n"
+                + "(Dữ liệu nhân viên được bảo lưu trên hệ thống để đảm bảo toàn vẹn dữ liệu lịch sử).";
+
+            if (MessageBox.Show(confirmMsg, "Xác nhận vô hiệu hóa tài khoản", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 var result = await _taiKhoanService.DeleteAsync(id);
                 if (result.Success)

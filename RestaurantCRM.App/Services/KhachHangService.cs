@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using RestaurantCRM.AdminApp.DTOs.KhachHang;
@@ -53,6 +53,13 @@ namespace RestaurantCRM.AdminApp.Services
         public Task<ApiResult> DeleteAsync(string maKhachHang)
         {
             return DeleteAsync(Base + "/" + Uri.EscapeDataString(maKhachHang), "Đã xóa khách hàng.");
+        }
+
+        public Task<ApiResult> ChangePasswordAsync(string maKhachHang, string matKhauMoi)
+        {
+            return PutAsync(Base + "/" + Uri.EscapeDataString(maKhachHang) + "/DoiMatKhau",
+                new { MatKhauMoi = matKhauMoi },
+                "Đổi mật khẩu khách hàng thành công.");
         }
     }
 }

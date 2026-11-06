@@ -126,13 +126,47 @@ namespace RestaurantCRM.API.Controllers
                 _service.Update(nhaCungCap);
                 await _service.SaveChangesAsync();
 
-                return Ok(new { message = "NCC đã có phiếu nhập nên sẽ ẩn NCC", isHidden = true });
+                return Ok(new { message = "Nhà cung cấp đã có lịch sử phiếu nhập hàng. Hệ thống đã tự động chuyển sang trạng thái 'Ẩn' để bảo toàn dữ liệu nhập kho.", isHidden = true });
             }
 
             _service.Remove(nhaCungCap);
             await _service.SaveChangesAsync();
 
-            return Ok(new { message = "Xóa thành công", isHidden = false });
+            return Ok(new { message = "Đã xóa vĩnh viễn nhà cung cấp khỏi hệ thống.", isHidden = false });
+        }
+
+        // PUT: api/AdminNhaCungCap/{id}/toggle-status - Ẩn / Hiện nhà cung cấp
+        [HttpPut("{id}/toggle-status")]
+        public async Task<IActionResult> ToggleStatus(string id)
+        {
+            var nhaCungCap = await _service.FindAsync<NhaCungCap>(id);
+            if (nhaCungCap == null)
+            {
+                return NotFound("Không tìm thấy nhà cung cấp.");
+            }
+
+            bool isCurrentlyHidden = string.Equals(nhaCungCap.TrangThai, "Hidden", StringComparison.OrdinalIgnoreCase)
+                                  || string.Equals(nhaCungCap.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase);
+
+            if (isCurrentlyHidden)
+            {
+                nhaCungCap.TrangThai = "Active";
+            }
+            else
+            {
+                nhaCungCap.TrangThai = "Hidden";
+            }
+
+            _service.Update(nhaCungCap);
+            await _service.SaveChangesAsync();
+
+            bool isHidden = nhaCungCap.TrangThai == "Hidden";
+            return Ok(new
+            {
+                message = isHidden ? "Đã ẩn nhà cung cấp thành công." : "Đã hiển thị lại nhà cung cấp thành công.",
+                isHidden = isHidden,
+                trangThai = nhaCungCap.TrangThai
+            });
         }
 
         private bool NhaCungCapExists(string id)

@@ -418,12 +418,14 @@ namespace RestaurantCRM.API.Controllers
             }
         }
 
-        // DELETE: api/AdminMonAn/{id} - Xóa món ăn (kiểm tra ràng buộc đơn hàng)
+        // DELETE: api/AdminMonAn/{id} - Xóa món ăn (kiểm tra ràng buộc đơn hàng/đánh giá/khuyến mãi)
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMonAn(string id)
         {
             var monAn = await _service.Query<MonAn>()
                 .Include(m => m.ChiTietHoaDon)
+                .Include(m => m.DanhGia)
+                .Include(m => m.KmTheoSp)
                 .Include(m => m.DinhLuong)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
@@ -432,17 +434,31 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy món ăn để xóa.");
             }
 
-            // Nếu món đã từng có trong hóa đơn bán, không cho xóa cứng để bảo vệ dữ liệu kế toán
-            if (monAn.ChiTietHoaDon.Any())
+            bool hasHistory = monAn.ChiTietHoaDon.Any() || monAn.DanhGia.Any() || monAn.KmTheoSp.Any();
+            if (hasHistory)
             {
-                return BadRequest("Không thể xóa món ăn này vì đã phát sinh hóa đơn bán hàng. Vui lòng chuyển trạng thái sang 'Ngừng kinh doanh' (Discontinued).");
+                if (monAn.TrangThai == "Discontinued")
+                {
+                    return BadRequest("Món ăn này đã ở trạng thái 'Ngừng kinh doanh' và có dữ liệu lịch sử liên quan (hóa đơn bán/đánh giá). Hệ thống bảo lưu toàn bộ dữ liệu lịch sử và không xóa khỏi cơ sở dữ liệu.");
+                }
+
+                // Tự động chuyển sang trạng thái Ngừng kinh doanh
+                monAn.TrangThai = "Discontinued";
+                _service.Update(monAn);
+                await _service.SaveChangesAsync();
+
+                return Ok(new { Message = "Món ăn đã phát sinh dữ liệu lịch sử (hóa đơn bán hàng/đánh giá). Hệ thống đã tự động chuyển món sang trạng thái 'Ngừng kinh doanh' để bảo toàn dữ liệu doanh thu." });
             }
 
-            // Khóa ngoại ON DELETE CASCADE sẽ tự động xóa các dòng DINH_LUONG liên quan
+            // Nếu chưa từng phát sinh dữ liệu: xóa định lượng và xóa vĩnh viễn món ăn
+            if (monAn.DinhLuong.Any())
+            {
+                _service.RemoveRange(monAn.DinhLuong);
+            }
             _service.Remove(monAn);
             await _service.SaveChangesAsync();
 
-            return Ok(new { Message = "Đã xóa món ăn thành công." });
+            return Ok(new { Message = "Đã xóa vĩnh viễn món ăn khỏi hệ thống." });
         }
     }
 }

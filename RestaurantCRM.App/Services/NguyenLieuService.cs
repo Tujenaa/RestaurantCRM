@@ -83,11 +83,23 @@ namespace RestaurantCRM.AdminApp.Services {
         public async Task<(bool Success, string Message)> DeleteAsync(string id) {
             try {
                 var response = await _httpClient.DeleteAsync($"api/AdminNguyenLieu/{id}");
-                if (response.IsSuccessStatusCode) {
-                    return (true, "Xóa nguyên vật liệu thành công!");
+                var content = await response.Content.ReadAsStringAsync();
+                string message = null;
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    try {
+                        using (var doc = System.Text.Json.JsonDocument.Parse(content))
+                        {
+                            if (doc.RootElement.TryGetProperty("message", out var msgProp) || doc.RootElement.TryGetProperty("Message", out msgProp))
+                                message = msgProp.GetString();
+                        }
+                    } catch {}
                 }
-                var err = await response.Content.ReadAsStringAsync();
-                return (false, string.IsNullOrWhiteSpace(err) ? "Xóa nguyên liệu thất bại." : err.Trim('"', '\r', '\n'));
+
+                if (response.IsSuccessStatusCode) {
+                    return (true, message ?? "Xóa nguyên vật liệu thành công!");
+                }
+                return (false, message ?? (string.IsNullOrWhiteSpace(content) ? "Xóa nguyên liệu thất bại." : content.Trim('"', '\r', '\n')));
             } catch (Exception ex) {
                 return (false, "Lỗi kết nối API: " + ex.Message);
             }

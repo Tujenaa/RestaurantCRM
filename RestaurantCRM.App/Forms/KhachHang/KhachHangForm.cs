@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.DTOs.KhachHang;
@@ -34,6 +35,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly Button _btnChiTiet = new Button { Text = "Xem chi tiết" };
         private readonly Button _btnSua = new Button { Text = "Sửa" };
         private readonly Button _btnKhoa = new Button { Text = "Khóa tài khoản" };
+        private readonly Button _btnDoiMatKhau = new Button { Text = "Đổi mật khẩu" };
         private readonly Button _btnXoa = new Button { Text = "Xóa" };
         private bool _loading;
 
@@ -68,7 +70,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 },
                 CountLabel = _lblCount,
                 Grid = _grid,
-                SecondaryActions = new[] { _btnChiTiet, _btnSua, _btnKhoa },
+                SecondaryActions = new[] { _btnChiTiet, _btnSua, _btnKhoa, _btnDoiMatKhau },
                 DangerActions = new[] { _btnXoa },
                 FooterInfo = _lblFooter
             });
@@ -89,6 +91,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _btnChiTiet.Click += (s, e) => MoChiTiet();
             _btnSua.Click += (s, e) => Sua();
             _btnKhoa.Click += (s, e) => DoiTrangThaiKhoa();
+            _btnDoiMatKhau.Click += (s, e) => DoiMatKhau();
             _btnXoa.Click += (s, e) => Xoa();
 
             UpdateSelectionUi();
@@ -217,6 +220,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _btnChiTiet.Enabled = has;
             _btnSua.Enabled = has;
             _btnKhoa.Enabled = has;
+            _btnDoiMatKhau.Enabled = has;
             _btnXoa.Enabled = has;
             _btnKhoa.Text = has && k.BiKhoa ? "Mở khóa" : "Khóa tài khoản";
             _lblFooter.Text = has
@@ -276,22 +280,168 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             else { _btnKhoa.Enabled = true; Notify.Error(this, r.Message); }
         }
 
+        private async void DoiMatKhau()
+        {
+            var k = SelectedDto();
+            if (k == null) return;
+            await HienThiDoiMatKhauDialog(k.MaKhachHang, k.HoTen, this);
+        }
+
+        internal static async Task HienThiDoiMatKhauDialog(string maKhachHang, string hoTen, IWin32Window owner = null)
+        {
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Đổi mật khẩu khách hàng";
+                dlg.Size = new Size(420, 260);
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.BackColor = Color.White;
+                dlg.Font = new Font(ThemeManager.FontFamily, 9.5F);
+
+                var lblInfo = new Label
+                {
+                    Text = "Đặt lại mật khẩu đăng nhập cho khách hàng:\n" + hoTen + " (" + maKhachHang + ")",
+                    Location = new Point(20, 16),
+                    Size = new Size(365, 38),
+                    ForeColor = ThemeManager.Ink
+                };
+                dlg.Controls.Add(lblInfo);
+
+                var lblNew = new Label { Text = "Mật khẩu mới (tối thiểu 6 ký tự):", Location = new Point(20, 62), AutoSize = true };
+                var txtNew = new TextBox { Location = new Point(20, 84), Width = 365, UseSystemPasswordChar = true };
+                dlg.Controls.Add(lblNew);
+                dlg.Controls.Add(txtNew);
+
+                var lblConfirm = new Label { Text = "Xác nhận mật khẩu mới:", Location = new Point(20, 116), AutoSize = true };
+                var txtConfirm = new TextBox { Location = new Point(20, 138), Width = 365, UseSystemPasswordChar = true };
+                dlg.Controls.Add(lblConfirm);
+                dlg.Controls.Add(txtConfirm);
+
+                var chkShow = new CheckBox { Text = "Hiện mật khẩu", Location = new Point(20, 168), AutoSize = true };
+                chkShow.CheckedChanged += (s, e) =>
+                {
+                    txtNew.UseSystemPasswordChar = !chkShow.Checked;
+                    txtConfirm.UseSystemPasswordChar = !chkShow.Checked;
+                };
+                dlg.Controls.Add(chkShow);
+
+                var btnLuu = new Button
+                {
+                    Text = "Lưu mật khẩu",
+                    Location = new Point(190, 185),
+                    Size = new Size(105, 30),
+                    BackColor = ThemeManager.Primary,
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat
+                };
+                btnLuu.FlatAppearance.BorderSize = 0;
+                dlg.Controls.Add(btnLuu);
+
+                var btnHuy = new Button
+                {
+                    Text = "Hủy",
+                    Location = new Point(305, 185),
+                    Size = new Size(80, 30),
+                    DialogResult = DialogResult.Cancel
+                };
+                dlg.Controls.Add(btnHuy);
+                dlg.CancelButton = btnHuy;
+
+                btnLuu.Click += async (s, e) =>
+                {
+                    var pass = (txtNew.Text ?? "").Trim();
+                    var confirm = (txtConfirm.Text ?? "").Trim();
+                    if (string.IsNullOrEmpty(pass) || pass.Length < 6)
+                    {
+                        MessageBox.Show(dlg, "Mật khẩu mới phải có tối thiểu 6 ký tự.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtNew.Focus();
+                        return;
+                    }
+                    if (pass != confirm)
+                    {
+                        MessageBox.Show(dlg, "Xác nhận mật khẩu mới không khớp.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtConfirm.Focus();
+                        return;
+                    }
+
+                    btnLuu.Enabled = false;
+                    var srv = new KhachHangService();
+                    var res = await srv.ChangePasswordAsync(maKhachHang, pass);
+                    if (res.Success)
+                    {
+                        MessageBox.Show(dlg, "Đổi mật khẩu cho khách hàng thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        dlg.DialogResult = DialogResult.OK;
+                        dlg.Close();
+                    }
+                    else
+                    {
+                        btnLuu.Enabled = true;
+                        MessageBox.Show(dlg, res.Message ?? "Đổi mật khẩu thất bại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+
+                if (owner != null) dlg.ShowDialog(owner);
+                else dlg.ShowDialog();
+            }
+        }
+
         private async void Xoa()
         {
             var k = SelectedDto();
             if (k == null) return;
+
+            // Nếu khách hàng có đơn hàng hoặc dữ liệu liên quan: Tạm khóa tài khoản
             if (k.SoDonHang > 0)
             {
-                Notify.Warn(this, "Khách hàng \"" + k.HoTen + "\" đã có " + k.SoDonHang + " đơn hàng nên không thể xóa để giữ lịch sử.\nBạn có thể khóa tài khoản thay thế.", "Không thể xóa");
+                string msgSoft = "Khách hàng \"" + k.HoTen + "\" đã có " + k.SoDonHang + " đơn hàng trong hệ thống.\n\n"
+                    + "Để bảo toàn dữ liệu hệ thống sẽ thực hiện khóa tài khoản.\n"
+                    + "Khách hàng sẽ không thể đăng nhập đặt món nữa, dữ liệu lịch sử được giữ nguyên.\n\n"
+                    + "Bạn có chắc chắn muốn khóa tài khoản khách hàng này không?";
+
+                if (!Notify.Confirm(this, msgSoft, "Khóa tài khoản khách hàng", true)) return;
+
+                _btnXoa.Enabled = false;
+                var r = await _service.DeleteAsync(k.MaKhachHang);
+                if (IsDisposed) return;
+                if (r.Success)
+                {
+                    Notify.Info(this, r.Message ?? "Đã cập nhật khách hàng thành công.");
+                    await LoadDataAsync(k.MaKhachHang);
+                }
+                else
+                {
+                    _btnXoa.Enabled = true;
+                    Notify.Error(this, r.Message);
+                }
                 return;
             }
-            if (!Notify.Confirm(this, "Xóa vĩnh viễn khách hàng \"" + k.HoTen + "\" (" + k.MaKhachHang + ")?\nThao tác này không hoàn tác được.", "Xóa khách hàng", true)) return;
+
+            // Nếu khách hàng chưa có dữ liệu giao dịch: Cho phép xóa vĩnh viễn nhưng PHẢI XÁC NHẬN LẠI (2 lần)
+            string msgHard1 = "Khách hàng \"" + k.HoTen + "\" (" + k.MaKhachHang + ") chưa có dữ liệu giao dịch liên quan.\n"
+                + "Bạn có muốn thực hiện xóa khách hàng này không?";
+            if (!Notify.Confirm(this, msgHard1, "Xác nhận xóa khách hàng (Bước 1/2)", false)) return;
+
+            // Xác nhận lại lần 2 (Double confirmation)
+            string msgHard2 = "⚠️ XÁC NHẬN LẦN CUỐI:\n"
+                + "Thao tác này sẽ XÓA VĨNH VIỄN khách hàng \"" + k.HoTen + "\" khỏi cơ sở dữ liệu và KHÔNG THỂ HOÀN TÁC!\n\n"
+                + "Bạn có CHẮC CHẮN 100% muốn xóa vĩnh viễn không?";
+            if (!Notify.Confirm(this, msgHard2, "Cảnh báo xóa vĩnh viễn (Bước 2/2)", true)) return;
 
             _btnXoa.Enabled = false;
-            var r = await _service.DeleteAsync(k.MaKhachHang);
+            var resHard = await _service.DeleteAsync(k.MaKhachHang);
             if (IsDisposed) return;
-            if (r.Success) await LoadDataAsync();
-            else { _btnXoa.Enabled = true; Notify.Error(this, r.Message); }
+            if (resHard.Success)
+            {
+                Notify.Info(this, resHard.Message ?? "Đã xóa vĩnh viễn khách hàng.");
+                await LoadDataAsync();
+            }
+            else
+            {
+                _btnXoa.Enabled = true;
+                Notify.Error(this, resHard.Message);
+            }
         }
     }
 }

@@ -90,7 +90,7 @@ namespace RestaurantCRM.API.Controllers
             return NoContent();
         }
 
-        // DELETE: api/AdminLoaiMon/{id} - Xóa cứng một loại món (Kiểm tra ràng buộc món ăn).
+        // DELETE: api/AdminLoaiMon/{id} - Xóa vĩnh viễn loại món (Kiểm tra ràng buộc món ăn).
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteLoaiMon(string id)
         {
@@ -111,7 +111,7 @@ namespace RestaurantCRM.API.Controllers
             _service.Remove(loaiMon);
             await _service.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { Message = "Đã xóa vĩnh viễn loại món khỏi hệ thống." });
         }
 
         private bool LoaiMonExists(string id)

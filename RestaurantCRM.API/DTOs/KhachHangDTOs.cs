@@ -42,4 +42,9 @@ namespace RestaurantCRM.API.DTOs
     {
         public string TrangThai { get; set; } = null!; // "Active" hoặc "Locked"
     }
+
+    public class AdminDoiMatKhauKhachHangRequest
+    {
+        public string MatKhauMoi { get; set; } = string.Empty;
+    }
 }

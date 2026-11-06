@@ -182,34 +182,32 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new { message = "Đổi mật khẩu thành công." });
         }
 
-        // DELETE: api/AdminNhanVien/{id} - Vô hiệu hóa hoặc xóa tài khoản
+        // DELETE: api/AdminNhanVien/{id} - Vô hiệu hóa / Tạm khóa tài khoản nhân viên (Bảo lưu dữ liệu lịch sử)
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteNhanVien(string id)
         {
             var entity = await _service.Query<NhanVien>()
-                .Include(n => n.HoaDon)
-                .Include(n => n.PhieuNhapHang)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == id);
 
             if (entity == null) return NotFound("Không tìm thấy nhân viên.");
 
             if (entity.TenDangNhap?.ToLower() == "admin")
             {
-                return BadRequest("Không thể xóa tài khoản admin quản trị tối cao của hệ thống.");
+                return BadRequest("Không thể khóa tài khoản admin quản trị tối cao của hệ thống.");
             }
 
-            // Nếu đã phát sinh hóa đơn hoặc phiếu nhập, chuyển trạng thái Inactive thay vì xóa cứng
-            if (entity.HoaDon.Count > 0 || entity.PhieuNhapHang.Count > 0)
+            // Nếu tài khoản đã ở trạng thái Inactive (tạm khóa)
+            if (string.Equals(entity.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase))
             {
-                entity.TrangThai = "Inactive";
-                _service.Update(entity);
-                await _service.SaveChangesAsync();
-                return Ok(new { message = "Tài khoản đã có dữ liệu giao dịch hóa đơn/phiếu nhập, hệ thống đã tự động chuyển sang trạng thái Ngừng hoạt động (Inactive)." });
+                return BadRequest("Tài khoản nhân viên này đã ở trạng thái tạm khóa (Inactive). Hệ thống bảo lưu toàn bộ dữ liệu lịch sử và không xóa khỏi cơ sở dữ liệu.");
             }
 
-            _service.Remove(entity);
+            // Thực hiện vô hiệu hóa: chuyển trạng thái sang Inactive, khóa quyền truy cập hệ thống
+            entity.TrangThai = "Inactive";
+            _service.Update(entity);
             await _service.SaveChangesAsync();
-            return Ok(new { message = "Đã xóa tài khoản nhân viên thành công." });
+
+            return Ok(new { message = "Đã tạm khóa tài khoản nhân viên thành công (chuyển sang trạng thái Inactive, vô hiệu hóa quyền đăng nhập)." });
         }
     }
 }

@@ -20,6 +20,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
         private readonly BindingSource _bindingSource = new BindingSource();
         private List<NguyenLieuDto> _allNguyenLieu = new List<NguyenLieuDto>();
         private bool _isLoading = false;
+        private readonly Button _btnXoa;
 
         public NguyenLieuForm()
         {
@@ -38,6 +39,19 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _nguyenLieuService = new NguyenLieuService(httpClient);
 
+            _btnXoa = new Button
+            {
+                Text = "🗑️ Xóa Nguyên Liệu",
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Height = 36,
+                BackColor = Color.FromArgb(254, 242, 242),
+                ForeColor = Color.FromArgb(220, 38, 38),
+                FlatStyle = FlatStyle.Flat
+            };
+            _btnXoa.FlatAppearance.BorderColor = Color.FromArgb(254, 202, 202);
+            _btnXoa.Click += btnXoa_Click;
+
             cboBoLoc.SelectedIndex = 0;
             SetupContextMenu();
 
@@ -55,7 +69,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 Filters = new[] { new FilterSpec(cboBoLoc, lblBoLoc) },
                 Grid = dgvNguyenLieu,
                 SecondaryActions = new[] { btnSua },
-                DangerActions = new[] { btnNgungNhap }
+                DangerActions = new[] { btnNgungNhap, _btnXoa }
             });
         }
 
@@ -324,6 +338,48 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 return dgvNguyenLieu.SelectedRows[0].DataBoundItem as NguyenLieuDto;
             }
             return null;
+        }
+
+        private async void btnXoa_Click(object sender, EventArgs e)
+        {
+            var selected = GetSelected();
+            if (selected == null)
+            {
+                MessageBox.Show("Vui lòng chọn một nguyên vật liệu trong danh sách để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Xác nhận bước 1
+            string msg1 = $"Bạn có chắc chắn muốn xóa nguyên vật liệu \"{selected.TenNguyenLieu}\" ({selected.MaNguyenLieu}) không?\n\n"
+                + "Lưu ý: Nếu nguyên liệu đã phát sinh lịch sử nhập kho hoặc nằm trong công thức món, hệ thống sẽ tự động chuyển sang trạng thái 'Ngừng sử dụng' để bảo toàn dữ liệu tồn kho.";
+            if (MessageBox.Show(msg1, "Xác nhận xóa nguyên liệu (Bước 1/2)", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            // Xác nhận bước 2 (Double confirmation)
+            string msg2 = $"⚠️ XÁC NHẬN LẦN CUỐI:\n"
+                + $"Nếu nguyên liệu \"{selected.TenNguyenLieu}\" chưa từng phát sinh dữ liệu nhập hay công thức, nguyên liệu sẽ bị XÓA VĨNH VIỄN khỏi hệ thống và không thể hoàn tác!\n\n"
+                + "Bạn có chắc chắn muốn tiếp tục thực hiện không?";
+            if (MessageBox.Show(msg2, "Cảnh báo xóa vĩnh viễn (Bước 2/2)", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            _btnXoa.Enabled = false;
+            try
+            {
+                var result = await _nguyenLieuService.DeleteAsync(selected.MaNguyenLieu);
+                if (result.Success)
+                {
+                    MessageBox.Show(result.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    await LoadData();
+                }
+                else
+                {
+                    MessageBox.Show(result.Message, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            finally
+            {
+                _btnXoa.Enabled = true;
+            }
         }
     }
 }

@@ -239,7 +239,7 @@ namespace RestaurantCRM.API.Controllers
 
             _service.Remove(entity);
             await _service.SaveChangesAsync();
-            return Ok(new { message = "Đã xóa vai trò thành công." });
+            return Ok(new { message = "Đã xóa vĩnh viễn vai trò khỏi hệ thống." });
         }
     }
 }

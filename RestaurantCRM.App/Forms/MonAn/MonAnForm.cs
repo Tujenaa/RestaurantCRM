@@ -21,6 +21,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         private List<LoaiMonDto> _allLoaiMon = new List<LoaiMonDto>();
         private readonly Timer _refreshTimer;
         private bool _isRefreshing = false;
+        private readonly Button _btnXoaMon;
 
         public MonAnForm()
         {
@@ -29,6 +30,19 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _monAnService = new MonAnService(httpClient);
             _loaiMonService = new LoaiMonService(httpClient);
+
+            _btnXoaMon = new Button
+            {
+                Text = "🗑️ Xóa Món",
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Height = 36,
+                BackColor = Color.FromArgb(254, 242, 242),
+                ForeColor = Color.FromArgb(220, 38, 38),
+                FlatStyle = FlatStyle.Flat
+            };
+            _btnXoaMon.FlatAppearance.BorderColor = Color.FromArgb(254, 202, 202);
+            _btnXoaMon.Click += btnXoaMon_Click;
 
             SetupKpiCards();
             SetupSearchAndFilter();
@@ -49,7 +63,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 CountLabel = lblDemSoLuong,
                 Grid = dgvMonAn,
                 SecondaryActions = new[] { btnSua },
-                DangerActions = new[] { btnNgungKinhDoanh },
+                DangerActions = new[] { btnNgungKinhDoanh, _btnXoaMon },
                 FooterInfo = lblSelectionInfo
             });
 
@@ -509,6 +523,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 {
                     btnSua.Enabled = true;
                     btnNgungKinhDoanh.Enabled = true;
+                    if (_btnXoaMon != null) _btnXoaMon.Enabled = true;
 
                     bool isNgungKinhDoanh = monAn.TrangThaiRaw == "Discontinued" || monAn.TrangThaiRaw == "Inactive";
                     if (isNgungKinhDoanh)
@@ -534,6 +549,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
 
             btnSua.Enabled = false;
             btnNgungKinhDoanh.Enabled = false;
+            if (_btnXoaMon != null) _btnXoaMon.Enabled = false;
             btnNgungKinhDoanh.Text = "🛑 Ngừng Kinh Doanh";
             btnNgungKinhDoanh.BackColor = Color.FromArgb(241, 245, 249);
             btnNgungKinhDoanh.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
@@ -640,6 +656,50 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 form.ShowDialog(this);
                 await LoadLoaiMon();
                 await LoadMonAn();
+            }
+        }
+
+        private async void btnXoaMon_Click(object sender, EventArgs e)
+        {
+            if (dgvMonAn.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn món ăn cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var monAn = (MonAnDto)dgvMonAn.SelectedRows[0].DataBoundItem;
+            if (monAn == null) return;
+
+            // Xác nhận bước 1
+            string msg1 = $"Bạn có chắc chắn muốn xóa món ăn \"{monAn.TenMonAn}\" ({monAn.MaMonAn}) không?\n\n"
+                + "Lưu ý: Nếu món đã phát sinh hóa đơn bán hàng hoặc đánh giá, hệ thống sẽ tự động chuyển sang trạng thái 'Ngừng kinh doanh' để bảo toàn dữ liệu lịch sử.";
+            if (MessageBox.Show(msg1, "Xác nhận xóa món ăn (Bước 1/2)", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            // Xác nhận bước 2 (Double confirmation)
+            string msg2 = $"⚠️ XÁC NHẬN LẦN CUỐI:\n"
+                + $"Nếu món ăn \"{monAn.TenMonAn}\" chưa từng phát sinh dữ liệu, món sẽ bị XÓA VĨNH VIỄN khỏi hệ thống và không thể hoàn tác!\n\n"
+                + "Bạn có chắc chắn muốn tiếp tục thực hiện không?";
+            if (MessageBox.Show(msg2, "Cảnh báo xóa vĩnh viễn (Bước 2/2)", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            _btnXoaMon.Enabled = false;
+            try
+            {
+                var result = await _monAnService.DeleteAsync(monAn.MaMonAn);
+                if (result.Success)
+                {
+                    MessageBox.Show(result.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    await LoadMonAn();
+                }
+                else
+                {
+                    MessageBox.Show(result.Message, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            finally
+            {
+                _btnXoaMon.Enabled = true;
             }
         }
     }

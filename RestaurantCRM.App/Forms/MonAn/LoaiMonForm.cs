@@ -375,26 +375,35 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 return;
             }
 
-            var confirm = MessageBox.Show(
+            // Xác nhận bước 1
+            var confirm1 = MessageBox.Show(
                 $"Bạn có chắc chắn muốn xóa loại món \"{_selectedLoaiMon.TenLoaiMon}\" ({_selectedLoaiMon.MaLoaiMon}) không?",
-                "Xác nhận xóa",
+                "Xác nhận xóa loại món (Bước 1/2)",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
-            if (confirm == DialogResult.Yes)
+            if (confirm1 != DialogResult.Yes) return;
+
+            // Xác nhận bước 2 (Double confirmation)
+            var confirm2 = MessageBox.Show(
+                $"⚠️ XÁC NHẬN LẦN CUỐI:\nThao tác này sẽ XÓA VĨNH VIỄN loại món \"{_selectedLoaiMon.TenLoaiMon}\" khỏi cơ sở dữ liệu và KHÔNG THỂ HOÀN TÁC!\n\nBạn có CHẮC CHẮN muốn xóa vĩnh viễn không?",
+                "Cảnh báo xóa vĩnh viễn (Bước 2/2)",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (confirm2 != DialogResult.Yes) return;
+
+            var result = await _loaiMonService.DeleteAsync(_selectedLoaiMon.MaLoaiMon);
+            if (result.Success)
             {
-                var result = await _loaiMonService.DeleteAsync(_selectedLoaiMon.MaLoaiMon);
-                if (result.Success)
-                {
-                    MessageBox.Show(result.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    ClearInput();
-                    await LoadData();
-                }
-                else
-                {
-                    // Hiển thị thông báo chi tiết từ API Server (ví dụ kiểm tra ràng buộc foreign key)
-                    MessageBox.Show(result.Message, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show(result.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ClearInput();
+                await LoadData();
+            }
+            else
+            {
+                // Hiển thị thông báo chi tiết từ API Server (ví dụ kiểm tra ràng buộc foreign key)
+                MessageBox.Show(result.Message, "Không thể xóa", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

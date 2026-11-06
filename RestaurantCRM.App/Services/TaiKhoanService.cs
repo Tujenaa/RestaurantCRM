@@ -142,8 +142,8 @@ namespace RestaurantCRM.AdminApp.Services
             {
                 var resp = await _http.DeleteAsync($"/api/AdminNhanVien/{maNV}");
                 var msg = await resp.Content.ReadAsStringAsync();
-                if (resp.IsSuccessStatusCode) return (true, "Xóa tài khoản thành công.");
-                return (false, string.IsNullOrWhiteSpace(msg) ? "Lỗi khi xóa" : msg);
+                if (resp.IsSuccessStatusCode) return (true, "Khóa tài khoản thành công.");
+                return (false, string.IsNullOrWhiteSpace(msg) ? "Lỗi khóa tài khoản" : msg);
             }
             catch (Exception ex)
             {

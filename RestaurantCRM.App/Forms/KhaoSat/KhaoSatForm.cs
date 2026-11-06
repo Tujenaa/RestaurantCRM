@@ -256,14 +256,40 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             if (k == null) return;
             if (k.SoNguoiTraLoi > 0)
             {
-                Notify.Warn(this, "Khảo sát \"" + k.TieuDe + "\" đã có " + k.SoNguoiTraLoi + " phiếu trả lời nên không thể xóa (cần giữ dữ liệu thống kê).\nBạn có thể đóng khảo sát thay thế.", "Không thể xóa");
+                if (k.TrangThai == KhaoSatConst.DaDong)
+                {
+                    Notify.Info(this, "Khảo sát \"" + k.TieuDe + "\" đã ở trạng thái Đóng và có " + k.SoNguoiTraLoi + " phiếu trả lời. Hệ thống bảo lưu toàn bộ dữ liệu để phục vụ thống kê báo cáo.");
+                    return;
+                }
+
+                string msgDong = "Khảo sát \"" + k.TieuDe + "\" đã có " + k.SoNguoiTraLoi + " phiếu trả lời.\n\n"
+                    + "Để bảo toàn dữ liệu thống kê, hệ thống sẽ thực hiện Đóng khảo sát.\n"
+                    + "Bạn có muốn Đóng khảo sát này lại không?";
+                if (!Notify.Confirm(this, msgDong, "Đóng khảo sát", true)) return;
+
+                _btnXoa.Enabled = false;
+                var rDong = await _service.DeleteAsync(k.MaKhaoSat);
+                if (IsDisposed) return;
+                if (!rDong.Success) { _btnXoa.Enabled = true; Notify.Error(this, rDong.Message); return; }
+                Notify.Info(this, rDong.Message ?? "Đã đóng khảo sát thành công.");
+                await LoadDataAsync(k.MaKhaoSat);
                 return;
             }
-            if (!Notify.Confirm(this, "Xóa khảo sát \"" + k.TieuDe + "\" cùng toàn bộ câu hỏi và tùy chọn?\nThao tác này không hoàn tác được.", "Xóa khảo sát", true)) return;
+
+            // Bước 1
+            if (!Notify.Confirm(this, "Bạn có chắc chắn muốn xóa khảo sát \"" + k.TieuDe + "\" cùng toàn bộ câu hỏi và tùy chọn?", "Xác nhận xóa khảo sát (Bước 1/2)", false)) return;
+
+            // Bước 2 (Double confirmation)
+            string msgHard2 = "⚠️ XÁC NHẬN LẦN CUỐI:\n"
+                + "Thao tác này sẽ XÓA VĨNH VIỄN khảo sát \"" + k.TieuDe + "\" khỏi cơ sở dữ liệu và KHÔNG THỂ HOÀN TÁC!\n\n"
+                + "Bạn có CHẮC CHẮN muốn xóa vĩnh viễn không?";
+            if (!Notify.Confirm(this, msgHard2, "Cảnh báo xóa vĩnh viễn (Bước 2/2)", true)) return;
+
             _btnXoa.Enabled = false;
             var r = await _service.DeleteAsync(k.MaKhaoSat);
             if (IsDisposed) return;
             if (!r.Success) { _btnXoa.Enabled = true; Notify.Error(this, r.Message); return; }
+            Notify.Info(this, r.Message ?? "Đã xóa vĩnh viễn khảo sát.");
             await LoadDataAsync();
         }
     }
