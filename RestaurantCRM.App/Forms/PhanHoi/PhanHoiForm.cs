@@ -35,6 +35,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private readonly DataGridView _grid = new DataGridView();
         private readonly TextBox _txtSearch = new TextBox();
         private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboSoSao = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private const string SaoTatCa = "Tất cả", SaoTieuCuc = "Từ 3 sao trở xuống";
         private readonly Label _lblCount = new Label();
         private readonly Label _lblFooter = new Label();
         private readonly Button _btnPhanTich = new Button { Text = "Phân tích món" };
@@ -94,6 +96,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Cần chú ý", "Chưa xử lý", "Đã xử lý", "Đã ẩn" });
             _cboTrangThai.SelectedIndex = 0;
+            _cboSoSao.Items.AddRange(new object[] { SaoTatCa, "5 sao", "4 sao", "3 sao", "2 sao", "1 sao", SaoTieuCuc });
+            _cboSoSao.SelectedIndex = 0;
 
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -103,7 +107,11 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 KpiLabels = new[] { _kTong, _kCho, _kDiem, _kAn },
                 Search = _txtSearch,
                 SearchPlaceholder = "Tìm theo mã, khách hàng, món ăn, nội dung...",
-                Filters = new[] { new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }) },
+                Filters = new[]
+                {
+                    new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
+                    new FilterSpec(_cboSoSao, new Label { Text = "Số sao" })
+                },
                 CountLabel = _lblCount,
                 Grid = _grid,
                 SecondaryActions = new[] { _btnDaXem, _btnAnHien },
@@ -126,6 +134,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboSoSao.SelectedIndexChanged += (s, e) => ApplyFilter();
             _grid.SelectionChanged += (s, e) => ShowDetail(SelectedDto());
             _grid.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) { e.Handled = true; XoaPhanHoi(); } };
             // Sao luôn màu vàng (UiStyler đặt lại màu chữ chung của bảng nên phải gán khi định dạng ô)
@@ -361,12 +370,17 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             if (chonMa == null) chonMa = SelectedDto()?.MaDanhGia;
             string q = (_txtSearch.Text ?? "").Trim().ToLowerInvariant();
             string tt = _cboTrangThai.SelectedItem as string ?? "Tất cả";
+            string locSao = _cboSoSao.SelectedItem as string ?? SaoTatCa;
+            int saoChinhXac = 0;
+            if (locSao != SaoTatCa && locSao != SaoTieuCuc) int.TryParse(locSao.Substring(0, 1), out saoChinhXac);
 
             var list = _all.Where(d =>
             {
                 if (tt == "Đã ẩn") { if (d.HienThi) return false; }
                 else if (tt == "Cần chú ý") { if (!d.CanChuY) return false; }
                 else if (tt != "Tất cả" && d.TrangThaiHienThi != tt) return false;
+                if (locSao == SaoTieuCuc) { if (!d.SoSao.HasValue || d.SoSao.Value > 3) return false; }
+                else if (saoChinhXac > 0 && (d.SoSao ?? 0) != saoChinhXac) return false;
                 if (q.Length == 0) return true;
                 return Has(d.MaDanhGia, q) || Has(d.TenKhachHang, q) || Has(d.TenMon, q) || Has(d.NoiDung, q) || Has(d.SoDienThoai, q)
                     || (d.ChiTietMon != null && d.ChiTietMon.Any(m => Has(m.TenMon, q) || Has(m.NoiDung, q)));
