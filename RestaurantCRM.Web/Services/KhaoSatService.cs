@@ -67,10 +67,12 @@ public class KhaoSatService(IHttpClientFactory factory)
         return await res.Content.ReadFromJsonAsync<List<LichSuKhaoSatItem>>(Json) ?? new();
     }
 
-    public async Task<KhaoSatViewModel?> GetByIdAsync(string id)
+    public async Task<KhaoSatViewModel?> GetByIdAsync(string id, string? maKhachHang = null)
     {
         var client = factory.CreateClient("ApiClient");
-        var res = await client.GetAsync($"/api/KhaoSat/{Uri.EscapeDataString(id)}");
+        var url = $"/api/KhaoSat/{Uri.EscapeDataString(id)}"
+                  + (string.IsNullOrEmpty(maKhachHang) ? "" : $"?maKhachHang={Uri.EscapeDataString(maKhachHang)}");
+        var res = await client.GetAsync(url);
         if (res.StatusCode == HttpStatusCode.NotFound) return null;
         res.EnsureSuccessStatusCode();
         return await res.Content.ReadFromJsonAsync<KhaoSatViewModel>(Json);

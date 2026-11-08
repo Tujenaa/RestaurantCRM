@@ -18,16 +18,26 @@ namespace RestaurantCRM.API.Controllers
             _service = service;
         }
 
-        // GET: api/KhaoSat/HienTai - Lấy bài khảo sát đang được mở
+        /// <summary>
+        /// Khách được tham gia khi khảo sát không giới hạn đối tượng (công khai)
+        /// hoặc khách có trong danh sách DOI_TUONG_KHAO_SAT của khảo sát.
+        /// </summary>
+        private static bool DuocThamGia(KhaoSat ks, string? maKhachHang) =>
+            !ks.DoiTuongKhaoSat.Any() ||
+            (!string.IsNullOrEmpty(maKhachHang) && ks.DoiTuongKhaoSat.Any(d => d.MaKhachHang == maKhachHang));
+
+        // GET: api/KhaoSat/HienTai?maKhachHang= - Lấy bài khảo sát đang được mở (mà khách được tham gia)
         [HttpGet("HienTai")]
-        public async Task<IActionResult> GetKhaoSatHienTai()
+        public async Task<IActionResult> GetKhaoSatHienTai([FromQuery] string? maKhachHang)
         {
-            var khaoSat = await _service.Query<KhaoSat>()
+            var dsMo = await _service.Query<KhaoSat>()
                 .Include(k => k.CauHoiKhaoSat)
                     .ThenInclude(c => c.TuyChonCauHoi)
+                .Include(k => k.DoiTuongKhaoSat)
                 .Where(k => k.TrangThai == "Open")
                 .OrderByDescending(k => k.NgayTao)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
+            var khaoSat = dsMo.FirstOrDefault(k => DuocThamGia(k, maKhachHang));
 
             if (khaoSat == null)
             {
@@ -64,10 +74,15 @@ namespace RestaurantCRM.API.Controllers
             }
 
             var khaoSat = await _service.Query<KhaoSat>()
+                .Include(k => k.DoiTuongKhaoSat)
                 .FirstOrDefaultAsync(k => k.MaKhaoSat == request.MaKhaoSat && k.TrangThai == "Open");
             if (khaoSat == null)
             {
                 return BadRequest("Khảo sát không tồn tại hoặc đã đóng.");
+            }
+            if (!DuocThamGia(khaoSat, request.MaKhachHang))
+            {
+                return BadRequest("Bạn không thuộc đối tượng của khảo sát này.");
             }
 
             var daGui = await _service.Query<PhieuTraLoi>()
@@ -100,8 +115,7 @@ namespace RestaurantCRM.API.Controllers
             }
 
             // Đánh dấu hoàn thành đối tượng khảo sát nếu khách hàng có trong danh sách
-            var doiTuong = await _service.Query<DoiTuongKhaoSat>()
-                .FirstOrDefaultAsync(d => d.MaKhaoSat == request.MaKhaoSat && d.MaKhachHang == request.MaKhachHang);
+            var doiTuong = khaoSat.DoiTuongKhaoSat.FirstOrDefault(d => d.MaKhachHang == request.MaKhachHang);
             if (doiTuong != null)
             {
                 doiTuong.DaHoanThanh = true;
@@ -115,11 +129,14 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("DanhSach")]
         public async Task<IActionResult> GetDanhSach([FromQuery] string? maKhachHang)
         {
-            var dsKhaoSat = await _service.Query<KhaoSat>()
+            var dsKhaoSat = (await _service.Query<KhaoSat>()
                 .Include(k => k.CauHoiKhaoSat)
+                .Include(k => k.DoiTuongKhaoSat)
                 .Where(k => k.TrangThai == "Open")
                 .OrderByDescending(k => k.NgayTao)
-                .ToListAsync();
+                .ToListAsync())
+                .Where(k => DuocThamGia(k, maKhachHang))
+                .ToList();
 
             var daTraLoi = new HashSet<string>();
             if (!string.IsNullOrEmpty(maKhachHang))
@@ -160,15 +177,17 @@ namespace RestaurantCRM.API.Controllers
                 NgayGui = p.NgayTraLoi
             }));
         }
-        // GET: api/KhaoSat/{id}
+        // GET: api/KhaoSat/{id}?maKhachHang=
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        public async Task<IActionResult> GetById(string id, [FromQuery] string? maKhachHang)
         {
             var khaoSat = await _service.Query<KhaoSat>()
                 .Include(k => k.CauHoiKhaoSat).ThenInclude(c => c.TuyChonCauHoi)
+                .Include(k => k.DoiTuongKhaoSat)
                 .FirstOrDefaultAsync(k => k.MaKhaoSat == id && k.TrangThai == "Open");
 
-            if (khaoSat == null) return NotFound("Khảo sát không tồn tại hoặc đã đóng.");
+            if (khaoSat == null || !DuocThamGia(khaoSat, maKhachHang))
+                return NotFound("Khảo sát không tồn tại, đã đóng hoặc bạn không thuộc đối tượng khảo sát.");
 
             return Ok(new
             {

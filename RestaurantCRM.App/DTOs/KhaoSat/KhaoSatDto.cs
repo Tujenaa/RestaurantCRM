@@ -30,6 +30,8 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         }
 
         public static string TenLoai(string loai) { return LaTracNghiem(loai) ? "Trắc nghiệm" : "Tự luận"; }
+
+        public static string TenDoiTuong(int soDoiTuong) { return soDoiTuong > 0 ? soDoiTuong.ToString("N0") + " khách" : "Tất cả khách"; }
     }
 
     /// <summary>Một dòng khảo sát (GET api/AdminKhaoSat).</summary>
@@ -43,8 +45,11 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         public string NguoiTao { get; set; }
         public int SoCauHoi { get; set; }
         public int SoNguoiTraLoi { get; set; }
+        /// <summary>Số khách được mời; 0 = tất cả khách hàng.</summary>
+        public int SoDoiTuong { get; set; }
 
         public string TrangThaiHienThi { get { return KhaoSatConst.TenTrangThai(TrangThai); } }
+        public string DoiTuongHienThi { get { return KhaoSatConst.TenDoiTuong(SoDoiTuong); } }
         public bool DangMo { get { return TrangThaiHienThi == "Đang mở"; } }
         public bool DaDong { get { return TrangThaiHienThi == "Đã đóng"; } }
         public bool LaNhap { get { return TrangThaiHienThi == "Nháp"; } }
@@ -59,9 +64,26 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         public DateTime? NgayTao { get; set; }
         public string MaNhanVien { get; set; }
         public int SoNguoiTraLoi { get; set; }
+        public int SoDoiTuong { get; set; }
         public List<CauHoiDto> CauHoi { get; set; } = new List<CauHoiDto>();
 
         public string TrangThaiHienThi { get { return KhaoSatConst.TenTrangThai(TrangThai); } }
+        public string DoiTuongHienThi { get { return KhaoSatConst.TenDoiTuong(SoDoiTuong); } }
+    }
+
+    /// <summary>Một khách hàng được mời tham gia khảo sát (GET api/AdminKhaoSat/{id}/DoiTuong).</summary>
+    public class DoiTuongKhaoSatDto
+    {
+        public string MaKhachHang { get; set; }
+        public string HoTen { get; set; }
+        public string SoDienThoai { get; set; }
+        public bool DaHoanThanh { get; set; }
+    }
+
+    /// <summary>PUT api/AdminKhaoSat/{id}/DoiTuong — danh sách rỗng = tất cả khách hàng.</summary>
+    public class DoiTuongUpdateRequest
+    {
+        public List<string> MaKhachHangs { get; set; } = new List<string>();
     }
 
     public class CauHoiDto

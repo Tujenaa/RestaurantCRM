@@ -31,6 +31,12 @@ namespace RestaurantCRM.API.DTOs
         public List<string> TuyChons { get; set; } = new List<string>();
     }
 
+    // ── Cập nhật đối tượng khảo sát (rỗng = tất cả khách hàng) ──────────────
+    public class DoiTuongUpdateRequest
+    {
+        public List<string> MaKhachHangs { get; set; } = new List<string>();
+    }
+
     // ── Thêm / Sửa tùy chọn câu hỏi ─────────────────────────────────────────
     public class TuyChonUpsertRequest
     {
