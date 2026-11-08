@@ -96,7 +96,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                     <div>
                         <strong style="font-size:14.5px; color:var(--ink); display:block;">Đánh giá món ăn trong đơn</strong>
-                        <small style="color:var(--muted); font-size:12.5px;">Chấm điểm sao và nhận xét chi tiết từng món (không bắt buộc)</small>
+                        <small style="color:var(--muted); font-size:12.5px;">Mặc định theo số sao chung — bấm sao của món để chấm riêng (không bắt buộc)</small>
                     </div>
                     <span style="font-size:12px; font-weight:700; color:var(--muted);">@dishes.Count món</span>
                 </div>
@@ -124,7 +124,7 @@
 
                                 <!-- Rating sao từng món -->
                                 <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                                    <div class="dish-stars" data-index="@i" style="display:inline-flex; gap:2px; font-size:22px; cursor:pointer;">
+                                    <div class="dish-stars" data-index="@i" data-manual="@(item.DanhGia != Model.DanhGia ? "true" : "false")" style="display:inline-flex; gap:2px; font-size:22px; cursor:pointer;">
                                         @for (var s = 1; s <= 5; s++)
                                         {
                                             <button type="button" class="dish-star-btn @(s <= item.DanhGia ? "on" : "")" data-dish-index="@i" data-rating="@s" style="background:none; border:none; cursor:pointer; font-size:22px; line-height:1; padding:0; color:@(s <= item.DanhGia ? "#f59e0b" : "#d1d5db");">★</button>
@@ -174,6 +174,29 @@
         const hiddenInput = document.getElementById('DanhGia');
         const label = document.getElementById('ratingLabel');
 
+        // Cập nhật sao, nhãn và input ẩn của một món
+        function setDishRating(container, rating) {
+            const dishIndex = container.getAttribute('data-index');
+            const valInput = document.getElementById('dish_rating_val_' + dishIndex);
+            const lbl = document.getElementById('dish_rating_lbl_' + dishIndex);
+            if (valInput) valInput.value = rating;
+            if (lbl) lbl.textContent = rating + '★';
+            container.querySelectorAll('.dish-star-btn').forEach((b, idx) => {
+                if (idx < rating) {
+                    b.style.color = '#f59e0b';
+                    b.classList.add('on');
+                } else {
+                    b.style.color = '#d1d5db';
+                    b.classList.remove('on');
+                }
+            });
+        }
+
+        // Món chưa được chấm tay sẽ đi theo số sao chung
+        function syncDishesWithOrder(val) {
+            document.querySelectorAll('.dish-stars[data-manual="false"]').forEach(c => setDishRating(c, val));
+        }
+
         stars.forEach(star => {
             star.addEventListener('click', function () {
                 const val = parseInt(this.getAttribute('data-rating'));
@@ -190,34 +213,22 @@
                         s.classList.remove('on');
                     }
                 });
+                syncDishesWithOrder(val);
             });
         });
 
-        // Event listener cho từng món
+        // Bấm sao của món → món đó được chấm riêng, không đồng bộ theo sao chung nữa
         document.querySelectorAll('.dish-star-btn').forEach(btn => {
             btn.addEventListener('click', function () {
-                const dishIndex = this.getAttribute('data-dish-index');
-                const rating = parseInt(this.getAttribute('data-rating'));
-                const valInput = document.getElementById('dish_rating_val_' + dishIndex);
-                const lbl = document.getElementById('dish_rating_lbl_' + dishIndex);
-
-                if (valInput) valInput.value = rating;
-                if (lbl) lbl.textContent = rating + '★';
-
-                const parentContainer = this.closest('.dish-stars');
-                if (parentContainer) {
-                    const siblingBtns = parentContainer.querySelectorAll('.dish-star-btn');
-                    siblingBtns.forEach((b, idx) => {
-                        if (idx < rating) {
-                            b.style.color = '#f59e0b';
-                            b.classList.add('on');
-                        } else {
-                            b.style.color = '#d1d5db';
-                            b.classList.remove('on');
-                        }
-                    });
-                }
+                const container = this.closest('.dish-stars');
+                if (!container) return;
+                container.setAttribute('data-manual', 'true');
+                setDishRating(container, parseInt(this.getAttribute('data-rating')));
             });
         });
+
+        // Khi trang tải (kể cả hiển thị lại sau lỗi): các món đi theo sao chung hiện tại
+        const initialRating = parseInt(hiddenInput.value);
+        if (initialRating >= 1 && initialRating <= 5) syncDishesWithOrder(initialRating);
     </script>
 }

@@ -34,6 +34,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly Button _btnLamMoi = new Button { Text = "Làm mới" };
         private readonly Button _btnSua = new Button { Text = "Sửa & câu hỏi" };
         private readonly Button _btnXemTruoc = new Button { Text = "Xem trước" };
+        private readonly Button _btnDoiTuong = new Button { Text = "Đối tượng" };
         private readonly Button _btnMoDong = new Button { Text = "Mở khảo sát" };
         private readonly Button _btnThongKe = new Button { Text = "Thống kê" };
         private readonly Button _btnXoa = new Button { Text = "Xóa" };
@@ -62,7 +63,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 Filters = new[] { new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }) },
                 CountLabel = _lblCount,
                 Grid = _grid,
-                SecondaryActions = new[] { _btnSua, _btnXemTruoc, _btnMoDong, _btnThongKe },
+                SecondaryActions = new[] { _btnSua, _btnDoiTuong, _btnXemTruoc, _btnMoDong, _btnThongKe },
                 DangerActions = new[] { _btnXoa },
                 FooterInfo = _lblFooter
             });
@@ -81,6 +82,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _btnLamMoi.Click += async (s, e) => await LoadDataAsync();
             _btnSua.Click += (s, e) => Sua();
             _btnXemTruoc.Click += (s, e) => XemTruoc();
+            _btnDoiTuong.Click += (s, e) => DoiTuong();
             _btnMoDong.Click += (s, e) => MoDong();
             _btnThongKe.Click += (s, e) => ThongKe();
             _btnXoa.Click += (s, e) => Xoa();
@@ -100,6 +102,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             AddCol("TieuDe", "Tiêu đề", 320);
             AddCol("SoCauHoi", "Số câu hỏi", 90, DataGridViewContentAlignment.MiddleRight);
             AddCol("SoPhieu", "Phiếu trả lời", 100, DataGridViewContentAlignment.MiddleRight);
+            AddCol("DoiTuong", "Đối tượng", 110);
             AddCol("NguoiTao", "Người tạo", 150);
             AddCol("NgayTao", "Ngày tạo", 100).DefaultCellStyle.Format = "dd/MM/yyyy";
             AddCol("TrangThai", "Trạng thái", 110);
@@ -158,7 +161,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             int chon = -1;
             foreach (var k in list)
             {
-                int i = _grid.Rows.Add(k.MaKhaoSat, k.TieuDe, k.SoCauHoi, k.SoNguoiTraLoi,
+                int i = _grid.Rows.Add(k.MaKhaoSat, k.TieuDe, k.SoCauHoi, k.SoNguoiTraLoi, k.DoiTuongHienThi,
                     string.IsNullOrWhiteSpace(k.NguoiTao) ? (k.MaNhanVien ?? "—") : k.NguoiTao, (object)k.NgayTao, k.TrangThaiHienThi);
                 _grid.Rows[i].Tag = k;
                 if (k.MaKhaoSat == chonMa) chon = i;
@@ -184,10 +187,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         {
             var k = SelectedDto();
             bool has = k != null;
-            foreach (var b in new[] { _btnSua, _btnXemTruoc, _btnMoDong, _btnThongKe, _btnXoa }) b.Enabled = has;
+            foreach (var b in new[] { _btnSua, _btnDoiTuong, _btnXemTruoc, _btnMoDong, _btnThongKe, _btnXoa }) b.Enabled = has;
             _btnMoDong.Text = has && k.DangMo ? "Đóng khảo sát" : "Mở khảo sát";
             _lblFooter.Text = has
-                ? k.TieuDe + " · " + k.SoCauHoi + " câu hỏi · " + k.SoNguoiTraLoi + " phiếu"
+                ? k.TieuDe + " · " + k.SoCauHoi + " câu hỏi · " + k.SoNguoiTraLoi + " phiếu · Đối tượng: " + k.DoiTuongHienThi.ToLowerInvariant()
                 : "Chọn một khảo sát để thao tác";
         }
 
@@ -226,13 +229,27 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             catch (ApiException ex) { Notify.Error(this, ex.Message); }
         }
 
+        private async void DoiTuong()
+        {
+            var k = SelectedDto();
+            if (k == null) return;
+            using (var dlg = new DoiTuongKhaoSatDialog(k.MaKhaoSat, k.TieuDe, k.DaDong))
+            {
+                Notify.ShowDialog(dlg, this);
+                if (dlg.DataChanged) await LoadDataAsync(k.MaKhaoSat);
+            }
+        }
+
         private async void MoDong()
         {
             var k = SelectedDto();
             if (k == null) return;
             bool mo = !k.DangMo;
             string hoi = mo
-                ? "Mở khảo sát \"" + k.TieuDe + "\"?\nKhách hàng sẽ thấy và trả lời được khảo sát trên website."
+                ? "Mở khảo sát \"" + k.TieuDe + "\"?\n"
+                  + (k.SoDoiTuong > 0
+                      ? k.SoDoiTuong + " khách hàng được chọn sẽ thấy và trả lời được khảo sát trên website."
+                      : "Tất cả khách hàng sẽ thấy và trả lời được khảo sát trên website.")
                 : "Đóng khảo sát \"" + k.TieuDe + "\"?\nKhách hàng sẽ không gửi thêm câu trả lời được. Kết quả đã thu vẫn được giữ.";
             if (!Notify.Confirm(this, hoi, mo ? "Mở khảo sát" : "Đóng khảo sát")) return;
 

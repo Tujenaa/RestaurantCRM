@@ -63,7 +63,8 @@ namespace RestaurantCRM.API.Controllers
                     k.MaNhanVien,
                     NguoiTao = k.MaNhanVienNavigation != null ? k.MaNhanVienNavigation.HoTen : null,
                     SoCauHoi = k.CauHoiKhaoSat.Count(),
-                    SoNguoiTraLoi = k.PhieuTraLoi.Count()
+                    SoNguoiTraLoi = k.PhieuTraLoi.Count(),
+                    SoDoiTuong = k.DoiTuongKhaoSat.Count()
                 })
                 .ToListAsync();
 
@@ -85,6 +86,7 @@ namespace RestaurantCRM.API.Controllers
             }
 
             var soPhieu = await _service.Query<PhieuTraLoi>().CountAsync(p => p.MaKhaoSat == id);
+            var soDoiTuongKs = await _service.Query<DoiTuongKhaoSat>().CountAsync(d => d.MaKhaoSat == id);
             var cauHoiDaCoTraLoi = await _service.Query<CauTraLoi>()
                 .Where(c => c.MaCauHoiNavigation != null && c.MaCauHoiNavigation.MaKhaoSat == id)
                 .Select(c => c.MaCauHoi)
@@ -99,6 +101,7 @@ namespace RestaurantCRM.API.Controllers
                 khaoSat.NgayTao,
                 khaoSat.MaNhanVien,
                 SoNguoiTraLoi = soPhieu,
+                SoDoiTuong = soDoiTuongKs,
                 CauHoi = SapXep(khaoSat.CauHoiKhaoSat, c => c.MaCauHoi).Select(c => new
                 {
                     c.MaCauHoi,
@@ -472,6 +475,113 @@ namespace RestaurantCRM.API.Controllers
             await _service.SaveChangesAsync();
 
             return Ok(new { message = "Xóa tùy chọn thành công." });
+        }
+
+        // ── ĐỐI TƯỢNG KHẢO SÁT ──────────────────────────────────────────────
+        // Không có dòng DOI_TUONG_KHAO_SAT nào = khảo sát công khai cho tất cả khách hàng.
+
+        // GET: api/AdminKhaoSat/{id}/DoiTuong - Danh sách khách hàng được mời
+        [HttpGet("{id}/DoiTuong")]
+        public async Task<IActionResult> GetDoiTuong(string id)
+        {
+            if (!await _service.Query<KhaoSat>().AnyAsync(k => k.MaKhaoSat == id))
+                return NotFound("Không tìm thấy khảo sát.");
+
+            var daTraLoi = (await _service.Query<PhieuTraLoi>()
+                .Where(p => p.MaKhaoSat == id && p.MaKhachHang != null)
+                .Select(p => p.MaKhachHang!)
+                .ToListAsync()).ToHashSet();
+
+            var ds = await _service.Query<DoiTuongKhaoSat>()
+                .Where(d => d.MaKhaoSat == id && d.MaKhachHang != null)
+                .Select(d => new
+                {
+                    MaKhachHang = d.MaKhachHang!,
+                    HoTen = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : null,
+                    SoDienThoai = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.SoDienThoai : null,
+                    d.DaHoanThanh
+                })
+                .ToListAsync();
+
+            return Ok(ds.Select(d => new
+            {
+                d.MaKhachHang,
+                d.HoTen,
+                d.SoDienThoai,
+                DaHoanThanh = d.DaHoanThanh == true || daTraLoi.Contains(d.MaKhachHang)
+            }));
+        }
+
+        // PUT: api/AdminKhaoSat/{id}/DoiTuong - Thay toàn bộ danh sách đối tượng. Danh sách rỗng = tất cả khách hàng.
+        [HttpPut("{id}/DoiTuong")]
+        public async Task<IActionResult> SetDoiTuong(string id, [FromBody] DoiTuongUpdateRequest request)
+        {
+            var khaoSat = await _service.FindAsync<KhaoSat>(id);
+            if (khaoSat == null)
+                return NotFound("Không tìm thấy khảo sát.");
+            if (khaoSat.TrangThai == DaDong)
+                return BadRequest("Khảo sát đã đóng, không thể thay đổi đối tượng.");
+
+            var yeuCau = (request?.MaKhachHangs ?? new List<string>())
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Select(m => m.Trim())
+                .Distinct()
+                .ToList();
+
+            var hopLe = yeuCau.Count == 0
+                ? new HashSet<string>()
+                : (await _service.Query<KhachHang>()
+                    .Where(k => yeuCau.Contains(k.MaKhachHang))
+                    .Select(k => k.MaKhachHang)
+                    .ToListAsync()).ToHashSet();
+
+            var daTraLoi = (await _service.Query<PhieuTraLoi>()
+                .Where(p => p.MaKhaoSat == id && p.MaKhachHang != null)
+                .Select(p => p.MaKhachHang!)
+                .ToListAsync()).ToHashSet();
+
+            var hienCo = await _service.Query<DoiTuongKhaoSat>()
+                .Include(d => d.MaKhachHangNavigation)
+                .Where(d => d.MaKhaoSat == id)
+                .ToListAsync();
+
+            // Chỉ áp dụng khi đang giới hạn đối tượng: không được bỏ khách đã trả lời
+            if (hopLe.Count > 0)
+            {
+                var biBo = hienCo.FirstOrDefault(d => d.MaKhachHang != null && !hopLe.Contains(d.MaKhachHang) && daTraLoi.Contains(d.MaKhachHang));
+                if (biBo != null)
+                    return BadRequest($"Khách hàng \"{biBo.MaKhachHangNavigation?.HoTen ?? biBo.MaKhachHang}\" đã trả lời khảo sát, không thể bỏ khỏi danh sách đối tượng.");
+            }
+
+            var canXoa = hienCo.Where(d => d.MaKhachHang == null || !hopLe.Contains(d.MaKhachHang)).ToList();
+            _service.RemoveRange(canXoa);
+
+            foreach (var d in hienCo.Except(canXoa))
+                d.DaHoanThanh = daTraLoi.Contains(d.MaKhachHang!);
+
+            var daCo = hienCo.Except(canXoa).Select(d => d.MaKhachHang!).ToHashSet();
+            var themMoi = hopLe.Where(m => !daCo.Contains(m)).OrderBy(m => m).ToList();
+            if (themMoi.Count > 0)
+            {
+                int so = await SoTiepTheoAsync<DoiTuongKhaoSat>("DT", d => d.MaDoiTuong.StartsWith("DT"), d => d.MaDoiTuong);
+                foreach (var ma in themMoi)
+                {
+                    _service.Add(new DoiTuongKhaoSat
+                    {
+                        MaDoiTuong = $"DT{so++:D3}",
+                        MaKhaoSat = id,
+                        MaKhachHang = ma,
+                        DaHoanThanh = daTraLoi.Contains(ma)
+                    });
+                }
+            }
+
+            await _service.SaveChangesAsync();
+
+            string thongBao = hopLe.Count == 0
+                ? "Khảo sát áp dụng cho tất cả khách hàng."
+                : $"Đã lưu {hopLe.Count} khách hàng là đối tượng khảo sát.";
+            return Ok(new { message = thongBao, soDoiTuong = hopLe.Count });
         }
 
         // ── THỐNG KÊ ─────────────────────────────────────────────────────────

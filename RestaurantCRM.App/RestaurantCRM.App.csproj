@@ -196,6 +196,9 @@
     <Compile Include="Forms\KhaoSat\Cauhoikhaosatdialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\KhaoSat\DoiTuongKhaoSatDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\KhaoSat\KhaoSatdialog.cs">
       <SubType>Form</SubType>
     </Compile>
