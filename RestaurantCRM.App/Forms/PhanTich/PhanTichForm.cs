@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -33,10 +34,17 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
         // Tab 2: Sở thích gọi món
         private UcTopList _topFood;
         private UcDataGridView _dgvFood;
+        private TextBox _txtSearchFood;
+        private ComboBox _cboLoaiFood;
+        private List<MonUaThichItemDto> _allFoodItems = new List<MonUaThichItemDto>();
+        private bool _updatingFoodFilter;
 
         // Tab 3: Chi tiêu khách hàng
         private UcTopList _topSpending;
         private UcDataGridView _dgvSpending;
+        private TextBox _txtSearchSpend;
+        private ComboBox _cboSegmentSpend;
+        private List<RestaurantCRM.AdminApp.DTOs.KhachHang.KhachHangDto> _allTopCustomers = new List<RestaurantCRM.AdminApp.DTOs.KhachHang.KhachHangDto>();
 
         public PhanTichForm()
         {
@@ -264,6 +272,19 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
                 Height = 28
             };
 
+            var filterFoodBar = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = Color.White, Padding = new Padding(0, 2, 0, 4) };
+            _txtSearchFood = new TextBox();
+            _txtSearchFood.TextChanged += (s, e) => RenderFoodGrid();
+            var pillFood = new PillSearch(_txtSearchFood, "Tìm mã, tên món ăn, loại món...") { Location = new Point(0, 2), Width = 250 };
+            _cboLoaiFood = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+            _cboLoaiFood.Items.Add("Tất cả loại món");
+            _cboLoaiFood.SelectedIndex = 0;
+            _cboLoaiFood.SelectedIndexChanged += (s, e) => { if (!_updatingFoodFilter) RenderFoodGrid(); };
+            var chipFood = new ComboChip(_cboLoaiFood, "Loại món") { Location = new Point(260, 2) };
+            filterFoodBar.Controls.Add(_cboLoaiFood);
+            filterFoodBar.Controls.Add(pillFood);
+            filterFoodBar.Controls.Add(chipFood);
+
             _dgvFood = new UcDataGridView { Dock = DockStyle.Fill };
             _dgvFood.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Mã món", Width = 80 });
             _dgvFood.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Tên món ăn", FillWeight = 160 });
@@ -287,7 +308,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
             _dgvFood.Columns.Add(cTyLe);
 
             rightCard.Controls.Add(_dgvFood);
+            rightCard.Controls.Add(filterFoodBar);
             rightCard.Controls.Add(lblGridTitle);
+            _dgvFood.BringToFront();
 
             split.Controls.Add(_topFood, 0, 0);
             split.Controls.Add(rightCard, 1, 0);
@@ -336,6 +359,26 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
                 Height = 28
             };
 
+            var filterSpendBar = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = Color.White, Padding = new Padding(0, 2, 0, 4) };
+            _txtSearchSpend = new TextBox();
+            _txtSearchSpend.TextChanged += (s, e) => RenderSpendingGrid();
+            var pillSpend = new PillSearch(_txtSearchSpend, "Tìm mã KH, họ tên, số điện thoại...") { Location = new Point(0, 2), Width = 250 };
+            _cboSegmentSpend = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+            _cboSegmentSpend.Items.AddRange(new object[]
+            {
+                "Tất cả phân khúc",
+                "Khách VIP (≥ 2 triệu)",
+                "Thân thiết (≥ 3 đơn)",
+                "Đang hoạt động",
+                "Tài khoản đã khóa"
+            });
+            _cboSegmentSpend.SelectedIndex = 0;
+            _cboSegmentSpend.SelectedIndexChanged += (s, e) => RenderSpendingGrid();
+            var chipSpend = new ComboChip(_cboSegmentSpend, "Phân khúc") { Location = new Point(260, 2) };
+            filterSpendBar.Controls.Add(_cboSegmentSpend);
+            filterSpendBar.Controls.Add(pillSpend);
+            filterSpendBar.Controls.Add(chipSpend);
+
             _dgvSpending = new UcDataGridView { Dock = DockStyle.Fill };
             _dgvSpending.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Mã KH", Width = 80 });
             _dgvSpending.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Họ và tên", FillWeight = 160 });
@@ -356,7 +399,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
             _dgvSpending.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Trạng thái", Width = 95 });
 
             rightCard.Controls.Add(_dgvSpending);
+            rightCard.Controls.Add(filterSpendBar);
             rightCard.Controls.Add(lblGridTitle);
+            _dgvSpending.BringToFront();
 
             split.Controls.Add(_topSpending, 0, 0);
             split.Controls.Add(rightCard, 1, 0);
@@ -419,17 +464,36 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
 
                     // 2. Tab Sở thích gọi món: Cập nhật Top list & DataGridView
                     var foodItems = new List<KeyValuePair<string, double>>();
-                    _dgvFood.Rows.Clear();
+                    _allFoodItems = data.TopMonUaThich ?? new List<MonUaThichItemDto>();
 
-                    if (data.TopMonUaThich != null)
+                    if (_cboLoaiFood != null)
                     {
-                        foreach (var m in data.TopMonUaThich)
+                        _updatingFoodFilter = true;
+                        try
                         {
-                            string label = $"{m.TenMon}  ·  {m.TyLeUaThich:0.0}%";
-                            foodItems.Add(new KeyValuePair<string, double>(label, m.SoLuongGoi));
-                            _dgvFood.Rows.Add(m.MaMon, m.TenMon, m.TenLoaiMon, m.SoLuongGoi.ToString("N0"), m.DoanhThu, $"{m.TyLeUaThich:0.0}%");
+                            string prev = _cboLoaiFood.SelectedItem as string;
+                            var cats = _allFoodItems
+                                .Select(x => x.TenLoaiMon)
+                                .Where(c => !string.IsNullOrWhiteSpace(c))
+                                .Distinct(StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(c => c)
+                                .ToList();
+                            _cboLoaiFood.Items.Clear();
+                            _cboLoaiFood.Items.Add("Tất cả loại món");
+                            foreach (var c in cats) _cboLoaiFood.Items.Add(c);
+                            int idx = !string.IsNullOrEmpty(prev) ? _cboLoaiFood.Items.IndexOf(prev) : 0;
+                            _cboLoaiFood.SelectedIndex = idx >= 0 ? idx : 0;
                         }
+                        finally { _updatingFoodFilter = false; }
                     }
+
+                    foreach (var m in _allFoodItems)
+                    {
+                        string label = $"{m.TenMon}  ·  {m.TyLeUaThich:0.0}%";
+                        foodItems.Add(new KeyValuePair<string, double>(label, m.SoLuongGoi));
+                    }
+
+                    RenderFoodGrid();
 
                     if (foodItems.Count == 0)
                         _topFood.Subtitle = "CHƯA CÓ DỮ LIỆU ĐẶT MÓN HOÀN THÀNH";
@@ -465,6 +529,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
                     var topList = new List<RestaurantCRM.AdminApp.DTOs.KhachHang.KhachHangDto>();
                     foreach (var x in ds) if (x.TongChiTieu > 0) topList.Add(x);
                     topList.Sort((a, b) => b.TongChiTieu.CompareTo(a.TongChiTieu));
+                    _allTopCustomers = topList;
 
                     // Top 8 vào thẻ tóm tắt
                     int take = Math.Min(8, topList.Count);
@@ -474,11 +539,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
                         items.Add(new KeyValuePair<string, double>(k.HoTen + "  ·  " + k.SoDonHang + " đơn", k.TongChiTieu));
                     }
 
-                    // Toàn bộ danh sách vào DataGridView xếp hạng
-                    foreach (var k in topList)
-                    {
-                        _dgvSpending.Rows.Add(k.MaKhachHang, k.HoTen, k.SoDienThoai, k.SoDonHang.ToString("N0"), k.TongChiTieu, k.TrangThaiHienThi);
-                    }
+                    RenderSpendingGrid();
                 }
 
                 if (items.Count == 0) _topSpending.Subtitle = "CHƯA CÓ ĐƠN HÀNG HOÀN THÀNH NÀO";
@@ -492,6 +553,42 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
                 _topSpending.Subtitle = "KHÔNG TẢI ĐƯỢC DỮ LIỆU — KIỂM TRA API";
                 _topSpending.SetItems(new List<KeyValuePair<string, double>>());
                 _dgvSpending.Rows.Clear();
+            }
+        }
+
+        private void RenderFoodGrid()
+        {
+            if (_dgvFood == null) return;
+            string q = (_txtSearchFood?.Text ?? "").Trim();
+            string cat = (_cboLoaiFood != null && _cboLoaiFood.SelectedIndex > 0) ? (_cboLoaiFood.SelectedItem as string) : null;
+
+            _dgvFood.Rows.Clear();
+            foreach (var m in _allFoodItems)
+            {
+                if (!string.IsNullOrEmpty(cat) && !string.Equals(m.TenLoaiMon, cat, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!UiStyler.MatchesSearch(q, m.MaMon, m.TenMon, m.TenLoaiMon))
+                    continue;
+                _dgvFood.Rows.Add(m.MaMon, m.TenMon, m.TenLoaiMon, m.SoLuongGoi.ToString("N0"), m.DoanhThu, $"{m.TyLeUaThich:0.0}%");
+            }
+        }
+
+        private void RenderSpendingGrid()
+        {
+            if (_dgvSpending == null) return;
+            string q = (_txtSearchSpend?.Text ?? "").Trim();
+            int segIdx = _cboSegmentSpend?.SelectedIndex ?? 0;
+
+            _dgvSpending.Rows.Clear();
+            foreach (var k in _allTopCustomers)
+            {
+                if (segIdx == 1 && k.TongChiTieu < 2000000) continue;
+                if (segIdx == 2 && k.SoDonHang < 3) continue;
+                if (segIdx == 3 && k.BiKhoa) continue;
+                if (segIdx == 4 && !k.BiKhoa) continue;
+                if (!UiStyler.MatchesSearch(q, k.MaKhachHang, k.HoTen, k.SoDienThoai, k.Email))
+                    continue;
+                _dgvSpending.Rows.Add(k.MaKhachHang, k.HoTen, k.SoDienThoai, k.SoDonHang.ToString("N0"), k.TongChiTieu, k.TrangThaiHienThi);
             }
         }
     }

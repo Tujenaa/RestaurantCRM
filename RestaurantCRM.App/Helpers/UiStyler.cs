@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 
 namespace RestaurantCRM.AdminApp.Helpers
@@ -457,6 +459,101 @@ namespace RestaurantCRM.AdminApp.Helpers
             Action set = () => { try { SendMessage(box.Handle, EM_SETCUEBANNER, (IntPtr)1, text); } catch { /* không hỗ trợ placeholder */ } };
             if (box.IsHandleCreated) set();
             else box.HandleCreated += (s, e) => set();
+        }
+
+        // ================= VIETNAMESE ACCENT-INSENSITIVE SEARCH =================
+
+        /// <summary>
+        /// Chuẩn hóa chuỗi tiếng Việt về chữ thường không dấu để tìm kiếm chính xác và linh hoạt.
+        /// </summary>
+        public static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+            string normalized = text.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(normalized.Length);
+            for (int i = 0; i < normalized.Length; i++)
+            {
+                char c = normalized[i];
+                if (c == 'đ' || c == 'Đ')
+                {
+                    sb.Append('d');
+                    continue;
+                }
+                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                {
+                    sb.Append(c);
+                }
+            }
+            return sb.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        /// <summary>
+        /// Kiểm tra một trường văn bản có chứa từ khóa (hỗ trợ cả có dấu và không dấu) hay không.
+        /// </summary>
+        public static bool ContainsUnaccented(string source, string query)
+        {
+            if (string.IsNullOrWhiteSpace(query)) return true;
+            if (string.IsNullOrWhiteSpace(source)) return false;
+
+            string qTrim = query.Trim();
+            if (source.IndexOf(qTrim, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+
+            string normSource = RemoveDiacritics(source);
+            string normQuery = RemoveDiacritics(qTrim);
+            return normSource.IndexOf(normQuery, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>
+        /// Kiểm tra danh sách các trường có khớp với từ khóa tìm kiếm nâng cao hay không.
+        /// Hỗ trợ gõ không dấu, có dấu và tách nhiều từ khóa (mỗi từ khóa phải xuất hiện ở ít nhất 1 trường).
+        /// </summary>
+        public static bool MatchesSearch(string query, params string[] fields)
+        {
+            if (string.IsNullOrWhiteSpace(query)) return true;
+            if (fields == null || fields.Length == 0) return false;
+
+            string qTrim = query.Trim();
+            // Kiểm tra khớp nguyên cụm trước
+            for (int i = 0; i < fields.Length; i++)
+            {
+                if (!string.IsNullOrEmpty(fields[i]) && ContainsUnaccented(fields[i], qTrim))
+                    return true;
+            }
+
+            // Hỗ trợ tìm kiếm đa từ khóa (VD: "kh01 nguyen" hoặc "bo luc lac")
+            string[] tokens = RemoveDiacritics(qTrim).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length <= 1) return false;
+
+            var combined = new StringBuilder();
+            for (int i = 0; i < fields.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(fields[i]))
+                {
+                    combined.Append(RemoveDiacritics(fields[i])).Append(' ');
+                }
+            }
+            string haystack = combined.ToString();
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                if (haystack.IndexOf(tokens[i], StringComparison.OrdinalIgnoreCase) < 0)
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Bật gợi ý tự động (AutoComplete) khi gõ tìm trực tiếp trong ComboBox nhiều phần tử.
+        /// </summary>
+        public static void EnableAutoComplete(ComboBox cbo)
+        {
+            if (cbo == null) return;
+            try
+            {
+                cbo.DropDownStyle = ComboBoxStyle.DropDown;
+                cbo.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+                cbo.AutoCompleteSource = AutoCompleteSource.ListItems;
+            }
+            catch { }
         }
     }
 }

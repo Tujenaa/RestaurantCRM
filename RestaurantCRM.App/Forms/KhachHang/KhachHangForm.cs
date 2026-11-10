@@ -24,6 +24,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly TextBox _txtSearch = new TextBox();
         private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly ComboBox _cboGioiTinh = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboPhanKhuc = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboSinhNhat = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly Label _lblCount = new Label { Text = "" };
         private readonly Label _lblFooter = new Label { Text = "" };
         private readonly Label _kTong = new Label { Text = "Tổng khách hàng: —" };
@@ -53,6 +55,23 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _cboTrangThai.SelectedIndex = 0;
             _cboGioiTinh.Items.AddRange(new object[] { "Tất cả", "Nam", "Nữ", "Khác" });
             _cboGioiTinh.SelectedIndex = 0;
+            _cboPhanKhuc.Items.AddRange(new object[]
+            {
+                "Tất cả",
+                "Khách VIP (≥ 2 triệu)",
+                "Thân thiết (≥ 3 đơn)",
+                "Đã mua hàng (≥ 1 đơn)",
+                "Chưa mua hàng (0 đơn)"
+            });
+            _cboPhanKhuc.SelectedIndex = 0;
+            _cboSinhNhat.Items.AddRange(new object[]
+            {
+                "Tất cả",
+                "Sinh nhật tháng này",
+                "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
+                "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
+            });
+            _cboSinhNhat.SelectedIndex = 0;
 
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -62,11 +81,13 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 HeaderActions = new Control[] { _btnLamMoi },
                 KpiLabels = new[] { _kTong, _kActive, _kLocked, _kChiTieu },
                 Search = _txtSearch,
-                SearchPlaceholder = "Tìm theo mã, tên, số điện thoại, email...",
+                SearchPlaceholder = "Tìm mã, họ tên, SĐT, email, địa chỉ...",
                 Filters = new[]
                 {
                     new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
-                    new FilterSpec(_cboGioiTinh, new Label { Text = "Giới tính" })
+                    new FilterSpec(_cboPhanKhuc, new Label { Text = "Phân khúc" }),
+                    new FilterSpec(_cboGioiTinh, new Label { Text = "Giới tính" }),
+                    new FilterSpec(_cboSinhNhat, new Label { Text = "Sinh nhật" })
                 },
                 CountLabel = _lblCount,
                 Grid = _grid,
@@ -78,6 +99,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
             _cboGioiTinh.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboPhanKhuc.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboSinhNhat.SelectedIndexChanged += (s, e) => ApplyFilter();
             _grid.SelectionChanged += (s, e) => UpdateSelectionUi();
             _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) MoChiTiet(); };
             _grid.KeyDown += (s, e) =>
@@ -168,17 +191,33 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private void ApplyFilter(string chonMa = null)
         {
             if (chonMa == null) chonMa = SelectedDto()?.MaKhachHang;
-            string q = (_txtSearch.Text ?? "").Trim().ToLowerInvariant();
+            string q = (_txtSearch.Text ?? "").Trim();
             string tt = _cboTrangThai.SelectedItem as string;
             string gt = _cboGioiTinh.SelectedItem as string;
+            int phanKhucIdx = _cboPhanKhuc.SelectedIndex;
+            int sinhNhatIdx = _cboSinhNhat.SelectedIndex;
+            int currentMonth = DateTime.Today.Month;
 
             var list = _all.Where(k =>
             {
                 if (tt == "Hoạt động" && k.BiKhoa) return false;
                 if (tt == "Đã khóa" && !k.BiKhoa) return false;
                 if (gt != null && gt != "Tất cả" && !string.Equals(k.GioiTinh, gt, StringComparison.OrdinalIgnoreCase)) return false;
-                if (q.Length == 0) return true;
-                return Contains(k.MaKhachHang, q) || Contains(k.HoTen, q) || Contains(k.SoDienThoai, q) || Contains(k.Email, q);
+
+                if (phanKhucIdx == 1 && k.TongChiTieu < 2000000) return false;
+                if (phanKhucIdx == 2 && k.SoDonHang < 3) return false;
+                if (phanKhucIdx == 3 && k.SoDonHang < 1) return false;
+                if (phanKhucIdx == 4 && k.SoDonHang > 0) return false;
+
+                if (sinhNhatIdx > 0)
+                {
+                    var dob = k.NgaySinhDate;
+                    if (!dob.HasValue) return false;
+                    int targetMonth = sinhNhatIdx == 1 ? currentMonth : (sinhNhatIdx - 1);
+                    if (dob.Value.Month != targetMonth) return false;
+                }
+
+                return UiStyler.MatchesSearch(q, k.MaKhachHang, k.HoTen, k.SoDienThoai, k.Email, k.DiaChi);
             }).OrderByDescending(k => k.MaKhachHang).ToList();
 
             _grid.SuspendLayout();

@@ -16,7 +16,7 @@ public class DonHangController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(string trangThai = "all")
+    public async Task<IActionResult> Index(string trangThai = "all", string? q = null, string thoiGian = "all")
     {
         var token = HttpContext.Session.GetString("Token");
         if (string.IsNullOrEmpty(token))
@@ -31,15 +31,40 @@ public class DonHangController : Controller
             return View(new DonHangDanhSachViewModel
             {
                 DonHangs = new List<DonHangViewModel>(),
-                TrangThaiDangChon = trangThai
+                TrangThaiDangChon = trangThai,
+                TuKhoa = q,
+                ThoiGianDangChon = thoiGian
             });
         }
         var orders = await _donHangService.GetOrdersForCustomerAsync(customerId, trangThai);
 
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            orders = orders.Where(o =>
+            {
+                var dishNames = o.ChiTiet != null ? string.Join(" ", o.ChiTiet.Select(c => c.TenMon)) : "";
+                return MenuController.MatchesSearch(q, o.MaDonHang, o.DiaChiGiao, o.TrangThai, dishNames);
+            }).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(thoiGian) && thoiGian != "all")
+        {
+            DateTime today = DateTime.Today;
+            orders = orders.Where(o => thoiGian switch
+            {
+                "7days" => o.NgayDat.Date >= today.AddDays(-7),
+                "30days" => o.NgayDat.Date >= today.AddDays(-30),
+                "thisyear" => o.NgayDat.Year == today.Year,
+                _ => true
+            }).ToList();
+        }
+
         return View(new DonHangDanhSachViewModel
         {
             DonHangs = orders,
-            TrangThaiDangChon = trangThai
+            TrangThaiDangChon = trangThai,
+            TuKhoa = q,
+            ThoiGianDangChon = thoiGian
         });
     }
 

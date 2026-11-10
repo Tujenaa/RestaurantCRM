@@ -66,6 +66,8 @@ public class MonAnDanhSachViewModel
     public string? TenLoaiHienTai { get; set; }
     public string? TuKhoa { get; set; }
     public string? SortDangChon { get; set; }
+    public string? MucGiaDangChon { get; set; }
+    public bool ChiKhuyenMai { get; set; }
     public bool MenuMode { get; set; }
 
     // Thuộc tính phân trang (Pagination)

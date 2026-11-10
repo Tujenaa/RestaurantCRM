@@ -46,6 +46,8 @@ public class DonHangDanhSachViewModel
 {
     public IReadOnlyList<DonHangViewModel> DonHangs { get; set; } = Array.Empty<DonHangViewModel>();
     public string TrangThaiDangChon { get; set; } = "all";
+    public string? TuKhoa { get; set; }
+    public string ThoiGianDangChon { get; set; } = "all";
 }
 
 public class DatHangViewModel

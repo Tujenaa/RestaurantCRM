@@ -273,16 +273,13 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _lblError.Text = n == 0 ? "Không có khách hàng nào thỏa tiêu chí." : "";
         }
 
-        /// <summary>Khách hiển thị: theo ô tìm; ẩn khách bị khóa trừ khi đã được chọn.</summary>
+        /// <summary>Khách hiển thị: theo ô tìm (hỗ trợ không dấu); ẩn khách bị khóa trừ khi đã được chọn.</summary>
         private List<KhachHangDto> DangHienThi()
         {
-            string q = ChuanHoa(_txtSearch.Text);
+            string q = (_txtSearch.Text ?? "").Trim();
             return _khach.Where(k =>
                 (!k.BiKhoa || _chon[k.MaKhachHang]) &&
-                (q.Length == 0
-                 || ChuanHoa(k.MaKhachHang).Contains(q)
-                 || ChuanHoa(k.HoTen).Contains(q)
-                 || (k.SoDienThoai ?? "").Contains(q))).ToList();
+                UiStyler.MatchesSearch(q, k.MaKhachHang, k.HoTen, k.SoDienThoai, k.Email, k.DiaChi)).ToList();
         }
 
         private void Render()

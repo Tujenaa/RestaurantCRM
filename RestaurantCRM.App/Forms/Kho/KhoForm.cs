@@ -23,6 +23,10 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
         private List<TonKhoDto> _allTonKho = new List<TonKhoDto>();
         private readonly Timer _refreshTimer;
         private bool _isRefreshing = false;
+        private readonly ComboBox _cboDonVi = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboTrangThaiNhap = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label _lblCount = new Label { Text = "" };
+        private bool _updatingFilterUnits = false;
 
         public KhoForm()
         {
@@ -45,6 +49,14 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
             _nguyenLieuService = new NguyenLieuService(httpClient);
             cboBoLoc.SelectedIndex = 0;
 
+            _cboDonVi.Items.Add("Tất cả ĐVT");
+            _cboDonVi.SelectedIndex = 0;
+            _cboDonVi.SelectedIndexChanged += (s, e) => { if (!_updatingFilterUnits) FilterData(preserveSelection: false); };
+
+            _cboTrangThaiNhap.Items.AddRange(new object[] { "Tất cả", "Đang nhập", "Ngừng nhập" });
+            _cboTrangThaiNhap.SelectedIndex = 0;
+            _cboTrangThaiNhap.SelectedIndexChanged += (s, e) => FilterData(preserveSelection: false);
+
             SetupContextMenu();
 
             // 3. Tăng chu kỳ timer lên 15 giây và chỉ cập nhật khi dữ liệu có thay đổi thật sự
@@ -66,8 +78,14 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 KpiLabels = new[] { lblTongMon, lblDuHang, lblSapHet, lblHetHang },
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
-                SearchPlaceholder = "Tìm nguyên liệu...",
-                Filters = new[] { new FilterSpec(cboBoLoc, lblBoLoc) },
+                SearchPlaceholder = "Tìm theo mã, tên nguyên liệu, đơn vị tính...",
+                Filters = new[]
+                {
+                    new FilterSpec(cboBoLoc, lblBoLoc),
+                    new FilterSpec(_cboDonVi, new Label { Text = "Đơn vị" }),
+                    new FilterSpec(_cboTrangThaiNhap, new Label { Text = "Trạng thái nhập" })
+                },
+                CountLabel = _lblCount,
                 Grid = dgvKho
             });
         }
@@ -100,12 +118,39 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
             try
             {
                 _allTonKho = await _khoService.GetTonKhoAsync() ?? new List<TonKhoDto>();
+                PopulateUnitFilter();
                 UpdateThongKe();
                 FilterData(preserveSelection: false);
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi khi tải dữ liệu tồn kho từ API: " + ex.Message, "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void PopulateUnitFilter()
+        {
+            _updatingFilterUnits = true;
+            try
+            {
+                string prev = _cboDonVi.SelectedItem as string;
+                var units = _allTonKho
+                    .Select(x => x.DonViTinh)
+                    .Where(u => !string.IsNullOrWhiteSpace(u))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(u => u)
+                    .ToList();
+
+                _cboDonVi.Items.Clear();
+                _cboDonVi.Items.Add("Tất cả ĐVT");
+                foreach (var u in units) _cboDonVi.Items.Add(u);
+
+                int idx = !string.IsNullOrEmpty(prev) ? _cboDonVi.Items.IndexOf(prev) : 0;
+                _cboDonVi.SelectedIndex = idx >= 0 ? idx : 0;
+            }
+            finally
+            {
+                _updatingFilterUnits = false;
             }
         }
 
@@ -176,17 +221,22 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
 
         private void FilterData(bool preserveSelection = false)
         {
-            var keyword = (txtTimKiem.Text ?? "").Trim().ToLower();
+            var keyword = (txtTimKiem.Text ?? "").Trim();
             int filterIndex = cboBoLoc.SelectedIndex;
+            string selectedUnit = _cboDonVi.SelectedIndex > 0 ? (_cboDonVi.SelectedItem as string) : null;
+            int statusNhapIdx = _cboTrangThaiNhap.SelectedIndex;
 
             var filtered = _allTonKho.Where(item => {
-                // Lọc từ khóa
-                bool matchKeyword = string.IsNullOrEmpty(keyword) ||
-                    (!string.IsNullOrEmpty(item.TenNguyenLieu) && item.TenNguyenLieu.ToLower().Contains(keyword)) ||
-                    (!string.IsNullOrEmpty(item.MaNguyenLieu) && item.MaNguyenLieu.ToLower().Contains(keyword)) ||
-                    (!string.IsNullOrEmpty(item.DonViTinh) && item.DonViTinh.ToLower().Contains(keyword));
+                // Lọc từ khóa (không dấu + đa từ)
+                if (!UiStyler.MatchesSearch(keyword, item.TenNguyenLieu, item.MaNguyenLieu, item.DonViTinh))
+                    return false;
 
-                if (!matchKeyword) return false;
+                if (!string.IsNullOrEmpty(selectedUnit) && !string.Equals(item.DonViTinh, selectedUnit, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                bool isNgungNhap = string.Equals(item.TrangThai, "Inactive", StringComparison.OrdinalIgnoreCase);
+                if (statusNhapIdx == 1 && isNgungNhap) return false;
+                if (statusNhapIdx == 2 && !isNgungNhap) return false;
 
                 // Lọc theo tình trạng
                 switch (filterIndex)
@@ -201,6 +251,10 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                         return true;
                 }
             }).ToList();
+
+            _lblCount.Text = filtered.Count == _allTonKho.Count
+                ? $"Hiển thị {filtered.Count} loại NL"
+                : $"Hiển thị {filtered.Count} / {_allTonKho.Count} loại NL";
 
             int scrollIndex = -1;
             string selectedMa = null;

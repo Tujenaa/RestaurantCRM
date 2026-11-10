@@ -15,6 +15,10 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
     {
         private readonly HoaDonService _hoaDonService;
         private List<HoaDonDto> _allHoaDon = new List<HoaDonDto>();
+        private readonly ComboBox _cboThoiGian = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboPhuongThuc = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboMucTien = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label _lblCount = new Label { Text = "" };
 
         // Xem nhanh khi rê chuột (không cần click)
         private readonly OrderHoverCard _hoverCard = new OrderHoverCard();
@@ -29,6 +33,37 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             _hoaDonService = new HoaDonService();
             SetupGridColumns();
 
+            _cboThoiGian.Items.AddRange(new object[] {
+                "Tất cả thời gian",
+                "Hôm nay",
+                "Hôm qua",
+                "7 ngày qua",
+                "30 ngày qua",
+                "Tháng này",
+                "Năm nay"
+            });
+            _cboThoiGian.SelectedIndex = 0;
+
+            _cboPhuongThuc.Items.AddRange(new object[] {
+                "Tất cả PTTT",
+                "Tiền mặt",
+                "Chuyển khoản",
+                "Thẻ / Ví điện tử"
+            });
+            _cboPhuongThuc.SelectedIndex = 0;
+
+            _cboMucTien.Items.AddRange(new object[] {
+                "Tất cả mức tiền",
+                "Dưới 200.000 đ",
+                "200.000 - 500.000 đ",
+                "Trên 500.000 đ"
+            });
+            _cboMucTien.SelectedIndex = 0;
+
+            _cboThoiGian.SelectedIndexChanged += (s, e) => FilterData();
+            _cboPhuongThuc.SelectedIndexChanged += (s, e) => FilterData();
+            _cboMucTien.SelectedIndexChanged += (s, e) => FilterData();
+
             // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -38,8 +73,15 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 KpiLabels = new[] { lblTongDon, lblChoXuLy, lblDangGiao, lblHoanThanh, lblDaHuy },
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
-                SearchPlaceholder = "Tìm theo mã đơn, khách hàng...",
-                Filters = new[] { new FilterSpec(cboTrangThai, lblTrangThai) },
+                SearchPlaceholder = "Tìm mã đơn, tên/SĐT khách, NV, địa chỉ...",
+                Filters = new[]
+                {
+                    new FilterSpec(cboTrangThai, lblTrangThai),
+                    new FilterSpec(_cboThoiGian, new Label { Text = "Thời gian" }),
+                    new FilterSpec(_cboPhuongThuc, new Label { Text = "Thanh toán" }),
+                    new FilterSpec(_cboMucTien, new Label { Text = "Mức tiền" })
+                },
+                CountLabel = _lblCount,
                 Grid = dgvHoaDon,
                 SecondaryActions = new[] { btnChiTiet }
             });
@@ -223,16 +265,67 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
 
         private void FilterData()
         {
-            var keyword = (txtTimKiem.Text ?? "").Trim().ToLower();
+            var keyword = (txtTimKiem.Text ?? "").Trim();
             int filterIndex = cboTrangThai.SelectedIndex;
+            int timeIndex = _cboThoiGian.SelectedIndex;
+            int payIndex = _cboPhuongThuc.SelectedIndex;
+            int amountIndex = _cboMucTien.SelectedIndex;
+            DateTime today = DateTime.Today;
 
             var filtered = _allHoaDon.Where(item => {
-                bool matchKeyword = string.IsNullOrEmpty(keyword) ||
-                    (!string.IsNullOrEmpty(item.MaHoaDon) && item.MaHoaDon.ToLower().Contains(keyword)) ||
-                    (!string.IsNullOrEmpty(item.TenKhachHang) && item.TenKhachHang.ToLower().Contains(keyword)) ||
-                    (!string.IsNullOrEmpty(item.TenNhanVien) && item.TenNhanVien.ToLower().Contains(keyword));
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    string dishNames = null;
+                    HoaDonDetailDto det;
+                    if (!string.IsNullOrEmpty(item.MaHoaDon) && _detailCache.TryGetValue(item.MaHoaDon, out det) && det?.ChiTiet != null)
+                    {
+                        dishNames = string.Join(" ", det.ChiTiet.Select(c => c.TenMon));
+                    }
 
-                if (!matchKeyword) return false;
+                    bool matchKeyword = UiStyler.MatchesSearch(keyword,
+                        item.MaHoaDon,
+                        item.TenKhachHang,
+                        item.SoDienThoai,
+                        item.MaKhachHang,
+                        item.MaNhanVien,
+                        item.TenNhanVien,
+                        item.DiaChiGiao,
+                        item.PhuongThucThanhToan,
+                        dishNames);
+
+                    if (!matchKeyword) return false;
+                }
+
+                // Lọc theo thời gian
+                if (timeIndex > 0)
+                {
+                    if (!item.NgayDat.HasValue) return false;
+                    DateTime d = item.NgayDat.Value.Date;
+                    if (timeIndex == 1 && d != today) return false; // Hôm nay
+                    if (timeIndex == 2 && d != today.AddDays(-1)) return false; // Hôm qua
+                    if (timeIndex == 3 && d < today.AddDays(-6)) return false; // 7 ngày qua
+                    if (timeIndex == 4 && d < today.AddDays(-29)) return false; // 30 ngày qua
+                    if (timeIndex == 5 && (d.Month != today.Month || d.Year != today.Year)) return false; // Tháng này
+                    if (timeIndex == 6 && d.Year != today.Year) return false; // Năm nay
+                }
+
+                // Lọc theo phương thức thanh toán
+                if (payIndex > 0)
+                {
+                    string pt = UiStyler.RemoveDiacritics(item.PhuongThucThanhToan ?? "");
+                    if (payIndex == 1 && !pt.Contains("tien mat") && !pt.Contains("cash") && !pt.Contains("cod")) return false;
+                    if (payIndex == 2 && !pt.Contains("chuyen khoan") && !pt.Contains("bank") && !pt.Contains("qr")) return false;
+                    if (payIndex == 3 && !pt.Contains("the") && !pt.Contains("vi") && !pt.Contains("momo") && !pt.Contains("zalo") && !pt.Contains("vnpay") && !pt.Contains("card")) return false;
+                }
+
+                // Lọc theo mức tiền
+                if (amountIndex > 0)
+                {
+                    double total = item.TongThanhToan ?? 0;
+                    if (amountIndex == 1 && total >= 200000) return false;
+                    if (amountIndex == 2 && (total < 200000 || total > 500000)) return false;
+                    if (amountIndex == 3 && total <= 500000) return false;
+                }
 
                 switch (filterIndex)
                 {
@@ -260,6 +353,9 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
 
             HideHover();
             dgvHoaDon.DataSource = filtered;
+            _lblCount.Text = filtered.Count == _allHoaDon.Count
+                ? $"Hiển thị {filtered.Count} đơn"
+                : $"Hiển thị {filtered.Count} / {_allHoaDon.Count} đơn";
             ColorGridRows();
         }
 

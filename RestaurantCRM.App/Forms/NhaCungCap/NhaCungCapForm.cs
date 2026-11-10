@@ -17,6 +17,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
         private readonly NhaCungCapService _nccService;
         private List<NhaCungCapDto> _allNcc = new List<NhaCungCapDto>();
         private readonly Button btnAnHien = new Button { Text = "Ẩn/Hiện NCC", AutoSize = true };
+        private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label _lblCount = new Label { Text = "" };
 
         public NhaCungCapForm()
         {
@@ -34,6 +36,10 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
 
             btnAnHien.Click += btnAnHien_Click;
 
+            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Đang hoạt động", "Đã ẩn" });
+            _cboTrangThai.SelectedIndex = 0;
+            _cboTrangThai.SelectedIndexChanged += (s, e) => FilterData();
+
             // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -42,7 +48,9 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 PrimaryActions = new[] { btnThem },
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
-                SearchPlaceholder = "Tìm nhà cung cấp...",
+                SearchPlaceholder = "Tìm mã, tên NCC, SĐT, email, địa chỉ...",
+                Filters = new[] { new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }) },
+                CountLabel = _lblCount,
                 Grid = dgvNhaCungCap,
                 SecondaryActions = new[] { btnSua, btnAnHien },
                 DangerActions = new[] { btnXoa }
@@ -70,19 +78,21 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
 
         private void FilterData()
         {
-            var keyword = (txtTimKiem.Text ?? "").Trim().ToLower();
+            var keyword = (txtTimKiem.Text ?? "").Trim();
+            int statusIdx = _cboTrangThai.SelectedIndex;
+
             var filtered = _allNcc.Where(n =>
-                string.IsNullOrEmpty(keyword) ||
-                (!string.IsNullOrEmpty(n.TenNhaCungCap) && n.TenNhaCungCap.ToLower().Contains(keyword)) ||
-                (!string.IsNullOrEmpty(n.MaNhaCungCap) && n.MaNhaCungCap.ToLower().Contains(keyword)) ||
-                (!string.IsNullOrEmpty(n.SoDienThoai) && n.SoDienThoai.ToLower().Contains(keyword)) ||
-                (!string.IsNullOrEmpty(n.Email) && n.Email.ToLower().Contains(keyword)) ||
-                (!string.IsNullOrEmpty(n.DiaChi) && n.DiaChi.ToLower().Contains(keyword)) ||
-                (!string.IsNullOrEmpty(n.TrangThaiHienThi) && n.TrangThaiHienThi.ToLower().Contains(keyword))
-            ).OrderByDescending(n => n.MaNhaCungCap).ToList();
+            {
+                if (statusIdx == 1 && !n.IsActive) return false;
+                if (statusIdx == 2 && n.IsActive) return false;
+                return UiStyler.MatchesSearch(keyword, n.TenNhaCungCap, n.MaNhaCungCap, n.SoDienThoai, n.Email, n.DiaChi, n.TrangThaiHienThi);
+            }).OrderByDescending(n => n.MaNhaCungCap).ToList();
 
             dgvNhaCungCap.DataSource = null;
             dgvNhaCungCap.DataSource = filtered;
+            _lblCount.Text = filtered.Count == _allNcc.Count
+                ? $"Hiển thị {filtered.Count} NCC"
+                : $"Hiển thị {filtered.Count} / {_allNcc.Count} NCC";
             dgvNhaCungCap_SelectionChanged(null, null);
         }
 

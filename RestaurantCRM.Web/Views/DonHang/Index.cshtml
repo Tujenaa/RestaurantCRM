@@ -16,11 +16,40 @@
     {
         <a class="@(Model.TrangThaiDangChon == filter.Item1 ? "active" : "")"
            asp-action="Index"
-           asp-route-trangThai="@filter.Item1">
+           asp-route-trangThai="@filter.Item1"
+           asp-route-q="@Model.TuKhoa"
+           asp-route-thoiGian="@Model.ThoiGianDangChon">
             @filter.Item2
         </a>
     }
 </div>
+
+<form method="get" asp-action="Index"
+      style="display:flex; flex-wrap:nowrap; gap:10px; align-items:center; padding:10px 14px; margin-bottom:16px; background:#fff; border:1px solid #e2e8f0; border-radius:12px;">
+    <input type="hidden" name="trangThai" value="@Model.TrangThaiDangChon" />
+    <div style="flex:1 1 220px; min-width:180px; max-width:360px;">
+        <input type="text" name="q" value="@Model.TuKhoa"
+               placeholder="Tìm mã đơn hàng, tên món đã đặt, địa chỉ nhận..."
+               style="width:100%; height:38px; padding:0 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13.5px;" />
+    </div>
+    <div style="flex:0 0 auto;">
+        <select name="thoiGian" onchange="this.form.submit()"
+                style="width:auto; height:38px; padding:0 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13.5px; background:#f8fafc;">
+            <option value="all" selected="@(string.IsNullOrEmpty(Model.ThoiGianDangChon) || Model.ThoiGianDangChon == "all")">Mọi thời gian</option>
+            <option value="7days" selected="@(Model.ThoiGianDangChon == "7days")">7 ngày qua</option>
+            <option value="30days" selected="@(Model.ThoiGianDangChon == "30days")">30 ngày qua</option>
+            <option value="thisyear" selected="@(Model.ThoiGianDangChon == "thisyear")">Năm nay</option>
+        </select>
+    </div>
+    <button type="submit" class="btn small" style="flex:0 0 auto; height:38px; padding:0 18px; white-space:nowrap;">Tìm đơn</button>
+    @if (!string.IsNullOrWhiteSpace(Model.TuKhoa) || (!string.IsNullOrEmpty(Model.ThoiGianDangChon) && Model.ThoiGianDangChon != "all"))
+    {
+        <a asp-action="Index" asp-route-trangThai="@Model.TrangThaiDangChon"
+           class="btn secondary small" style="flex:0 0 auto; height:38px; display:inline-flex; align-items:center; white-space:nowrap;">
+            Đặt lại
+        </a>
+    }
+</form>
 
 @if (Model.DonHangs.Count == 0)
 {

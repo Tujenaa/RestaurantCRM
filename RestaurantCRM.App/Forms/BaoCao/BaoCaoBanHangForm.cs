@@ -57,13 +57,18 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
         private QuarterComparisonChartRenderer _chartRenderer;
 
         // Tab 2: Nhân viên
+        private TextBox _txtSearchNV;
+        private ComboBox _cboChucVuNV;
         private UcDataGridView _dgvNhanVien;
+        private bool _updatingFilterNV;
 
         // Tab 3: Món ăn
         private TextBox _txtSearchMon;
+        private ComboBox _cboDanhMucMon;
         private RadioButton _radMonTheoQuy;
         private RadioButton _radMonTheoNam;
         private UcDataGridView _dgvMonAn;
+        private bool _updatingFilterMon;
 
         // Dữ liệu báo cáo hiện tại
         private BaoCaoDoanhThuTheoQuyDto _currentData;
@@ -492,10 +497,32 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             };
             pnlCard.Controls.Add(lblTitle);
 
+            // Thanh tìm kiếm & lọc chức vụ nhân viên
+            _txtSearchNV = new TextBox();
+            _txtSearchNV.TextChanged += (s, e) => RenderNhanVienGrid();
+            var pillNV = new PillSearch(_txtSearchNV, "Tìm mã, họ tên nhân viên, chức vụ...")
+            {
+                Location = new Point(16, 40),
+                Width = 260
+            };
+            pnlCard.Controls.Add(pillNV);
+
+            _cboChucVuNV = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+            _cboChucVuNV.Items.Add("Tất cả chức vụ");
+            _cboChucVuNV.SelectedIndex = 0;
+            _cboChucVuNV.SelectedIndexChanged += (s, e) => { if (!_updatingFilterNV) RenderNhanVienGrid(); };
+            pnlCard.Controls.Add(_cboChucVuNV);
+
+            var chipChucVu = new ComboChip(_cboChucVuNV, "Chức vụ")
+            {
+                Location = new Point(286, 40)
+            };
+            pnlCard.Controls.Add(chipChucVu);
+
             _dgvNhanVien = new UcDataGridView
             {
-                Location = new Point(16, 42),
-                Size = new Size(pnlCard.Width - 32, pnlCard.Height - 56),
+                Location = new Point(16, 86),
+                Size = new Size(pnlCard.Width - 32, pnlCard.Height - 100),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 ScrollBars = ScrollBars.Vertical,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -570,23 +597,32 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             };
             pnlCard.Controls.Add(lblTitle);
 
-            // Bộ lọc phụ món ăn (Tìm kiếm & Chế độ xem Quý vs Nhiều năm)
-            var lblSearch = new Label { Text = "🔍 Tìm món:", Location = new Point(16, 46), AutoSize = true, ForeColor = ThemeManager.Ink2 };
-            pnlCard.Controls.Add(lblSearch);
-
-            _txtSearchMon = new TextBox
-            {
-                Location = new Point(95, 43),
-                Width = 200,
-                Font = new Font("Segoe UI", 9F)
-            };
+            // Bộ lọc phụ món ăn (Tìm kiếm không dấu, Lọc danh mục & Chế độ xem Quý vs Nhiều năm)
+            _txtSearchMon = new TextBox();
             _txtSearchMon.TextChanged += (s, e) => RenderMonAnGrid();
-            pnlCard.Controls.Add(_txtSearchMon);
+            var pillMon = new PillSearch(_txtSearchMon, "Tìm tên món, mã món, danh mục...")
+            {
+                Location = new Point(16, 40),
+                Width = 250
+            };
+            pnlCard.Controls.Add(pillMon);
+
+            _cboDanhMucMon = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+            _cboDanhMucMon.Items.Add("Tất cả danh mục");
+            _cboDanhMucMon.SelectedIndex = 0;
+            _cboDanhMucMon.SelectedIndexChanged += (s, e) => { if (!_updatingFilterMon) RenderMonAnGrid(); };
+            pnlCard.Controls.Add(_cboDanhMucMon);
+
+            var chipDanhMuc = new ComboChip(_cboDanhMucMon, "Danh mục")
+            {
+                Location = new Point(276, 40)
+            };
+            pnlCard.Controls.Add(chipDanhMuc);
 
             _radMonTheoQuy = new RadioButton
             {
                 Text = "Xem theo 4 Quý của năm",
-                Location = new Point(320, 44),
+                Location = new Point(510, 48),
                 AutoSize = true,
                 Checked = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
@@ -598,7 +634,7 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             _radMonTheoNam = new RadioButton
             {
                 Text = "Xem so sánh 3 Năm liên tiếp",
-                Location = new Point(510, 44),
+                Location = new Point(700, 48),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = ThemeManager.Teal
@@ -608,8 +644,8 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
 
             _dgvMonAn = new UcDataGridView
             {
-                Location = new Point(16, 76),
-                Size = new Size(pnlCard.Width - 32, pnlCard.Height - 90),
+                Location = new Point(16, 86),
+                Size = new Size(pnlCard.Width - 32, pnlCard.Height - 100),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 ScrollBars = ScrollBars.Vertical,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -686,10 +722,50 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             RenderTaiChinhGrid();
             _chartRenderer.SetData(_currentData.BangTaiChinhQuy);
 
-            // 3. Render Tab 2: Nhân viên
+            // 3. Render Tab 2: Nhân viên (Cập nhật danh sách chức vụ lọc)
+            if (_currentData.BangNhanVien != null && _cboChucVuNV != null)
+            {
+                _updatingFilterNV = true;
+                try
+                {
+                    string prev = _cboChucVuNV.SelectedItem as string;
+                    var roles = _currentData.BangNhanVien
+                        .Select(x => x.ChucVu)
+                        .Where(r => !string.IsNullOrWhiteSpace(r))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(r => r)
+                        .ToList();
+                    _cboChucVuNV.Items.Clear();
+                    _cboChucVuNV.Items.Add("Tất cả chức vụ");
+                    foreach (var r in roles) _cboChucVuNV.Items.Add(r);
+                    int idx = !string.IsNullOrEmpty(prev) ? _cboChucVuNV.Items.IndexOf(prev) : 0;
+                    _cboChucVuNV.SelectedIndex = idx >= 0 ? idx : 0;
+                }
+                finally { _updatingFilterNV = false; }
+            }
             RenderNhanVienGrid();
 
-            // 4. Render Tab 3: Món ăn
+            // 4. Render Tab 3: Món ăn (Cập nhật danh sách danh mục lọc)
+            if (_currentData.BangMonAn != null && _cboDanhMucMon != null)
+            {
+                _updatingFilterMon = true;
+                try
+                {
+                    string prev = _cboDanhMucMon.SelectedItem as string;
+                    var cats = _currentData.BangMonAn
+                        .Select(x => x.DanhMuc)
+                        .Where(c => !string.IsNullOrWhiteSpace(c))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(c => c)
+                        .ToList();
+                    _cboDanhMucMon.Items.Clear();
+                    _cboDanhMucMon.Items.Add("Tất cả danh mục");
+                    foreach (var c in cats) _cboDanhMucMon.Items.Add(c);
+                    int idx = !string.IsNullOrEmpty(prev) ? _cboDanhMucMon.Items.IndexOf(prev) : 0;
+                    _cboDanhMucMon.SelectedIndex = idx >= 0 ? idx : 0;
+                }
+                finally { _updatingFilterMon = false; }
+            }
             RenderMonAnGrid();
         }
 
@@ -745,7 +821,19 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             _dgvNhanVien.Rows.Clear();
             if (_currentData?.BangNhanVien == null) return;
 
-            foreach (var nv in _currentData.BangNhanVien)
+            string q = (_txtSearchNV?.Text ?? "").Trim();
+            string roleFilter = (_cboChucVuNV != null && _cboChucVuNV.SelectedIndex > 0)
+                ? (_cboChucVuNV.SelectedItem as string)
+                : null;
+
+            var filtered = _currentData.BangNhanVien.Where(nv =>
+            {
+                if (!string.IsNullOrEmpty(roleFilter) && !string.Equals(nv.ChucVu, roleFilter, StringComparison.OrdinalIgnoreCase))
+                    return false;
+                return UiStyler.MatchesSearch(q, nv.MaNhanVien, nv.TenNhanVien, nv.ChucVu);
+            }).ToList();
+
+            foreach (var nv in filtered)
             {
                 string tenNv = nv.TenNhanVien;
                 if (nv.Stt == 1 && nv.TongNam > 0) tenNv = "🥇 " + tenNv;
@@ -765,23 +853,24 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             }
 
             // Dòng tổng cộng
-            double tongQ1 = _currentData.BangNhanVien.Sum(x => x.Quy1);
-            double tongQ2 = _currentData.BangNhanVien.Sum(x => x.Quy2);
-            double tongQ3 = _currentData.BangNhanVien.Sum(x => x.Quy3);
-            double tongQ4 = _currentData.BangNhanVien.Sum(x => x.Quy4);
-            double tongNam = _currentData.BangNhanVien.Sum(x => x.TongNam);
+            double tongQ1 = filtered.Sum(x => x.Quy1);
+            double tongQ2 = filtered.Sum(x => x.Quy2);
+            double tongQ3 = filtered.Sum(x => x.Quy3);
+            double tongQ4 = filtered.Sum(x => x.Quy4);
+            double tongNam = filtered.Sum(x => x.TongNam);
+            double tongTyLe = filtered.Sum(x => x.TyLeDongGop);
 
             int totalRowIdx = _dgvNhanVien.Rows.Add(
                 "",
                 "TỔNG",
-                "TỔNG CỘNG TOÀN HỆ THỐNG",
+                filtered.Count == _currentData.BangNhanVien.Count ? "TỔNG CỘNG TOÀN HỆ THỐNG" : $"TỔNG CỘNG ({filtered.Count} NV)",
                 "",
                 $"{tongQ1:N0} đ",
                 $"{tongQ2:N0} đ",
                 $"{tongQ3:N0} đ",
                 $"{tongQ4:N0} đ",
                 $"{tongNam:N0} đ",
-                "100.0%"
+                $"{tongTyLe:N1}%"
             );
 
             var rTotal = _dgvNhanVien.Rows[totalRowIdx];
@@ -803,12 +892,18 @@ namespace RestaurantCRM.AdminApp.Forms.BaoCao
             _dgvMonAn.Rows.Clear();
             if (_currentData?.BangMonAn == null) return;
 
-            string keyword = _txtSearchMon.Text?.Trim().ToLower() ?? "";
+            string keyword = _txtSearchMon.Text?.Trim() ?? "";
+            string catFilter = (_cboDanhMucMon != null && _cboDanhMucMon.SelectedIndex > 0)
+                ? (_cboDanhMucMon.SelectedItem as string)
+                : null;
+
             var list = _currentData.BangMonAn
-                .Where(m => string.IsNullOrEmpty(keyword)
-                         || m.TenMon.ToLower().Contains(keyword)
-                         || m.DanhMuc.ToLower().Contains(keyword)
-                         || m.MaMon.ToLower().Contains(keyword))
+                .Where(m =>
+                {
+                    if (!string.IsNullOrEmpty(catFilter) && !string.Equals(m.DanhMuc, catFilter, StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    return UiStyler.MatchesSearch(keyword, m.TenMon, m.DanhMuc, m.MaMon);
+                })
                 .ToList();
 
             bool isTheoQuy = _radMonTheoQuy.Checked;

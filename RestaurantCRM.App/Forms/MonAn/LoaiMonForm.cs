@@ -18,6 +18,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         private readonly MonAnService _monAnService;
         private List<LoaiMonDto> _allLoaiMon = new List<LoaiMonDto>();
         private LoaiMonDto _selectedLoaiMon;
+        private readonly ComboBox _cboTinhTrang = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label _lblCount = new Label { Text = "" };
 
         public LoaiMonForm()
         {
@@ -27,6 +29,15 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             _loaiMonService = new LoaiMonService(httpClient);
             _monAnService = new MonAnService(httpClient);
 
+            _cboTinhTrang.Items.AddRange(new object[]
+            {
+                "Tất cả",
+                "Có món ăn (> 0)",
+                "Chưa có món (0)"
+            });
+            _cboTinhTrang.SelectedIndex = 0;
+            _cboTinhTrang.SelectedIndexChanged += (s, e) => FilterData();
+
             // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -35,7 +46,9 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 HeaderActions = new Control[] { btnLamMoi },
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
-                SearchPlaceholder = "Tìm loại món...",
+                SearchPlaceholder = "Tìm theo mã hoặc tên loại món...",
+                Filters = new[] { new FilterSpec(_cboTinhTrang, new Label { Text = "Món ăn" }) },
+                CountLabel = _lblCount,
                 Grid = dgvLoaiMon,
                 SidePanel = grpChiTiet,
                 SideWidth = 360
@@ -92,15 +105,23 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
 
         private void FilterData()
         {
-            var keyword = (txtTimKiem.Text ?? "").Trim().ToLower();
+            var keyword = (txtTimKiem.Text ?? "").Trim();
+            int tinhTrangIdx = _cboTinhTrang.SelectedIndex;
+
             var filtered = _allLoaiMon.Where(lm =>
-                string.IsNullOrEmpty(keyword) ||
-                (!string.IsNullOrEmpty(lm.TenLoaiMon) && lm.TenLoaiMon.ToLower().Contains(keyword)) ||
-                (!string.IsNullOrEmpty(lm.MaLoaiMon) && lm.MaLoaiMon.ToLower().Contains(keyword))
-            ).OrderByDescending(lm => lm.MaLoaiMon).ToList();
+            {
+                if (!UiStyler.MatchesSearch(keyword, lm.TenLoaiMon, lm.MaLoaiMon))
+                    return false;
+                if (tinhTrangIdx == 1 && lm.SoLuongMon <= 0) return false;
+                if (tinhTrangIdx == 2 && lm.SoLuongMon > 0) return false;
+                return true;
+            }).OrderByDescending(lm => lm.MaLoaiMon).ToList();
 
             dgvLoaiMon.DataSource = null;
             dgvLoaiMon.DataSource = filtered;
+            _lblCount.Text = filtered.Count == _allLoaiMon.Count
+                ? $"Hiển thị {filtered.Count} loại"
+                : $"Hiển thị {filtered.Count} / {_allLoaiMon.Count} loại";
 
             if (_selectedLoaiMon != null)
             {
