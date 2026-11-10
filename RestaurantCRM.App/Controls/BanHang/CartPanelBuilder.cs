@@ -288,7 +288,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             _btnClearCart = new Button
             {
-                Text = "🗑  Xóa tất cả",
+                Text = "Xóa tất cả",
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Anchor = AnchorStyles.Right,
@@ -370,7 +370,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             _btnPay = new Button
             {
-                Text = "✓  Xác nhận đơn hàng",
+                Text = "Xác nhận đơn hàng",
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0, S(10), 0, 0),
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
@@ -446,12 +446,13 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             _lblPromoIcon = new Label
             {
-                Text = "🎟️",
+                Text = "",
+                Visible = false,
                 AutoSize = true,
                 Anchor = AnchorStyles.Left,
-                Font = new Font("Segoe UI Emoji", 10.5F),
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 BackColor = Color.Transparent,
-                Margin = new Padding(0, 0, S(6), 0)
+                Margin = Padding.Empty
             };
             grid.Controls.Add(_lblPromoIcon, 0, 0);
             grid.SetRowSpan(_lblPromoIcon, 2);
@@ -982,7 +983,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         {
             if (subTotal <= 0)
             {
-                _lblPromoIcon.Text = "🎟️";
+                _lblPromoIcon.Text = "";
                 _lblPromoTitle.Text = "Voucher / Giảm giá";
                 _lblPromoTitle.ForeColor = ThemeManager.Ink;
                 _lblPromoSub.Text = "Chưa có món";
@@ -997,7 +998,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             if (appliedVoucher != null)
             {
                 var (_, disc, _) = calcService.EvaluateVoucher(appliedVoucher, subTotal);
-                _lblPromoIcon.Text = "✔";
+                _lblPromoIcon.Text = "";
                 _lblPromoTitle.Text = $"Mã [{appliedVoucher.MaVoucher}]";
                 _lblPromoTitle.ForeColor = Color.FromArgb(22, 163, 74);
                 _lblPromoSub.Text = $"Giảm -{disc:N0} đ";
@@ -1014,7 +1015,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             if (best != null)
             {
-                _lblPromoIcon.Text = "✨";
+                _lblPromoIcon.Text = "";
                 _lblPromoTitle.Text = $"Gợi ý: [{best.MaVoucher}]";
                 _lblPromoTitle.ForeColor = ThemeManager.Primary;
                 _lblPromoSub.Text = $"Giảm {bestDisc:N0} đ";
@@ -1025,7 +1026,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             }
             else
             {
-                _lblPromoIcon.Text = "🎟️";
+                _lblPromoIcon.Text = "";
                 _lblPromoTitle.Text = "Voucher / Giảm giá";
                 _lblPromoTitle.ForeColor = ThemeManager.Muted;
                 _lblPromoSub.Text = "Nhập mã hoặc chọn";

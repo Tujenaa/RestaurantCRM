@@ -40,10 +40,10 @@ namespace RestaurantCRM.AdminApp.Controls
             using (var f1 = new Font(ThemeManager.FontFamily, 8.5F))
             using (var f2 = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold))
             {
-                int w = 40 + 30;
+                int w = 16 + 26;
                 if (_caption.Length > 0) w += TextRenderer.MeasureText(_caption + ":", f1).Width;
                 w += TextRenderer.MeasureText(Current() ?? "", f2).Width;
-                Width = Math.Min(320, w);
+                Width = Math.Max(84, Math.Min(240, w));
             }
             Invalidate();
         }
@@ -58,9 +58,17 @@ namespace RestaurantCRM.AdminApp.Controls
         protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
         protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
 
-        protected override void OnClick(EventArgs e)
+        protected override void OnMouseClick(MouseEventArgs e)
         {
-            base.OnClick(e);
+            base.OnMouseClick(e);
+            // Nếu đang lọc (SelectedIndex > 0) và người dùng bấm vào góc phải (nút ✕) -> đặt lại về mặc định
+            if (IsActive() && e.X >= Width - 26 && _cb.Items.Count > 0)
+            {
+                _cb.SelectedIndex = 0;
+                Refit();
+                return;
+            }
+
             var menu = new ContextMenuStrip { ShowImageMargin = false, Font = new Font(ThemeManager.FontFamily, 9.5F), BackColor = Color.White };
             for (int i = 0; i < _cb.Items.Count; i++)
             {
@@ -88,10 +96,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 using (var pen = new Pen(active ? Color.FromArgb(110, ThemeManager.Primary) : ThemeManager.Line)) g.DrawPath(pen, path);
             }
             Color c = active ? ThemeManager.Primary : ThemeManager.Ink2;
-            using (var fi = ThemeManager.Icon(8.5F))
-                TextRenderer.DrawText(g, ThemeManager.Glyph.Filter, fi, new Rectangle(13, 0, 16, Height), c,
-                    TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
-            int x = 36;
+            int x = 14;
             using (var f1 = new Font(ThemeManager.FontFamily, 8.5F))
             using (var f2 = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold))
             {
@@ -100,14 +105,23 @@ namespace RestaurantCRM.AdminApp.Controls
                     string cap = _caption + ":";
                     TextRenderer.DrawText(g, cap, f1, new Rectangle(x, 0, Width, Height), ThemeManager.Muted,
                         TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-                    x += TextRenderer.MeasureText(g, cap, f1, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width + 5;
+                    x += TextRenderer.MeasureText(g, cap, f1, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width + 4;
                 }
-                TextRenderer.DrawText(g, Current() ?? "", f2, new Rectangle(x, 0, Width - x - 28, Height), c,
+                TextRenderer.DrawText(g, Current() ?? "", f2, new Rectangle(x, 0, Math.Max(10, Width - x - 24), Height), c,
                     TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
             }
-            using (var fi = ThemeManager.Icon(7F))
-                TextRenderer.DrawText(g, ThemeManager.Glyph.ChevronDown, fi, new Rectangle(Width - 26, 0, 14, Height), ThemeManager.Muted,
-                    TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+            if (active)
+            {
+                using (var fClear = new Font(ThemeManager.FontFamily, 7.5F, FontStyle.Bold))
+                    TextRenderer.DrawText(g, "✕", fClear, new Rectangle(Width - 24, 0, 16, Height), ThemeManager.Primary,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+            }
+            else
+            {
+                using (var fi = ThemeManager.Icon(7F))
+                    TextRenderer.DrawText(g, ThemeManager.Glyph.ChevronDown, fi, new Rectangle(Width - 24, 0, 14, Height), ThemeManager.Muted,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+            }
         }
     }
 }

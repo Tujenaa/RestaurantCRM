@@ -30,6 +30,8 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap {
             _nguyenLieuService = new NguyenLieuService(httpClient);
 
             dgvChiTiet.AutoGenerateColumns = false;
+            UiStyler.EnableAutoComplete(cboNhaCungCap);
+            UiStyler.EnableAutoComplete(cboMonAn);
             cboMonAn.SelectedIndexChanged += CboMonAn_SelectedIndexChanged;
 
             numSoLuong.KeyDown += (s, e) => {

@@ -24,6 +24,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly DataGridView _grid = new DataGridView();
         private readonly TextBox _txtSearch = new TextBox();
         private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboDoiTuong = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly Label _lblCount = new Label();
         private readonly Label _lblFooter = new Label();
         private readonly Label _kTong = new Label { Text = "Tổng khảo sát: —" };
@@ -50,6 +51,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             BuildGrid();
             _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Nháp", "Đang mở", "Đã đóng" });
             _cboTrangThai.SelectedIndex = 0;
+            _cboDoiTuong.Items.AddRange(new object[] { "Tất cả", "Tất cả KH (Công khai)", "Khách cụ thể" });
+            _cboDoiTuong.SelectedIndex = 0;
 
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -59,8 +62,12 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 HeaderActions = new Control[] { _btnLamMoi },
                 KpiLabels = new[] { _kTong, _kMo, _kNhap, _kPhieu },
                 Search = _txtSearch,
-                SearchPlaceholder = "Tìm theo mã hoặc tiêu đề khảo sát...",
-                Filters = new[] { new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }) },
+                SearchPlaceholder = "Tìm mã, tiêu đề khảo sát, người tạo...",
+                Filters = new[]
+                {
+                    new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
+                    new FilterSpec(_cboDoiTuong, new Label { Text = "Đối tượng" })
+                },
                 CountLabel = _lblCount,
                 Grid = _grid,
                 SecondaryActions = new[] { _btnSua, _btnDoiTuong, _btnXemTruoc, _btnMoDong, _btnThongKe },
@@ -70,6 +77,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboDoiTuong.SelectedIndexChanged += (s, e) => ApplyFilter();
             _grid.SelectionChanged += (s, e) => UpdateSelectionUi();
             _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) Sua(); };
             _grid.KeyDown += (s, e) =>
@@ -149,12 +157,17 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private void ApplyFilter(string chonMa = null)
         {
             if (chonMa == null) chonMa = SelectedDto()?.MaKhaoSat;
-            string q = (_txtSearch.Text ?? "").Trim().ToLowerInvariant();
+            string q = (_txtSearch.Text ?? "").Trim();
             string tt = _cboTrangThai.SelectedItem as string ?? "Tất cả";
+            int dtIdx = _cboDoiTuong.SelectedIndex;
 
             var list = _all.Where(k =>
-                (tt == "Tất cả" || k.TrangThaiHienThi == tt) &&
-                (q.Length == 0 || (k.MaKhaoSat ?? "").ToLowerInvariant().Contains(q) || (k.TieuDe ?? "").ToLowerInvariant().Contains(q))).ToList();
+            {
+                if (tt != "Tất cả" && k.TrangThaiHienThi != tt) return false;
+                if (dtIdx == 1 && k.SoDoiTuong > 0) return false;
+                if (dtIdx == 2 && k.SoDoiTuong <= 0) return false;
+                return UiStyler.MatchesSearch(q, k.MaKhaoSat, k.TieuDe, k.NguoiTao, k.MaNhanVien, k.DoiTuongHienThi);
+            }).ToList();
 
             _grid.SuspendLayout();
             _grid.Rows.Clear();

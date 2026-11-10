@@ -36,6 +36,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private readonly TextBox _txtSearch = new TextBox();
         private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly ComboBox _cboSoSao = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboThoiGian = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboNoiDung = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private const string SaoTatCa = "Tất cả", SaoTieuCuc = "Từ 3 sao trở xuống";
         private readonly Label _lblCount = new Label();
         private readonly Label _lblFooter = new Label();
@@ -98,6 +100,10 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _cboTrangThai.SelectedIndex = 0;
             _cboSoSao.Items.AddRange(new object[] { SaoTatCa, "5 sao", "4 sao", "3 sao", "2 sao", "1 sao", SaoTieuCuc });
             _cboSoSao.SelectedIndex = 0;
+            _cboThoiGian.Items.AddRange(new object[] { "Tất cả", "Hôm nay", "7 ngày qua", "30 ngày qua", "Tháng này" });
+            _cboThoiGian.SelectedIndex = 0;
+            _cboNoiDung.Items.AddRange(new object[] { "Tất cả", "Có nhận xét chữ", "Đã trả lời", "Chưa trả lời" });
+            _cboNoiDung.SelectedIndex = 0;
 
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -106,11 +112,13 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 HeaderActions = new Control[] { _btnLamMoi, _btnPhanTich },
                 KpiLabels = new[] { _kTong, _kCho, _kDiem, _kAn },
                 Search = _txtSearch,
-                SearchPlaceholder = "Tìm theo mã, khách hàng, món ăn, nội dung...",
+                SearchPlaceholder = "Tìm mã ĐG, mã đơn, KH, SĐT, món ăn, nội dung...",
                 Filters = new[]
                 {
                     new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
-                    new FilterSpec(_cboSoSao, new Label { Text = "Số sao" })
+                    new FilterSpec(_cboSoSao, new Label { Text = "Số sao" }),
+                    new FilterSpec(_cboThoiGian, new Label { Text = "Thời gian" }),
+                    new FilterSpec(_cboNoiDung, new Label { Text = "Loại" })
                 },
                 CountLabel = _lblCount,
                 Grid = _grid,
@@ -135,6 +143,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
             _cboSoSao.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboThoiGian.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboNoiDung.SelectedIndexChanged += (s, e) => ApplyFilter();
             _grid.SelectionChanged += (s, e) => ShowDetail(SelectedDto());
             _grid.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) { e.Handled = true; XoaPhanHoi(); } };
             // Sao luôn màu vàng (UiStyler đặt lại màu chữ chung của bảng nên phải gán khi định dạng ô)
@@ -368,9 +378,12 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         {
             _hoverCard.HideCard();
             if (chonMa == null) chonMa = SelectedDto()?.MaDanhGia;
-            string q = (_txtSearch.Text ?? "").Trim().ToLowerInvariant();
+            string q = (_txtSearch.Text ?? "").Trim();
             string tt = _cboTrangThai.SelectedItem as string ?? "Tất cả";
             string locSao = _cboSoSao.SelectedItem as string ?? SaoTatCa;
+            int timeIdx = _cboThoiGian.SelectedIndex;
+            int ndIdx = _cboNoiDung.SelectedIndex;
+            DateTime today = DateTime.Today;
             int saoChinhXac = 0;
             if (locSao != SaoTatCa && locSao != SaoTieuCuc) int.TryParse(locSao.Substring(0, 1), out saoChinhXac);
 
@@ -379,11 +392,30 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 if (tt == "Đã ẩn") { if (d.HienThi) return false; }
                 else if (tt == "Cần chú ý") { if (!d.CanChuY) return false; }
                 else if (tt != "Tất cả" && d.TrangThaiHienThi != tt) return false;
+
                 if (locSao == SaoTieuCuc) { if (!d.SoSao.HasValue || d.SoSao.Value > 3) return false; }
                 else if (saoChinhXac > 0 && (d.SoSao ?? 0) != saoChinhXac) return false;
+
+                if (timeIdx > 0)
+                {
+                    if (!d.NgayDanhGia.HasValue) return false;
+                    DateTime dt = d.NgayDanhGia.Value.Date;
+                    if (timeIdx == 1 && dt != today) return false;
+                    if (timeIdx == 2 && dt < today.AddDays(-6)) return false;
+                    if (timeIdx == 3 && dt < today.AddDays(-29)) return false;
+                    if (timeIdx == 4 && (dt.Month != today.Month || dt.Year != today.Year)) return false;
+                }
+
+                if (ndIdx == 1 && string.IsNullOrWhiteSpace(d.NoiDung) && (d.ChiTietMon == null || !d.ChiTietMon.Any(m => !string.IsNullOrWhiteSpace(m.NoiDung))))
+                    return false;
+                if (ndIdx == 2 && !d.DaTraLoi) return false;
+                if (ndIdx == 3 && d.DaTraLoi) return false;
+
                 if (q.Length == 0) return true;
-                return Has(d.MaDanhGia, q) || Has(d.TenKhachHang, q) || Has(d.TenMon, q) || Has(d.NoiDung, q) || Has(d.SoDienThoai, q)
-                    || (d.ChiTietMon != null && d.ChiTietMon.Any(m => Has(m.TenMon, q) || Has(m.NoiDung, q)));
+                string chiTietText = d.ChiTietMon != null && d.ChiTietMon.Count > 0
+                    ? string.Join(" ", d.ChiTietMon.Select(m => (m.TenMon ?? "") + " " + (m.NoiDung ?? "")))
+                    : null;
+                return UiStyler.MatchesSearch(q, d.MaDanhGia, d.MaHoaDon, d.TenKhachHang, d.MaKhachHang, d.SoDienThoai, d.TenMon, d.NoiDung, chiTietText);
             })
             // Ưu tiên: chưa xử lý + cần chú ý → chưa xử lý → đã xử lý; trong mỗi nhóm mới nhất lên trước
             .OrderBy(d => d.LaDaXuLy ? 2 : (d.CanChuY ? 0 : 1))

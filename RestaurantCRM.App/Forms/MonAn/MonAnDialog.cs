@@ -51,6 +51,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn {
             };
 
             SetupDinhLuongGrid();
+            RestaurantCRM.AdminApp.Helpers.UiStyler.EnableAutoComplete(cboLoaiMon);
+            RestaurantCRM.AdminApp.Helpers.UiStyler.EnableAutoComplete(cboNguyenLieu);
             numGia.ValueChanged += (s, e) => RecalculateCogs();
         }
 

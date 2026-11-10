@@ -31,7 +31,10 @@ namespace RestaurantCRM.API.Controllers
                 {
                     d.MaHoaDon,
                     d.NgayDat,
+                    d.MaKhachHang,
                     TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : (!string.IsNullOrEmpty(d.TenKhachHang) ? d.TenKhachHang : "Khách vãng lai"),
+                    SoDienThoai = d.MaKhachHangNavigation != null ? (d.MaKhachHangNavigation.SoDienThoai ?? "") : (d.SoDienThoai ?? ""),
+                    DiaChiGiao = d.DiaChiGiao ?? "",
                     d.TrangThai,
                     d.TongTienHang,
                     d.TongThanhToan,

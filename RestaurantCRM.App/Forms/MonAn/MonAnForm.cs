@@ -22,6 +22,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         private readonly Timer _refreshTimer;
         private bool _isRefreshing = false;
         private readonly Button _btnXoaMon;
+        private readonly ComboBox _cboMucGia = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
 
         public MonAnForm()
         {
@@ -58,8 +59,13 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 KpiHost = pnlKpis,
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
-                SearchPlaceholder = "Tìm theo tên hoặc mã món...",
-                Filters = new[] { new FilterSpec(cboLoaiMon, lblLoaiMon), new FilterSpec(cboTrangThai, lblTrangThai) },
+                SearchPlaceholder = "Tìm tên, mã món, mô tả, nguyên liệu...",
+                Filters = new[]
+                {
+                    new FilterSpec(cboLoaiMon, lblLoaiMon),
+                    new FilterSpec(cboTrangThai, lblTrangThai),
+                    new FilterSpec(_cboMucGia, new Label { Text = "Mức giá" })
+                },
                 CountLabel = lblDemSoLuong,
                 Grid = dgvMonAn,
                 SecondaryActions = new[] { btnSua },
@@ -122,10 +128,22 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             cboTrangThai.Items.AddRange(new object[] {
                 "Tất cả trạng thái",
                 "Đang kinh doanh",
+                "Sắp hết hàng (≤ 5 suất)",
                 "Hết hàng",
                 "Ngừng kinh doanh"
             });
             cboTrangThai.SelectedIndex = 0;
+
+            _cboMucGia.Items.Clear();
+            _cboMucGia.Items.AddRange(new object[] {
+                "Tất cả mức giá",
+                "Dưới 50.000 đ",
+                "50.000 - 150.000 đ",
+                "150.000 - 300.000 đ",
+                "Trên 300.000 đ"
+            });
+            _cboMucGia.SelectedIndex = 0;
+            _cboMucGia.SelectedIndexChanged += (s, e) => FilterData();
 
             pnlFilter.Paint += (s, e) => {
                 using (var pen = new Pen(Color.FromArgb(226, 232, 240), 1))
@@ -268,27 +286,45 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
 
         private void FilterData(string selectId = null, bool preserveScroll = false)
         {
-            var keyword = (txtTimKiem.Text ?? "").Trim().ToLowerInvariant();
+            var keyword = (txtTimKiem.Text ?? "").Trim();
             var maLoaiMon = cboLoaiMon.SelectedValue?.ToString() ?? "";
             var selectedTrangThai = cboTrangThai.SelectedItem?.ToString() ?? "Tất cả trạng thái";
+            int mucGiaIndex = _cboMucGia.SelectedIndex;
 
             var filtered = _allMonAn.Where(m => {
-                bool matchKeyword = string.IsNullOrEmpty(keyword)
-                    || (m.TenMonAn != null && m.TenMonAn.ToLowerInvariant().Contains(keyword))
-                    || (m.MaMonAn != null && m.MaMonAn.ToLowerInvariant().Contains(keyword));
+                string catName = _allLoaiMon.FirstOrDefault(x => x.MaLoaiMon == m.MaLoaiMon)?.TenLoaiMon ?? m.TenLoaiMon;
+                string ingredients = m.DinhLuong != null && m.DinhLuong.Count > 0
+                    ? string.Join(" ", m.DinhLuong.Select(dl => dl.TenNguyenLieu))
+                    : null;
+
+                bool matchKeyword = UiStyler.MatchesSearch(keyword, m.TenMonAn, m.MaMonAn, m.MoTa, catName, ingredients);
+                if (!matchKeyword) return false;
 
                 bool matchLoai = string.IsNullOrEmpty(maLoaiMon) || m.MaLoaiMon == maLoaiMon;
+                if (!matchLoai) return false;
 
                 bool isNgungKd = m.TrangThaiRaw == "Discontinued" || m.TrangThaiRaw == "Inactive";
                 bool isHetHang = !isNgungKd && (m.SoLuongTon <= 0 || m.TrangThaiRaw == "OutOfStock");
+                bool isSapHet = !isNgungKd && !isHetHang && m.SoLuongTon <= 5;
                 bool isDangKd = !isNgungKd && !isHetHang;
 
                 bool matchStatus = true;
                 if (selectedTrangThai == "Đang kinh doanh") matchStatus = isDangKd;
+                else if (selectedTrangThai == "Sắp hết hàng (≤ 5 suất)") matchStatus = isSapHet;
                 else if (selectedTrangThai == "Hết hàng") matchStatus = isHetHang;
                 else if (selectedTrangThai == "Ngừng kinh doanh") matchStatus = isNgungKd;
+                if (!matchStatus) return false;
 
-                return matchKeyword && matchLoai && matchStatus;
+                if (mucGiaIndex > 0)
+                {
+                    decimal gia = m.Gia;
+                    if (mucGiaIndex == 1 && gia >= 50000m) return false;
+                    if (mucGiaIndex == 2 && (gia < 50000m || gia > 150000m)) return false;
+                    if (mucGiaIndex == 3 && (gia <= 150000m || gia > 300000m)) return false;
+                    if (mucGiaIndex == 4 && gia <= 300000m) return false;
+                }
+
+                return true;
             }).OrderByDescending(m => m.MaMonAn).ToList();
 
             // Lưu lại vị trí cuộn ngang (X), vị trí cuộn dọc (Y), và dòng đang chọn

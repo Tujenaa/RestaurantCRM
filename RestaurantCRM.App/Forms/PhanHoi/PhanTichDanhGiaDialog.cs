@@ -19,10 +19,16 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private readonly Label _summary = new Label();
         private readonly Label _commentsTitle = new Label();
         private readonly Label _emptyComments = new Label();
+        private readonly TextBox _txtSearchDish = new TextBox();
+        private readonly ComboBox _cboFilterDish = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboFilterCommentSao = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly PillSearch _pillDish;
+        private readonly ComboChip _chipDish;
+        private readonly ComboChip _chipCommentSao;
         private System.Collections.Generic.List<PhanTichDanhGiaMonDto> _data = new System.Collections.Generic.List<PhanTichDanhGiaMonDto>();
 
         public PhanTichDanhGiaDialog(PhanHoiService service)
-            : base("Phân tích đánh giá món ăn", "Điểm trung bình, phân bố số sao và nhận xét theo từng món.", 1080, 610, null, "Đóng")
+            : base("Phân tích đánh giá món ăn", "Điểm trung bình, phân bố số sao và nhận xét theo từng món.", 1080, 650, null, "Đóng")
         {
             _service = service;
             var root = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
@@ -30,8 +36,40 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             _summary.Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold);
             _summary.ForeColor = ThemeManager.Ink2;
-            _summary.TextAlign = ContentAlignment.MiddleLeft;
+            _summary.TextAlign = ContentAlignment.MiddleRight;
             root.Controls.Add(_summary);
+
+            _cboFilterDish.Items.AddRange(new object[]
+            {
+                "Tất cả món",
+                "Điểm cao (≥ 4.0 sao)",
+                "Cần cải thiện (< 3.5 sao)",
+                "Có đánh giá 1-2 sao"
+            });
+            _cboFilterDish.SelectedIndex = 0;
+            _cboFilterDish.Visible = false;
+            root.Controls.Add(_cboFilterDish);
+
+            _pillDish = new PillSearch(_txtSearchDish, "Tìm tên hoặc mã món ăn...") { Width = 260 };
+            _chipDish = new ComboChip(_cboFilterDish, "Mức điểm");
+            root.Controls.Add(_pillDish);
+            root.Controls.Add(_chipDish);
+
+            _cboFilterCommentSao.Items.AddRange(new object[]
+            {
+                "Tất cả nhận xét",
+                "5 sao", "4 sao", "3 sao", "2 sao", "1 sao",
+                "Từ 3 sao trở xuống"
+            });
+            _cboFilterCommentSao.SelectedIndex = 0;
+            _cboFilterCommentSao.Visible = false;
+            root.Controls.Add(_cboFilterCommentSao);
+            _chipCommentSao = new ComboChip(_cboFilterCommentSao, "Lọc sao");
+            root.Controls.Add(_chipCommentSao);
+
+            _txtSearchDish.TextChanged += (s, e) => RenderDishes();
+            _cboFilterDish.SelectedIndexChanged += (s, e) => RenderDishes();
+            _cboFilterCommentSao.SelectedIndexChanged += (s, e) => ShowComments(SelectedDish());
 
             _dishes.AllowUserToAddRows = false;
             _dishes.AllowUserToDeleteRows = false;
@@ -90,12 +128,20 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
         private void LayoutContent(Control root)
         {
-            _summary.SetBounds(0, 0, root.ClientSize.Width, 24);
-            _dishes.SetBounds(0, 28, root.ClientSize.Width, 226);
-            _commentsTitle.SetBounds(0, 262, root.ClientSize.Width, 26);
-            int commentsTop = 292;
-            _comments.SetBounds(0, commentsTop, root.ClientSize.Width, Math.Max(90, root.ClientSize.Height - commentsTop));
-            _emptyComments.SetBounds(0, commentsTop, root.ClientSize.Width, Math.Max(90, root.ClientSize.Height - commentsTop));
+            int w = root.ClientSize.Width;
+            _pillDish.Location = new Point(0, 0);
+            _chipDish.Location = new Point(_pillDish.Right + 8, 0);
+            _summary.SetBounds(_chipDish.Right + 12, 6, Math.Max(120, w - _chipDish.Right - 12), 26);
+
+            _dishes.SetBounds(0, 44, w, 220);
+
+            int commentBarY = 272;
+            _commentsTitle.SetBounds(0, commentBarY + 6, Math.Max(150, w - _chipCommentSao.Width - 12), 26);
+            _chipCommentSao.Location = new Point(w - _chipCommentSao.Width, commentBarY);
+
+            int commentsTop = commentBarY + 42;
+            _comments.SetBounds(0, commentsTop, w, Math.Max(90, root.ClientSize.Height - commentsTop));
+            _emptyComments.SetBounds(0, commentsTop, w, Math.Max(90, root.ClientSize.Height - commentsTop));
         }
 
         private async Task LoadAsync()
@@ -105,36 +151,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             try
             {
                 _data = await _service.GetPhanTichMonAsync();
-                _dishes.Rows.Clear();
-                foreach (var mon in _data)
-                {
-                    int row = _dishes.Rows.Add(
-                        mon.TenMon ?? mon.MaMon ?? "Món ăn",
-                        mon.SoLuotDanhGia,
-                        mon.DiemTrungBinh.HasValue ? mon.DiemTrungBinh.Value.ToString("0.00") + " / 5" : "—",
-                        mon.SoSao1, mon.SoSao2, mon.SoSao3, mon.SoSao4, mon.SoSao5);
-                    _dishes.Rows[row].Tag = mon;
-                }
-
-                int tong = _data.Sum(x => x.SoLuotDanhGia);
-                _summary.Text = _data.Count == 0
-                    ? "Chưa có đánh giá nào gắn với món ăn."
-                    : "" + _data.Count.ToString("N0") + " món · " + tong.ToString("N0") + " lượt đánh giá";
-
-                if (_dishes.Rows.Count > 0)
-                {
-                    _dishes.Rows[0].Selected = true;
-                    _dishes.CurrentCell = _dishes.Rows[0].Cells[0];
-                    ShowComments(SelectedDish());
-                }
-                else
-                {
-                    _commentsTitle.Text = "Nhận xét của khách hàng";
-                    _comments.Rows.Clear();
-                    _emptyComments.Text = "Chưa có món nào được đánh giá.";
-                    _emptyComments.Visible = true;
-                    _emptyComments.BringToFront();
-                }
+                RenderDishes();
             }
             catch (ApiException ex)
             {
@@ -149,6 +166,53 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             }
         }
 
+        private void RenderDishes()
+        {
+            string q = (_txtSearchDish.Text ?? "").Trim();
+            int filterIdx = _cboFilterDish.SelectedIndex;
+
+            var filtered = _data.Where(mon =>
+            {
+                if (!UiStyler.MatchesSearch(q, mon.TenMon, mon.MaMon)) return false;
+                double avg = mon.DiemTrungBinh ?? 0;
+                if (filterIdx == 1 && avg < 4.0) return false;
+                if (filterIdx == 2 && (avg <= 0 || avg >= 3.5)) return false;
+                if (filterIdx == 3 && (mon.SoSao1 + mon.SoSao2) <= 0) return false;
+                return true;
+            }).ToList();
+
+            _dishes.Rows.Clear();
+            foreach (var mon in filtered)
+            {
+                int row = _dishes.Rows.Add(
+                    mon.TenMon ?? mon.MaMon ?? "Món ăn",
+                    mon.SoLuotDanhGia,
+                    mon.DiemTrungBinh.HasValue ? mon.DiemTrungBinh.Value.ToString("0.00") + " / 5" : "—",
+                    mon.SoSao1, mon.SoSao2, mon.SoSao3, mon.SoSao4, mon.SoSao5);
+                _dishes.Rows[row].Tag = mon;
+            }
+
+            int tong = filtered.Sum(x => x.SoLuotDanhGia);
+            _summary.Text = _data.Count == 0
+                ? "Chưa có đánh giá nào gắn với món ăn."
+                : $"Hiển thị {filtered.Count}/{_data.Count} món · {tong:N0} lượt đánh giá";
+
+            if (_dishes.Rows.Count > 0)
+            {
+                _dishes.Rows[0].Selected = true;
+                _dishes.CurrentCell = _dishes.Rows[0].Cells[0];
+                ShowComments(SelectedDish());
+            }
+            else
+            {
+                _commentsTitle.Text = "Nhận xét của khách hàng";
+                _comments.Rows.Clear();
+                _emptyComments.Text = "Không có món ăn nào khớp bộ lọc.";
+                _emptyComments.Visible = true;
+                _emptyComments.BringToFront();
+            }
+        }
+
         private PhanTichDanhGiaMonDto SelectedDish()
         {
             return _dishes.SelectedRows.Count == 0 ? null : _dishes.SelectedRows[0].Tag as PhanTichDanhGiaMonDto;
@@ -159,7 +223,16 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             if (mon == null) return;
             _commentsTitle.Text = "Nhận xét: " + (mon.TenMon ?? mon.MaMon ?? "Món ăn");
             _comments.Rows.Clear();
-            foreach (var item in mon.NhanXet ?? new System.Collections.Generic.List<PhanTichNhanXetDto>())
+            int saoFilter = _cboFilterCommentSao.SelectedIndex;
+            var comments = (mon.NhanXet ?? new System.Collections.Generic.List<PhanTichNhanXetDto>()).Where(c =>
+            {
+                int s = c.SoSao ?? 0;
+                if (saoFilter >= 1 && saoFilter <= 5) return s == (6 - saoFilter);
+                if (saoFilter == 6) return s > 0 && s <= 3;
+                return true;
+            }).ToList();
+
+            foreach (var item in comments)
             {
                 _comments.Rows.Add(
                     item.NgayDanhGia.HasValue ? item.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—",
@@ -168,9 +241,10 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             }
 
             bool none = _comments.Rows.Count == 0;
-            _emptyComments.Text = "Món này chưa có nhận xét bằng chữ.";
+            _emptyComments.Text = saoFilter > 0 ? "Không có nhận xét nào ở mức sao này." : "Món này chưa có nhận xét bằng chữ.";
             _emptyComments.Visible = none;
             if (none) _emptyComments.BringToFront(); else _comments.BringToFront();
+            LayoutContent(_dishes.Parent);
         }
     }
 }

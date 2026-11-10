@@ -30,6 +30,9 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
         private Button _btnDelete;
         private Button _btnOpenFolder;
         private Panel _pnlLoading;
+        private TextBox _txtSearch;
+        private ComboBox _cboThoiGian;
+        private Label _lblFilterCount;
 
         public BackupRestoreForm()
         {
@@ -227,6 +230,35 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
             };
             foreach (var b in new[] { _btnCreateBackup, _btnRefresh, _btnOpenFolder }) b.SizeChanged += (s, e) => placeLeft();
             placeRight();
+
+            // Hàng tìm kiếm & lọc nâng cao cho bản sao lưu (tách dòng riêng cân đối, không đè nút)
+            var filterBar = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = Color.White, Padding = new Padding(0, 4, 0, 4) };
+            _txtSearch = new TextBox();
+            _txtSearch.TextChanged += (s, e) => RenderBackupsGrid();
+            var pillSearch = new PillSearch(_txtSearch, "Tìm tên file .bak hoặc ghi chú sao lưu...") { Width = 300, Location = new Point(0, 4) };
+
+            _cboThoiGian = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+            _cboThoiGian.Items.AddRange(new object[] { "Tất cả thời gian", "Hôm nay", "7 ngày qua", "30 ngày qua" });
+            _cboThoiGian.SelectedIndex = 0;
+            _cboThoiGian.SelectedIndexChanged += (s, e) => RenderBackupsGrid();
+            var chipTime = new ComboChip(_cboThoiGian, "Thời gian") { Location = new Point(310, 4) };
+
+            _lblFilterCount = new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Right,
+                Width = 180,
+                TextAlign = ContentAlignment.MiddleRight,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = ThemeManager.Muted
+            };
+
+            filterBar.Controls.Add(_cboThoiGian);
+            filterBar.Controls.Add(pillSearch);
+            filterBar.Controls.Add(chipTime);
+            filterBar.Controls.Add(_lblFilterCount);
+
+            pnlGridCard.Controls.Add(filterBar);
             pnlGridCard.Controls.Add(toolbar);
 
             // DataGridView
@@ -301,14 +333,12 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
         {
             try
             {
-                _backups = await _backupService.GetAllAsync();
-                _dgvBackups.Rows.Clear();
+                _backups = await _backupService.GetAllAsync() ?? new List<BackupItemModel>();
 
                 long totalBytes = 0;
                 foreach (var b in _backups)
                 {
                     totalBytes += b.FileSizeBytes;
-                    _dgvBackups.Rows.Add(b.FileName, b.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss"), b.FileSizeFormatted, b.Note);
                 }
 
                 _lblTotalBackups.Text = _backups.Count + " bản sao lưu";
@@ -321,10 +351,43 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
                 {
                     _lblLatestBackup.Text = "Chưa có bản sao lưu";
                 }
+
+                RenderBackupsGrid();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi khi nạp dữ liệu sao lưu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RenderBackupsGrid()
+        {
+            if (_dgvBackups == null) return;
+            string q = (_txtSearch?.Text ?? "").Trim();
+            int timeIdx = _cboThoiGian?.SelectedIndex ?? 0;
+            DateTime today = DateTime.Today;
+
+            var filtered = _backups.Where(b =>
+            {
+                if (!UiStyler.MatchesSearch(q, b.FileName, b.Note, b.CreatedAt.ToString("dd/MM/yyyy")))
+                    return false;
+                if (timeIdx == 1 && b.CreatedAt.Date != today) return false;
+                if (timeIdx == 2 && b.CreatedAt.Date < today.AddDays(-6)) return false;
+                if (timeIdx == 3 && b.CreatedAt.Date < today.AddDays(-29)) return false;
+                return true;
+            }).ToList();
+
+            _dgvBackups.Rows.Clear();
+            foreach (var b in filtered)
+            {
+                _dgvBackups.Rows.Add(b.FileName, b.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss"), b.FileSizeFormatted, b.Note);
+            }
+
+            if (_lblFilterCount != null)
+            {
+                _lblFilterCount.Text = filtered.Count == _backups.Count
+                    ? $"Hiển thị {filtered.Count} bản"
+                    : $"Hiển thị {filtered.Count} / {_backups.Count} bản";
             }
         }
 

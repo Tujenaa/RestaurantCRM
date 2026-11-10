@@ -38,12 +38,18 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
 
         private TextBox _txtSearchDon;
         private ComboBox _cboStatusDon;
+        private ComboBox _cboHinhThucDon;
+        private ComboBox _cboLuotDungDon;
 
         private TextBox _txtSearchLoai;
         private ComboBox _cboStatusLoai;
+        private ComboBox _cboHinhThucLoai;
+        private ComboBox _cboLuotDungLoai;
 
         private TextBox _txtSearchMon;
         private ComboBox _cboStatusMon;
+        private ComboBox _cboHinhThucMon;
+        private ComboBox _cboLuotDungMon;
 
         public KhuyenMaiForm()
         {
@@ -182,11 +188,13 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
             card.BringToFront();
         }
 
-        // ================= HELPER TẠO THANH CÔNG CỤ (CHỐNG CHỒNG LẤN) =================
+        // ================= HELPER TẠO THANH CÔNG CỤ (CHỐNG CHỒNG LẤN & BỘ LỌC NÂNG CAO) =================
         private Panel CreateTabToolbar(
             Button btnAdd, Button btnEdit, Button btnDelete,
             TextBox txtSearch, ComboBox cboStatus,
-            string searchPlaceholder)
+            string searchPlaceholder,
+            ComboBox cboHinhThuc = null,
+            ComboBox cboLuotDung = null)
         {
             var toolbar = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = Color.White };
 
@@ -199,41 +207,79 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 BackColor = Color.White,
-                Padding = new Padding(0, 8, 0, 4)
+                Padding = new Padding(0, 7, 0, 4)
             };
             if (btnAdd != null) leftFlow.Controls.Add(btnAdd);
             if (btnEdit != null) leftFlow.Controls.Add(btnEdit);
             if (btnDelete != null) leftFlow.Controls.Add(btnDelete);
 
-            // Bên phải: Ô tìm kiếm + Dropdown lọc trạng thái (Chống chồng lấn)
-            var rightPanel = new Panel
+            // Bên phải: Ô tìm kiếm PillSearch + các ComboChip lọc nâng cao tự động co giãn
+            var rightFlow = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
-                Width = 430,
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = true,
                 BackColor = Color.White,
-                Padding = new Padding(0, 8, 0, 4)
+                Padding = new Padding(4, 6, 0, 2)
             };
 
-            cboStatus.Location = new Point(280, 8);
-            cboStatus.Width = 145;
-            cboStatus.Height = 32;
             cboStatus.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboStatus.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
             cboStatus.Items.Clear();
             cboStatus.Items.AddRange(new object[] { "Tất cả trạng thái", "Đang áp dụng", "Chưa diễn ra", "Đã kết thúc" });
             cboStatus.SelectedIndex = 0;
+            cboStatus.Visible = false;
+            toolbar.Controls.Add(cboStatus);
 
-            txtSearch.Location = new Point(10, 8);
-            txtSearch.Width = 260;
-            txtSearch.Height = 32;
-            txtSearch.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
-            UiStyler.SetPlaceholder(txtSearch, searchPlaceholder);
+            if (cboLuotDung != null)
+            {
+                cboLuotDung.DropDownStyle = ComboBoxStyle.DropDownList;
+                cboLuotDung.Items.Clear();
+                cboLuotDung.Items.AddRange(new object[] { "Tất cả lượt", "Còn lượt dùng", "Đã hết lượt" });
+                cboLuotDung.SelectedIndex = 0;
+                cboLuotDung.Visible = false;
+                toolbar.Controls.Add(cboLuotDung);
+                var chipLuot = new ComboChip(cboLuotDung, "Lượt") { Margin = new Padding(6, 0, 0, 4) };
+                rightFlow.Controls.Add(chipLuot);
+            }
 
-            rightPanel.Controls.Add(txtSearch);
-            rightPanel.Controls.Add(cboStatus);
+            if (cboHinhThuc != null)
+            {
+                cboHinhThuc.DropDownStyle = ComboBoxStyle.DropDownList;
+                cboHinhThuc.Items.Clear();
+                cboHinhThuc.Items.AddRange(new object[] { "Tất cả hình thức", "Giảm theo %", "Giảm tiền mặt" });
+                cboHinhThuc.SelectedIndex = 0;
+                cboHinhThuc.Visible = false;
+                toolbar.Controls.Add(cboHinhThuc);
+                var chipHT = new ComboChip(cboHinhThuc, "Loại") { Margin = new Padding(6, 0, 0, 4) };
+                rightFlow.Controls.Add(chipHT);
+            }
 
-            toolbar.Controls.Add(rightPanel);
+            var chipStatus = new ComboChip(cboStatus, "Trạng thái") { Margin = new Padding(6, 0, 0, 4) };
+            rightFlow.Controls.Add(chipStatus);
+
+            var pillSearch = new PillSearch(txtSearch, searchPlaceholder)
+            {
+                Width = 220,
+                Margin = new Padding(6, 0, 0, 4)
+            };
+            rightFlow.Controls.Add(pillSearch);
+
+            // Tự động điều chỉnh chiều cao toolbar nếu cửa sổ hẹp khiến bộ lọc xuống 2 dòng
+            Action syncHeight = () =>
+            {
+                if (toolbar.IsDisposed) return;
+                int maxB = 0;
+                foreach (Control c in rightFlow.Controls)
+                    if (c.Visible && c.Bottom + c.Margin.Bottom > maxB) maxB = c.Bottom + c.Margin.Bottom;
+                int h = Math.Max(50, maxB + 6);
+                if (toolbar.Height != h) toolbar.Height = h;
+            };
+            rightFlow.Layout += (s, e) => syncHeight();
+            rightFlow.Resize += (s, e) => syncHeight();
+
+            toolbar.Controls.Add(rightFlow);
             toolbar.Controls.Add(leftFlow);
+            rightFlow.BringToFront();
             return toolbar;
         }
 
@@ -297,11 +343,15 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
 
             _txtSearchDon = new TextBox();
             _cboStatusDon = new ComboBox();
+            _cboHinhThucDon = new ComboBox();
+            _cboLuotDungDon = new ComboBox();
 
             _txtSearchDon.TextChanged += (s, e) => RenderVoucherDonGrid();
             _cboStatusDon.SelectedIndexChanged += (s, e) => RenderVoucherDonGrid();
+            _cboHinhThucDon.SelectedIndexChanged += (s, e) => RenderVoucherDonGrid();
+            _cboLuotDungDon.SelectedIndexChanged += (s, e) => RenderVoucherDonGrid();
 
-            var toolbar = CreateTabToolbar(btnAdd, btnEdit, btnDelete, _txtSearchDon, _cboStatusDon, "🔍 Tìm mã voucher đơn hàng...");
+            var toolbar = CreateTabToolbar(btnAdd, btnEdit, btnDelete, _txtSearchDon, _cboStatusDon, "Tìm mã voucher, chương trình...", _cboHinhThucDon, _cboLuotDungDon);
             tab.Controls.Add(toolbar);
 
             _dgvVoucherDon = CreateStyledGrid();
@@ -347,11 +397,15 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
 
             _txtSearchLoai = new TextBox();
             _cboStatusLoai = new ComboBox();
+            _cboHinhThucLoai = new ComboBox();
+            _cboLuotDungLoai = new ComboBox();
 
             _txtSearchLoai.TextChanged += (s, e) => RenderVoucherLoaiGrid();
             _cboStatusLoai.SelectedIndexChanged += (s, e) => RenderVoucherLoaiGrid();
+            _cboHinhThucLoai.SelectedIndexChanged += (s, e) => RenderVoucherLoaiGrid();
+            _cboLuotDungLoai.SelectedIndexChanged += (s, e) => RenderVoucherLoaiGrid();
 
-            var toolbar = CreateTabToolbar(btnAdd, btnEdit, btnDelete, _txtSearchLoai, _cboStatusLoai, "🔍 Tìm theo mã hoặc loại món...");
+            var toolbar = CreateTabToolbar(btnAdd, btnEdit, btnDelete, _txtSearchLoai, _cboStatusLoai, "Tìm mã voucher, loại món...", _cboHinhThucLoai, _cboLuotDungLoai);
             tab.Controls.Add(toolbar);
 
             _dgvVoucherLoai = CreateStyledGrid();
@@ -399,11 +453,15 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
 
             _txtSearchMon = new TextBox();
             _cboStatusMon = new ComboBox();
+            _cboHinhThucMon = new ComboBox();
+            _cboLuotDungMon = new ComboBox();
 
             _txtSearchMon.TextChanged += (s, e) => RenderVoucherMonGrid();
             _cboStatusMon.SelectedIndexChanged += (s, e) => RenderVoucherMonGrid();
+            _cboHinhThucMon.SelectedIndexChanged += (s, e) => RenderVoucherMonGrid();
+            _cboLuotDungMon.SelectedIndexChanged += (s, e) => RenderVoucherMonGrid();
 
-            var toolbar = CreateTabToolbar(btnAdd, btnEdit, btnDelete, _txtSearchMon, _cboStatusMon, "🔍 Tìm theo mã hoặc tên món ăn...");
+            var toolbar = CreateTabToolbar(btnAdd, btnEdit, btnDelete, _txtSearchMon, _cboStatusMon, "Tìm mã voucher, tên món ăn...", _cboHinhThucMon, _cboLuotDungMon);
             tab.Controls.Add(toolbar);
 
             _dgvVoucherMon = CreateStyledGrid();
@@ -552,19 +610,32 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
             }
         }
 
+        private static bool MatchVoucherAdvanced(VoucherDto v, int hinhThucIdx, int luotDungIdx)
+        {
+            if (hinhThucIdx > 0)
+            {
+                bool isPercent = (v.PhanTramGiam.HasValue && v.PhanTramGiam.Value > 0) || (v.HinhThuc != null && v.HinhThuc.Contains("%"));
+                if (hinhThucIdx == 1 && !isPercent) return false;
+                if (hinhThucIdx == 2 && isPercent) return false;
+            }
+            if (luotDungIdx > 0)
+            {
+                bool exhausted = v.SoLuongToiDa.HasValue && v.SoLuongToiDa.Value > 0 && (v.SoLuongDaDung ?? 0) >= v.SoLuongToiDa.Value;
+                if (luotDungIdx == 1 && exhausted) return false;
+                if (luotDungIdx == 2 && !exhausted) return false;
+            }
+            return true;
+        }
+
         private void RenderChuongTrinhGrid()
         {
             if (_dgvChuongTrinh == null) return;
-            string keyword = _txtSearchCT?.Text?.Trim().ToLowerInvariant() ?? "";
+            string keyword = _txtSearchCT?.Text?.Trim() ?? "";
             string statusFilter = _cboStatusCT?.SelectedItem?.ToString() ?? "Tất cả trạng thái";
 
             var filtered = _chuongTrinhList.Where(ct => {
-                if (!string.IsNullOrEmpty(keyword))
-                {
-                    bool matchMa = ct.MaChuongTrinh?.ToLowerInvariant().Contains(keyword) ?? false;
-                    bool matchTen = ct.TenChuongTrinh?.ToLowerInvariant().Contains(keyword) ?? false;
-                    if (!matchMa && !matchTen) return false;
-                }
+                if (!UiStyler.MatchesSearch(keyword, ct.MaChuongTrinh, ct.TenChuongTrinh))
+                    return false;
                 if (statusFilter != "Tất cả trạng thái" && ct.TrangThai != statusFilter) return false;
                 return true;
             }).ToList();
@@ -586,13 +657,16 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
         private void RenderVoucherDonGrid()
         {
             if (_dgvVoucherDon == null) return;
-            string keyword = _txtSearchDon?.Text?.Trim().ToLowerInvariant() ?? "";
+            string keyword = _txtSearchDon?.Text?.Trim() ?? "";
             string statusFilter = _cboStatusDon?.SelectedItem?.ToString() ?? "Tất cả trạng thái";
+            int htIdx = _cboHinhThucDon?.SelectedIndex ?? 0;
+            int luotIdx = _cboLuotDungDon?.SelectedIndex ?? 0;
 
-            var filtered = _voucherList.Where(v => v.PhamViApDung == "TOAN_DON" && (
-                (string.IsNullOrEmpty(keyword) || (v.MaVoucher?.ToLowerInvariant().Contains(keyword) ?? false) || (v.TenChuongTrinh?.ToLowerInvariant().Contains(keyword) ?? false))
+            var filtered = _voucherList.Where(v => v.PhamViApDung == "TOAN_DON"
+                && UiStyler.MatchesSearch(keyword, v.MaVoucher, v.MaChuongTrinh, v.TenChuongTrinh, v.HinhThuc)
                 && (statusFilter == "Tất cả trạng thái" || v.TrangThai == statusFilter)
-            )).ToList();
+                && MatchVoucherAdvanced(v, htIdx, luotIdx)
+            ).ToList();
 
             _dgvVoucherDon.Rows.Clear();
             foreach (var v in filtered)
@@ -619,16 +693,16 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
         private void RenderVoucherLoaiGrid()
         {
             if (_dgvVoucherLoai == null) return;
-            string keyword = _txtSearchLoai?.Text?.Trim().ToLowerInvariant() ?? "";
+            string keyword = _txtSearchLoai?.Text?.Trim() ?? "";
             string statusFilter = _cboStatusLoai?.SelectedItem?.ToString() ?? "Tất cả trạng thái";
+            int htIdx = _cboHinhThucLoai?.SelectedIndex ?? 0;
+            int luotIdx = _cboLuotDungLoai?.SelectedIndex ?? 0;
 
-            var filtered = _voucherList.Where(v => v.PhamViApDung == "THEO_LOAI" && (
-                (string.IsNullOrEmpty(keyword)
-                 || (v.MaVoucher?.ToLowerInvariant().Contains(keyword) ?? false)
-                 || (v.TenLoaiMon?.ToLowerInvariant().Contains(keyword) ?? false)
-                 || (v.TenChuongTrinh?.ToLowerInvariant().Contains(keyword) ?? false))
+            var filtered = _voucherList.Where(v => v.PhamViApDung == "THEO_LOAI"
+                && UiStyler.MatchesSearch(keyword, v.MaVoucher, v.TenLoaiMon, v.MaLoaiMon, v.MaChuongTrinh, v.TenChuongTrinh, v.HinhThuc)
                 && (statusFilter == "Tất cả trạng thái" || v.TrangThai == statusFilter)
-            )).ToList();
+                && MatchVoucherAdvanced(v, htIdx, luotIdx)
+            ).ToList();
 
             _dgvVoucherLoai.Rows.Clear();
             foreach (var v in filtered)
@@ -656,16 +730,16 @@ namespace RestaurantCRM.AdminApp.Forms.KhuyenMai
         private void RenderVoucherMonGrid()
         {
             if (_dgvVoucherMon == null) return;
-            string keyword = _txtSearchMon?.Text?.Trim().ToLowerInvariant() ?? "";
+            string keyword = _txtSearchMon?.Text?.Trim() ?? "";
             string statusFilter = _cboStatusMon?.SelectedItem?.ToString() ?? "Tất cả trạng thái";
+            int htIdx = _cboHinhThucMon?.SelectedIndex ?? 0;
+            int luotIdx = _cboLuotDungMon?.SelectedIndex ?? 0;
 
-            var filtered = _voucherList.Where(v => v.PhamViApDung == "THEO_MON" && (
-                (string.IsNullOrEmpty(keyword)
-                 || (v.MaVoucher?.ToLowerInvariant().Contains(keyword) ?? false)
-                 || (v.TenMon?.ToLowerInvariant().Contains(keyword) ?? false)
-                 || (v.TenChuongTrinh?.ToLowerInvariant().Contains(keyword) ?? false))
+            var filtered = _voucherList.Where(v => v.PhamViApDung == "THEO_MON"
+                && UiStyler.MatchesSearch(keyword, v.MaVoucher, v.TenMon, v.MaMon, v.MaChuongTrinh, v.TenChuongTrinh, v.HinhThuc)
                 && (statusFilter == "Tất cả trạng thái" || v.TrangThai == statusFilter)
-            )).ToList();
+                && MatchVoucherAdvanced(v, htIdx, luotIdx)
+            ).ToList();
 
             _dgvVoucherMon.Rows.Clear();
             foreach (var v in filtered)
