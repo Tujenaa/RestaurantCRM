@@ -37,10 +37,10 @@ public class KhaoSatController(KhaoSatService api) : Controller
         }
         try
         {
-            var ks = await api.GetByIdAsync(id);
+            var ks = await api.GetByIdAsync(id, MaKhachHang);
             if (ks is null)
             {
-                TempData["ThongBao"] = "Khảo sát đã đóng hoặc không còn tồn tại.";
+                TempData["ThongBao"] = "Khảo sát đã đóng, không còn tồn tại hoặc bạn không thuộc đối tượng khảo sát.";
                 return RedirectToAction(nameof(Index));
             }
             var ds = await api.GetDanhSachAsync(MaKhachHang);
@@ -71,7 +71,7 @@ public class KhaoSatController(KhaoSatService api) : Controller
         KhaoSatViewModel? ks;
         try
         {
-            ks = await api.GetByIdAsync(model.MaKhaoSat);
+            ks = await api.GetByIdAsync(model.MaKhaoSat, maKh);
         }
         catch (HttpRequestException)
         {

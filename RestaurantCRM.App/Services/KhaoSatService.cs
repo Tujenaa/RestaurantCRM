@@ -90,6 +90,21 @@ namespace RestaurantCRM.AdminApp.Services
             return DeleteAsync(Base + "/" + E(maKhaoSat) + "/CauHoi/" + E(maCauHoi) + "/TuyChon/" + E(maTuyChon), "Đã xóa tùy chọn.");
         }
 
+        // ── Đối tượng khảo sát ───────────────────────────────────────────────
+
+        public async Task<List<DoiTuongKhaoSatDto>> GetDoiTuongAsync(string maKhaoSat)
+        {
+            return await GetAsync<List<DoiTuongKhaoSatDto>>(Base + "/" + E(maKhaoSat) + "/DoiTuong") ?? new List<DoiTuongKhaoSatDto>();
+        }
+
+        /// <param name="maKhachHangs">Danh sách khách được mời; rỗng = tất cả khách hàng.</param>
+        public Task<ApiResult> SetDoiTuongAsync(string maKhaoSat, IEnumerable<string> maKhachHangs)
+        {
+            return PutAsync(Base + "/" + E(maKhaoSat) + "/DoiTuong",
+                new DoiTuongUpdateRequest { MaKhachHangs = new List<string>(maKhachHangs ?? new string[0]) },
+                "Đã lưu đối tượng khảo sát.");
+        }
+
         // ── Thống kê ─────────────────────────────────────────────────────────
 
         public Task<KhaoSatKetQuaDto> GetResultsAsync(string maKhaoSat)

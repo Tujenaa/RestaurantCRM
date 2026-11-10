@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
@@ -18,14 +20,62 @@ public class MenuController : Controller
 
     [HttpGet("")]
     [HttpGet("Index")]
-    public async Task<IActionResult> Index([FromQuery] string? loai = null, [FromQuery] string? q = null, [FromQuery] string? sort = null, [FromQuery] int page = 1)
+    public async Task<IActionResult> Index(
+        [FromQuery] string? loai = null,
+        [FromQuery] string? q = null,
+        [FromQuery] string? sort = null,
+        [FromQuery] string? mucGia = null,
+        [FromQuery] bool khuyenMai = false,
+        [FromQuery] int page = 1)
     {
         if (page < 1) page = 1;
         const int pageSize = 8;
 
         var categories = await _monAnService.GetCategoriesAsync();
-        var dishes = await _monAnService.GetAllAsync(loai, q, sort);
+        // Tải toàn bộ món theo loại rồi lọc thông minh (không dấu + khoảng giá + khuyến mãi)
+        var dishes = await _monAnService.GetAllAsync(loai, null, null);
         var availableDishes = dishes.Where(d => d.ConHang).ToList();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            availableDishes = availableDishes
+                .Where(d => MatchesSearch(q, d.TenMon, d.MoTa, d.LoaiMon, d.MaMon))
+                .ToList();
+        }
+
+        if (khuyenMai)
+        {
+            availableDishes = availableDishes
+                .Where(d => d.DonGiaSauGiam > 0 && d.DonGiaSauGiam < d.DonGia)
+                .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(mucGia) && mucGia != "all")
+        {
+            availableDishes = availableDishes.Where(d =>
+            {
+                decimal price = d.DonGiaSauGiam > 0 ? d.DonGiaSauGiam : d.DonGia;
+                return mucGia switch
+                {
+                    "duoi50" => price < 50000m,
+                    "50-150" => price >= 50000m && price <= 150000m,
+                    "150-300" => price > 150000m && price <= 300000m,
+                    "tren300" => price > 300000m,
+                    _ => true
+                };
+            }).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(sort))
+        {
+            availableDishes = sort switch
+            {
+                "price_asc" => availableDishes.OrderBy(d => d.DonGiaSauGiam > 0 ? d.DonGiaSauGiam : d.DonGia).ToList(),
+                "price_desc" => availableDishes.OrderByDescending(d => d.DonGiaSauGiam > 0 ? d.DonGiaSauGiam : d.DonGia).ToList(),
+                "name_asc" => availableDishes.OrderBy(d => d.TenMon).ToList(),
+                _ => availableDishes
+            };
+        }
 
         int totalDishes = availableDishes.Count;
         int totalPages = (int)Math.Ceiling((double)totalDishes / pageSize);
@@ -63,6 +113,8 @@ public class MenuController : Controller
             TenLoaiHienTai = tenLoaiHienTai,
             TuKhoa = q,
             SortDangChon = sort,
+            MucGiaDangChon = mucGia,
+            ChiKhuyenMai = khuyenMai,
             MenuMode = true,
             CurrentPage = page,
             PageSize = pageSize,
@@ -71,6 +123,45 @@ public class MenuController : Controller
         };
 
         return View(viewModel);
+    }
+
+    internal static string RemoveDiacritics(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        string normalized = text.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(normalized.Length);
+        foreach (char c in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                if (c == 'đ') sb.Append('d');
+                else if (c == 'Đ') sb.Append('d');
+                else sb.Append(char.ToLowerInvariant(c));
+            }
+        }
+        return sb.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    internal static bool MatchesSearch(string? query, params string?[] fields)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return true;
+        var tokens = query.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var token in tokens)
+        {
+            string tNorm = RemoveDiacritics(token);
+            bool matched = false;
+            foreach (var f in fields)
+            {
+                if (string.IsNullOrWhiteSpace(f)) continue;
+                if (f.Contains(token, StringComparison.OrdinalIgnoreCase) || RemoveDiacritics(f).Contains(tNorm))
+                {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) return false;
+        }
+        return true;
     }
 
     [HttpGet("ChiTiet/{id}")]

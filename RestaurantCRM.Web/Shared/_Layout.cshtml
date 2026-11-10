@@ -18,6 +18,17 @@
                 }
             } catch(e){}
         })();
+
+        // Chế độ chụp ảnh toàn trang: thêm ?chup vào URL để bật (giữ trong phiên), ?chup=0 để tắt.
+        // Khi bật, header không còn dính (sticky) nên công cụ chụp cuộn-ghép không vẽ header giữa trang.
+        (function() {
+            try {
+                var m = /[?&]chup(?:=([^&]*))?(?:&|$)/.exec(location.search);
+                if (m) sessionStorage.setItem('cheDoChup', m[1] === '0' ? '0' : '1');
+                if (sessionStorage.getItem('cheDoChup') === '1')
+                    document.documentElement.classList.add('che-do-chup');
+            } catch(e){}
+        })();
     </script>
 </head>
 <body>

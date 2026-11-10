@@ -26,6 +26,8 @@
                        asp-controller="Menu" asp-action="Index"
                        asp-route-loai="@(cat.MaLoaiMon == "all" ? null : cat.MaLoaiMon)"
                        asp-route-q="@Model.TuKhoa"
+                       asp-route-mucGia="@Model.MucGiaDangChon"
+                       asp-route-khuyenMai="@(Model.ChiKhuyenMai ? "true" : null)"
                        asp-route-sort="@Model.SortDangChon"
                        asp-route-page="1"
                        title="Xem món loại: @cat.TenLoaiMon">
@@ -38,6 +40,45 @@
                 }
             </div>
         </div>
+
+        <!-- Advanced Search & Filter Form -->
+        <form method="get" asp-controller="Menu" asp-action="Index"
+              style="display:flex; flex-wrap:nowrap; gap:10px; align-items:center; padding:10px 14px; margin-top:10px; background:#fff; border:1px solid #e2e8f0; border-radius:12px;">
+            @if (!string.IsNullOrEmpty(Model.LoaiDangChon) && Model.LoaiDangChon != "all")
+            {
+                <input type="hidden" name="loai" value="@Model.LoaiDangChon" />
+            }
+            <div style="flex:1 1 180px; min-width:160px; max-width:290px;">
+                <input type="text" name="q" value="@Model.TuKhoa"
+                       placeholder="Tìm tên món, nguyên liệu, mô tả..."
+                       style="width:100%; height:38px; padding:0 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13.5px;" />
+            </div>
+            <div style="flex:0 0 auto;">
+                <select name="mucGia" onchange="this.form.submit()"
+                        style="width:auto; height:38px; padding:0 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13.5px; background:#f8fafc;">
+                    <option value="all" selected="@(string.IsNullOrEmpty(Model.MucGiaDangChon) || Model.MucGiaDangChon == "all")">Mức giá: Tất cả</option>
+                    <option value="duoi50" selected="@(Model.MucGiaDangChon == "duoi50")">Dưới 50.000đ</option>
+                    <option value="50-150" selected="@(Model.MucGiaDangChon == "50-150")">50.000đ – 150.000đ</option>
+                    <option value="150-300" selected="@(Model.MucGiaDangChon == "150-300")">150.000đ – 300.000đ</option>
+                    <option value="tren300" selected="@(Model.MucGiaDangChon == "tren300")">Trên 300.000đ</option>
+                </select>
+            </div>
+            <div style="flex:0 0 auto;">
+                <select name="sort" onchange="this.form.submit()"
+                        style="width:auto; height:38px; padding:0 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13.5px; background:#f8fafc;">
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.SortDangChon))">Sắp xếp: Mặc định</option>
+                    <option value="price_asc" selected="@(Model.SortDangChon == "price_asc")">Giá tăng dần</option>
+                    <option value="price_desc" selected="@(Model.SortDangChon == "price_desc")">Giá giảm dần</option>
+                    <option value="name_asc" selected="@(Model.SortDangChon == "name_asc")">Tên A → Z</option>
+                </select>
+            </div>
+            <label style="display:inline-flex; flex:0 0 auto; align-items:center; gap:7px; font-size:13.5px; font-weight:600; color:#b91c1c; cursor:pointer; padding:0 6px; white-space:nowrap; margin:0;">
+                <input type="checkbox" name="khuyenMai" value="true" checked="@(Model.ChiKhuyenMai)" onchange="this.form.submit()"
+                       style="width:16px; height:16px; margin:0; flex:0 0 16px; cursor:pointer;" />
+                <span>Đang giảm giá</span>
+            </label>
+            <button type="submit" class="btn small" style="flex:0 0 auto; height:38px; padding:0 18px; white-space:nowrap;">Lọc món</button>
+        </form>
 
         <!-- Filter Status Bar -->
         <div class="menu-filter-status">
@@ -58,10 +99,14 @@
                 <span class="filter-count">(@Model.TotalDishes món)</span>
             </div>
 
-            @if (!string.IsNullOrEmpty(Model.LoaiDangChon) && Model.LoaiDangChon != "all" || !string.IsNullOrWhiteSpace(Model.TuKhoa))
+            @if ((!string.IsNullOrEmpty(Model.LoaiDangChon) && Model.LoaiDangChon != "all")
+                 || !string.IsNullOrWhiteSpace(Model.TuKhoa)
+                 || (!string.IsNullOrEmpty(Model.MucGiaDangChon) && Model.MucGiaDangChon != "all")
+                 || Model.ChiKhuyenMai
+                 || !string.IsNullOrEmpty(Model.SortDangChon))
             {
                 <a asp-controller="Menu" asp-action="Index" class="btn-clear-filter" title="Xóa tất cả bộ lọc">
-                    ✕ Xóa bộ lọc
+                    Đặt lại bộ lọc
                 </a>
             }
         </div>
@@ -116,6 +161,8 @@
                            asp-controller="Menu" asp-action="Index"
                            asp-route-loai="@Model.LoaiDangChon"
                            asp-route-q="@Model.TuKhoa"
+                           asp-route-mucGia="@Model.MucGiaDangChon"
+                           asp-route-khuyenMai="@(Model.ChiKhuyenMai ? "true" : null)"
                            asp-route-sort="@Model.SortDangChon"
                            asp-route-page="@(Model.CurrentPage - 1)"
                            aria-label="Trang trước">
@@ -140,6 +187,8 @@
                                    asp-controller="Menu" asp-action="Index"
                                    asp-route-loai="@Model.LoaiDangChon"
                                    asp-route-q="@Model.TuKhoa"
+                                   asp-route-mucGia="@Model.MucGiaDangChon"
+                                   asp-route-khuyenMai="@(Model.ChiKhuyenMai ? "true" : null)"
                                    asp-route-sort="@Model.SortDangChon"
                                    asp-route-page="@p">@p</a>
                             }
@@ -152,6 +201,8 @@
                            asp-controller="Menu" asp-action="Index"
                            asp-route-loai="@Model.LoaiDangChon"
                            asp-route-q="@Model.TuKhoa"
+                           asp-route-mucGia="@Model.MucGiaDangChon"
+                           asp-route-khuyenMai="@(Model.ChiKhuyenMai ? "true" : null)"
                            asp-route-sort="@Model.SortDangChon"
                            asp-route-page="@(Model.CurrentPage + 1)"
                            aria-label="Trang sau">

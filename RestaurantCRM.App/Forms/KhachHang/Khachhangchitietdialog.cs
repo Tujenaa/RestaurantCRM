@@ -22,6 +22,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly DataGridView _surveys = new DataGridView();
         private readonly DataGridView _preferences = new DataGridView();
         private readonly TabControl _historyTabs = new TabControl();
+        private readonly TextBox _txtSearchHistory = new TextBox();
+        private readonly PillSearch _searchHistory;
         private readonly Label _emptyOrders = EmptyLabel("Khách hàng chưa có đơn hàng.");
         private readonly Label _emptyRatings = EmptyLabel("Khách hàng chưa gửi đánh giá nào.");
         private readonly Label _emptySurveys = EmptyLabel("Khách hàng chưa tham gia khảo sát nào.");
@@ -34,7 +36,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         public bool DataChanged { get; private set; }
 
         public KhachHangChiTietDialog(string maKhachHang)
-            : base("Chi tiết khách hàng", "Mã khách hàng: " + maKhachHang, 1000, 560, null, "Đóng")
+            : base("Chi tiết khách hàng", "Mã khách hàng: " + maKhachHang, 1000, 600, null, "Đóng")
         {
             _ma = maKhachHang;
             const int L = Gutter, W = 1000 - Gutter * 2;
@@ -47,13 +49,18 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             Body.Controls.Add(_profile);
 
             // 4 ô số liệu
-            _stats.SetBounds(L - 4, 152, W + 8, 96);
+            _stats.SetBounds(L - 4, 152, W + 8, 92);
             _stats.ColumnCount = 4; _stats.RowCount = 1; _stats.BackColor = Color.White;
             _stats.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             for (int i = 0; i < 4; i++) _stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
             Body.Controls.Add(_stats);
 
-            _historyTabs.SetBounds(L, 258, W, 272);
+            _searchHistory = new PillSearch(_txtSearchHistory, "Tìm nhanh trong lịch sử đơn hàng, đánh giá, khảo sát, món ưa thích...");
+            _searchHistory.SetBounds(L, 250, 440, 36);
+            _txtSearchHistory.TextChanged += (s, e) => RenderHistoryTabs();
+            Body.Controls.Add(_searchHistory);
+
+            _historyTabs.SetBounds(L, 292, W, 276);
             _historyTabs.Font = new Font(ThemeManager.FontFamily, 9F);
             _historyTabs.Controls.Add(BuildTab("Đơn hàng", _orders, _emptyOrders));
             _historyTabs.Controls.Add(BuildTab("Đánh giá", _ratings, _emptyRatings));
@@ -136,8 +143,18 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             AddStat(3, "Khảo sát đã trả lời", _kh.SoKhaoSatDaTraLoi.ToString("N0"), ThemeManager.Violet);
             _stats.ResumeLayout();
 
+            RenderHistoryTabs();
+        }
+
+        private void RenderHistoryTabs()
+        {
+            if (_kh == null) return;
+            string q = (_txtSearchHistory?.Text ?? "").Trim();
+
             _orders.Rows.Clear();
-            var list = _kh.LichSuHoaDon ?? new System.Collections.Generic.List<KhachHangHoaDonDto>();
+            var list = (_kh.LichSuHoaDon ?? new System.Collections.Generic.List<KhachHangHoaDonDto>())
+                .FindAll(d => UiStyler.MatchesSearch(q, d.MaHoaDon, d.TrangThai, ThemeManager.CleanStatus(d.TrangThai),
+                    d.NgayDat.HasValue ? d.NgayDat.Value.ToString("dd/MM/yyyy HH:mm") : ""));
             foreach (var d in list)
                 _orders.Rows.Add(d.MaHoaDon, d.NgayDat.HasValue ? d.NgayDat.Value.ToString("dd/MM/yyyy HH:mm") : "—",
                     (d.TongTien ?? 0).ToString("#,##0 đ"), ThemeManager.CleanStatus(d.TrangThai));
@@ -145,7 +162,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _emptyOrders.Visible = list.Count == 0;
 
             _ratings.Rows.Clear();
-            var reviews = _kh.LichSuDanhGia ?? new System.Collections.Generic.List<KhachHangDanhGiaDto>();
+            var reviews = (_kh.LichSuDanhGia ?? new System.Collections.Generic.List<KhachHangDanhGiaDto>())
+                .FindAll(d => UiStyler.MatchesSearch(q, d.TenMon, d.NoiDung, (d.SoSao ?? 0).ToString() + " sao",
+                    d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : ""));
             foreach (var d in reviews)
             {
                 int stars = Math.Max(0, Math.Min(5, d.SoSao ?? 0));
@@ -160,7 +179,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _emptyRatings.Visible = reviews.Count == 0;
 
             _surveys.Rows.Clear();
-            var surveys = _kh.LichSuKhaoSat ?? new System.Collections.Generic.List<KhachHangKhaoSatDto>();
+            var surveys = (_kh.LichSuKhaoSat ?? new System.Collections.Generic.List<KhachHangKhaoSatDto>())
+                .FindAll(d => UiStyler.MatchesSearch(q, d.TenKhaoSat, d.MaKhaoSat,
+                    d.NgayTraLoi.HasValue ? d.NgayTraLoi.Value.ToString("dd/MM/yyyy HH:mm") : ""));
             foreach (var d in surveys)
                 _surveys.Rows.Add(string.IsNullOrWhiteSpace(d.TenKhaoSat) ? d.MaKhaoSat : d.TenKhaoSat,
                     d.NgayTraLoi.HasValue ? d.NgayTraLoi.Value.ToString("dd/MM/yyyy HH:mm") : "—");
@@ -168,7 +189,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _emptySurveys.Visible = surveys.Count == 0;
 
             _preferences.Rows.Clear();
-            var preferences = _kh.MonUaThich ?? new System.Collections.Generic.List<KhachHangMonUaThichDto>();
+            var preferences = (_kh.MonUaThich ?? new System.Collections.Generic.List<KhachHangMonUaThichDto>())
+                .FindAll(d => UiStyler.MatchesSearch(q, d.TenMon, d.MaMon));
             foreach (var d in preferences)
                 _preferences.Rows.Add(d.TenMon ?? d.MaMon ?? "Món ăn", d.SoLuongDaMua.ToString("N0"));
             _historyTabs.TabPages[3].Text = "Sở thích (" + preferences.Count + ")";

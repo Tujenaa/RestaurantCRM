@@ -41,7 +41,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
             var lblHeader = new Label
             {
-                Text = "🎟️ Danh Sách Ưu Đãi & Voucher",
+                Text = "Danh Sách Ưu Đãi & Voucher",
                 Location = new Point(0, 0),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 12F, FontStyle.Bold),
@@ -51,15 +51,27 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
 
             var lblSub = new Label
             {
-                Text = $"Tổng tiền món tính voucher: {currentSubTotal:N0} đ",
-                Location = new Point(2, 28),
+                Text = $"Tổng tiền món: {currentSubTotal:N0} đ",
+                Location = new Point(2, 30),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(14, 124, 134)
             };
             root.Controls.Add(lblSub);
 
-            // Khung nhập mã thủ công
+            var chkShowAll = new CheckBox
+            {
+                Text = "Hiện cả mã chưa đủ ĐK",
+                Location = new Point(280, 28),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8.75F),
+                ForeColor = ThemeManager.Ink2,
+                Checked = true,
+                Cursor = Cursors.Hand
+            };
+            root.Controls.Add(chkShowAll);
+
+            // Khung nhập mã thủ công & tìm kiếm nhanh
             var pnlInput = new Panel
             {
                 Location = new Point(0, 56),
@@ -68,16 +80,17 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             root.Controls.Add(pnlInput);
 
+            string placeholderText = "Tìm hoặc nhập mã voucher (VD: GIAM20K)...";
             var txtCode = new TextBox
             {
                 Location = new Point(8, 7),
                 Width = 320,
                 Font = new Font("Segoe UI", 10F),
                 ForeColor = ThemeManager.Muted,
-                Text = "Nhập mã voucher (VD: GIAM20K)..."
+                Text = placeholderText
             };
             txtCode.GotFocus += (s, e) => {
-                if (txtCode.Text == "Nhập mã voucher (VD: GIAM20K)...")
+                if (txtCode.Text == placeholderText)
                 {
                     txtCode.Text = "";
                     txtCode.ForeColor = ThemeManager.Ink;
@@ -86,7 +99,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             txtCode.LostFocus += (s, e) => {
                 if (string.IsNullOrWhiteSpace(txtCode.Text))
                 {
-                    txtCode.Text = "Nhập mã voucher (VD: GIAM20K)...";
+                    txtCode.Text = placeholderText;
                     txtCode.ForeColor = ThemeManager.Muted;
                 }
             };
@@ -105,7 +118,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             btnApplyCode.FlatAppearance.BorderSize = 0;
             btnApplyCode.Click += (s, e) => {
-                string input = (txtCode.Text == "Nhập mã voucher (VD: GIAM20K)..." ? "" : txtCode.Text).Trim();
+                string input = (txtCode.Text == placeholderText ? "" : txtCode.Text).Trim();
                 if (string.IsNullOrEmpty(input))
                 {
                     MessageBox.Show(this, "Vui lòng nhập mã voucher.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -147,7 +160,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             pnlInput.Controls.Add(btnApplyCode);
 
-            // Danh sách các voucher toàn đơn đủ điều kiện khả dụng
+            // Danh sách các voucher toàn đơn
             var flow = new FlowLayoutPanel
             {
                 Location = new Point(0, 104),
@@ -159,32 +172,47 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             };
             root.Controls.Add(flow);
 
-            var eligibleOrderVouchers = (vouchers ?? new List<VoucherDto>())
-                .Where(v => v.TrangThai == "Đang áp dụng" && v.PhamViApDung == "TOAN_DON")
-                .Select(v => new
-                {
-                    Voucher = v,
-                    Eval = calcService.EvaluateVoucher(v, currentSubTotal, currentCartList)
-                })
-                .Where(x => x.Eval.isEligible)
-                .OrderByDescending(x => x.Eval.discount)
-                .Select(x => x.Voucher)
-                .ToList();
+            Action renderVoucherList = () =>
+            {
+                string q = (txtCode.Text == placeholderText ? "" : txtCode.Text).Trim();
+                bool includeIneligible = chkShowAll.Checked;
 
-            if (!eligibleOrderVouchers.Any())
-            {
-                flow.Controls.Add(new Label
+                flow.SuspendLayout();
+                var oldControls = flow.Controls.Cast<Control>().ToList();
+                flow.Controls.Clear();
+                foreach (var c in oldControls) c.Dispose();
+
+                var list = (vouchers ?? new List<VoucherDto>())
+                    .Where(v => v.TrangThai == "Đang áp dụng" && v.PhamViApDung == "TOAN_DON")
+                    .Where(v => UiStyler.MatchesSearch(q, v.MaVoucher, v.MaKmvoucher, v.HinhThuc))
+                    .Select(v => new
+                    {
+                        Voucher = v,
+                        Eval = calcService.EvaluateVoucher(v, currentSubTotal, currentCartList)
+                    })
+                    .Where(x => includeIneligible || x.Eval.isEligible)
+                    .OrderByDescending(x => x.Eval.isEligible)
+                    .ThenByDescending(x => x.Eval.discount)
+                    .ToList();
+
+                if (!list.Any())
                 {
-                    Text = "Hiện chưa có voucher toàn đơn nào đủ điều kiện áp dụng cho giỏ hàng này.",
-                    ForeColor = ThemeManager.Muted,
-                    Margin = new Padding(10),
-                    AutoSize = true
-                });
-            }
-            else
-            {
-                foreach (var v in eligibleOrderVouchers)
+                    flow.Controls.Add(new Label
+                    {
+                        Text = "Không có voucher toàn đơn nào phù hợp với điều kiện lọc.",
+                        ForeColor = ThemeManager.Muted,
+                        Margin = new Padding(10),
+                        AutoSize = true
+                    });
+                    flow.ResumeLayout();
+                    return;
+                }
+
+                foreach (var item in list)
                 {
+                    var v = item.Voucher;
+                    bool isEligible = item.Eval.isEligible;
+                    decimal missing = item.Eval.missingAmount;
                     decimal minOrder = (decimal)(v.GiaTriDonToiThieu ?? 0);
                     bool isCurrentOrderVoucher = currentApplied != null
                         && (currentApplied.MaVoucher == v.MaVoucher || currentApplied.MaKmvoucher == v.MaKmvoucher);
@@ -197,19 +225,19 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                         BorderWidth = 1,
                         BorderColor = isCurrentOrderVoucher
                             ? Color.FromArgb(14, 124, 134)
-                            : Color.FromArgb(203, 213, 225),
+                            : (isEligible ? Color.FromArgb(203, 213, 225) : Color.FromArgb(226, 232, 240)),
                         FillColor = isCurrentOrderVoucher
                             ? Color.FromArgb(240, 253, 250)
-                            : Color.White
+                            : (isEligible ? Color.White : Color.FromArgb(248, 250, 252))
                     };
 
                     var lblCode = new Label
                     {
-                        Text = $"🎟️ {v.MaVoucher} [Toàn đơn]",
+                        Text = $"{v.MaVoucher} [Toàn đơn]",
                         Location = new Point(10, 8),
                         AutoSize = true,
                         Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                        ForeColor = Color.FromArgb(29, 78, 216)
+                        ForeColor = isEligible ? Color.FromArgb(29, 78, 216) : ThemeManager.Muted
                     };
                     card.Controls.Add(lblCode);
 
@@ -219,43 +247,57 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                         Location = new Point(10, 30),
                         AutoSize = true,
                         Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                        ForeColor = Color.FromArgb(22, 163, 74)
+                        ForeColor = isEligible ? Color.FromArgb(22, 163, 74) : ThemeManager.Muted
                     };
                     card.Controls.Add(lblDiscountDesc);
 
-                    string conditionText = minOrder > 0 ? $"Đơn tối thiểu: {minOrder:N0} đ" : "Áp dụng cho mọi giá trị đơn";
+                    string conditionText = minOrder > 0
+                        ? (isEligible ? $"Đơn tối thiểu: {minOrder:N0} đ (Đã đủ ĐK)" : $"Đơn tối thiểu: {minOrder:N0} đ • Mua thêm {missing:N0} đ")
+                        : "Áp dụng cho mọi giá trị đơn";
                     var lblCondition = new Label
                     {
                         Text = conditionText,
                         Location = new Point(10, 52),
-                        Size = new Size(270, 28),
+                        Size = new Size(295, 28),
                         Font = new Font("Segoe UI", 8F),
-                        ForeColor = ThemeManager.Muted
+                        ForeColor = isEligible ? ThemeManager.Muted : ThemeManager.Amber
                     };
                     card.Controls.Add(lblCondition);
 
                     var btnSelect = new Button
                     {
-                        Text = isCurrentOrderVoucher ? "Đang chọn" : "Chọn mã",
+                        Text = isCurrentOrderVoucher ? "Đang chọn" : (isEligible ? "Chọn mã" : "Chưa đủ ĐK"),
                         Location = new Point(316, 24),
                         Size = new Size(110, 32),
-                        BackColor = isCurrentOrderVoucher ? Color.FromArgb(22, 163, 74) : Color.FromArgb(14, 124, 134),
-                        ForeColor = Color.White,
+                        BackColor = isCurrentOrderVoucher
+                            ? Color.FromArgb(22, 163, 74)
+                            : (isEligible ? Color.FromArgb(14, 124, 134) : Color.FromArgb(226, 232, 240)),
+                        ForeColor = isEligible ? Color.White : ThemeManager.Muted,
                         FlatStyle = FlatStyle.Flat,
                         Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                        Cursor = Cursors.Hand
+                        Cursor = isEligible ? Cursors.Hand : Cursors.Default,
+                        Enabled = isEligible
                     };
                     btnSelect.FlatAppearance.BorderSize = 0;
-                    btnSelect.Click += (s, e) => {
-                        SelectedVoucher = v;
-                        DialogResult = DialogResult.OK;
-                        Close();
-                    };
+                    if (isEligible)
+                    {
+                        btnSelect.Click += (s, e) => {
+                            SelectedVoucher = v;
+                            DialogResult = DialogResult.OK;
+                            Close();
+                        };
+                    }
                     card.Controls.Add(btnSelect);
 
                     flow.Controls.Add(card);
                 }
-            }
+
+                flow.ResumeLayout(true);
+            };
+
+            txtCode.TextChanged += (s, e) => renderVoucherList();
+            chkShowAll.CheckedChanged += (s, e) => renderVoucherList();
+            renderVoucherList();
 
             // Thanh nút bấm dưới cùng
             var btnClearVoucher = new Button

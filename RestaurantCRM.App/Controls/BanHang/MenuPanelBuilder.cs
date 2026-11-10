@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
 using RestaurantCRM.AdminApp.Models;
@@ -23,6 +25,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         private FlowLayoutPanel _productsPanel;
         private TextBox _txtSearch;
         private ComboBox _cboCategory;
+        private ComboBox _cboPriceFilter;
         private CheckBox _chkOnlyInStock;
 
         public event Action<MonAnDto> DishSelected;
@@ -31,6 +34,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         public bool IsSearchFocused => _txtSearch?.Focused ?? false;
         public string SearchQuery => _txtSearch?.Text?.Trim()?.ToLowerInvariant() ?? "";
         public string SelectedCategory => _cboCategory?.SelectedItem?.ToString() ?? "Tất cả loại món";
+        public string SelectedPriceFilter => _cboPriceFilter?.SelectedItem?.ToString() ?? "Tất cả mức giá";
         public bool OnlyInStock => _chkOnlyInStock?.Checked ?? false;
 
         public MenuPanelBuilder(Font baseFont)
@@ -98,7 +102,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             var pnlSearch = new RoundedPanel
             {
-                Size = new Size(240, 32),
+                Size = new Size(205, 32),
                 Location = new Point(0, 2),
                 Radius = 8,
                 BorderWidth = 1,
@@ -106,36 +110,47 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 FillColor = Color.White
             };
 
-            var lblSearchIcon = new Label
+            var lblClear = new Label
             {
-                Text = ThemeManager.Glyph.Search,
-                Font = ThemeManager.Icon(9.5F),
+                Text = "✕",
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 ForeColor = ThemeManager.Muted,
-                Location = new Point(8, 9),
+                Location = new Point(182, 8),
                 Size = new Size(18, 18),
                 BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter
+                TextAlign = ContentAlignment.MiddleCenter,
+                Cursor = Cursors.Hand,
+                Visible = false
             };
-            pnlSearch.Controls.Add(lblSearchIcon);
+            lblClear.Click += (s, e) =>
+            {
+                _txtSearch.Text = "";
+                _txtSearch.Focus();
+            };
+            pnlSearch.Controls.Add(lblClear);
 
             _txtSearch = new TextBox
             {
                 ForeColor = ThemeManager.Ink,
                 Font = _baseFont,
-                Location = new Point(32, 8),
-                Width = 200,
+                Location = new Point(10, 8),
+                Width = 170,
                 BorderStyle = BorderStyle.None,
                 BackColor = Color.White
             };
-            UiStyler.SetPlaceholder(_txtSearch, "Tìm món...");
-            _txtSearch.TextChanged += (s, e) => FilterChanged?.Invoke();
+            UiStyler.SetPlaceholder(_txtSearch, "Tìm tên, mã, mô tả...");
+            _txtSearch.TextChanged += (s, e) =>
+            {
+                lblClear.Visible = _txtSearch.TextLength > 0;
+                FilterChanged?.Invoke();
+            };
             pnlSearch.Controls.Add(_txtSearch);
             bar.Controls.Add(pnlSearch);
 
             _cboCategory = new ComboBox
             {
-                Location = new Point(248, 4),
-                Size = new Size(160, 32),
+                Location = new Point(211, 4),
+                Size = new Size(146, 32),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = _baseFont
             };
@@ -144,10 +159,29 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             _cboCategory.SelectedIndexChanged += (s, e) => FilterChanged?.Invoke();
             bar.Controls.Add(_cboCategory);
 
+            _cboPriceFilter = new ComboBox
+            {
+                Location = new Point(363, 4),
+                Size = new Size(142, 32),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = _baseFont
+            };
+            _cboPriceFilter.Items.AddRange(new object[]
+            {
+                "Tất cả mức giá",
+                "Đang giảm giá",
+                "Dưới 100.000 đ",
+                "100.000 - 250.000 đ",
+                "Trên 250.000 đ"
+            });
+            _cboPriceFilter.SelectedIndex = 0;
+            _cboPriceFilter.SelectedIndexChanged += (s, e) => FilterChanged?.Invoke();
+            bar.Controls.Add(_cboPriceFilter);
+
             _chkOnlyInStock = new CheckBox
             {
-                Text = "Chỉ món còn hàng",
-                Location = new Point(416, 8),
+                Text = "Còn hàng",
+                Location = new Point(513, 8),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
                 ForeColor = ThemeManager.Ink2,
@@ -209,16 +243,16 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             string q = SearchQuery;
             string selCat = SelectedCategory;
+            string selPrice = SelectedPriceFilter;
             bool onlyStock = OnlyInStock;
 
             var filtered = allMonAn.Where(mon =>
             {
-                bool matchName = string.IsNullOrEmpty(q) ||
-                                 (mon.TenMonAn != null && mon.TenMonAn.ToLowerInvariant().Contains(q)) ||
-                                 (mon.MaMonAn != null && mon.MaMonAn.ToLowerInvariant().Contains(q));
+                bool matchName = MatchesSearchQuery(mon, q);
                 bool matchCat = selCat == "Tất cả loại món" || mon.TenLoaiMon == selCat;
                 bool matchStock = !onlyStock || mon.SoLuongTon > 0;
-                return matchName && matchCat && matchStock;
+                bool matchPrice = MatchesPriceFilter(mon, selPrice, calcService, vouchers);
+                return matchName && matchCat && matchStock && matchPrice;
             }).ToList();
 
             if (!filtered.Any())
@@ -261,6 +295,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
 
             string query = SearchQuery;
             string selCat = SelectedCategory;
+            string selPrice = SelectedPriceFilter;
             bool onlyStock = OnlyInStock;
 
             var monAnList = allMonAn?.ToList() ?? new List<MonAnDto>();
@@ -277,12 +312,11 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                     continue;
                 }
 
-                bool matchName = string.IsNullOrEmpty(query) ||
-                                 (mon.TenMonAn != null && mon.TenMonAn.ToLowerInvariant().Contains(query)) ||
-                                 (mon.MaMonAn != null && mon.MaMonAn.ToLowerInvariant().Contains(query));
+                bool matchName = MatchesSearchQuery(mon, query);
                 bool matchCat = selCat == "Tất cả loại món" || mon.TenLoaiMon == selCat;
                 bool matchStock = !onlyStock || mon.SoLuongTon > 0;
-                bool shouldShow = matchName && matchCat && matchStock;
+                bool matchPrice = MatchesPriceFilter(mon, selPrice, calcService, vouchers);
+                bool shouldShow = matchName && matchCat && matchStock && matchPrice;
 
                 if (!shouldShow)
                 {
@@ -306,7 +340,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 var lblTen = card.Controls["lblTen"] as Label;
                 if (lblTen != null)
                 {
-                    lblTen.Size = new Size(hasPromo ? 110 : 162, 34);
+                    lblTen.Size = new Size(hasPromo ? 132 : 190, 34);
                     lblTen.ForeColor = rawInStock ? ThemeManager.Ink : ThemeManager.Muted;
                     lblTen.Cursor = canAddMore ? Cursors.Hand : Cursors.Default;
                 }
@@ -314,7 +348,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 var lblSaleBadge = card.Controls["lblSaleBadge"] as Label;
                 if (lblSaleBadge != null)
                 {
-                    lblSaleBadge.Text = hasPromo ? $"🔥 {promoText}" : "";
+                    lblSaleBadge.Text = hasPromo ? promoText : "";
                     lblSaleBadge.Visible = hasPromo;
                 }
 
@@ -338,35 +372,6 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                     lblGiaGoc.Visible = showGiaGoc;
                 }
 
-                var lblStock = card.Controls["lblStock"] as Label;
-                if (lblStock != null)
-                {
-                    if (!rawInStock)
-                    {
-                        lblStock.Text = "● Hết món";
-                        lblStock.ForeColor = ThemeManager.Red;
-                        lblStock.BackColor = ThemeManager.RedSoft;
-                    }
-                    else if (virtualRemaining == 0)
-                    {
-                        lblStock.Text = inCartQty > 0 ? $"● Hết suất (Đã lấy {inCartQty})" : "● Hết món";
-                        lblStock.ForeColor = ThemeManager.Red;
-                        lblStock.BackColor = ThemeManager.RedSoft;
-                    }
-                    else if (virtualRemaining <= 5)
-                    {
-                        lblStock.Text = inCartQty > 0 ? $"● Còn: {virtualRemaining} (giỏ: {inCartQty})" : $"● Còn: {virtualRemaining}";
-                        lblStock.ForeColor = ThemeManager.Amber;
-                        lblStock.BackColor = ThemeManager.AmberSoft;
-                    }
-                    else
-                    {
-                        lblStock.Text = inCartQty > 0 ? $"● Còn: {virtualRemaining} (giỏ: {inCartQty})" : $"● Còn: {virtualRemaining}";
-                        lblStock.ForeColor = ThemeManager.Green;
-                        lblStock.BackColor = ThemeManager.GreenSoft;
-                    }
-                }
-
                 var btnAdd = card.Controls["btnAdd"] as Button;
                 if (btnAdd != null)
                 {
@@ -386,6 +391,12 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                         btnAdd.Cursor = Cursors.Default;
                         btnAdd.Enabled = false;
                     }
+                }
+
+                var lblStock = card.Controls["lblStock"] as Label;
+                if (lblStock != null)
+                {
+                    ApplyStockBadgeStyle(lblStock, btnAdd, rawInStock, virtualRemaining, inCartQty);
                 }
             }
         }
@@ -408,7 +419,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             {
                 Name = "card_" + mon.MaMonAn,
                 Tag = mon.MaMonAn,
-                Size = new Size(182, 114),
+                Size = new Size(206, 116),
                 Margin = new Padding(6),
                 Radius = 10,
                 BorderWidth = 1,
@@ -422,7 +433,7 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 Name = "lblTen",
                 Text = mon.TenMonAn,
                 Location = new Point(8, 6),
-                Size = new Size(hasPromo ? 110 : 162, 34),
+                Size = new Size(hasPromo ? 132 : 190, 34),
                 AutoEllipsis = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = rawInStock ? ThemeManager.Ink : ThemeManager.Muted,
@@ -434,8 +445,8 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             var lblSaleBadge = new Label
             {
                 Name = "lblSaleBadge",
-                Text = hasPromo ? $"🔥 {promoText}" : "",
-                Location = new Point(116, 6),
+                Text = hasPromo ? promoText : "",
+                Location = new Point(140, 6),
                 Size = new Size(58, 20),
                 Font = new Font("Segoe UI", 7F, FontStyle.Bold),
                 ForeColor = ThemeManager.Red,
@@ -471,14 +482,64 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             };
             card.Controls.Add(lblGiaGoc);
 
+            var btnAdd = new Button
+            {
+                Name = "btnAdd",
+                Location = new Point(138, 70),
+                Size = new Size(58, 30),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+            };
+            btnAdd.FlatAppearance.BorderSize = 0;
+
+            if (canAddMore)
+            {
+                btnAdd.Text = "+ Thêm";
+                btnAdd.BackColor = _accent;
+                btnAdd.ForeColor = Color.White;
+                btnAdd.Cursor = Cursors.Hand;
+                btnAdd.Click += (s, e) => DishSelected?.Invoke(mon);
+            }
+            else
+            {
+                btnAdd.Text = "Hết";
+                btnAdd.BackColor = Color.FromArgb(241, 245, 249);
+                btnAdd.ForeColor = ThemeManager.Muted;
+                btnAdd.Cursor = Cursors.Default;
+                btnAdd.Enabled = false;
+            }
+            card.Controls.Add(btnAdd);
+
             var lblStock = new Label
             {
                 Name = "lblStock",
-                Location = new Point(8, 72),
+                Location = new Point(8, 74),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
                 Padding = new Padding(3, 2, 3, 2)
             };
+            ApplyStockBadgeStyle(lblStock, btnAdd, rawInStock, virtualRemaining, inCartQty);
+            card.Controls.Add(lblStock);
+
+            Action handleCardClick = () =>
+            {
+                if (canAddMore) DishSelected?.Invoke(mon);
+            };
+            card.Click += (s, e) => handleCardClick();
+            lblTen.Click += (s, e) => handleCardClick();
+            lblGia.Click += (s, e) => handleCardClick();
+
+            return card;
+        }
+
+        private static void ApplyStockBadgeStyle(
+            Label lblStock,
+            Button btnAdd,
+            bool rawInStock,
+            int virtualRemaining,
+            int inCartQty)
+        {
+            if (lblStock == null) return;
 
             if (!rawInStock)
             {
@@ -504,45 +565,62 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
                 lblStock.ForeColor = ThemeManager.Green;
                 lblStock.BackColor = ThemeManager.GreenSoft;
             }
-            card.Controls.Add(lblStock);
 
-            var btnAdd = new Button
-            {
-                Name = "btnAdd",
-                Location = new Point(112, 68),
-                Size = new Size(60, 30),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
-            };
-            btnAdd.FlatAppearance.BorderSize = 0;
+            int btnLeft = btnAdd != null ? btnAdd.Left : 138;
+            int btnTop = btnAdd != null ? btnAdd.Top : 70;
+            int btnHeight = btnAdd != null ? btnAdd.Height : 30;
+            int maxWidth = Math.Max(60, btnLeft - lblStock.Left - 6);
+            lblStock.MaximumSize = new Size(maxWidth, 0);
+            lblStock.Top = Math.Max(64, btnTop + (btnHeight - lblStock.PreferredHeight) / 2);
+        }
 
-            if (canAddMore)
+        private static bool MatchesPriceFilter(
+            MonAnDto mon,
+            string selPrice,
+            OrderCalculationService calcService,
+            IEnumerable<VoucherDto> vouchers)
+        {
+            if (mon == null || string.IsNullOrEmpty(selPrice) || selPrice == "Tất cả mức giá")
+                return true;
+
+            var (effPrice, promoText, _, _) = calcService != null
+                ? calcService.GetDishPriceInfo(mon, vouchers)
+                : (mon.Gia, (string)null, 0m, (string)null);
+
+            if (selPrice == "Đang giảm giá") return promoText != null;
+            if (selPrice == "Dưới 100.000 đ") return effPrice < 100000m;
+            if (selPrice == "100.000 - 250.000 đ") return effPrice >= 100000m && effPrice <= 250000m;
+            if (selPrice == "Trên 250.000 đ") return effPrice > 250000m;
+            return true;
+        }
+
+        private static bool MatchesSearchQuery(MonAnDto mon, string query)
+        {
+            if (string.IsNullOrWhiteSpace(query)) return true;
+            if (mon == null) return false;
+
+            return UiStyler.MatchesSearch(query, mon.TenMonAn, mon.MaMonAn, mon.TenLoaiMon, mon.MoTa);
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+            string normalized = text.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(normalized.Length);
+
+            foreach (char c in normalized)
             {
-                btnAdd.Text = "+ Thêm";
-                btnAdd.BackColor = _accent;
-                btnAdd.ForeColor = Color.White;
-                btnAdd.Cursor = Cursors.Hand;
-                btnAdd.Click += (s, e) => DishSelected?.Invoke(mon);
+                UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (category != UnicodeCategory.NonSpacingMark)
+                {
+                    if (c == 'đ') sb.Append('d');
+                    else if (c == 'Đ') sb.Append('D');
+                    else sb.Append(c);
+                }
             }
-            else
-            {
-                btnAdd.Text = "Hết";
-                btnAdd.BackColor = Color.FromArgb(241, 245, 249);
-                btnAdd.ForeColor = ThemeManager.Muted;
-                btnAdd.Cursor = Cursors.Default;
-                btnAdd.Enabled = false;
-            }
-            card.Controls.Add(btnAdd);
 
-            Action handleCardClick = () =>
-            {
-                if (canAddMore) DishSelected?.Invoke(mon);
-            };
-            card.Click += (s, e) => handleCardClick();
-            lblTen.Click += (s, e) => handleCardClick();
-            lblGia.Click += (s, e) => handleCardClick();
-
-            return card;
+            return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
         }
     }
 }

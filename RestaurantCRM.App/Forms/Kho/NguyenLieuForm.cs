@@ -21,6 +21,10 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
         private List<NguyenLieuDto> _allNguyenLieu = new List<NguyenLieuDto>();
         private bool _isLoading = false;
         private readonly Button _btnXoa;
+        private readonly ComboBox _cboDonVi = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboMucGia = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label _lblCount = new Label { Text = "" };
+        private bool _updatingFilterUnits = false;
 
         public NguyenLieuForm()
         {
@@ -53,6 +57,21 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
             _btnXoa.Click += btnXoa_Click;
 
             cboBoLoc.SelectedIndex = 0;
+
+            _cboDonVi.Items.Add("Tất cả ĐVT");
+            _cboDonVi.SelectedIndex = 0;
+            _cboDonVi.SelectedIndexChanged += (s, e) => { if (!_updatingFilterUnits) FilterData(preserveSelection: false); };
+
+            _cboMucGia.Items.AddRange(new object[]
+            {
+                "Tất cả giá nhập",
+                "Dưới 50.000 đ",
+                "50.000 - 200.000 đ",
+                "Trên 200.000 đ"
+            });
+            _cboMucGia.SelectedIndex = 0;
+            _cboMucGia.SelectedIndexChanged += (s, e) => FilterData(preserveSelection: false);
+
             SetupContextMenu();
 
             // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
@@ -65,8 +84,14 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 KpiLabels = new[] { lblTongSo, lblDangNhap, lblNgungNhap },
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
-                SearchPlaceholder = "Tìm theo mã hoặc tên nguyên liệu...",
-                Filters = new[] { new FilterSpec(cboBoLoc, lblBoLoc) },
+                SearchPlaceholder = "Tìm theo mã, tên nguyên liệu, ĐVT...",
+                Filters = new[]
+                {
+                    new FilterSpec(cboBoLoc, lblBoLoc),
+                    new FilterSpec(_cboDonVi, new Label { Text = "Đơn vị" }),
+                    new FilterSpec(_cboMucGia, new Label { Text = "Giá nhập" })
+                },
+                CountLabel = _lblCount,
                 Grid = dgvNguyenLieu,
                 SecondaryActions = new[] { btnSua },
                 DangerActions = new[] { btnNgungNhap, _btnXoa }
@@ -104,6 +129,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
             try
             {
                 _allNguyenLieu = await _nguyenLieuService.GetAllAsync() ?? new List<NguyenLieuDto>();
+                PopulateUnitFilter();
                 UpdateThongKe();
                 FilterData(preserveSelection: false);
             }
@@ -128,22 +154,62 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
             lblNgungNhap.Text = $"⚪ Ngừng nhập: {ngungNhap} loại";
         }
 
+        private void PopulateUnitFilter()
+        {
+            _updatingFilterUnits = true;
+            try
+            {
+                string prev = _cboDonVi.SelectedItem as string;
+                var units = _allNguyenLieu
+                    .Select(x => x.DonViTinh)
+                    .Where(u => !string.IsNullOrWhiteSpace(u))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(u => u)
+                    .ToList();
+
+                _cboDonVi.Items.Clear();
+                _cboDonVi.Items.Add("Tất cả ĐVT");
+                foreach (var u in units) _cboDonVi.Items.Add(u);
+
+                int idx = !string.IsNullOrEmpty(prev) ? _cboDonVi.Items.IndexOf(prev) : 0;
+                _cboDonVi.SelectedIndex = idx >= 0 ? idx : 0;
+            }
+            finally
+            {
+                _updatingFilterUnits = false;
+            }
+        }
+
         private void FilterData(bool preserveSelection = true)
         {
-            string keyword = (txtTimKiem.Text ?? "").Trim().ToLower();
+            string keyword = (txtTimKiem.Text ?? "").Trim();
             int filterIndex = cboBoLoc.SelectedIndex;
+            string selectedUnit = _cboDonVi.SelectedIndex > 0 ? (_cboDonVi.SelectedItem as string) : null;
+            int priceIndex = _cboMucGia.SelectedIndex;
 
             var filtered = _allNguyenLieu.Where(nl => {
                 // 1. Lọc theo trạng thái
                 if (filterIndex == 1 && !nl.IsActive) return false; // Chỉ Đang nhập (Active)
                 if (filterIndex == 2 && nl.IsActive) return false;  // Chỉ Ngừng nhập (Inactive)
 
-                // 2. Lọc theo từ khóa
-                if (string.IsNullOrEmpty(keyword)) return true;
-                return (!string.IsNullOrEmpty(nl.TenNguyenLieu) && nl.TenNguyenLieu.ToLower().Contains(keyword)) ||
-                       (!string.IsNullOrEmpty(nl.MaNguyenLieu) && nl.MaNguyenLieu.ToLower().Contains(keyword)) ||
-                       (!string.IsNullOrEmpty(nl.DonViTinh) && nl.DonViTinh.ToLower().Contains(keyword));
+                if (!string.IsNullOrEmpty(selectedUnit) && !string.Equals(nl.DonViTinh, selectedUnit, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (priceIndex > 0)
+                {
+                    decimal gia = nl.GiaNhapGanNhat;
+                    if (priceIndex == 1 && gia >= 50000m) return false;
+                    if (priceIndex == 2 && (gia < 50000m || gia > 200000m)) return false;
+                    if (priceIndex == 3 && gia <= 200000m) return false;
+                }
+
+                // 2. Lọc theo từ khóa (hỗ trợ không dấu)
+                return UiStyler.MatchesSearch(keyword, nl.TenNguyenLieu, nl.MaNguyenLieu, nl.DonViTinh);
             }).ToList();
+
+            _lblCount.Text = filtered.Count == _allNguyenLieu.Count
+                ? $"Hiển thị {filtered.Count} nguyên liệu"
+                : $"Hiển thị {filtered.Count} / {_allNguyenLieu.Count} nguyên liệu";
 
             string selectedMa = null;
             int scrollIndex = -1;

@@ -169,54 +169,141 @@ namespace RestaurantCRM.AdminApp.Controls
             card.Dock = DockStyle.Fill;
             card.Padding = new Padding(16, 6, 16, 10);
 
-            var filterRow = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = Color.White };
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.White, Padding = new Padding(0, 4, 0, 0) };
+            var filterRow = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = Color.White };
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                BackColor = Color.White,
+                Padding = new Padding(0, 4, 0, 2)
+            };
+            PillSearch searchPill = null;
             if (spec.Search != null)
             {
-                var pill = new PillSearch(spec.Search, spec.SearchPlaceholder) { Width = 280, Margin = new Padding(0, 0, 8, 0) };
-                flow.Controls.Add(pill);
+                searchPill = new PillSearch(spec.Search, spec.SearchPlaceholder) { Width = 250, Margin = new Padding(0, 0, 8, 4) };
+                flow.Controls.Add(searchPill);
             }
+            var filterCombos = new List<ComboBox>();
             if (spec.Filters != null)
                 foreach (var f in spec.Filters)
                 {
                     if (f.Combo == null) continue;
-                    var chip = new ComboChip(f.Combo, f.Caption != null ? f.Caption.Text : null) { Margin = new Padding(0, 0, 8, 0) };
+                    var chip = new ComboChip(f.Combo, f.Caption != null ? f.Caption.Text : null) { Margin = new Padding(0, 0, 8, 4) };
                     flow.Controls.Add(chip);
                     f.Combo.Visible = false;            // vẫn giữ trong form để DataSource hoạt động
                     filterRow.Controls.Add(f.Combo);
+                    filterCombos.Add(f.Combo);
                 }
             if (spec.FilterExtras != null)
                 foreach (var c in spec.FilterExtras)
                 {
                     var b = c as Button;
                     if (b != null) { ButtonSkin.SetKind(b, ButtonSkin.Kind.Secondary); FitButton(b); }
-                    c.Margin = new Padding(0, 0, 8, 0);
+                    c.Margin = new Padding(0, 0, 8, 4);
                     flow.Controls.Add(c);
                 }
-            filterRow.Controls.Add(flow);
-            // Ô tìm kiếm co lại khi thẻ hẹp để các chip lọc không bị cắt
-            PillSearch searchPill = null;
-            foreach (Control c in flow.Controls) if (c is PillSearch) searchPill = (PillSearch)c;
-            if (searchPill != null)
+
+            // Nút "Đặt lại" tự động hiện khi đang có từ khóa tìm kiếm hoặc bộ lọc nâng cao đang bật
+            Button btnResetFilters = null;
+            if (spec.Search != null || filterCombos.Count > 0)
             {
-                flow.Resize += (s, e) =>
+                btnResetFilters = new Button
                 {
-                    int others = 0;
-                    foreach (Control c in flow.Controls) if (c != searchPill && c.Visible) others += c.Width + c.Margin.Horizontal;
-                    int w = Math.Max(160, Math.Min(280, flow.ClientSize.Width - others - searchPill.Margin.Horizontal - 4));
-                    if (searchPill.Width != w) searchPill.Width = w;
+                    Text = "Đặt lại lọc",
+                    Visible = false,
+                    Margin = new Padding(0, 2, 8, 4)
                 };
+                ButtonSkin.SetKind(btnResetFilters, ButtonSkin.Kind.Ghost);
+                FitButton(btnResetFilters, 76);
+                btnResetFilters.Click += (s, e) =>
+                {
+                    if (spec.Search != null && spec.Search.TextLength > 0)
+                        spec.Search.Clear();
+                    foreach (var cb in filterCombos)
+                    {
+                        if (cb.Items.Count > 0 && cb.SelectedIndex != 0)
+                            cb.SelectedIndex = 0;
+                    }
+                };
+                flow.Controls.Add(btnResetFilters);
             }
+
+            filterRow.Controls.Add(flow);
+
             if (spec.CountLabel != null)
             {
                 var cl = spec.CountLabel;
-                cl.AutoSize = false; cl.Dock = DockStyle.Right; cl.Width = 170;
-                cl.TextAlign = ContentAlignment.MiddleRight; cl.Padding = new Padding(0, 6, 2, 0);
+                cl.AutoSize = false; cl.Dock = DockStyle.Right; cl.Width = 155;
+                cl.TextAlign = ContentAlignment.TopRight; cl.Padding = new Padding(0, 12, 2, 0);
                 cl.Font = new Font(ThemeManager.FontFamily, 8.5F); cl.ForeColor = ThemeManager.Muted; cl.BackColor = Color.White;
                 filterRow.Controls.Add(cl);
                 cl.BringToFront();
                 flow.BringToFront();
             }
+
+            // Tự động cân đối chiều rộng ô tìm kiếm và chiều cao hàng lọc khi có nhiều chip lọc (3-5 bộ lọc)
+            bool adjustingFilterLayout = false;
+            Action syncFilterLayout = () =>
+            {
+                if (adjustingFilterLayout || filterRow.IsDisposed || flow.ClientSize.Width <= 40) return;
+                adjustingFilterLayout = true;
+                try
+                {
+                    if (btnResetFilters != null)
+                    {
+                        bool anyActive = (spec.Search != null && spec.Search.TextLength > 0);
+                        if (!anyActive)
+                        {
+                            foreach (var cb in filterCombos)
+                                if (cb.SelectedIndex > 0) { anyActive = true; break; }
+                        }
+                        if (btnResetFilters.Visible != anyActive)
+                            btnResetFilters.Visible = anyActive;
+                    }
+
+                    if (searchPill != null)
+                    {
+                        int others = 0;
+                        foreach (Control c in flow.Controls)
+                            if (c != searchPill && c.Visible) others += c.Width + c.Margin.Horizontal;
+
+                        int availSingleRow = flow.ClientSize.Width - others - searchPill.Margin.Horizontal - 6;
+                        int targetWidth;
+                        if (availSingleRow >= 175)
+                        {
+                            // Đủ chỗ nằm gọn trên 1 hàng
+                            targetWidth = Math.Min(270, availSingleRow);
+                        }
+                        else
+                        {
+                            // Nhiều bộ lọc -> cho phép xuống hàng thứ 2 cân đối, giữ ô tìm kiếm rộng rãi dễ gõ
+                            targetWidth = Math.Min(250, Math.Max(185, (int)(flow.ClientSize.Width * 0.32)));
+                        }
+                        if (Math.Abs(searchPill.Width - targetWidth) > 2)
+                            searchPill.Width = targetWidth;
+                    }
+
+                    int maxBottom = 0;
+                    foreach (Control c in flow.Controls)
+                    {
+                        if (c.Visible && c.Bottom + c.Margin.Bottom > maxBottom)
+                            maxBottom = c.Bottom + c.Margin.Bottom;
+                    }
+                    int desiredHeight = Math.Max(46, maxBottom + 4);
+                    if (filterRow.Height != desiredHeight)
+                        filterRow.Height = desiredHeight;
+                }
+                finally
+                {
+                    adjustingFilterLayout = false;
+                }
+            };
+
+            flow.Layout += (s, e) => syncFilterLayout();
+            flow.Resize += (s, e) => syncFilterLayout();
+            if (spec.Search != null) spec.Search.TextChanged += (s, e) => syncFilterLayout();
+            foreach (var cb in filterCombos) cb.SelectedIndexChanged += (s, e) => syncFilterLayout();
 
             Panel footer = null;
             bool hasFooter = (spec.SecondaryActions != null && spec.SecondaryActions.Length > 0)

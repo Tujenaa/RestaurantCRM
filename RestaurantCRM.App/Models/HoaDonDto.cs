@@ -10,8 +10,17 @@ namespace RestaurantCRM.AdminApp.Models {
         [JsonPropertyName("ngayDat")]
         public DateTime? NgayDat { get; set; }
 
+        [JsonPropertyName("maKhachHang")]
+        public string MaKhachHang { get; set; }
+
         [JsonPropertyName("tenKhachHang")]
         public string TenKhachHang { get; set; }
+
+        [JsonPropertyName("soDienThoai")]
+        public string SoDienThoai { get; set; }
+
+        [JsonPropertyName("diaChiGiao")]
+        public string DiaChiGiao { get; set; }
 
         [JsonPropertyName("trangThai")]
         public string TrangThai { get; set; }

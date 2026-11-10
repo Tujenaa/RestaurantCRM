@@ -29,6 +29,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly Button _btnSuaCH;
         private readonly Button _btnXoaCH;
         private readonly Button _btnXemTruoc;
+        private readonly Button _btnDoiTuong;
         private readonly Label _lblError = new Label();
         private string _noteText = "";
         private bool _noteWarn;
@@ -84,6 +85,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
             _btnXemTruoc = AddLeftButton("Xem trước", ButtonSkin.Kind.Ghost);
             _btnXemTruoc.Click += async (s, e) => await XemTruocAsync();
+            _btnDoiTuong = AddLeftButton("Đối tượng", ButtonSkin.Kind.Ghost);
+            _btnDoiTuong.Click += async (s, e) => await DoiTuongAsync();
 
             _txtTieuDe.TextChanged += (s, e) => _lblError.Text = "";
             _btnThemCH.Click += async (s, e) => await ThemCauHoiAsync();
@@ -216,6 +219,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _btnSuaCH.Enabled = c != null;
             _btnXoaCH.Enabled = c != null;
             _btnXemTruoc.Enabled = coKS;
+            _btnDoiTuong.Enabled = coKS;
+            _btnDoiTuong.Text = coKS ? "Đối tượng: " + _ks.DoiTuongHienThi.ToLowerInvariant() : "Đối tượng";
+            PageKit.FitButton(_btnDoiTuong, 88);
             _grid.Enabled = coKS;
         }
 
@@ -314,6 +320,20 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             if (!r.Success) { Notify.Error(this, r.Message); return; }
             DataChanged = true;
             await TaiLaiAsync();
+        }
+
+        private async Task DoiTuongAsync()
+        {
+            if (_ks == null) return;
+            using (var dlg = new DoiTuongKhaoSatDialog(MaKhaoSat, _ks.TieuDe, _ks.TrangThaiHienThi == "Đã đóng"))
+            {
+                Notify.ShowDialog(dlg, this);
+                if (dlg.DataChanged)
+                {
+                    DataChanged = true;
+                    await TaiLaiAsync();
+                }
+            }
         }
 
         private async Task XemTruocAsync()

@@ -47,7 +47,8 @@ namespace RestaurantCRM.AdminApp.Forms
             Font = new Font("Segoe UI", 9.5F);
 
             for (int i = 0; i < columns.Length; i++) _table.Columns.Add("C" + i, typeof(string));
-            foreach (string[] row in rows) _table.Rows.Add((object[])row);
+            for (int i = 0; i < columns.Length; i++) _table.Columns.Add("_Norm" + i, typeof(string));
+            foreach (string[] row in rows) AddOrUpdateNormalizedRow(null, row);
 
             var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 12, 16, 12), BackColor = ThemeManager.Bg };
             Controls.Add(content);
@@ -401,6 +402,31 @@ namespace RestaurantCRM.AdminApp.Forms
             if (row != null) EditRow(row);
         }
 
+        private void AddOrUpdateNormalizedRow(DataRow existingRow, object[] rawValues)
+        {
+            int colCount = _columns.Length;
+            if (existingRow == null)
+            {
+                var rowValues = new object[colCount * 2];
+                for (int i = 0; i < colCount; i++)
+                {
+                    string val = (rawValues != null && i < rawValues.Length && rawValues[i] != null) ? rawValues[i].ToString() : "";
+                    rowValues[i] = val;
+                    rowValues[colCount + i] = UiStyler.RemoveDiacritics(val);
+                }
+                _table.Rows.Add(rowValues);
+            }
+            else
+            {
+                for (int i = 0; i < colCount; i++)
+                {
+                    string val = (rawValues != null && i < rawValues.Length && rawValues[i] != null) ? rawValues[i].ToString() : "";
+                    existingRow[i] = val;
+                    existingRow[colCount + i] = UiStyler.RemoveDiacritics(val);
+                }
+            }
+        }
+
         public void SetTableData(System.Collections.Generic.IEnumerable<object[]> rows)
         {
             if (_grid.InvokeRequired)
@@ -411,7 +437,7 @@ namespace RestaurantCRM.AdminApp.Forms
             _table.Rows.Clear();
             if (rows != null)
             {
-                foreach (var r in rows) _table.Rows.Add(r);
+                foreach (var r in rows) AddOrUpdateNormalizedRow(null, r);
             }
             // Mặc định sắp xếp giảm dần theo cột Mã (C0) để hiển thị bản ghi mới nhất lên đầu
             if (_table.Columns.Count > 0)
@@ -460,31 +486,35 @@ namespace RestaurantCRM.AdminApp.Forms
 
         private void ApplyAdvancedFilter()
         {
-            string value = _filterValue.Text.Trim().Replace("'", "''");
-            if (string.IsNullOrWhiteSpace(value))
+            string raw = _filterValue.Text.Trim();
+            if (string.IsNullOrWhiteSpace(raw))
             {
                 _table.DefaultView.RowFilter = "";
                 return;
             }
 
-            string safeValue = value.Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]");
+            string EscapeLike(string s) => s.Replace("'", "''").Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]");
+
+            string safeValue = EscapeLike(raw);
+            string safeNorm = EscapeLike(UiStyler.RemoveDiacritics(raw));
+            int colCount = _columns.Length;
 
             if (_filterColIndex <= 0)
             {
-                // Tìm tất cả cột
+                // Tìm tất cả cột (hỗ trợ cả có dấu và không dấu)
                 string filter = "";
-                foreach (DataColumn column in _table.Columns)
+                for (int i = 0; i < colCount; i++)
                 {
-                    filter += (filter.Length == 0 ? "" : " OR ") + "Convert([" + column.ColumnName + "], 'System.String') LIKE '%" + safeValue + "%'";
+                    string clause = "Convert([C" + i + "], 'System.String') LIKE '%" + safeValue + "%' OR Convert([_Norm" + i + "], 'System.String') LIKE '%" + safeNorm + "%'";
+                    filter += (filter.Length == 0 ? "" : " OR ") + "(" + clause + ")";
                 }
                 _table.DefaultView.RowFilter = filter;
             }
             else
             {
-                // Tìm trong cột được chọn
+                // Tìm trong cột được chọn (hỗ trợ cả có dấu và không dấu)
                 int colIdx = _filterColIndex - 1;
-                string column = "C" + colIdx;
-                _table.DefaultView.RowFilter = "Convert([" + column + "], 'System.String') LIKE '%" + safeValue + "%'";
+                _table.DefaultView.RowFilter = "Convert([C" + colIdx + "], 'System.String') LIKE '%" + safeValue + "%' OR Convert([_Norm" + colIdx + "], 'System.String') LIKE '%" + safeNorm + "%'";
             }
         }
 
@@ -603,8 +633,9 @@ namespace RestaurantCRM.AdminApp.Forms
                 var cancel = new Button { Text = "Hủy", DialogResult = DialogResult.Cancel, Size = new Size(85, 36), Location = new Point(270, dialog.ClientSize.Height - 52), FlatStyle = FlatStyle.Flat };
                 dialog.Controls.Add(save); dialog.Controls.Add(cancel); dialog.AcceptButton = save; dialog.CancelButton = cancel;
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
-                if (row == null) { object[] values = new object[_table.Columns.Count]; for (int i = 0; i < values.Length; i++) values[i] = i < editors.Length ? editors[i].Text.Trim() : ""; _table.Rows.Add(values); }
-                else for (int i = 0; i < editors.Length && i < _table.Columns.Count; i++) row[i] = editors[i].Text.Trim();
+                object[] values = new object[_columns.Length];
+                for (int i = 0; i < values.Length; i++) values[i] = i < editors.Length ? editors[i].Text.Trim() : "";
+                AddOrUpdateNormalizedRow(row, values);
             }
         }
     }
