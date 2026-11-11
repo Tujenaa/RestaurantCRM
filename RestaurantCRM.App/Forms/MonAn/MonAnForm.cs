@@ -23,6 +23,17 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         private bool _isRefreshing = false;
         private readonly Button _btnXoaMon;
         private readonly ComboBox _cboMucGia = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly SearchScopes<MonAnDto> _scopes;
+
+        private string TenLoai(MonAnDto m)
+        {
+            return _allLoaiMon.FirstOrDefault(x => x.MaLoaiMon == m.MaLoaiMon)?.TenLoaiMon ?? m.TenLoaiMon;
+        }
+
+        private static string NguyenLieuText(MonAnDto m)
+        {
+            return m.DinhLuong != null && m.DinhLuong.Count > 0 ? string.Join(" ", m.DinhLuong.Select(dl => dl.TenNguyenLieu)) : null;
+        }
 
         public MonAnForm()
         {
@@ -49,6 +60,16 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             SetupSearchAndFilter();
             SetupGridDesign();
 
+            // "Tìm theo": mặc định chỉ tên món; người dùng có thể chọn mã / loại / mô tả / nguyên liệu / tất cả
+            _scopes = new SearchScopes<MonAnDto>("MonAn")
+                .Add("Tên món", "Tên", "Tìm theo tên món...", m => new[] { m.TenMonAn })
+                .Add("Mã món", "Mã", "Tìm theo mã món...", m => new[] { m.MaMonAn })
+                .Add("Loại món", "Loại", "Tìm theo loại món...", m => new[] { TenLoai(m) })
+                .Add("Mô tả", "Mô tả", "Tìm trong mô tả món...", m => new[] { m.MoTa })
+                .Add("Nguyên liệu", "Nguyên liệu", "Tìm theo nguyên liệu...", m => new[] { NguyenLieuText(m) })
+                .AddAll("Tìm tên, mã, loại, mô tả, nguyên liệu...");
+            _scopes.Changed += (s, e) => FilterData();
+
             // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
             PageKit.BuildListPage(this, new ListPageSpec
             {
@@ -59,7 +80,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 KpiHost = pnlKpis,
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
-                SearchPlaceholder = "Tìm tên, mã món, mô tả, nguyên liệu...",
+                SearchPlaceholder = "Tìm theo tên món...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(cboLoaiMon, lblLoaiMon),
@@ -292,12 +314,8 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             int mucGiaIndex = _cboMucGia.SelectedIndex;
 
             var filtered = _allMonAn.Where(m => {
-                string catName = _allLoaiMon.FirstOrDefault(x => x.MaLoaiMon == m.MaLoaiMon)?.TenLoaiMon ?? m.TenLoaiMon;
-                string ingredients = m.DinhLuong != null && m.DinhLuong.Count > 0
-                    ? string.Join(" ", m.DinhLuong.Select(dl => dl.TenNguyenLieu))
-                    : null;
-
-                bool matchKeyword = UiStyler.MatchesSearch(keyword, m.TenMonAn, m.MaMonAn, m.MoTa, catName, ingredients);
+                // Tìm theo lựa chọn "Tìm theo" (mặc định: tên món)
+                bool matchKeyword = _scopes.Matches(keyword, m);
                 if (!matchKeyword) return false;
 
                 bool matchLoai = string.IsNullOrEmpty(maLoaiMon) || m.MaLoaiMon == maLoaiMon;

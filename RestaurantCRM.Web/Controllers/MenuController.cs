@@ -1,6 +1,5 @@
-using System.Globalization;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantCRM.Web.Helpers;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
 
@@ -39,7 +38,7 @@ public class MenuController : Controller
         if (!string.IsNullOrWhiteSpace(q))
         {
             availableDishes = availableDishes
-                .Where(d => MatchesSearch(q, d.TenMon, d.MoTa, d.LoaiMon, d.MaMon))
+                .Where(d => MatchesSearch(q, d.TenMon))   // chỉ tìm theo tên món
                 .ToList();
         }
 
@@ -125,44 +124,10 @@ public class MenuController : Controller
         return View(viewModel);
     }
 
-    internal static string RemoveDiacritics(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
-        string normalized = text.Normalize(NormalizationForm.FormD);
-        var sb = new StringBuilder(normalized.Length);
-        foreach (char c in normalized)
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-            {
-                if (c == 'đ') sb.Append('d');
-                else if (c == 'Đ') sb.Append('d');
-                else sb.Append(char.ToLowerInvariant(c));
-            }
-        }
-        return sb.ToString().Normalize(NormalizationForm.FormC);
-    }
+    // Cùng quy tắc tìm kiếm với app (khớp đầu chữ, gõ có dấu thì khớp đúng dấu) – xem SearchHelper
+    internal static string RemoveDiacritics(string? text) => SearchHelper.RemoveDiacritics(text);
 
-    internal static bool MatchesSearch(string? query, params string?[] fields)
-    {
-        if (string.IsNullOrWhiteSpace(query)) return true;
-        var tokens = query.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        foreach (var token in tokens)
-        {
-            string tNorm = RemoveDiacritics(token);
-            bool matched = false;
-            foreach (var f in fields)
-            {
-                if (string.IsNullOrWhiteSpace(f)) continue;
-                if (f.Contains(token, StringComparison.OrdinalIgnoreCase) || RemoveDiacritics(f).Contains(tNorm))
-                {
-                    matched = true;
-                    break;
-                }
-            }
-            if (!matched) return false;
-        }
-        return true;
-    }
+    internal static bool MatchesSearch(string? query, params string?[] fields) => SearchHelper.MatchesSearch(query, fields);
 
     [HttpGet("ChiTiet/{id}")]
     public async Task<IActionResult> ChiTiet(string id)

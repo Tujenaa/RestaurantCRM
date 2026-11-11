@@ -28,6 +28,16 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
         private readonly PhanHoiService _service = new PhanHoiService();
         private List<PhanHoiDto> _all = new List<PhanHoiDto>();
+
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<PhanHoiDto> _scopes = new SearchScopes<PhanHoiDto>("PhanHoi")
+            .AddAll("Tìm mã ĐG, mã đơn, KH, SĐT, món ăn, nội dung...", d => new[] { d.TrangThaiHienThi })
+            .Add("Nội dung đánh giá", "Nội dung", "Tìm trong nội dung đánh giá...",
+                d => new[] { d.NoiDung, d.ChiTietMon != null ? string.Join(" ", d.ChiTietMon.Select(m => m.NoiDung ?? "")) : null })
+            .Add("Khách hàng (tên, SĐT, mã)", "Khách", "Tìm tên, SĐT hoặc mã khách...", d => new[] { d.TenKhachHang, d.SoDienThoai, d.MaKhachHang })
+            .Add("Món ăn", "Món", "Tìm theo món được đánh giá...",
+                d => new[] { d.TenMon, d.ChiTietMon != null ? string.Join(" ", d.ChiTietMon.Select(m => m.TenMon ?? "")) : null })
+            .Add("Mã đánh giá / mã đơn", "Mã", "Tìm mã đánh giá hoặc mã đơn...", d => new[] { d.MaDanhGia, d.MaHoaDon });
         private PhanHoiDto _current;
         private bool _loading;
 
@@ -113,6 +123,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 KpiLabels = new[] { _kCho, _kDiem },   // 2 ô, cỡ như khi có 5 ô (đồng bộ trang Đơn hàng / Phiếu nhập)
                 Search = _txtSearch,
                 SearchPlaceholder = "Tìm mã ĐG, mã đơn, KH, SĐT, món ăn, nội dung...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
@@ -143,6 +154,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             }
 
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            _scopes.Changed += (s, e) => ApplyFilter();
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
             _cboSoSao.SelectedIndexChanged += (s, e) => ApplyFilter();
             _cboThoiGian.SelectedIndexChanged += (s, e) => ApplyFilter();
@@ -414,10 +426,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 if (ndIdx == 3 && d.DaTraLoi) return false;
 
                 if (q.Length == 0) return true;
-                string chiTietText = d.ChiTietMon != null && d.ChiTietMon.Count > 0
-                    ? string.Join(" ", d.ChiTietMon.Select(m => (m.TenMon ?? "") + " " + (m.NoiDung ?? "")))
-                    : null;
-                return UiStyler.MatchesSearch(q, d.MaDanhGia, d.MaHoaDon, d.TenKhachHang, d.MaKhachHang, d.SoDienThoai, d.TenMon, d.NoiDung, chiTietText);
+                return _scopes.Matches(q, d);
             })
             // Ưu tiên: chưa xử lý + cần chú ý → chưa xử lý → đã xử lý; trong mỗi nhóm mới nhất lên trước
             .OrderBy(d => d.LaDaXuLy ? 2 : (d.CanChuY ? 0 : 1))

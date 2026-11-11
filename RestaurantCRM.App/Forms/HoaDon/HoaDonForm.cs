@@ -28,11 +28,33 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             "Chọn một đơn hàng trong danh sách\nđể xem món ăn và thông tin đơn.", "MÓN ĂN", "SL", "THÀNH TIỀN");
         private string _sideMa;
 
+        // "Tìm theo" (mặc định: tất cả – giống cách tìm trước đây)
+        private readonly SearchScopes<HoaDonDto> _scopes;
+
+        private string TenMonTrongDon(HoaDonDto item)
+        {
+            HoaDonDetailDto det;
+            if (!string.IsNullOrEmpty(item.MaHoaDon) && _detailCache.TryGetValue(item.MaHoaDon, out det) && det?.ChiTiet != null)
+                return string.Join(" ", det.ChiTiet.Select(c => c.TenMon));
+            return null;
+        }
+
         public HoaDonForm()
         {
             InitializeComponent();
             _hoaDonService = new HoaDonService();
             SetupGridColumns();
+
+            _scopes = new SearchScopes<HoaDonDto>("HoaDon")
+                .AddAll("Tìm mã đơn, khách, NV, món, địa chỉ, ngày, số tiền...",
+                    // chỉ có trong "Tất cả": những gì đang thấy trên bảng
+                    x => new[] { x.PhuongThucThanhToan, ThemeManager.CleanStatus(x.TrangThai), x.NgayDatHienThi, x.TongTienHienThi })
+                .Add("Mã đơn", "Mã đơn", "Tìm theo mã đơn...", x => new[] { x.MaHoaDon })
+                .Add("Khách hàng (tên, SĐT, mã)", "Khách", "Tìm tên, SĐT hoặc mã khách...", x => new[] { x.TenKhachHang, x.SoDienThoai, x.MaKhachHang })
+                .Add("Nhân viên", "NV", "Tìm theo nhân viên...", x => new[] { x.TenNhanVien, x.MaNhanVien })
+                .Add("Món trong đơn", "Món", "Tìm theo món trong đơn...", x => new[] { TenMonTrongDon(x) })
+                .Add("Địa chỉ giao", "Địa chỉ", "Tìm theo địa chỉ giao...", x => new[] { x.DiaChiGiao });
+            _scopes.Changed += (s, e) => FilterData();
 
             _cboThoiGian.Items.AddRange(new object[] {
                 "Tất cả thời gian",
@@ -75,6 +97,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm mã đơn, tên/SĐT khách, NV, địa chỉ...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(cboTrangThai, lblTrangThai),
@@ -286,28 +309,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             DateTime today = DateTime.Today;
 
             var filtered = _allHoaDon.Where(item => {
-                if (!string.IsNullOrEmpty(keyword))
-                {
-                    string dishNames = null;
-                    HoaDonDetailDto det;
-                    if (!string.IsNullOrEmpty(item.MaHoaDon) && _detailCache.TryGetValue(item.MaHoaDon, out det) && det?.ChiTiet != null)
-                    {
-                        dishNames = string.Join(" ", det.ChiTiet.Select(c => c.TenMon));
-                    }
-
-                    bool matchKeyword = UiStyler.MatchesSearch(keyword,
-                        item.MaHoaDon,
-                        item.TenKhachHang,
-                        item.SoDienThoai,
-                        item.MaKhachHang,
-                        item.MaNhanVien,
-                        item.TenNhanVien,
-                        item.DiaChiGiao,
-                        item.PhuongThucThanhToan,
-                        dishNames);
-
-                    if (!matchKeyword) return false;
-                }
+                if (!string.IsNullOrEmpty(keyword) && !_scopes.Matches(keyword, item)) return false;
 
                 // Lọc theo thời gian
                 if (timeIndex > 0)

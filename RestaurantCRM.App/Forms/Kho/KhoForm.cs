@@ -21,6 +21,13 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
         private readonly NguyenLieuService _nguyenLieuService;
         private readonly BindingSource _bindingSource = new BindingSource();
         private List<TonKhoDto> _allTonKho = new List<TonKhoDto>();
+
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<TonKhoDto> _scopes = new SearchScopes<TonKhoDto>("Kho")
+            .AddAll("Tìm theo mã, tên nguyên liệu, đơn vị tính...", x => new[] { x.TrangThaiHienThi })
+            .Add("Tên nguyên liệu", "Tên", "Tìm theo tên nguyên liệu...", x => new[] { x.TenNguyenLieu })
+            .Add("Mã nguyên liệu", "Mã", "Tìm theo mã nguyên liệu...", x => new[] { x.MaNguyenLieu })
+            .Add("Đơn vị tính", "ĐVT", "Tìm theo đơn vị tính...", x => new[] { x.DonViTinh });
         private readonly Timer _refreshTimer;
         private bool _isRefreshing = false;
         private readonly ComboBox _cboDonVi = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -31,6 +38,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
         public KhoForm()
         {
             InitializeComponent();
+            _scopes.Changed += (s, e) => FilterData();
 
             // 1. Chống chớp giật màn hình (Flickering): Kích hoạt DoubleBuffering cho Form và DataGridView
             this.DoubleBuffered = true;
@@ -79,6 +87,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm theo mã, tên nguyên liệu, đơn vị tính...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(cboBoLoc, lblBoLoc),
@@ -228,7 +237,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
 
             var filtered = _allTonKho.Where(item => {
                 // Lọc từ khóa (không dấu + đa từ)
-                if (!UiStyler.MatchesSearch(keyword, item.TenNguyenLieu, item.MaNguyenLieu, item.DonViTinh))
+                if (!_scopes.Matches(keyword, item))
                     return false;
 
                 if (!string.IsNullOrEmpty(selectedUnit) && !string.Equals(item.DonViTinh, selectedUnit, StringComparison.OrdinalIgnoreCase))

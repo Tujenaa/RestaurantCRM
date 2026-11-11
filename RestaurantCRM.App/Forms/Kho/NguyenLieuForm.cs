@@ -19,6 +19,13 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
         private readonly NguyenLieuService _nguyenLieuService;
         private readonly BindingSource _bindingSource = new BindingSource();
         private List<NguyenLieuDto> _allNguyenLieu = new List<NguyenLieuDto>();
+
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<NguyenLieuDto> _scopes = new SearchScopes<NguyenLieuDto>("NguyenLieu")
+            .AddAll("Tìm theo mã, tên nguyên liệu, ĐVT...", x => new[] { x.TrangThaiHienThi })
+            .Add("Tên nguyên liệu", "Tên", "Tìm theo tên nguyên liệu...", x => new[] { x.TenNguyenLieu })
+            .Add("Mã nguyên liệu", "Mã", "Tìm theo mã nguyên liệu...", x => new[] { x.MaNguyenLieu })
+            .Add("Đơn vị tính", "ĐVT", "Tìm theo đơn vị tính...", x => new[] { x.DonViTinh });
         private bool _isLoading = false;
         private readonly Button _btnXoa;
         private readonly ComboBox _cboDonVi = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -29,6 +36,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
         public NguyenLieuForm()
         {
             InitializeComponent();
+            _scopes.Changed += (s, e) => FilterData();
 
             this.DoubleBuffered = true;
             EnableDoubleBuffered(dgvNguyenLieu);
@@ -85,6 +93,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm theo mã, tên nguyên liệu, ĐVT...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(cboBoLoc, lblBoLoc),
@@ -204,7 +213,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 }
 
                 // 2. Lọc theo từ khóa (hỗ trợ không dấu)
-                return UiStyler.MatchesSearch(keyword, nl.TenNguyenLieu, nl.MaNguyenLieu, nl.DonViTinh);
+                return _scopes.Matches(keyword, nl);
             }).ToList();
 
             _lblCount.Text = filtered.Count == _allNguyenLieu.Count

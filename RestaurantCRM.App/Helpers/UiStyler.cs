@@ -488,57 +488,125 @@ namespace RestaurantCRM.AdminApp.Helpers
         }
 
         /// <summary>
-        /// Kiểm tra một trường văn bản có chứa từ khóa (hỗ trợ cả có dấu và không dấu) hay không.
+        /// Kiểm tra một trường văn bản có khớp từ khóa hay không (cùng quy tắc với <see cref="MatchesSearch"/>).
         /// </summary>
         public static bool ContainsUnaccented(string source, string query)
         {
-            if (string.IsNullOrWhiteSpace(query)) return true;
-            if (string.IsNullOrWhiteSpace(source)) return false;
-
-            string qTrim = query.Trim();
-            if (source.IndexOf(qTrim, StringComparison.OrdinalIgnoreCase) >= 0) return true;
-
-            string normSource = RemoveDiacritics(source);
-            string normQuery = RemoveDiacritics(qTrim);
-            return normSource.IndexOf(normQuery, StringComparison.OrdinalIgnoreCase) >= 0;
+            return MatchesSearch(query, source);
         }
 
         /// <summary>
-        /// Kiểm tra danh sách các trường có khớp với từ khóa tìm kiếm nâng cao hay không.
-        /// Hỗ trợ gõ không dấu, có dấu và tách nhiều từ khóa (mỗi từ khóa phải xuất hiện ở ít nhất 1 trường).
+        /// Tìm kiếm tiếng Việt. Câu tìm được tách thành các từ; MỌI từ phải khớp ở ít nhất một trường:
+        ///  • Từ có chữ số (mã, SĐT, số tiền, ngày): khớp ở bất kỳ vị trí ("012" ra "HD012").
+        ///    Từ chỉ gồm số thì so thêm với phần chữ số của trường ("350000" ra "350.000 đ", "0901234" ra "0901 234 567").
+        ///  • Từ chỉ có chữ: khớp ở ĐẦU một chữ ("an" ra "An", "Anh"; không ra "Thanh"; "gmail" ra "a@gmail.com").
+        ///  • Gõ không dấu → so không dấu ("bo" ra Bò, Bơ); gõ có dấu → so đúng dấu ("bò" chỉ ra Bò). Xét riêng từng từ.
+        ///  • Không phân biệt hoa/thường; chuẩn hóa Unicode (NFC) cả hai phía.
         /// </summary>
         public static bool MatchesSearch(string query, params string[] fields)
         {
             if (string.IsNullOrWhiteSpace(query)) return true;
             if (fields == null || fields.Length == 0) return false;
 
-            string qTrim = query.Trim();
-            // Kiểm tra khớp nguyên cụm trước
-            for (int i = 0; i < fields.Length; i++)
-            {
-                if (!string.IsNullOrEmpty(fields[i]) && ContainsUnaccented(fields[i], qTrim))
-                    return true;
-            }
+            var tokens = PrepareTokens(query);
+            if (tokens.Count == 0) return true;
 
-            // Hỗ trợ tìm kiếm đa từ khóa (VD: "kh01 nguyen" hoặc "bo luc lac")
-            string[] tokens = RemoveDiacritics(qTrim).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (tokens.Length <= 1) return false;
+            // Chuẩn hóa mỗi trường tối đa 1 lần cho mỗi kiểu so (lười: chỉ khi cần)
+            var accented = new string[fields.Length];
+            var plain = new string[fields.Length];
+            var digits = new string[fields.Length];
 
-            var combined = new StringBuilder();
-            for (int i = 0; i < fields.Length; i++)
+            foreach (var t in tokens)
             {
-                if (!string.IsNullOrWhiteSpace(fields[i]))
+                bool found = false;
+                for (int i = 0; i < fields.Length && !found; i++)
                 {
-                    combined.Append(RemoveDiacritics(fields[i])).Append(' ');
+                    if (string.IsNullOrEmpty(fields[i])) continue;
+                    string hay;
+                    if (t.Accented) hay = accented[i] ?? (accented[i] = Fold(fields[i], true));
+                    else hay = plain[i] ?? (plain[i] = Fold(fields[i], false));
+
+                    if (t.AnyPosition)
+                    {
+                        if (hay.IndexOf(t.Key, StringComparison.Ordinal) >= 0) found = true;
+                        else if (t.Digits != null)
+                        {
+                            string d = digits[i] ?? (digits[i] = DigitsOnly(fields[i]));
+                            found = d.Length > 0 && d.IndexOf(t.Digits, StringComparison.Ordinal) >= 0;
+                        }
+                    }
+                    else found = StartsWordAt(hay, t.Key);
                 }
-            }
-            string haystack = combined.ToString();
-            for (int i = 0; i < tokens.Length; i++)
-            {
-                if (haystack.IndexOf(tokens[i], StringComparison.OrdinalIgnoreCase) < 0)
-                    return false;
+                if (!found) return false;
             }
             return true;
+        }
+
+        private sealed class SearchToken
+        {
+            public string Key;          // từ khóa đã chuẩn hóa (giữ hoặc bỏ dấu tùy Accented)
+            public bool Accented;       // người dùng gõ có dấu -> so đúng dấu
+            public bool AnyPosition;    // có chữ số / bắt đầu bằng ký hiệu -> khớp ở bất kỳ vị trí
+            public string Digits;       // từ chỉ gồm số (bỏ . , - / khoảng trắng) -> phần chữ số để so
+        }
+
+        private static List<SearchToken> PrepareTokens(string query)
+        {
+            var list = new List<SearchToken>();
+            foreach (var raw in query.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                bool accented = HasDiacritics(raw);
+                string key = Fold(raw, accented);
+                if (key.Length == 0) continue;
+
+                bool hasDigit = false, onlyNumeric = true;
+                foreach (char c in key)
+                {
+                    if (char.IsDigit(c)) hasDigit = true;
+                    else if (c != '.' && c != ',' && c != '-' && c != '/') onlyNumeric = false;
+                }
+                list.Add(new SearchToken
+                {
+                    Key = key,
+                    Accented = accented,
+                    AnyPosition = hasDigit || !char.IsLetterOrDigit(key[0]),
+                    Digits = hasDigit && onlyNumeric ? DigitsOnly(key) : null
+                });
+            }
+            return list;
+        }
+
+        /// <summary>Có dấu tiếng Việt (kể cả "đ") hay không.</summary>
+        private static bool HasDiacritics(string s)
+        {
+            string lower = s.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormC);
+            return lower != RemoveDiacritics(s);
+        }
+
+        /// <summary>Chữ thường + NFC; bỏ dấu nếu keepAccents = false.</summary>
+        private static string Fold(string s, bool keepAccents)
+        {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+            return keepAccents ? s.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormC) : RemoveDiacritics(s);
+        }
+
+        private static string DigitsOnly(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            foreach (char c in s) if (c >= '0' && c <= '9') sb.Append(c);
+            return sb.ToString();
+        }
+
+        /// <summary>Từ khóa xuất hiện ở đầu một chữ (đầu chuỗi hoặc sau ký tự không phải chữ/số).</summary>
+        private static bool StartsWordAt(string hay, string key)
+        {
+            int idx = hay.IndexOf(key, StringComparison.Ordinal);
+            while (idx >= 0)
+            {
+                if (idx == 0 || !char.IsLetterOrDigit(hay[idx - 1])) return true;
+                idx = hay.IndexOf(key, idx + 1, StringComparison.Ordinal);
+            }
+            return false;
         }
 
         /// <summary>

@@ -35,6 +35,7 @@ namespace RestaurantCRM.AdminApp.Controls
         public Label FooterInfo;
         public Control SidePanel;            // khối chi tiết bên phải (nếu có)
         public int SideWidth = 340;
+        public ISearchScopes SearchScopes;   // lựa chọn "Tìm theo" (nút nhỏ đầu ô tìm kiếm)
         public bool SideFullHeight;          // khối bên phải cao từ dưới tiêu đề tới đáy (hàng KPI chỉ nằm bên trái)
         public int KpiSlots;                 // > số ô KPI: mỗi ô rộng = bề ngang trang / KpiSlots, xếp sát trái
     }
@@ -198,8 +199,12 @@ namespace RestaurantCRM.AdminApp.Controls
             PillSearch searchPill = null;
             if (spec.Search != null)
             {
-                searchPill = new PillSearch(spec.Search, spec.SearchPlaceholder) { Width = 250, Margin = new Padding(0, 0, 8, 4) };
+                var scopes = spec.SearchScopes;
+                string placeholder = scopes != null && scopes.Placeholders.Count > 0
+                    ? scopes.Placeholders[scopes.SelectedIndex] : spec.SearchPlaceholder;
+                searchPill = new PillSearch(spec.Search, placeholder) { Width = 250, Margin = new Padding(0, 0, 8, 4) };
                 flow.Controls.Add(searchPill);
+                if (scopes != null && scopes.Names.Count > 1) AttachSearchScopes(searchPill, spec.Search, scopes);
             }
             var filterCombos = new List<ComboBox>();
             var filterChips = new List<ComboChip>();
@@ -330,16 +335,17 @@ namespace RestaurantCRM.AdminApp.Controls
                             if (c != searchPill && c.Visible) others += c.Width + c.Margin.Horizontal;
 
                         int availSingleRow = flow.ClientSize.Width - others - searchPill.Margin.Horizontal - 6;
+                        int sw = searchPill.ScopeWidth;   // nút "Tìm theo" trong ô
                         int targetWidth;
-                        if (availSingleRow >= 175)
+                        if (availSingleRow >= 175 + sw)
                         {
                             // Đủ chỗ nằm gọn trên 1 hàng
-                            targetWidth = Math.Min(270, availSingleRow);
+                            targetWidth = Math.Min(270 + sw, availSingleRow);
                         }
                         else
                         {
                             // Nhiều bộ lọc -> cho phép xuống hàng thứ 2 cân đối, giữ ô tìm kiếm rộng rãi dễ gõ
-                            targetWidth = Math.Min(250, Math.Max(185, (int)(flow.ClientSize.Width * 0.32)));
+                            targetWidth = Math.Min(250 + sw, Math.Max(185 + sw, (int)(flow.ClientSize.Width * 0.32)));
                         }
                         if (Math.Abs(searchPill.Width - targetWidth) > 2)
                             searchPill.Width = targetWidth;
@@ -479,7 +485,9 @@ namespace RestaurantCRM.AdminApp.Controls
         /// </summary>
         private static void FitFilterRowSingleLine(FlowLayoutPanel flow, PillSearch search, List<ComboChip> chips)
         {
-            const int SearchMin = 150, SearchMax = 270, ChipMin = 90;
+            const int ChipMin = 90;
+            int scopeW = search != null ? search.ScopeWidth : 0;   // nút "Tìm theo" nằm trong ô tìm kiếm
+            int SearchMin = 150 + scopeW, SearchMax = 270 + scopeW;
             int room = flow.ClientSize.Width - flow.Padding.Horizontal - 6;
             foreach (Control c in flow.Controls)
                 if (c != search && !(c is ComboChip) && c.Visible) room -= c.Width + c.Margin.Horizontal;
@@ -509,6 +517,40 @@ namespace RestaurantCRM.AdminApp.Controls
             }
 
             if (search != null && Math.Abs(search.Width - searchW) > 2) search.Width = searchW;
+        }
+
+        /// <summary>Gắn nút "Tìm theo" vào ô tìm kiếm: bấm mở menu chọn; đổi lựa chọn thì đổi chữ nút + chữ gợi ý.</summary>
+        public static void AttachSearchScopes(PillSearch pill, TextBox box, ISearchScopes scopes)
+        {
+            Action refresh = () =>
+            {
+                pill.SetScopeButton(scopes.ShortNames[scopes.SelectedIndex], p => ShowScopeMenu(pill, p, scopes, box));
+                UiStyler.SetPlaceholder(box, scopes.Placeholders[scopes.SelectedIndex]);
+            };
+            refresh();
+            scopes.Changed += (s, e) => refresh();
+        }
+
+        /// <summary>Menu chọn "Tìm theo" (cùng kiểu gọn với menu "Bộ lọc").</summary>
+        public static void ShowScopeMenu(Control owner, Point at, ISearchScopes scopes, TextBox box)
+        {
+            var font = new Font(ThemeManager.FontFamily, 8.5F);
+            var menu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = false, Padding = new Padding(2), Font = font, BackColor = Color.White };
+            menu.Items.Add(new ToolStripLabel("Tìm theo") { ForeColor = ThemeManager.Muted, Padding = new Padding(4, 1, 4, 1) });
+            for (int i = 0; i < scopes.Names.Count; i++)
+            {
+                int idx = i;
+                bool sel = idx == scopes.SelectedIndex;
+                var it = new ToolStripMenuItem((sel ? "✓  " : "     ") + scopes.Names[i])
+                {
+                    Padding = new Padding(4, 1, 4, 1),
+                    ForeColor = sel ? ThemeManager.Primary : ThemeManager.Ink2
+                };
+                it.Click += (s, e) => { scopes.SelectedIndex = idx; if (box != null && box.CanFocus) box.Focus(); };
+                menu.Items.Add(it);
+            }
+            menu.Closed += (s, e) => owner.BeginInvoke((Action)(() => { menu.Dispose(); font.Dispose(); }));
+            menu.Show(owner, at);
         }
 
         /// <summary>

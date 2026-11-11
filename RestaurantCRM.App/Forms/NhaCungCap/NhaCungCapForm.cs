@@ -16,6 +16,15 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
     {
         private readonly NhaCungCapService _nccService;
         private List<NhaCungCapDto> _allNcc = new List<NhaCungCapDto>();
+
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<NhaCungCapDto> _scopes = new SearchScopes<NhaCungCapDto>("NhaCungCap")
+            .AddAll("Tìm mã, tên NCC, SĐT, email, địa chỉ...", n => new[] { n.TrangThaiHienThi })
+            .Add("Tên nhà cung cấp", "Tên", "Tìm theo tên nhà cung cấp...", n => new[] { n.TenNhaCungCap })
+            .Add("Mã nhà cung cấp", "Mã", "Tìm theo mã nhà cung cấp...", n => new[] { n.MaNhaCungCap })
+            .Add("Số điện thoại", "SĐT", "Tìm theo số điện thoại...", n => new[] { n.SoDienThoai })
+            .Add("Email", "Email", "Tìm theo email...", n => new[] { n.Email })
+            .Add("Địa chỉ", "Địa chỉ", "Tìm theo địa chỉ...", n => new[] { n.DiaChi });
         private readonly Button btnAnHien = new Button { Text = "Ẩn/Hiện NCC", AutoSize = true };
         private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly Label _lblCount = new Label { Text = "" };
@@ -23,6 +32,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
         public NhaCungCapForm()
         {
             InitializeComponent();
+            _scopes.Changed += (s, e) => FilterData();
             dgvNhaCungCap.AutoGenerateColumns = false;
             dgvNhaCungCap.AllowUserToResizeColumns = true;
             dgvNhaCungCap.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
@@ -49,6 +59,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm mã, tên NCC, SĐT, email, địa chỉ...",
+                SearchScopes = _scopes,
                 Filters = new[] { new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }) },
                 CountLabel = _lblCount,
                 Grid = dgvNhaCungCap,
@@ -85,7 +96,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
             {
                 if (statusIdx == 1 && !n.IsActive) return false;
                 if (statusIdx == 2 && n.IsActive) return false;
-                return UiStyler.MatchesSearch(keyword, n.TenNhaCungCap, n.MaNhaCungCap, n.SoDienThoai, n.Email, n.DiaChi, n.TrangThaiHienThi);
+                return _scopes.Matches(keyword, n);
             }).OrderByDescending(n => n.MaNhaCungCap).ToList();
 
             dgvNhaCungCap.DataSource = null;

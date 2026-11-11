@@ -125,6 +125,7 @@
     <Compile Include="Controls\UcSidebar.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Controls\Common\SearchScopes.cs" />
     <Compile Include="Controls\DetailKit.cs">
       <SubType>Component</SubType>
     </Compile>

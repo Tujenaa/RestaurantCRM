@@ -22,6 +22,16 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
         private readonly Label _lblCount = new Label { Text = "" };
         private bool _updatingFilterList;
 
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<PhieuNhapDto> _scopes = new SearchScopes<PhieuNhapDto>("PhieuNhap")
+            .AddAll("Tìm mã phiếu, NCC, nhân viên, ghi chú, ngày, số tiền...",
+                p => new[] { p.NgayNhap.HasValue ? p.NgayNhap.Value.ToString("dd/MM/yyyy HH:mm") : null,
+                             p.TongTien.HasValue ? p.TongTien.Value.ToString("#,##0") : null })
+            .Add("Mã phiếu", "Mã", "Tìm theo mã phiếu...", p => new[] { p.MaPhieuNhap })
+            .Add("Nhà cung cấp", "NCC", "Tìm theo tên hoặc mã NCC...", p => new[] { p.TenNhaCungCap, p.MaNhaCungCap })
+            .Add("Nhân viên", "NV", "Tìm theo nhân viên lập...", p => new[] { p.TenNhanVien, p.MaNhanVien })
+            .Add("Ghi chú", "Ghi chú", "Tìm trong ghi chú...", p => new[] { p.GhiChu });
+
         // 2 ô số liệu ở trên
         private readonly Label _kTongPhieu = new Label { Text = "Tổng phiếu: —" };
         private readonly Label _kTongGiaTri = new Label { Text = "Tổng giá trị: —" };
@@ -35,6 +45,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
         public PhieuNhapForm()
         {
             InitializeComponent();
+            _scopes.Changed += (s, e) => FilterData();
             dgvPhieuNhap.AutoGenerateColumns = false;
             dgvPhieuNhap.AllowUserToResizeColumns = true;
             SetupGridColumns();
@@ -79,6 +90,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm mã phiếu, NCC, nhân viên, ghi chú...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(_cboNhaCungCap, new Label { Text = "Nhà cung cấp" }),
@@ -201,7 +213,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
 
             var filtered = _allPhieuNhap.Where(p =>
             {
-                if (!UiStyler.MatchesSearch(keyword, p.MaPhieuNhap, p.TenNhaCungCap, p.MaNhaCungCap, p.MaNhanVien, p.TenNhanVien, p.GhiChu))
+                if (!_scopes.Matches(keyword, p))
                     return false;
 
                 if (!string.IsNullOrEmpty(selectedNcc) && !string.Equals(p.TenNhaCungCap, selectedNcc, StringComparison.OrdinalIgnoreCase))
