@@ -202,12 +202,36 @@ namespace RestaurantCRM.AdminApp.Controls
                 flow.Controls.Add(searchPill);
             }
             var filterCombos = new List<ComboBox>();
+            var filterChips = new List<ComboChip>();
+            int filterCount = 0;
+            if (spec.Filters != null) foreach (var f in spec.Filters) if (f.Combo != null) filterCount++;
+
+            // ≥ 2 bộ lọc: gom vào nút "Bộ lọc" (menu gọn) + chip nhỏ chỉ hiện cho bộ lọc đang bật.
+            // 1 bộ lọc: giữ chip đầy đủ như cũ (một chip không tốn chỗ hơn nút).
+            bool filterMenuMode = filterCount >= 2;
+            if (filterMenuMode) flow.WrapContents = false;   // luôn 1 hàng (FitFilterRowSingleLine co giãn cho vừa)
+            Button btnFilter = null;
+            if (filterMenuMode)
+            {
+                btnFilter = new Button { Text = "Bộ lọc ▾", Margin = new Padding(0, 2, 8, 4) };
+                ButtonSkin.SetKind(btnFilter, ButtonSkin.Kind.Secondary);
+                FitButton(btnFilter, 84);
+                btnFilter.Click += (s, e) => ShowFilterMenu(btnFilter, filterChips);
+                flow.Controls.Add(btnFilter);
+            }
             if (spec.Filters != null)
                 foreach (var f in spec.Filters)
                 {
                     if (f.Combo == null) continue;
                     var chip = new ComboChip(f.Combo, f.Caption != null ? f.Caption.Text : null) { Margin = new Padding(0, 0, 8, 4) };
+                    if (filterMenuMode)
+                    {
+                        chip.Compact = true;
+                        chip.AutoHideWhenInactive = true;
+                        chip.Margin = new Padding(0, 4, 6, 4);   // căn giữa theo ô tìm kiếm cao 38px
+                    }
                     flow.Controls.Add(chip);
+                    filterChips.Add(chip);
                     f.Combo.Visible = false;            // vẫn giữ trong form để DataSource hoạt động
                     filterRow.Controls.Add(f.Combo);
                     filterCombos.Add(f.Combo);
@@ -222,8 +246,9 @@ namespace RestaurantCRM.AdminApp.Controls
                 }
 
             // Nút "Đặt lại" tự động hiện khi đang có từ khóa tìm kiếm hoặc bộ lọc nâng cao đang bật
+            // (chế độ nút "Bộ lọc" không cần: đã có "Đặt lại" trong menu, ✕ trên chip và trong ô tìm kiếm)
             Button btnResetFilters = null;
-            if (spec.Search != null || filterCombos.Count > 0)
+            if (!filterMenuMode && (spec.Search != null || filterCombos.Count > 0))
             {
                 btnResetFilters = new Button
                 {
@@ -277,6 +302,25 @@ namespace RestaurantCRM.AdminApp.Controls
                         }
                         if (btnResetFilters.Visible != anyActive)
                             btnResetFilters.Visible = anyActive;
+                    }
+
+                    if (btnFilter != null)
+                    {
+                        int active = 0;
+                        foreach (var cb in filterCombos) if (cb.SelectedIndex > 0) active++;
+                        string text = active > 0 ? "Bộ lọc (" + active + ") ▾" : "Bộ lọc ▾";
+                        if (btnFilter.Text != text)
+                        {
+                            btnFilter.Text = text;
+                            ButtonSkin.SetKind(btnFilter, active > 0 ? ButtonSkin.Kind.Soft : ButtonSkin.Kind.Secondary);
+                        }
+                    }
+
+                    if (filterMenuMode)
+                    {
+                        FitFilterRowSingleLine(flow, searchPill, filterChips);
+                        if (filterRow.Height != 46) filterRow.Height = 46;
+                        return;
                     }
 
                     if (searchPill != null)
@@ -428,6 +472,108 @@ namespace RestaurantCRM.AdminApp.Controls
         }
 
         /// <summary>Đặt kích thước nút theo chữ (chiều cao chuẩn 34).</summary>
+        /// <summary>
+        /// Giữ hàng lọc trên 1 hàng. Thiếu chỗ thì lần lượt: (1) thu hẹp ô tìm kiếm (270 → 150px),
+        /// (2) rút ngắn chip đang bật (tối thiểu 90px, chữ cắt "…", tooltip hiện đủ),
+        /// (3) tạm ẩn bớt chip từ cuối (nút "Bộ lọc (n)" và menu vẫn đủ thông tin).
+        /// </summary>
+        private static void FitFilterRowSingleLine(FlowLayoutPanel flow, PillSearch search, List<ComboChip> chips)
+        {
+            const int SearchMin = 150, SearchMax = 270, ChipMin = 90;
+            int room = flow.ClientSize.Width - flow.Padding.Horizontal - 6;
+            foreach (Control c in flow.Controls)
+                if (c != search && !(c is ComboChip) && c.Visible) room -= c.Width + c.Margin.Horizontal;
+            if (search != null) room -= search.Margin.Horizontal;
+
+            var active = new List<ComboChip>();
+            foreach (var chip in chips) if (chip.Combo.SelectedIndex > 0) active.Add(chip);
+            int natural = 0;
+            foreach (var chip in active) natural += chip.NaturalWidth + chip.Margin.Horizontal;
+
+            int searchW = search != null ? Math.Min(SearchMax, Math.Max(SearchMin, room - natural)) : 0;
+            int chipRoom = room - searchW;
+
+            // Mặc định: chip hiện đủ, không giới hạn
+            foreach (var chip in chips) { chip.MaxWidth = 0; chip.Suppressed = false; }
+
+            if (natural > chipRoom && active.Count > 0)
+            {
+                int margin = active[0].Margin.Horizontal;
+                // Số chip hiện được khi mỗi chip tối thiểu ChipMin
+                int show = Math.Max(0, Math.Min(active.Count, chipRoom / (ChipMin + margin)));
+                for (int i = 0; i < active.Count; i++)
+                {
+                    if (i >= show) { active[i].Suppressed = true; continue; }
+                    active[i].MaxWidth = Math.Max(ChipMin, chipRoom / show - margin);
+                }
+            }
+
+            if (search != null && Math.Abs(search.Width - searchW) > 2) search.Width = searchW;
+        }
+
+        /// <summary>
+        /// Menu "Bộ lọc" gọn: mỗi dòng "Nhãn ......... giá trị ▸", submenu là các lựa chọn,
+        /// "↺ Đặt lại" chỉ hiện khi có bộ lọc đang bật.
+        /// </summary>
+        private static void ShowFilterMenu(Button owner, List<ComboChip> chips)
+        {
+            var font = new Font(ThemeManager.FontFamily, 8.5F);
+            var itemPad = new Padding(4, 1, 4, 1);
+            Func<ToolStripDropDownMenu, ToolStripDropDownMenu> compact = m =>
+            {
+                m.ShowImageMargin = false;
+                m.ShowCheckMargin = false;
+                m.Padding = new Padding(2);
+                m.Font = font;
+                m.BackColor = Color.White;
+                return m;
+            };
+
+            var menu = new ContextMenuStrip();
+            compact(menu);
+            bool anyActive = false;
+            foreach (var chip in chips)
+            {
+                var cb = chip.Combo;
+                bool active = cb.SelectedIndex > 0;
+                anyActive |= active;
+                string value = active ? cb.GetItemText(cb.SelectedItem) : "Tất cả";
+                var parent = new ToolStripMenuItem(chip.Caption.Length > 0 ? chip.Caption : "Lọc")
+                {
+                    ShortcutKeyDisplayString = value,   // giá trị hiện tại căn phải
+                    Padding = itemPad,
+                    ForeColor = active ? ThemeManager.Primary : ThemeManager.Ink2
+                };
+                if (active) parent.Font = new Font(font, FontStyle.Bold);
+                compact((ToolStripDropDownMenu)parent.DropDown);
+                for (int i = 0; i < cb.Items.Count; i++)
+                {
+                    int idx = i;
+                    bool sel = idx == cb.SelectedIndex;
+                    var it = new ToolStripMenuItem((sel ? "✓  " : "     ") + cb.GetItemText(cb.Items[i]))
+                    {
+                        Padding = itemPad,
+                        ForeColor = sel ? ThemeManager.Primary : ThemeManager.Ink2
+                    };
+                    it.Click += (s, e) => { cb.SelectedIndex = idx; };
+                    parent.DropDownItems.Add(it);
+                }
+                menu.Items.Add(parent);
+            }
+            if (anyActive)
+            {
+                var reset = new ToolStripMenuItem("↺  Đặt lại") { Padding = itemPad, ForeColor = ThemeManager.Muted };
+                reset.Click += (s, e) =>
+                {
+                    foreach (var chip in chips)
+                        if (chip.Combo.Items.Count > 0 && chip.Combo.SelectedIndex != 0) chip.Combo.SelectedIndex = 0;
+                };
+                menu.Items.Add(reset);
+            }
+            menu.Closed += (s, e) => owner.BeginInvoke((Action)(() => { menu.Dispose(); font.Dispose(); }));
+            menu.Show(owner, new Point(0, owner.Height + 2));
+        }
+
         public static void FitButton(Button b, int min = 84)
         {
             b.Font = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold);
