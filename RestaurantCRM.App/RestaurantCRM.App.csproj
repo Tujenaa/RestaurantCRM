@@ -104,6 +104,7 @@
     <Compile Include="Controls\BaoCao\BaoCaoKpiTile.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\BaoCao\BaoCaoUi.cs" />
     <Compile Include="Controls\BaoCao\SalesLineChartRenderer.cs" />
     <Compile Include="Controls\PhanHoi\ChatBubble.cs">
       <SubType>Component</SubType>

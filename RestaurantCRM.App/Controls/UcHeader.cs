@@ -79,21 +79,22 @@ namespace RestaurantCRM.AdminApp.Controls
                 right = tx - 14;
             }
 
-            // Pill ngày
+            // Pill ngày (chỉ để chữ, không icon)
             string date = DateTime.Now.ToString("dd/MM/yyyy");
-            using (var fi = ThemeManager.Icon(8F))
-            using (var f = new Font("Segoe UI", 8F, FontStyle.Bold))
+            using (var f = new Font("Segoe UI", 8.5F, FontStyle.Bold))
             {
                 var ts = TextRenderer.MeasureText(g, date, f, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                 int pillH = 28;
-                var pill = new Rectangle(right - ts.Width - 36, (Height - pillH) / 2, ts.Width + 36, pillH);
+                var pill = new Rectangle(right - ts.Width - 28, (Height - pillH) / 2, ts.Width + 28, pillH);
                 using (var path = ThemeManager.RoundedRect(pill, 14))
-                using (var br = new SolidBrush(Color.White))
-                    g.FillPath(br, path);
-                TextRenderer.DrawText(g, ThemeManager.Glyph.Calendar, fi, new Rectangle(pill.X + 8, pill.Y, 14, pill.Height),
+                {
+                    using (var br = new SolidBrush(Color.White))
+                        g.FillPath(br, path);
+                    using (var pen = new Pen(ThemeManager.Line))
+                        g.DrawPath(pen, path);
+                }
+                TextRenderer.DrawText(g, date, f, pill,
                     ThemeManager.Primary, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-                TextRenderer.DrawText(g, date, f, new Rectangle(pill.X + 26, pill.Y, ts.Width + 4, pill.Height),
-                    ThemeManager.Primary, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
             }
         }
 

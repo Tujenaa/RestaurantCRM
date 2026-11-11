@@ -96,21 +96,22 @@ namespace RestaurantCRM.AdminApp.Controls
                 var g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-                // biểu tượng logo: ô vuông bo góc xanh
-                var badge = collapsed ? new Rectangle((Width - 26) / 2, 24, 26, 26) : new Rectangle(28, 34, 26, 26);
-                using (var path = ThemeManager.RoundedRect(badge, 7))
-                using (var br = new SolidBrush(ThemeManager.Primary))
-                    g.FillPath(br, path);
-                using (var f = ThemeManager.Icon(10F))
-                    TextRenderer.DrawText(g, ThemeManager.Glyph.Home, f, badge, Color.White,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-                if (collapsed) return;
-                using (var f1 = new Font("Segoe UI", 13F, FontStyle.Bold))
-                using (var f2 = new Font("Segoe UI", 13F, FontStyle.Regular))
+                if (collapsed)
                 {
-                    TextRenderer.DrawText(g, "Lẩu", f1, new Point(60, 33), ThemeManager.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    var badge = new Rectangle((Width - 26) / 2, 24, 26, 26);
+                    using (var path = ThemeManager.RoundedRect(badge, 7))
+                    using (var br = new SolidBrush(ThemeManager.Primary))
+                        g.FillPath(br, path);
+                    using (var f = ThemeManager.Icon(10F))
+                        TextRenderer.DrawText(g, ThemeManager.Glyph.Home, f, badge, Color.White,
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    return;
+                }
+                using (var f1 = new Font("Segoe UI", 14.5F, FontStyle.Bold))
+                {
+                    TextRenderer.DrawText(g, "Lẩu", f1, new Point(24, 31), ThemeManager.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                     var w = TextRenderer.MeasureText(g, "Lẩu", f1, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
-                    TextRenderer.DrawText(g, "Phố", f2, new Point(62 + w, 33), ThemeManager.Primary, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                    TextRenderer.DrawText(g, "Phố", f1, new Point(28 + w, 31), ThemeManager.Primary, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                 }
             };
             Controls.Add(topPanel);
@@ -133,6 +134,15 @@ namespace RestaurantCRM.AdminApp.Controls
 
             // ── 3. Menu ──────────────────────────────────────────────
             var menuPanel = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Color.White };
+            menuPanel.HorizontalScroll.Enabled = false;
+            menuPanel.HorizontalScroll.Visible = false;
+            menuPanel.Resize += (s, e) =>
+            {
+                int itemW = Math.Max(32, menuPanel.ClientSize.Width - 24);
+                foreach (Control c in menuPanel.Controls)
+                    if (c is MenuItemControl && c.Width != itemW)
+                        c.Width = itemW;
+            };
             Controls.Add(menuPanel);
             menuPanel.BringToFront();
 
@@ -357,7 +367,7 @@ namespace RestaurantCRM.AdminApp.Controls
                 ForeColor = _textHeader,
                 Font = new Font("Segoe UI", 7F, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(28, y + 4),
+                Location = new Point(24, y + 4),
                 UseMnemonic = false,
                 BackColor = Color.Transparent
             };
@@ -367,10 +377,11 @@ namespace RestaurantCRM.AdminApp.Controls
 
         private void AddMenuItem(Panel parent, string commandKey, string title, string glyph, ref int y)
         {
+            int itemW = Math.Max(32, (parent.ClientSize.Width > 0 ? parent.ClientSize.Width : Width) - 24);
             var item = new MenuItemControl(this, commandKey, title, glyph)
             {
                 Location = new Point(12, y),
-                Size = new Size(Width - 24, 38)
+                Size = new Size(itemW, 38)
             };
             if (commandKey == "Dashboard") _active = item;
             if (s_collapsed) _tip.SetToolTip(item, title);
@@ -454,8 +465,18 @@ namespace RestaurantCRM.AdminApp.Controls
                 if (active || _hover)
                 {
                     using (var path = ThemeManager.RoundedRect(new Rectangle(0, 0, Width - 1, Height - 1), 9))
-                    using (var br = new SolidBrush(active ? ThemeManager.PrimarySoft : _owner._hoverBg))
-                        g.FillPath(br, path);
+                    {
+                        using (var br = new SolidBrush(active ? ThemeManager.PrimarySoft : _owner._hoverBg))
+                            g.FillPath(br, path);
+                        if (active && !s_collapsed)
+                        {
+                            var state = g.Save();
+                            g.SetClip(path);
+                            using (var brBar = new SolidBrush(ThemeManager.Primary))
+                                g.FillRectangle(brBar, 0, 0, 3, Height);
+                            g.Restore(state);
+                        }
+                    }
                 }
                 Color c = active ? ThemeManager.Primary : (_hover ? ThemeManager.Ink2 : _owner._textNormal);
                 if (s_collapsed)
@@ -465,11 +486,8 @@ namespace RestaurantCRM.AdminApp.Controls
                             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                     return;
                 }
-                using (var f = ThemeManager.Icon(10.5F))
-                    TextRenderer.DrawText(g, _glyph, f, new Rectangle(14, 0, 22, Height), c,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                 using (var f = new Font("Segoe UI", 9.5F, active ? FontStyle.Bold : FontStyle.Regular))
-                    TextRenderer.DrawText(g, _title, f, new Rectangle(46, 0, Width - 50, Height), c,
+                    TextRenderer.DrawText(g, _title, f, new Rectangle(14, 0, Width - 22, Height), c,
                         TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
             }
         }
