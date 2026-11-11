@@ -35,6 +35,9 @@ namespace RestaurantCRM.AdminApp.Controls
         public Label FooterInfo;
         public Control SidePanel;            // khối chi tiết bên phải (nếu có)
         public int SideWidth = 340;
+        public ISearchScopes SearchScopes;   // lựa chọn "Tìm theo" (nút nhỏ đầu ô tìm kiếm)
+        public bool SideFullHeight;          // khối bên phải cao từ dưới tiêu đề tới đáy (hàng KPI chỉ nằm bên trái)
+        public int KpiSlots;                 // > số ô KPI: mỗi ô rộng = bề ngang trang / KpiSlots, xếp sát trái
     }
 
     /// <summary>
@@ -143,13 +146,28 @@ namespace RestaurantCRM.AdminApp.Controls
             Control kpiRow = null;
             if (spec.KpiLabels != null && spec.KpiLabels.Length > 0)
             {
-                var tl = new TableLayoutPanel { Dock = DockStyle.Top, Height = 84, ColumnCount = spec.KpiLabels.Length, RowCount = 1, BackColor = ThemeManager.Bg, Margin = new Padding(0), Padding = new Padding(0) };
+                int n = spec.KpiLabels.Length;
+                bool fixedSlots = spec.KpiSlots > n;
+                var tl = new TableLayoutPanel { Dock = DockStyle.Top, Height = 84, ColumnCount = fixedSlots ? n + 1 : n, RowCount = 1, BackColor = ThemeManager.Bg, Margin = new Padding(0), Padding = new Padding(0) };
                 tl.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-                for (int i = 0; i < spec.KpiLabels.Length; i++)
+                for (int i = 0; i < n; i++)
                 {
-                    tl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / spec.KpiLabels.Length));
+                    tl.ColumnStyles.Add(fixedSlots ? new ColumnStyle(SizeType.Absolute, 200) : new ColumnStyle(SizeType.Percent, 100f / n));
                     var tile = new KpiTile(spec.KpiLabels[i]) { Dock = DockStyle.Fill };
                     tl.Controls.Add(tile, i, 0);
+                }
+                if (fixedSlots)
+                {
+                    // Ô KPI giữ cỡ như khi trang có KpiSlots ô (chia theo bề ngang cả trang), phần còn lại để trống
+                    tl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                    int slots = spec.KpiSlots;
+                    Action fitKpi = () =>
+                    {
+                        int w = Math.Max(150, (form.ClientSize.Width - form.Padding.Horizontal) / slots);
+                        for (int i = 0; i < n; i++) tl.ColumnStyles[i].Width = w;
+                    };
+                    fitKpi();
+                    form.Resize += (s, e) => fitKpi();
                 }
                 kpiRow = tl;
             }
@@ -181,16 +199,44 @@ namespace RestaurantCRM.AdminApp.Controls
             PillSearch searchPill = null;
             if (spec.Search != null)
             {
-                searchPill = new PillSearch(spec.Search, spec.SearchPlaceholder) { Width = 250, Margin = new Padding(0, 0, 8, 4) };
+                var scopes = spec.SearchScopes;
+                string placeholder = scopes != null && scopes.Placeholders.Count > 0
+                    ? scopes.Placeholders[scopes.SelectedIndex] : spec.SearchPlaceholder;
+                searchPill = new PillSearch(spec.Search, placeholder) { Width = 250, Margin = new Padding(0, 0, 8, 4) };
                 flow.Controls.Add(searchPill);
+                if (scopes != null && scopes.Names.Count > 1) AttachSearchScopes(searchPill, spec.Search, scopes);
             }
             var filterCombos = new List<ComboBox>();
+            var filterChips = new List<ComboChip>();
+            int filterCount = 0;
+            if (spec.Filters != null) foreach (var f in spec.Filters) if (f.Combo != null) filterCount++;
+
+            // ≥ 2 bộ lọc: gom vào nút "Bộ lọc" (menu gọn) + chip nhỏ chỉ hiện cho bộ lọc đang bật.
+            // 1 bộ lọc: giữ chip đầy đủ như cũ (một chip không tốn chỗ hơn nút).
+            bool filterMenuMode = filterCount >= 2;
+            if (filterMenuMode) flow.WrapContents = false;   // luôn 1 hàng (FitFilterRowSingleLine co giãn cho vừa)
+            Button btnFilter = null;
+            if (filterMenuMode)
+            {
+                btnFilter = new Button { Text = "Bộ lọc ▾", Margin = new Padding(0, 2, 8, 4) };
+                ButtonSkin.SetKind(btnFilter, ButtonSkin.Kind.Secondary);
+                FitButton(btnFilter, 84);
+                btnFilter.Click += (s, e) => ShowFilterMenu(btnFilter, filterChips);
+                flow.Controls.Add(btnFilter);
+            }
             if (spec.Filters != null)
                 foreach (var f in spec.Filters)
                 {
                     if (f.Combo == null) continue;
                     var chip = new ComboChip(f.Combo, f.Caption != null ? f.Caption.Text : null) { Margin = new Padding(0, 0, 8, 4) };
+                    if (filterMenuMode)
+                    {
+                        chip.Compact = true;
+                        chip.AutoHideWhenInactive = true;
+                        chip.Margin = new Padding(0, 4, 6, 4);   // căn giữa theo ô tìm kiếm cao 38px
+                    }
                     flow.Controls.Add(chip);
+                    filterChips.Add(chip);
                     f.Combo.Visible = false;            // vẫn giữ trong form để DataSource hoạt động
                     filterRow.Controls.Add(f.Combo);
                     filterCombos.Add(f.Combo);
@@ -205,8 +251,9 @@ namespace RestaurantCRM.AdminApp.Controls
                 }
 
             // Nút "Đặt lại" tự động hiện khi đang có từ khóa tìm kiếm hoặc bộ lọc nâng cao đang bật
+            // (chế độ nút "Bộ lọc" không cần: đã có "Đặt lại" trong menu, ✕ trên chip và trong ô tìm kiếm)
             Button btnResetFilters = null;
-            if (spec.Search != null || filterCombos.Count > 0)
+            if (!filterMenuMode && (spec.Search != null || filterCombos.Count > 0))
             {
                 btnResetFilters = new Button
                 {
@@ -262,6 +309,25 @@ namespace RestaurantCRM.AdminApp.Controls
                             btnResetFilters.Visible = anyActive;
                     }
 
+                    if (btnFilter != null)
+                    {
+                        int active = 0;
+                        foreach (var cb in filterCombos) if (cb.SelectedIndex > 0) active++;
+                        string text = active > 0 ? "Bộ lọc (" + active + ") ▾" : "Bộ lọc ▾";
+                        if (btnFilter.Text != text)
+                        {
+                            btnFilter.Text = text;
+                            ButtonSkin.SetKind(btnFilter, active > 0 ? ButtonSkin.Kind.Soft : ButtonSkin.Kind.Secondary);
+                        }
+                    }
+
+                    if (filterMenuMode)
+                    {
+                        FitFilterRowSingleLine(flow, searchPill, filterChips);
+                        if (filterRow.Height != 46) filterRow.Height = 46;
+                        return;
+                    }
+
                     if (searchPill != null)
                     {
                         int others = 0;
@@ -269,16 +335,17 @@ namespace RestaurantCRM.AdminApp.Controls
                             if (c != searchPill && c.Visible) others += c.Width + c.Margin.Horizontal;
 
                         int availSingleRow = flow.ClientSize.Width - others - searchPill.Margin.Horizontal - 6;
+                        int sw = searchPill.ScopeWidth;   // nút "Tìm theo" trong ô
                         int targetWidth;
-                        if (availSingleRow >= 175)
+                        if (availSingleRow >= 175 + sw)
                         {
                             // Đủ chỗ nằm gọn trên 1 hàng
-                            targetWidth = Math.Min(270, availSingleRow);
+                            targetWidth = Math.Min(270 + sw, availSingleRow);
                         }
                         else
                         {
                             // Nhiều bộ lọc -> cho phép xuống hàng thứ 2 cân đối, giữ ô tìm kiếm rộng rãi dễ gõ
-                            targetWidth = Math.Min(250, Math.Max(185, (int)(flow.ClientSize.Width * 0.32)));
+                            targetWidth = Math.Min(250 + sw, Math.Max(185 + sw, (int)(flow.ClientSize.Width * 0.32)));
                         }
                         if (Math.Abs(searchPill.Width - targetWidth) > 2)
                             searchPill.Width = targetWidth;
@@ -357,9 +424,19 @@ namespace RestaurantCRM.AdminApp.Controls
             }
 
             // 7. Lắp vào form theo thứ tự trên -> dưới
+            // (Dock xử lý từ control thêm sau cùng ngược về trước)
             form.Controls.Add(card);
-            if (side != null) form.Controls.Add(side);
-            if (kpiRow != null) form.Controls.Add(kpiRow);
+            if (spec.SideFullHeight)
+            {
+                // Khối phải dock ngay dưới tiêu đề, trước hàng KPI -> cao tới đáy; KPI chỉ trải phần bên trái
+                if (kpiRow != null) form.Controls.Add(kpiRow);
+                if (side != null) form.Controls.Add(side);
+            }
+            else
+            {
+                if (side != null) form.Controls.Add(side);
+                if (kpiRow != null) form.Controls.Add(kpiRow);
+            }
             form.Controls.Add(header);
             card.BringToFront();
 
@@ -401,6 +478,144 @@ namespace RestaurantCRM.AdminApp.Controls
         }
 
         /// <summary>Đặt kích thước nút theo chữ (chiều cao chuẩn 34).</summary>
+        /// <summary>
+        /// Giữ hàng lọc trên 1 hàng. Thiếu chỗ thì lần lượt: (1) thu hẹp ô tìm kiếm (270 → 150px),
+        /// (2) rút ngắn chip đang bật (tối thiểu 90px, chữ cắt "…", tooltip hiện đủ),
+        /// (3) tạm ẩn bớt chip từ cuối (nút "Bộ lọc (n)" và menu vẫn đủ thông tin).
+        /// </summary>
+        private static void FitFilterRowSingleLine(FlowLayoutPanel flow, PillSearch search, List<ComboChip> chips)
+        {
+            const int ChipMin = 90;
+            int scopeW = search != null ? search.ScopeWidth : 0;   // nút "Tìm theo" nằm trong ô tìm kiếm
+            int SearchMin = 150 + scopeW, SearchMax = 270 + scopeW;
+            int room = flow.ClientSize.Width - flow.Padding.Horizontal - 6;
+            foreach (Control c in flow.Controls)
+                if (c != search && !(c is ComboChip) && c.Visible) room -= c.Width + c.Margin.Horizontal;
+            if (search != null) room -= search.Margin.Horizontal;
+
+            var active = new List<ComboChip>();
+            foreach (var chip in chips) if (chip.Combo.SelectedIndex > 0) active.Add(chip);
+            int natural = 0;
+            foreach (var chip in active) natural += chip.NaturalWidth + chip.Margin.Horizontal;
+
+            int searchW = search != null ? Math.Min(SearchMax, Math.Max(SearchMin, room - natural)) : 0;
+            int chipRoom = room - searchW;
+
+            // Mặc định: chip hiện đủ, không giới hạn
+            foreach (var chip in chips) { chip.MaxWidth = 0; chip.Suppressed = false; }
+
+            if (natural > chipRoom && active.Count > 0)
+            {
+                int margin = active[0].Margin.Horizontal;
+                // Số chip hiện được khi mỗi chip tối thiểu ChipMin
+                int show = Math.Max(0, Math.Min(active.Count, chipRoom / (ChipMin + margin)));
+                for (int i = 0; i < active.Count; i++)
+                {
+                    if (i >= show) { active[i].Suppressed = true; continue; }
+                    active[i].MaxWidth = Math.Max(ChipMin, chipRoom / show - margin);
+                }
+            }
+
+            if (search != null && Math.Abs(search.Width - searchW) > 2) search.Width = searchW;
+        }
+
+        /// <summary>Gắn nút "Tìm theo" vào ô tìm kiếm: bấm mở menu chọn; đổi lựa chọn thì đổi chữ nút + chữ gợi ý.</summary>
+        public static void AttachSearchScopes(PillSearch pill, TextBox box, ISearchScopes scopes)
+        {
+            Action refresh = () =>
+            {
+                pill.SetScopeButton(scopes.ShortNames[scopes.SelectedIndex], p => ShowScopeMenu(pill, p, scopes, box));
+                UiStyler.SetPlaceholder(box, scopes.Placeholders[scopes.SelectedIndex]);
+            };
+            refresh();
+            scopes.Changed += (s, e) => refresh();
+        }
+
+        /// <summary>Menu chọn "Tìm theo" (cùng kiểu gọn với menu "Bộ lọc").</summary>
+        public static void ShowScopeMenu(Control owner, Point at, ISearchScopes scopes, TextBox box)
+        {
+            var font = new Font(ThemeManager.FontFamily, 8.5F);
+            var menu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = false, Padding = new Padding(2), Font = font, BackColor = Color.White };
+            menu.Items.Add(new ToolStripLabel("Tìm theo") { ForeColor = ThemeManager.Muted, Padding = new Padding(4, 1, 4, 1) });
+            for (int i = 0; i < scopes.Names.Count; i++)
+            {
+                int idx = i;
+                bool sel = idx == scopes.SelectedIndex;
+                var it = new ToolStripMenuItem((sel ? "✓  " : "     ") + scopes.Names[i])
+                {
+                    Padding = new Padding(4, 1, 4, 1),
+                    ForeColor = sel ? ThemeManager.Primary : ThemeManager.Ink2
+                };
+                it.Click += (s, e) => { scopes.SelectedIndex = idx; if (box != null && box.CanFocus) box.Focus(); };
+                menu.Items.Add(it);
+            }
+            menu.Closed += (s, e) => owner.BeginInvoke((Action)(() => { menu.Dispose(); font.Dispose(); }));
+            menu.Show(owner, at);
+        }
+
+        /// <summary>
+        /// Menu "Bộ lọc" gọn: mỗi dòng "Nhãn ......... giá trị ▸", submenu là các lựa chọn,
+        /// "↺ Đặt lại" chỉ hiện khi có bộ lọc đang bật.
+        /// </summary>
+        private static void ShowFilterMenu(Button owner, List<ComboChip> chips)
+        {
+            var font = new Font(ThemeManager.FontFamily, 8.5F);
+            var itemPad = new Padding(4, 1, 4, 1);
+            Func<ToolStripDropDownMenu, ToolStripDropDownMenu> compact = m =>
+            {
+                m.ShowImageMargin = false;
+                m.ShowCheckMargin = false;
+                m.Padding = new Padding(2);
+                m.Font = font;
+                m.BackColor = Color.White;
+                return m;
+            };
+
+            var menu = new ContextMenuStrip();
+            compact(menu);
+            bool anyActive = false;
+            foreach (var chip in chips)
+            {
+                var cb = chip.Combo;
+                bool active = cb.SelectedIndex > 0;
+                anyActive |= active;
+                string value = active ? cb.GetItemText(cb.SelectedItem) : "Tất cả";
+                var parent = new ToolStripMenuItem(chip.Caption.Length > 0 ? chip.Caption : "Lọc")
+                {
+                    ShortcutKeyDisplayString = value,   // giá trị hiện tại căn phải
+                    Padding = itemPad,
+                    ForeColor = active ? ThemeManager.Primary : ThemeManager.Ink2
+                };
+                if (active) parent.Font = new Font(font, FontStyle.Bold);
+                compact((ToolStripDropDownMenu)parent.DropDown);
+                for (int i = 0; i < cb.Items.Count; i++)
+                {
+                    int idx = i;
+                    bool sel = idx == cb.SelectedIndex;
+                    var it = new ToolStripMenuItem((sel ? "✓  " : "     ") + cb.GetItemText(cb.Items[i]))
+                    {
+                        Padding = itemPad,
+                        ForeColor = sel ? ThemeManager.Primary : ThemeManager.Ink2
+                    };
+                    it.Click += (s, e) => { cb.SelectedIndex = idx; };
+                    parent.DropDownItems.Add(it);
+                }
+                menu.Items.Add(parent);
+            }
+            if (anyActive)
+            {
+                var reset = new ToolStripMenuItem("↺  Đặt lại") { Padding = itemPad, ForeColor = ThemeManager.Muted };
+                reset.Click += (s, e) =>
+                {
+                    foreach (var chip in chips)
+                        if (chip.Combo.Items.Count > 0 && chip.Combo.SelectedIndex != 0) chip.Combo.SelectedIndex = 0;
+                };
+                menu.Items.Add(reset);
+            }
+            menu.Closed += (s, e) => owner.BeginInvoke((Action)(() => { menu.Dispose(); font.Dispose(); }));
+            menu.Show(owner, new Point(0, owner.Height + 2));
+        }
+
         public static void FitButton(Button b, int min = 84)
         {
             b.Font = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold);

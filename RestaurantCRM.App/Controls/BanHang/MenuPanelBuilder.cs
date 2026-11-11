@@ -28,6 +28,11 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
         private ComboBox _cboPriceFilter;
         private CheckBox _chkOnlyInStock;
 
+        // "Tìm theo": mặc định tên món, có thể chọn mã món
+        private readonly SearchScopes<MonAnDto> _scopes = new SearchScopes<MonAnDto>("BanHang.Menu")
+            .Add("Tên món", "Tên", "Tìm theo tên món...", m => new[] { m.TenMonAn })
+            .Add("Mã món", "Mã", "Tìm theo mã món...", m => new[] { m.MaMonAn });
+
         public event Action<MonAnDto> DishSelected;
         public event Action FilterChanged;
 
@@ -129,16 +134,39 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             };
             pnlSearch.Controls.Add(lblClear);
 
+            // Nút "Tìm theo" nhỏ ở đầu ô (Tên ▾ / Mã ▾)
+            var lblScope = new Label
+            {
+                Font = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Primary,
+                Location = new Point(6, 7),
+                Size = new Size(42, 18),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand,
+                UseMnemonic = false
+            };
+            var scopeLine = new Panel { BackColor = ThemeManager.Line, Location = new Point(48, 8), Size = new Size(1, 16) };
+            pnlSearch.Controls.Add(lblScope);
+            pnlSearch.Controls.Add(scopeLine);
+
             _txtSearch = new TextBox
             {
                 ForeColor = ThemeManager.Ink,
                 Font = _baseFont,
-                Location = new Point(10, 8),
-                Width = 170,
+                Location = new Point(54, 8),
+                Width = 126,
                 BorderStyle = BorderStyle.None,
                 BackColor = Color.White
             };
-            UiStyler.SetPlaceholder(_txtSearch, "Tìm tên, mã, mô tả...");
+            Action refreshScope = () =>
+            {
+                lblScope.Text = _scopes.ShortNames[_scopes.SelectedIndex] + " ▾";
+                UiStyler.SetPlaceholder(_txtSearch, _scopes.Placeholders[_scopes.SelectedIndex]);
+            };
+            refreshScope();
+            lblScope.Click += (s, e) => PageKit.ShowScopeMenu(lblScope, new Point(0, lblScope.Height + 8), _scopes, _txtSearch);
+            _scopes.Changed += (s, e) => { refreshScope(); FilterChanged?.Invoke(); };
             _txtSearch.TextChanged += (s, e) =>
             {
                 lblClear.Visible = _txtSearch.TextLength > 0;
@@ -594,33 +622,13 @@ namespace RestaurantCRM.AdminApp.Controls.BanHang
             return true;
         }
 
-        private static bool MatchesSearchQuery(MonAnDto mon, string query)
+        private bool MatchesSearchQuery(MonAnDto mon, string query)
         {
             if (string.IsNullOrWhiteSpace(query)) return true;
             if (mon == null) return false;
 
-            return UiStyler.MatchesSearch(query, mon.TenMonAn, mon.MaMonAn, mon.TenLoaiMon, mon.MoTa);
-        }
-
-        private static string RemoveDiacritics(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
-
-            string normalized = text.Normalize(NormalizationForm.FormD);
-            var sb = new StringBuilder(normalized.Length);
-
-            foreach (char c in normalized)
-            {
-                UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(c);
-                if (category != UnicodeCategory.NonSpacingMark)
-                {
-                    if (c == 'đ') sb.Append('d');
-                    else if (c == 'Đ') sb.Append('D');
-                    else sb.Append(c);
-                }
-            }
-
-            return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
+            // Theo lựa chọn "Tìm theo" (mặc định: tên món)
+            return _scopes.Matches(query, mon);
         }
     }
 }

@@ -20,6 +20,15 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly KhachHangService _service = new KhachHangService();
         private List<KhachHangDto> _all = new List<KhachHangDto>();
 
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<KhachHangDto> _scopes = new SearchScopes<KhachHangDto>("KhachHang")
+            .AddAll("Tìm mã, họ tên, SĐT, email, địa chỉ...")
+            .Add("Họ tên", "Tên", "Tìm theo họ tên...", k => new[] { k.HoTen })
+            .Add("Số điện thoại", "SĐT", "Tìm theo số điện thoại...", k => new[] { k.SoDienThoai })
+            .Add("Email", "Email", "Tìm theo email...", k => new[] { k.Email })
+            .Add("Mã khách hàng", "Mã", "Tìm theo mã khách hàng...", k => new[] { k.MaKhachHang })
+            .Add("Địa chỉ", "Địa chỉ", "Tìm theo địa chỉ...", k => new[] { k.DiaChi });
+
         private readonly DataGridView _grid = new DataGridView();
         private readonly TextBox _txtSearch = new TextBox();
         private readonly ComboBox _cboTrangThai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -45,6 +54,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         {
             InitializeComponent();
             Text = "Khách hàng";
+            _scopes.Changed += (s, e) => ApplyFilter();
             Size = new Size(1180, 720);
             Font = new Font(ThemeManager.FontFamily, 9.5F);
             StartPosition = FormStartPosition.CenterParent;
@@ -82,6 +92,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 KpiLabels = new[] { _kTong, _kActive, _kLocked, _kChiTieu },
                 Search = _txtSearch,
                 SearchPlaceholder = "Tìm mã, họ tên, SĐT, email, địa chỉ...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
@@ -217,7 +228,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                     if (dob.Value.Month != targetMonth) return false;
                 }
 
-                return UiStyler.MatchesSearch(q, k.MaKhachHang, k.HoTen, k.SoDienThoai, k.Email, k.DiaChi);
+                return _scopes.Matches(q, k);
             }).OrderByDescending(k => k.MaKhachHang).ToList();
 
             _grid.SuspendLayout();

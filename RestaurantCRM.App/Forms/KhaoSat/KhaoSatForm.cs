@@ -19,6 +19,13 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
     {
         private readonly KhaoSatService _service = new KhaoSatService();
         private List<KhaoSatDto> _all = new List<KhaoSatDto>();
+
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<KhaoSatDto> _scopes = new SearchScopes<KhaoSatDto>("KhaoSat")
+            .AddAll("Tìm mã, tiêu đề khảo sát, người tạo...", k => new[] { k.DoiTuongHienThi })
+            .Add("Tiêu đề", "Tiêu đề", "Tìm theo tiêu đề khảo sát...", k => new[] { k.TieuDe })
+            .Add("Mã khảo sát", "Mã", "Tìm theo mã khảo sát...", k => new[] { k.MaKhaoSat })
+            .Add("Người tạo", "Người tạo", "Tìm theo người tạo...", k => new[] { k.NguoiTao, k.MaNhanVien });
         private bool _loading;
 
         private readonly DataGridView _grid = new DataGridView();
@@ -44,6 +51,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         {
             InitializeComponent();
             Text = "Khảo sát";
+            _scopes.Changed += (s, e) => ApplyFilter();
             Size = new Size(1180, 720);
             Font = new Font(ThemeManager.FontFamily, 9.5F);
             StartPosition = FormStartPosition.CenterParent;
@@ -63,6 +71,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 KpiLabels = new[] { _kTong, _kMo, _kNhap, _kPhieu },
                 Search = _txtSearch,
                 SearchPlaceholder = "Tìm mã, tiêu đề khảo sát, người tạo...",
+                SearchScopes = _scopes,
                 Filters = new[]
                 {
                     new FilterSpec(_cboTrangThai, new Label { Text = "Trạng thái" }),
@@ -166,7 +175,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 if (tt != "Tất cả" && k.TrangThaiHienThi != tt) return false;
                 if (dtIdx == 1 && k.SoDoiTuong > 0) return false;
                 if (dtIdx == 2 && k.SoDoiTuong <= 0) return false;
-                return UiStyler.MatchesSearch(q, k.MaKhaoSat, k.TieuDe, k.NguoiTao, k.MaNhanVien, k.DoiTuongHienThi);
+                return _scopes.Matches(q, k);
             }).ToList();
 
             _grid.SuspendLayout();

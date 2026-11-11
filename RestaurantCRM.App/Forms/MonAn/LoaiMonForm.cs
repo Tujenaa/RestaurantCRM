@@ -17,6 +17,12 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         private readonly LoaiMonService _loaiMonService;
         private readonly MonAnService _monAnService;
         private List<LoaiMonDto> _allLoaiMon = new List<LoaiMonDto>();
+
+        // "Tìm theo" (mặc định: tất cả)
+        private readonly SearchScopes<LoaiMonDto> _scopes = new SearchScopes<LoaiMonDto>("LoaiMon")
+            .AddAll("Tìm theo mã hoặc tên loại món...")
+            .Add("Tên loại món", "Tên", "Tìm theo tên loại món...", x => new[] { x.TenLoaiMon })
+            .Add("Mã loại món", "Mã", "Tìm theo mã loại món...", x => new[] { x.MaLoaiMon });
         private LoaiMonDto _selectedLoaiMon;
         private readonly ComboBox _cboTinhTrang = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly Label _lblCount = new Label { Text = "" };
@@ -24,6 +30,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
         public LoaiMonForm()
         {
             InitializeComponent();
+            _scopes.Changed += (s, e) => FilterData();
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
             _loaiMonService = new LoaiMonService(httpClient);
@@ -47,6 +54,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm theo mã hoặc tên loại món...",
+                SearchScopes = _scopes,
                 Filters = new[] { new FilterSpec(_cboTinhTrang, new Label { Text = "Món ăn" }) },
                 CountLabel = _lblCount,
                 Grid = dgvLoaiMon,
@@ -110,7 +118,7 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
 
             var filtered = _allLoaiMon.Where(lm =>
             {
-                if (!UiStyler.MatchesSearch(keyword, lm.TenLoaiMon, lm.MaLoaiMon))
+                if (!_scopes.Matches(keyword, lm))
                     return false;
                 if (tinhTrangIdx == 1 && lm.SoLuongMon <= 0) return false;
                 if (tinhTrangIdx == 2 && lm.SoLuongMon > 0) return false;

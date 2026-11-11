@@ -10,9 +10,12 @@ namespace RestaurantCRM.AdminApp.Controls
     // ───────────────────────────────────────────────────────────────────────
     public class ComboChip : Control
     {
+        private static readonly ToolTip SharedTip = new ToolTip();
         private readonly ComboBox _cb;
         private readonly string _caption;
         private bool _hover;
+        private bool _compact;
+        private bool _autoHide;
 
         public ComboChip(ComboBox cb, string caption)
         {
@@ -25,6 +28,48 @@ namespace RestaurantCRM.AdminApp.Controls
             cb.DataSourceChanged += (s, e) => Refit();
             cb.TextChanged += (s, e) => Refit();
             Refit();
+        }
+
+        public string Caption { get { return _caption; } }
+        public ComboBox Combo { get { return _cb; } }
+
+        /// <summary>Chip gọn: cao 30px, chỉ hiện giá trị (nhãn + giá trị đầy đủ đưa vào tooltip).</summary>
+        public bool Compact
+        {
+            get { return _compact; }
+            set
+            {
+                _compact = value;
+                Height = value ? 30 : 38;
+                Refit();
+            }
+        }
+
+        /// <summary>Chỉ hiện khi bộ lọc đang bật (đã chọn khác mục đầu).</summary>
+        public bool AutoHideWhenInactive
+        {
+            get { return _autoHide; }
+            set { _autoHide = value; Refit(); }
+        }
+
+        private int _maxWidth;
+        private bool _suppressed;
+
+        /// <summary>Độ rộng tối đa do bố cục đặt (0 = mặc định). Chữ dài sẽ bị cắt "…".</summary>
+        public int MaxWidth
+        {
+            get { return _maxWidth; }
+            set { if (_maxWidth != value) { _maxWidth = value; Refit(); } }
+        }
+
+        /// <summary>Độ rộng chip cần để hiện đủ chữ (trong giới hạn mặc định).</summary>
+        public int NaturalWidth { get; private set; }
+
+        /// <summary>Bố cục thiếu chỗ: tạm ẩn chip dù bộ lọc đang bật (nút "Bộ lọc (n)" vẫn báo số lượng).</summary>
+        public bool Suppressed
+        {
+            get { return _suppressed; }
+            set { if (_suppressed != value) { _suppressed = value; Refit(); } }
         }
 
         private string Current()
@@ -40,11 +85,19 @@ namespace RestaurantCRM.AdminApp.Controls
             using (var f1 = new Font(ThemeManager.FontFamily, 8.5F))
             using (var f2 = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold))
             {
-                int w = 16 + 26;
-                if (_caption.Length > 0) w += TextRenderer.MeasureText(_caption + ":", f1).Width;
+                int w = (_compact ? 12 : 16) + 26;
+                if (_caption.Length > 0 && !_compact) w += TextRenderer.MeasureText(_caption + ":", f1).Width;
                 w += TextRenderer.MeasureText(Current() ?? "", f2).Width;
-                Width = Math.Max(84, Math.Min(240, w));
+                NaturalWidth = _compact ? Math.Max(64, Math.Min(180, w)) : Math.Max(84, Math.Min(240, w));
+                int target = _maxWidth > 0 ? Math.Min(NaturalWidth, _maxWidth) : NaturalWidth;
+                if (Width != target) Width = target;
             }
+            if (_compact)
+            {
+                string tip = _caption.Length > 0 ? _caption + ": " + Current() : Current();
+                if (SharedTip.GetToolTip(this) != tip) SharedTip.SetToolTip(this, tip);
+            }
+            if (_autoHide) Visible = IsActive() && !_suppressed;
             Invalidate();
         }
 
@@ -96,11 +149,11 @@ namespace RestaurantCRM.AdminApp.Controls
                 using (var pen = new Pen(active ? Color.FromArgb(110, ThemeManager.Primary) : ThemeManager.Line)) g.DrawPath(pen, path);
             }
             Color c = active ? ThemeManager.Primary : ThemeManager.Ink2;
-            int x = 14;
+            int x = _compact ? 12 : 14;
             using (var f1 = new Font(ThemeManager.FontFamily, 8.5F))
             using (var f2 = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold))
             {
-                if (_caption.Length > 0)
+                if (_caption.Length > 0 && !_compact)
                 {
                     string cap = _caption + ":";
                     TextRenderer.DrawText(g, cap, f1, new Rectangle(x, 0, Width, Height), ThemeManager.Muted,

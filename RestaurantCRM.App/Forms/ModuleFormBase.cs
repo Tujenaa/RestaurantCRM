@@ -47,7 +47,7 @@ namespace RestaurantCRM.AdminApp.Forms
             Font = new Font("Segoe UI", 9.5F);
 
             for (int i = 0; i < columns.Length; i++) _table.Columns.Add("C" + i, typeof(string));
-            for (int i = 0; i < columns.Length; i++) _table.Columns.Add("_Norm" + i, typeof(string));
+            _table.Columns.Add("_Match", typeof(bool));   // kết quả tìm kiếm của dòng (lọc bằng RowFilter "[_Match] = true")
             foreach (string[] row in rows) AddOrUpdateNormalizedRow(null, row);
 
             var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 12, 16, 12), BackColor = ThemeManager.Bg };
@@ -405,26 +405,36 @@ namespace RestaurantCRM.AdminApp.Forms
         private void AddOrUpdateNormalizedRow(DataRow existingRow, object[] rawValues)
         {
             int colCount = _columns.Length;
+            var vals = new string[colCount];
+            for (int i = 0; i < colCount; i++)
+                vals[i] = (rawValues != null && i < rawValues.Length && rawValues[i] != null) ? rawValues[i].ToString() : "";
+            bool match = RowMatches(vals);
+
             if (existingRow == null)
             {
-                var rowValues = new object[colCount * 2];
-                for (int i = 0; i < colCount; i++)
-                {
-                    string val = (rawValues != null && i < rawValues.Length && rawValues[i] != null) ? rawValues[i].ToString() : "";
-                    rowValues[i] = val;
-                    rowValues[colCount + i] = UiStyler.RemoveDiacritics(val);
-                }
+                var rowValues = new object[colCount + 1];
+                for (int i = 0; i < colCount; i++) rowValues[i] = vals[i];
+                rowValues[colCount] = match;
                 _table.Rows.Add(rowValues);
             }
             else
             {
-                for (int i = 0; i < colCount; i++)
-                {
-                    string val = (rawValues != null && i < rawValues.Length && rawValues[i] != null) ? rawValues[i].ToString() : "";
-                    existingRow[i] = val;
-                    existingRow[colCount + i] = UiStyler.RemoveDiacritics(val);
-                }
+                for (int i = 0; i < colCount; i++) existingRow[i] = vals[i];
+                existingRow[colCount] = match;
             }
+        }
+
+        /// <summary>Dòng có khớp ô tìm kiếm hiện tại không (tất cả cột hoặc cột đang chọn).</summary>
+        private bool RowMatches(string[] vals)
+        {
+            string raw = _filterValue.Text;
+            if (string.IsNullOrWhiteSpace(raw)) return true;
+            if (_filterColIndex > 0)
+            {
+                int c = _filterColIndex - 1;
+                return c < vals.Length && UiStyler.MatchesSearch(raw, vals[c]);
+            }
+            return UiStyler.MatchesSearch(raw, vals);
         }
 
         public void SetTableData(System.Collections.Generic.IEnumerable<object[]> rows)
@@ -486,36 +496,19 @@ namespace RestaurantCRM.AdminApp.Forms
 
         private void ApplyAdvancedFilter()
         {
-            string raw = _filterValue.Text.Trim();
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                _table.DefaultView.RowFilter = "";
-                return;
-            }
-
-            string EscapeLike(string s) => s.Replace("'", "''").Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]");
-
-            string safeValue = EscapeLike(raw);
-            string safeNorm = EscapeLike(UiStyler.RemoveDiacritics(raw));
+            // Cùng quy tắc tìm kiếm với các trang khác (UiStyler.MatchesSearch)
             int colCount = _columns.Length;
+            _table.DefaultView.RowFilter = "";
+            if (string.IsNullOrWhiteSpace(_filterValue.Text)) return;
 
-            if (_filterColIndex <= 0)
+            var vals = new string[colCount];
+            foreach (DataRow row in _table.Rows)
             {
-                // Tìm tất cả cột (hỗ trợ cả có dấu và không dấu)
-                string filter = "";
-                for (int i = 0; i < colCount; i++)
-                {
-                    string clause = "Convert([C" + i + "], 'System.String') LIKE '%" + safeValue + "%' OR Convert([_Norm" + i + "], 'System.String') LIKE '%" + safeNorm + "%'";
-                    filter += (filter.Length == 0 ? "" : " OR ") + "(" + clause + ")";
-                }
-                _table.DefaultView.RowFilter = filter;
+                for (int i = 0; i < colCount; i++) vals[i] = Convert.ToString(row[i]);
+                bool match = RowMatches(vals);
+                if (!(row[colCount] is bool b) || b != match) row[colCount] = match;
             }
-            else
-            {
-                // Tìm trong cột được chọn (hỗ trợ cả có dấu và không dấu)
-                int colIdx = _filterColIndex - 1;
-                _table.DefaultView.RowFilter = "Convert([C" + colIdx + "], 'System.String') LIKE '%" + safeValue + "%' OR Convert([_Norm" + colIdx + "], 'System.String') LIKE '%" + safeNorm + "%'";
-            }
+            _table.DefaultView.RowFilter = "[_Match] = true";
         }
 
         private void SortByColumn(int index)
