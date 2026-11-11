@@ -20,12 +20,13 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
         private readonly ComboBox _cboMucTien = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly Label _lblCount = new Label { Text = "" };
 
-        // Xem nhanh khi rê chuột (không cần click)
-        private readonly OrderHoverCard _hoverCard = new OrderHoverCard();
+        // Chi tiết đơn tải sẵn ở nền: dùng cho khung bên phải và tìm kiếm theo tên món
         private readonly Dictionary<string, HoaDonDetailDto> _detailCache = new Dictionary<string, HoaDonDetailDto>();
-        private readonly HashSet<string> _loadingDetail = new HashSet<string>();
-        private readonly Timer _hoverWatch = new Timer { Interval = 60 };
-        private int _hoverRow = -1;
+
+        // Khung chi tiết bên phải (click 1 lần vào dòng để xem)
+        private readonly DetailSidePanel _side = new DetailSidePanel(
+            "Chọn một đơn hàng trong danh sách\nđể xem món ăn và thông tin đơn.", "MÓN ĂN", "SL", "THÀNH TIỀN");
+        private string _sideMa;
 
         public HoaDonForm()
         {
@@ -64,13 +65,13 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             _cboPhuongThuc.SelectedIndexChanged += (s, e) => FilterData();
             _cboMucTien.SelectedIndexChanged += (s, e) => FilterData();
 
-            // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
+            // Bố cục giống trang Phản hồi: danh sách bên trái, khung chi tiết bên phải, 2 ô số liệu ở trên
             PageKit.BuildListPage(this, new ListPageSpec
             {
                 Title = lblTieuDe,
                 Subtitle = lblSub,
                 HeaderActions = new Control[] { btnLamMoi },
-                KpiLabels = new[] { lblTongDon, lblChoXuLy, lblDangGiao, lblHoanThanh, lblDaHuy },
+                KpiLabels = new[] { lblTongDon, lblChoXuLy },
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm mã đơn, tên/SĐT khách, NV, địa chỉ...",
@@ -83,17 +84,31 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 },
                 CountLabel = _lblCount,
                 Grid = dgvHoaDon,
-                SecondaryActions = new[] { btnChiTiet }
+                SidePanel = _side,
+                SideWidth = 400,
+                SideFullHeight = true,
+                KpiSlots = 5
             });
 
-            SetupHoverPreview();
+            // Nút "Chi tiết" nằm trong khung bên phải (mở hộp thoại xử lý đơn như cũ)
+            _side.AttachButton(btnChiTiet, "Chi tiết ↗");
+
+            // Click 1 lần: xem ở khung bên phải; double-click: mở hộp thoại chi tiết
+            dgvHoaDon.CellClick -= dgvHoaDon_CellClick;
+            dgvHoaDon.SelectionChanged += (s, e) => ShowSide(SelectedHoaDon());
+            dgvHoaDon.CellDoubleClick += dgvHoaDon_CellDoubleClick;
+            dgvHoaDon.DataBindingComplete += (s, e) => { ApplyPendingSelection(); ColorGridRows(); };
+            // Người dùng đã thao tác trên lưới: không tự bỏ chọn nữa
+            dgvHoaDon.CellMouseDown += (s, e) => _bindingPending = false;
+            dgvHoaDon.KeyDown += (s, e) => _bindingPending = false;
         }
 
         private void SetupGridColumns()
         {
+            // Bảng hẹp vì có khung bên phải: chỉ giữ trường quan trọng, khách hàng xem ở khung bên phải
             dgvHoaDon.AutoGenerateColumns = false;
-            dgvHoaDon.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
-            dgvHoaDon.ScrollBars = ScrollBars.Both;
+            dgvHoaDon.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvHoaDon.ScrollBars = ScrollBars.Vertical;
             dgvHoaDon.AllowUserToResizeColumns = true;
             dgvHoaDon.Columns.Clear();
 
@@ -102,89 +117,81 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 Name = "MaHoaDon",
                 DataPropertyName = "MaHoaDon",
                 HeaderText = "Mã Đơn",
-                Width = 130,
-                MinimumWidth = 100
-            });
-
-            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "NgayDatHienThi",
-                DataPropertyName = "NgayDatHienThi",
-                HeaderText = "Thời Gian Đặt",
-                Width = 160,
-                MinimumWidth = 130
-            });
-
-            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "TenKhachHang",
-                DataPropertyName = "TenKhachHang",
-                HeaderText = "Khách Hàng",
-                Width = 220,
-                MinimumWidth = 160
-            });
-
-            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "MaNhanVien",
-                DataPropertyName = "MaNhanVien",
-                HeaderText = "Mã NV",
-                Width = 100,
-                MinimumWidth = 80,
+                FillWeight = 14,
+                MinimumWidth = 70,
                 DefaultCellStyle = new DataGridViewCellStyle
                 {
-                    Alignment = DataGridViewContentAlignment.MiddleCenter
+                    Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold)
                 }
             });
 
             dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "TenNhanVien",
-                DataPropertyName = "TenNhanVien",
-                HeaderText = "Nhân Viên Phụ Trách",
-                Width = 180,
-                MinimumWidth = 140
+                Name = "NgayDat",
+                DataPropertyName = "NgayDat",
+                HeaderText = "Ngày Đặt",
+                FillWeight = 19,
+                MinimumWidth = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yy HH:mm", NullValue = "-" }
+            });
+
+            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "TongTienHienThi",
+                DataPropertyName = "TongTienHienThi",
+                HeaderText = "Tổng Tiền",
+                FillWeight = 17,
+                MinimumWidth = 90,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Alignment = DataGridViewContentAlignment.MiddleRight,
+                    Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold),
+                    ForeColor = ThemeManager.Primary
+                }
+            });
+
+            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "TrangThai",
+                DataPropertyName = "TrangThai",
+                HeaderText = "Trạng Thái",
+                FillWeight = 16,
+                MinimumWidth = 90,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Alignment = DataGridViewContentAlignment.MiddleCenter,
+                    Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold)
+                }
             });
 
             dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "PhuongThucThanhToan",
                 DataPropertyName = "PhuongThucThanhToan",
-                HeaderText = "Phương Thức TT",
-                Width = 160,
-                MinimumWidth = 130
+                HeaderText = "Thanh Toán",
+                FillWeight = 17,
+                MinimumWidth = 80
             });
 
-            var colTongTien = new DataGridViewTextBoxColumn
+            dgvHoaDon.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "TongTienHienThi",
-                DataPropertyName = "TongTienHienThi",
-                HeaderText = "Tổng Thanh Toán",
-                Width = 160,
-                MinimumWidth = 130,
-                DefaultCellStyle = new DataGridViewCellStyle
-                {
-                    Alignment = DataGridViewContentAlignment.MiddleRight,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(29, 78, 216)
-                }
-            };
-            dgvHoaDon.Columns.Add(colTongTien);
+                Name = "TenNhanVien",
+                DataPropertyName = "TenNhanVien",
+                HeaderText = "Nhân Viên",
+                FillWeight = 17,
+                MinimumWidth = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { NullValue = "—" }
+            });
 
-            var colTrangThai = new DataGridViewTextBoxColumn
+            // Trạng thái hiển thị tiếng Việt (Pending -> Chờ xử lý ...)
+            dgvHoaDon.CellFormatting += (s, e) =>
             {
-                Name = "TrangThai",
-                DataPropertyName = "TrangThai",
-                HeaderText = "Trạng Thái",
-                Width = 160,
-                MinimumWidth = 130,
-                DefaultCellStyle = new DataGridViewCellStyle
-                {
-                    Alignment = DataGridViewContentAlignment.MiddleCenter,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Bold)
-                }
+                if (e.RowIndex < 0 || e.ColumnIndex < 0 || dgvHoaDon.Columns[e.ColumnIndex].Name != "TrangThai") return;
+                var st = e.Value as string;
+                if (st == null) return;
+                e.Value = ThemeManager.CleanStatus(st);
+                e.FormattingApplied = true;
             };
-            dgvHoaDon.Columns.Add(colTrangThai);
         }
 
         private async void HoaDonForm_Load(object sender, EventArgs e)
@@ -204,15 +211,16 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             await LoadData();
         }
 
-        private async Task LoadData()
+        private async Task LoadData(string selectMa = null)
         {
             try
             {
                 _allHoaDon = await _hoaDonService.GetAllAsync();
                 _detailCache.Clear();
+                _sideMa = null;
                 PrefetchDetails();
                 UpdateThongKe();
-                FilterData();
+                FilterData(selectMa);
             }
             catch (Exception ex)
             {
@@ -263,8 +271,13 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             return s.Contains("cancelled") || s.Contains("hủy");
         }
 
-        private void FilterData()
+        private void FilterData() { FilterData(null); }
+
+        private void FilterData(string selectMa)
         {
+            // Giữ dòng đang xem nếu nó vẫn còn sau khi lọc
+            if (selectMa == null) selectMa = SelectedHoaDon()?.MaHoaDon;
+
             var keyword = (txtTimKiem.Text ?? "").Trim();
             int filterIndex = cboTrangThai.SelectedIndex;
             int timeIndex = _cboThoiGian.SelectedIndex;
@@ -351,12 +364,46 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             .ThenByDescending(x => x.MaHoaDon)
             .ToList();
 
-            HideHover();
+            _pendingSelect = selectMa ?? "";
+            _bindingPending = true;
             dgvHoaDon.DataSource = filtered;
             _lblCount.Text = filtered.Count == _allHoaDon.Count
                 ? $"Hiển thị {filtered.Count} đơn"
                 : $"Hiển thị {filtered.Count} / {_allHoaDon.Count} đơn";
             ColorGridRows();
+            ApplyPendingSelection();
+        }
+
+        // Lưới tự chọn dòng đầu khi gắn dữ liệu (kể cả lần gắn hoãn lúc lưới mới hiện lên).
+        // Bỏ chọn đó: chưa chọn đơn nào thì khung bên phải để trống; có đơn đang xem thì chọn lại đơn đó.
+        private string _pendingSelect = "";
+        private bool _bindingPending;
+
+        private void ApplyPendingSelection()
+        {
+            if (!_bindingPending) return;
+            dgvHoaDon.ClearSelection();
+            dgvHoaDon.CurrentCell = null;
+            SelectRow(_pendingSelect);
+            ShowSide(SelectedHoaDon());
+            if (dgvHoaDon.IsHandleCreated && dgvHoaDon.Visible) _bindingPending = false;
+        }
+
+        private void SelectRow(string maHoaDon)
+        {
+            if (string.IsNullOrEmpty(maHoaDon)) return;
+            foreach (DataGridViewRow row in dgvHoaDon.Rows)
+            {
+                if ((row.DataBoundItem as HoaDonDto)?.MaHoaDon != maHoaDon) continue;
+                dgvHoaDon.CurrentCell = row.Cells[0];
+                row.Selected = true;
+                return;
+            }
+        }
+
+        private HoaDonDto SelectedHoaDon()
+        {
+            return dgvHoaDon.SelectedRows.Count > 0 ? dgvHoaDon.SelectedRows[0].DataBoundItem as HoaDonDto : null;
         }
 
         private void ColorGridRows()
@@ -399,7 +446,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
 
         private async void btnLamMoi_Click(object sender, EventArgs e)
         {
-            await LoadData();
+            await LoadData(SelectedHoaDon()?.MaHoaDon);
         }
 
         private void btnChiTiet_Click(object sender, EventArgs e)
@@ -407,48 +454,104 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             OpenChiTietDialog();
         }
 
-        // Click 1 lần vào dòng là mở luôn màn hình xử lý đơn
+        // Designer vẫn gắn sự kiện này; click 1 lần giờ chỉ xem ở khung bên phải (gỡ trong constructor)
         private void dgvHoaDon_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+        }
+
+        // Double-click vào dòng: mở màn hình xử lý đơn
+        private void dgvHoaDon_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.RowIndex >= dgvHoaDon.Rows.Count) return;
             var item = dgvHoaDon.Rows[e.RowIndex].DataBoundItem as HoaDonDto;
             if (item == null) return;
-            HideHover();
             OpenChiTietDialog(item);
         }
 
         private async void OpenChiTietDialog(HoaDonDto selected = null)
         {
-            HideHover();
+            if (selected == null) selected = SelectedHoaDon();
             if (selected == null)
             {
-                if (dgvHoaDon.SelectedRows.Count == 0)
-                {
-                    MessageBox.Show("Vui lòng chọn một đơn hàng từ danh sách để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-                selected = dgvHoaDon.SelectedRows[0].DataBoundItem as HoaDonDto;
+                MessageBox.Show("Vui lòng chọn một đơn hàng từ danh sách để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
-            if (selected == null) return;
 
             using (var dialog = new HoaDonDialog(selected.MaHoaDon))
             {
                 if (dialog.ShowDialog(this) == DialogResult.OK)
                 {
-                    await LoadData();
+                    await LoadData(selected.MaHoaDon);
                 }
             }
         }
 
-        // ── Sắp xếp mã đơn theo số ───────────────────────────────────
-        private static string CodePrefix(string code)
+        // ── Khung chi tiết bên phải ──────────────────────────────────
+        private void ShowSide(HoaDonDto item)
         {
-            if (string.IsNullOrEmpty(code)) return "";
-            int i = 0;
-            while (i < code.Length && !char.IsDigit(code[i])) i++;
-            return code.Substring(0, i).ToUpperInvariant();
+            if (item == null || string.IsNullOrEmpty(item.MaHoaDon))
+            {
+                _sideMa = null;
+                _side.ShowEmpty();
+                return;
+            }
+
+            if (item.MaHoaDon == _sideMa) return;   // đang hiển thị (hoặc đang tải) đúng đơn này rồi
+            _sideMa = item.MaHoaDon;
+
+            HoaDonDetailDto detail;
+            if (_detailCache.TryGetValue(item.MaHoaDon, out detail)) RenderSide(item, detail);
+            else
+            {
+                _side.ShowLoading("#" + item.MaHoaDon);
+                LoadSideDetail(item);
+            }
         }
 
+        private async void LoadSideDetail(HoaDonDto item)
+        {
+            string ma = item.MaHoaDon;
+            try
+            {
+                var detail = await _hoaDonService.GetByIdAsync(ma);
+                if (IsDisposed || detail == null) return;
+                _detailCache[ma] = detail;
+                if (_sideMa == ma) RenderSide(item, detail);   // người dùng có thể đã chọn đơn khác
+            }
+            catch (Exception ex)
+            {
+                if (!IsDisposed && _sideMa == ma) _side.SetItems("Không tải được chi tiết đơn", new List<DetailItem>(), ex.Message);
+            }
+        }
+
+        private void RenderSide(HoaDonDto item, HoaDonDetailDto d)
+        {
+            _side.SetHeader("#" + item.MaHoaDon, d.TrangThai ?? item.TrangThai);
+
+            // Món ăn – ưu tiên hiển thị đầu tiên
+            var chiTiet = d.ChiTiet ?? new List<ChiTietHoaDonDto>();
+            var items = chiTiet.Select(c => new DetailItem
+            {
+                Name = string.IsNullOrWhiteSpace(c.TenMon) ? c.MaMon : c.TenMon,
+                Code = c.ChietKhauTinhToan > 0 ? c.MaMon + "  ·  " + c.DonGiaHienThi + "  ·  CK " + c.ChietKhauHienThi : c.MaMon + "  ·  " + c.DonGiaHienThi,
+                Qty = "x" + c.SoLuong,
+                Amount = c.ThanhTienHienThi
+            }).ToList();
+            _side.SetItems("Món ăn (" + chiTiet.Count + " món, " + chiTiet.Sum(c => c.SoLuong) + " phần)", items, "Đơn hàng không có món nào.");
+
+            // Tổng tiền
+            double ck = chiTiet.Sum(c => c.ChietKhauTinhToan);
+            double goc = chiTiet.Count > 0
+                ? chiTiet.Sum(c => ((c.DonGiaGoc.HasValue && c.DonGiaGoc.Value > 0) ? c.DonGiaGoc.Value : (c.DonGiaSauGiam ?? 0)) * c.SoLuong)
+                : (d.TongTienHang ?? 0);
+            var lines = new List<KeyValuePair<string, string>> { DetailSidePanel.Field("Tiền món", DetailSidePanel.Money(goc)) };
+            if (ck > 0) lines.Add(DetailSidePanel.Field("Chiết khấu món", "-" + DetailSidePanel.Money(ck)));
+            if ((d.TienGiamVoucher ?? 0) > 0) lines.Add(DetailSidePanel.Field("Giảm voucher", "-" + DetailSidePanel.Money(d.TienGiamVoucher.Value)));
+            _side.SetTotals(lines, "Tổng thanh toán", DetailSidePanel.Money(d.TongThanhToan ?? item.TongThanhToan ?? 0));
+            // Thông tin khách / địa chỉ: xem trong hộp thoại "Chi tiết ↗"
+        }
+
+        // ── Sắp xếp mã đơn theo số ───────────────────────────────────
         private static long CodeNumber(string code)
         {
             if (string.IsNullOrEmpty(code)) return 0;
@@ -457,107 +560,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             return long.TryParse(digits, out n) ? n : long.MaxValue;
         }
 
-        // ── Xem nhanh đơn hàng khi rê chuột ──────────────────────────
-        private void SetupHoverPreview()
-        {
-            dgvHoaDon.ShowCellToolTips = false; // tooltip mặc định của lưới chen vào làm thẻ nháy
-            dgvHoaDon.CellMouseEnter += (s, e) =>
-            {
-                if (e.RowIndex < 0) { HideHover(); return; }
-                if (e.RowIndex == _hoverRow) return;
-                _hoverRow = e.RowIndex;
-                ShowHover(_hoverRow);   // hiện ngay, không chờ
-            };
-            // Rời một ô: nếu chuột không còn nằm trên dòng đơn nào thì ẩn ngay
-            dgvHoaDon.CellMouseLeave += (s, e) => { if (IsHandleCreated && !IsDisposed) BeginInvoke((Action)HideIfOffRow); };
-            dgvHoaDon.MouseMove += (s, e) =>
-            {
-                if (_hoverCard.IsShown && dgvHoaDon.HitTest(e.X, e.Y).RowIndex < 0) HideHover();
-            };
-            dgvHoaDon.Scroll += (s, e) => HideHover();
-            dgvHoaDon.MouseLeave += (s, e) =>
-            {
-                // Chuột đi qua thẻ (trong suốt) vẫn tính là trên lưới; chỉ ẩn khi thật sự rời lưới
-                var pt = dgvHoaDon.PointToClient(Cursor.Position);
-                if (!dgvHoaDon.ClientRectangle.Contains(pt)) HideHover();
-            };
-
-            // Lưới an toàn khi thẻ đang hiện: rời lưới / đổi cửa sổ / mở dialog thì ẩn
-            _hoverWatch.Tick += (s, e) =>
-            {
-                if (!_hoverCard.IsShown) { _hoverWatch.Stop(); return; }
-                HideIfOffRow();
-                if (!dgvHoaDon.Visible || !IsOwnerWindowActive()) HideHover();
-            };
-
-            VisibleChanged += (s, e) => { if (!Visible) HideHover(); };
-            Disposed += (s, e) =>
-            {
-                _hoverWatch.Dispose();
-                _hoverCard.Dispose();
-            };
-        }
-
-        private void HideIfOffRow()
-        {
-            if (IsDisposed || !_hoverCard.IsShown) return;
-            var pt = dgvHoaDon.PointToClient(Cursor.Position);
-            if (!dgvHoaDon.ClientRectangle.Contains(pt) || dgvHoaDon.HitTest(pt.X, pt.Y).RowIndex < 0)
-                HideHover();
-        }
-
-        private bool IsOwnerWindowActive()
-        {
-            var active = Form.ActiveForm;
-            return active != null && (active == (TopLevelControl as Form) || active == _hoverCard);
-        }
-
-        private void ShowHover(int rowIndex)
-        {
-            if (IsDisposed || rowIndex < 0 || rowIndex >= dgvHoaDon.Rows.Count) return;
-            if (!IsOwnerWindowActive()) return;
-            var item = dgvHoaDon.Rows[rowIndex].DataBoundItem as HoaDonDto;
-            if (item == null || string.IsNullOrEmpty(item.MaHoaDon)) return;
-
-            var rowRect = dgvHoaDon.RectangleToScreen(dgvHoaDon.GetRowDisplayRectangle(rowIndex, false));
-            HoaDonDetailDto detail;
-            _detailCache.TryGetValue(item.MaHoaDon, out detail);
-            _hoverCard.ShowFor(item, detail, rowRect, Cursor.Position);
-            _hoverWatch.Start();
-
-            if (detail == null) LoadHoverDetail(item.MaHoaDon);
-        }
-
-        private async void LoadHoverDetail(string maHoaDon)
-        {
-            if (!_loadingDetail.Add(maHoaDon)) return;
-            try
-            {
-                var detail = await _hoaDonService.GetByIdAsync(maHoaDon);
-                if (detail == null || IsDisposed) return;
-                _detailCache[maHoaDon] = detail;
-                if (_hoverCard.IsShown && _hoverCard.CurrentMaHoaDon == maHoaDon)
-                    _hoverCard.UpdateDetail(detail);
-            }
-            catch
-            {
-                // Lỗi mạng khi xem nhanh: bỏ qua, thẻ vẫn hiện thông tin tóm tắt
-            }
-            finally
-            {
-                _loadingDetail.Remove(maHoaDon);
-            }
-        }
-
-        private void HideHover()
-        {
-            _hoverWatch.Stop();
-            _hoverRow = -1;
-            _hoverCard.HideCard();
-        }
-
-        // Tải sẵn chi tiết tất cả đơn ở chế độ nền để rê chuột là có đủ thông tin ngay,
-        // không bị thẻ "Đang tải..." rồi giãn ra (gây cảm giác nháy).
+        // Tải sẵn chi tiết tất cả đơn ở chế độ nền: khung bên phải hiện ngay và tìm kiếm khớp được theo tên món.
         private int _prefetchVersion;
         private async void PrefetchDetails()
         {
@@ -573,9 +576,8 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                     {
                         if (version != _prefetchVersion || IsDisposed || _detailCache.ContainsKey(ma)) return;
                         var d = await _hoaDonService.GetByIdAsync(ma);
-                        if (d == null || version != _prefetchVersion || IsDisposed) return;
+                        if (d == null || version != _prefetchVersion || IsDisposed || _detailCache.ContainsKey(ma)) return;
                         _detailCache[ma] = d;
-                        if (_hoverCard.IsShown && _hoverCard.CurrentMaHoaDon == ma) _hoverCard.UpdateDetail(d);
                     }
                     catch { /* bỏ qua lỗi từng đơn */ }
                     finally { gate.Release(); }

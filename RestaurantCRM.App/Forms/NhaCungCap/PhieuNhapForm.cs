@@ -22,13 +22,22 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
         private readonly Label _lblCount = new Label { Text = "" };
         private bool _updatingFilterList;
 
+        // 2 ô số liệu ở trên
+        private readonly Label _kTongPhieu = new Label { Text = "Tổng phiếu: —" };
+        private readonly Label _kTongGiaTri = new Label { Text = "Tổng giá trị: —" };
+
+        // Khung chi tiết bên phải (click 1 lần vào dòng để xem)
+        private readonly DetailSidePanel _side = new DetailSidePanel(
+            "Chọn một phiếu nhập trong danh sách\nđể xem nguyên liệu và thông tin phiếu.", "NGUYÊN LIỆU", "SỐ LƯỢNG", "THÀNH TIỀN");
+        private readonly Dictionary<string, PhieuNhapDto> _detailCache = new Dictionary<string, PhieuNhapDto>();
+        private string _sideMa;
+
         public PhieuNhapForm()
         {
             InitializeComponent();
             dgvPhieuNhap.AutoGenerateColumns = false;
             dgvPhieuNhap.AllowUserToResizeColumns = true;
-            dgvPhieuNhap.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
-            dgvPhieuNhap.ScrollBars = ScrollBars.Both;
+            SetupGridColumns();
 
             var baseUrl = (ApiConfig.BaseUrl ?? "http://localhost:5275").TrimEnd('/') + "/";
             var httpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
@@ -59,13 +68,14 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
             _cboThoiGian.SelectedIndexChanged += (s, e) => FilterData();
             _cboMucTien.SelectedIndexChanged += (s, e) => FilterData();
 
-            // Bố cục hiện đại thống nhất (giữ nguyên toàn bộ control & sự kiện của Designer)
+            // Bố cục giống trang Phản hồi: danh sách bên trái, khung chi tiết bên phải, 2 ô số liệu ở trên
             PageKit.BuildListPage(this, new ListPageSpec
             {
                 Title = lblTieuDe,
                 Subtitle = lblSub,
                 HeaderActions = new Control[] { btnLamMoi },
                 PrimaryActions = new[] { btnTaoPhieuNhap },
+                KpiLabels = new[] { _kTongPhieu, _kTongGiaTri },
                 Search = txtTimKiem,
                 SearchIcon = lblTimKiem,
                 SearchPlaceholder = "Tìm mã phiếu, NCC, nhân viên, ghi chú...",
@@ -77,8 +87,54 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 },
                 CountLabel = _lblCount,
                 Grid = dgvPhieuNhap,
-                SecondaryActions = new[] { btnXemChiTiet }
+                SidePanel = _side,
+                SideWidth = 400,
+                SideFullHeight = true,
+                KpiSlots = 5
             });
+
+            // Nút "Chi tiết" nằm trong khung bên phải; double-click dòng vẫn mở hộp thoại chi tiết
+            _side.AttachButton(btnXemChiTiet, "Chi tiết ↗");
+            dgvPhieuNhap.SelectionChanged += (s, e) => ShowSide(GetSelected());
+            dgvPhieuNhap.DataBindingComplete += (s, e) => ApplyPendingSelection();
+            // Người dùng đã thao tác trên lưới: không tự bỏ chọn nữa
+            dgvPhieuNhap.CellMouseDown += (s, e) => _bindingPending = false;
+            dgvPhieuNhap.KeyDown += (s, e) => _bindingPending = false;
+        }
+
+        /// <summary>
+        /// Bảng hẹp vì có khung bên phải: Mã phiếu – Ngày nhập – Tổng tiền – Nhà cung cấp – Nhân viên.
+        /// Ghi chú xem trong hộp thoại "Chi tiết ↗".
+        /// </summary>
+        private void SetupGridColumns()
+        {
+            dgvPhieuNhap.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvPhieuNhap.ScrollBars = ScrollBars.Vertical;
+
+            colMaNhanVien.Visible = false;
+            colGhiChu.Visible = false;
+
+            colMaPhieu.DisplayIndex = 0;
+            colNgayNhap.DisplayIndex = 1;
+            colTongTien.DisplayIndex = 2;
+            colNhaCungCap.DisplayIndex = 3;
+            colNhanVien.DisplayIndex = 4;
+
+            colMaPhieu.FillWeight = 16; colMaPhieu.MinimumWidth = 80;
+            colNgayNhap.FillWeight = 20; colNgayNhap.MinimumWidth = 110;
+            colTongTien.FillWeight = 18; colTongTien.MinimumWidth = 100;
+            colNhaCungCap.FillWeight = 26; colNhaCungCap.MinimumWidth = 110;
+            colNhanVien.FillWeight = 20; colNhanVien.MinimumWidth = 90;
+
+            colMaPhieu.DefaultCellStyle.Font = new System.Drawing.Font(ThemeManager.FontFamily, 9F, System.Drawing.FontStyle.Bold);
+            colNhanVien.HeaderText = "Nhân Viên";
+            colNhanVien.DefaultCellStyle.NullValue = "—";
+            colTongTien.HeaderText = "Tổng Tiền";
+            colTongTien.DefaultCellStyle.Format = "#,##0 đ";
+            colTongTien.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            colTongTien.DefaultCellStyle.Font = new System.Drawing.Font(ThemeManager.FontFamily, 9F, System.Drawing.FontStyle.Bold);
+            colTongTien.DefaultCellStyle.ForeColor = ThemeManager.Primary;
+            colTongTien.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
         }
 
         private async void PhieuNhapForm_Load(object sender, EventArgs e)
@@ -90,9 +146,14 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
         {
             try
             {
+                string keep = GetSelected()?.MaPhieuNhap;
                 _allPhieuNhap = await _pnService.GetAllAsync() ?? new List<PhieuNhapDto>();
+                _detailCache.Clear();
+                _sideMa = null;
+                _kTongPhieu.Text = "Tổng phiếu: " + _allPhieuNhap.Count.ToString("N0") + " phiếu";
+                _kTongGiaTri.Text = "Tổng giá trị: " + DetailSidePanel.Money(_allPhieuNhap.Sum(p => p.TongTien ?? 0m));
                 PopulateSupplierFilter();
-                FilterData();
+                FilterData(keep);
             }
             catch (Exception ex)
             {
@@ -126,8 +187,12 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
             }
         }
 
-        private void FilterData()
+        private void FilterData() { FilterData(null); }
+
+        private void FilterData(string selectMa)
         {
+            // Giữ phiếu đang xem nếu nó vẫn còn sau khi lọc
+            if (selectMa == null) selectMa = GetSelected()?.MaPhieuNhap;
             var keyword = (txtTimKiem.Text ?? "").Trim();
             string selectedNcc = _cboNhaCungCap.SelectedIndex > 0 ? (_cboNhaCungCap.SelectedItem as string) : null;
             int timeIndex = _cboThoiGian.SelectedIndex;
@@ -164,11 +229,94 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 return true;
             }).OrderByDescending(p => p.NgayNhap ?? DateTime.MinValue).ToList();
 
+            _pendingSelect = selectMa ?? "";
+            _bindingPending = true;
             dgvPhieuNhap.DataSource = null;
             dgvPhieuNhap.DataSource = filtered;
             _lblCount.Text = filtered.Count == _allPhieuNhap.Count
                 ? $"Hiển thị {filtered.Count} phiếu"
                 : $"Hiển thị {filtered.Count} / {_allPhieuNhap.Count} phiếu";
+            ApplyPendingSelection();
+        }
+
+        // Lưới tự chọn dòng đầu khi gắn dữ liệu (kể cả lần gắn hoãn lúc lưới mới hiện lên).
+        // Bỏ chọn đó: chưa chọn phiếu nào thì khung bên phải để trống; có phiếu đang xem thì chọn lại phiếu đó.
+        private string _pendingSelect = "";
+        private bool _bindingPending;
+
+        private void ApplyPendingSelection()
+        {
+            if (!_bindingPending) return;
+            dgvPhieuNhap.ClearSelection();
+            dgvPhieuNhap.CurrentCell = null;
+            if (!string.IsNullOrEmpty(_pendingSelect))
+            {
+                foreach (DataGridViewRow row in dgvPhieuNhap.Rows)
+                {
+                    if ((row.DataBoundItem as PhieuNhapDto)?.MaPhieuNhap != _pendingSelect) continue;
+                    dgvPhieuNhap.CurrentCell = row.Cells[colMaPhieu.Index];
+                    row.Selected = true;
+                    break;
+                }
+            }
+            ShowSide(GetSelected());
+            if (dgvPhieuNhap.IsHandleCreated && dgvPhieuNhap.Visible) _bindingPending = false;
+        }
+
+        // ── Khung chi tiết bên phải ──────────────────────────────────
+        private async void ShowSide(PhieuNhapDto item)
+        {
+            if (item == null || string.IsNullOrEmpty(item.MaPhieuNhap))
+            {
+                _sideMa = null;
+                _side.ShowEmpty();
+                return;
+            }
+            string ma = item.MaPhieuNhap;
+            if (ma == _sideMa) return;   // đang hiển thị (hoặc đang tải) đúng phiếu này rồi
+            _sideMa = ma;
+
+            PhieuNhapDto detail;
+            if (_detailCache.TryGetValue(ma, out detail)) { RenderSide(detail); return; }
+
+            _side.ShowLoading(ma);
+            try
+            {
+                detail = await _pnService.GetByIdAsync(ma);
+                if (IsDisposed) return;
+                if (detail == null) detail = item;   // không có chi tiết: hiện tối thiểu từ dòng danh sách
+                _detailCache[ma] = detail;
+                if (_sideMa == ma) RenderSide(detail);   // người dùng có thể đã chọn phiếu khác
+            }
+            catch (Exception ex)
+            {
+                if (!IsDisposed && _sideMa == ma)
+                {
+                    RenderSide(item);
+                    _side.SetItems("Không tải được chi tiết phiếu", new List<DetailItem>(), ex.Message);
+                }
+            }
+        }
+
+        private void RenderSide(PhieuNhapDto p)
+        {
+            _side.SetHeader(p.MaPhieuNhap, "Đã nhập kho", ThemeManager.Green, ThemeManager.GreenSoft);
+
+            // Nguyên liệu – ưu tiên hiển thị đầu tiên
+            var chiTiet = p.ChiTietPhieuNhaps ?? new List<ChiTietPhieuNhapDto>();
+            var items = chiTiet.Select(c => new DetailItem
+            {
+                Name = string.IsNullOrWhiteSpace(c.TenNguyenLieu) ? c.MaNguyenLieu : c.TenNguyenLieu,
+                Code = c.MaNguyenLieu + "  ·  " + DetailSidePanel.Money(c.DonGiaNhap) + (string.IsNullOrWhiteSpace(c.DonViTinh) ? "" : "/" + c.DonViTinh),
+                Qty = c.SoLuong.ToString("#,##0.##") + (string.IsNullOrWhiteSpace(c.DonViTinh) ? "" : " " + c.DonViTinh),
+                Amount = DetailSidePanel.Money(c.ThanhTien)
+            }).ToList();
+            _side.SetItems("Nguyên liệu (" + chiTiet.Count + " mặt hàng)", items, "Phiếu nhập không có nguyên liệu nào.");
+
+            _side.SetTotals(
+                new[] { DetailSidePanel.Field("Số mặt hàng", chiTiet.Count.ToString("N0")) },
+                "Tổng giá trị", DetailSidePanel.Money(p.TongTien ?? chiTiet.Sum(c => c.ThanhTien)));
+            // Ghi chú / thông tin khác: xem trong hộp thoại "Chi tiết ↗"
         }
 
         private void txtTimKiem_TextChanged(object sender, EventArgs e)

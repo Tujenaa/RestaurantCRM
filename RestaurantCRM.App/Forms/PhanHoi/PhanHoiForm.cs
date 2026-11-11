@@ -110,7 +110,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 Title = new Label { Text = "Phản hồi khách hàng" },
                 Subtitle = new Label { Text = "Đọc góp ý, trả lời khách và theo dõi trạng thái xử lý." },
                 HeaderActions = new Control[] { _btnLamMoi, _btnPhanTich },
-                KpiLabels = new[] { _kTong, _kCho, _kDiem, _kAn },
+                KpiLabels = new[] { _kCho, _kDiem },   // 2 ô, cỡ như khi có 5 ô (đồng bộ trang Đơn hàng / Phiếu nhập)
                 Search = _txtSearch,
                 SearchPlaceholder = "Tìm mã ĐG, mã đơn, KH, SĐT, món ăn, nội dung...",
                 Filters = new[]
@@ -126,7 +126,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 DangerActions = new[] { _btnXoa },
                 FooterInfo = _lblFooter,
                 SidePanel = _detail,
-                SideWidth = 400
+                SideWidth = 400,
+                SideFullHeight = true,
+                KpiSlots = 5
             });
 
             // Bảng hẹp vì có khung chi tiết bên phải: không xuống dòng, cột co được nhỏ
@@ -439,6 +441,11 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             {
                 _grid.Rows[chon].Selected = true;
                 _grid.CurrentCell = _grid.Rows[chon].Cells[0];
+            }
+            else
+            {
+                // Chưa chọn phản hồi nào: không để lưới tự chọn dòng đầu, khung bên phải để trống
+                _grid.CurrentCell = null;
             }
             _lblCount.Text = list.Count == _all.Count ? "Hiển thị " + list.Count + " phản hồi" : "Hiển thị " + list.Count + " / " + _all.Count + " phản hồi";
             ShowDetail(SelectedDto());

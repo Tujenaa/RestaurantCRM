@@ -35,6 +35,8 @@ namespace RestaurantCRM.AdminApp.Controls
         public Label FooterInfo;
         public Control SidePanel;            // khối chi tiết bên phải (nếu có)
         public int SideWidth = 340;
+        public bool SideFullHeight;          // khối bên phải cao từ dưới tiêu đề tới đáy (hàng KPI chỉ nằm bên trái)
+        public int KpiSlots;                 // > số ô KPI: mỗi ô rộng = bề ngang trang / KpiSlots, xếp sát trái
     }
 
     /// <summary>
@@ -143,13 +145,28 @@ namespace RestaurantCRM.AdminApp.Controls
             Control kpiRow = null;
             if (spec.KpiLabels != null && spec.KpiLabels.Length > 0)
             {
-                var tl = new TableLayoutPanel { Dock = DockStyle.Top, Height = 84, ColumnCount = spec.KpiLabels.Length, RowCount = 1, BackColor = ThemeManager.Bg, Margin = new Padding(0), Padding = new Padding(0) };
+                int n = spec.KpiLabels.Length;
+                bool fixedSlots = spec.KpiSlots > n;
+                var tl = new TableLayoutPanel { Dock = DockStyle.Top, Height = 84, ColumnCount = fixedSlots ? n + 1 : n, RowCount = 1, BackColor = ThemeManager.Bg, Margin = new Padding(0), Padding = new Padding(0) };
                 tl.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-                for (int i = 0; i < spec.KpiLabels.Length; i++)
+                for (int i = 0; i < n; i++)
                 {
-                    tl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / spec.KpiLabels.Length));
+                    tl.ColumnStyles.Add(fixedSlots ? new ColumnStyle(SizeType.Absolute, 200) : new ColumnStyle(SizeType.Percent, 100f / n));
                     var tile = new KpiTile(spec.KpiLabels[i]) { Dock = DockStyle.Fill };
                     tl.Controls.Add(tile, i, 0);
+                }
+                if (fixedSlots)
+                {
+                    // Ô KPI giữ cỡ như khi trang có KpiSlots ô (chia theo bề ngang cả trang), phần còn lại để trống
+                    tl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                    int slots = spec.KpiSlots;
+                    Action fitKpi = () =>
+                    {
+                        int w = Math.Max(150, (form.ClientSize.Width - form.Padding.Horizontal) / slots);
+                        for (int i = 0; i < n; i++) tl.ColumnStyles[i].Width = w;
+                    };
+                    fitKpi();
+                    form.Resize += (s, e) => fitKpi();
                 }
                 kpiRow = tl;
             }
@@ -357,9 +374,19 @@ namespace RestaurantCRM.AdminApp.Controls
             }
 
             // 7. Lắp vào form theo thứ tự trên -> dưới
+            // (Dock xử lý từ control thêm sau cùng ngược về trước)
             form.Controls.Add(card);
-            if (side != null) form.Controls.Add(side);
-            if (kpiRow != null) form.Controls.Add(kpiRow);
+            if (spec.SideFullHeight)
+            {
+                // Khối phải dock ngay dưới tiêu đề, trước hàng KPI -> cao tới đáy; KPI chỉ trải phần bên trái
+                if (kpiRow != null) form.Controls.Add(kpiRow);
+                if (side != null) form.Controls.Add(side);
+            }
+            else
+            {
+                if (side != null) form.Controls.Add(side);
+                if (kpiRow != null) form.Controls.Add(kpiRow);
+            }
             form.Controls.Add(header);
             card.BringToFront();
 
