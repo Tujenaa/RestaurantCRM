@@ -17,7 +17,7 @@ public class MonAnViewModel
     public string BieuTuong { get; set; } = "🍲";
     public string Tag { get; set; } = "";
     public string Tone { get; set; } = "";
-    public double DiemDanhGiaTrungBinh { get; set; } = 5.0;
+    public double DiemDanhGiaTrungBinh { get; set; } = 0;
     public int SoLuongDanhGia { get; set; } = 0;
 
     // Computed properties for UI display

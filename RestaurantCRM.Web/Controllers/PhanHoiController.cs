@@ -1,3 +1,4 @@
+using RestaurantCRM.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
@@ -83,7 +84,8 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
                 TenMon = c.TenMon,
                 DuongDanAnh = c.DuongDanAnh,
                 DanhGia = 5,
-                NoiDung = ""
+                NoiDung = "",
+                ChamRieng = false
             }).ToList()
         };
 
@@ -136,8 +138,9 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
                     MaMon = c.MaMon,
                     TenMon = c.TenMon,
                     DuongDanAnh = c.DuongDanAnh,
-                    DanhGia = 5,
-                    NoiDung = ""
+                    DanhGia = model.DanhGia,
+                    NoiDung = "",
+                    ChamRieng = false
                 }).ToList();
             }
             return View("DanhGia", model);
@@ -156,6 +159,10 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         {
             TempData["ThongBao"] = $"Cảm ơn bạn đã gửi đánh giá cho đơn hàng #{model.MaDonHang}!";
             return RedirectToAction(nameof(ChiTiet), new { maHoaDon = model.MaDonHang });
+        }
+        else if (TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(result.Message))
+        {
+            return this.DangXuatVaVeDangNhap();
         }
         else
         {
@@ -221,13 +228,15 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
             DanhGia = detail.SoSaoChung,
             NoiDung = detail.NoiDungChung ?? "",
             DonHangHienTai = orderDetail,
+            // Món có số sao → khách đã chấm riêng; món NULL → hiển thị theo sao chung
             ChiTietMonDanhGia = detail.ChiTietMon.Select(m => new DishReviewInputItem
             {
                 MaMon = m.MaMon,
                 TenMon = m.TenMon,
                 DuongDanAnh = m.DuongDanAnh,
-                DanhGia = m.SoSao,
-                NoiDung = m.NoiDung ?? ""
+                DanhGia = m.SoSao ?? detail.SoSaoChung,
+                NoiDung = m.NoiDung ?? "",
+                ChamRieng = m.SoSao.HasValue
             }).ToList()
         };
 
@@ -263,6 +272,10 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         {
             TempData["ThongBao"] = $"Cập nhật đánh giá cho đơn hàng #{model.MaDonHang} thành công!";
             return RedirectToAction(nameof(ChiTiet), new { maHoaDon = model.MaDonHang });
+        }
+        if (TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(result.Message))
+        {
+            return this.DangXuatVaVeDangNhap();
         }
 
         TempData["Loi"] = result.Message;

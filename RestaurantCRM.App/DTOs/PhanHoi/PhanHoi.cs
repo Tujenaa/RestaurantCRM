@@ -31,8 +31,8 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
         /// <summary>Đánh giá từng món của đơn (bảng CHI_TIET_DANH_GIA).</summary>
         public List<DanhGiaMonDto> ChiTietMon { get; set; } = new List<DanhGiaMonDto>();
 
-        /// <summary>Số món bị chấm thấp (≤ 2 sao).</summary>
-        public int SoMonBiChe { get { return ChiTietMon == null ? 0 : ChiTietMon.Count(m => m.SoSao > 0 && m.SoSao <= 2); } }
+        /// <summary>Số món khách chấm riêng ở mức thấp (≤ 2 sao). Món không đánh giá riêng (SoSao NULL) không tính.</summary>
+        public int SoMonBiChe { get { return ChiTietMon == null ? 0 : ChiTietMon.Count(m => m.SoSao.HasValue && m.SoSao.Value <= 2); } }
         /// <summary>Cần chú ý: điểm chung 1–2 sao hoặc có món bị chấm thấp.</summary>
         public bool CanChuY { get { return (SoSao.HasValue && SoSao.Value > 0 && SoSao.Value <= 2) || SoMonBiChe > 0; } }
 
@@ -47,7 +47,8 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
     {
         public string MaMon { get; set; }
         public string TenMon { get; set; }
-        public int SoSao { get; set; }
+        /// <summary>NULL = khách không đánh giá riêng món này.</summary>
+        public int? SoSao { get; set; }
         public string NoiDung { get; set; }
     }
 
@@ -75,8 +76,18 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
     {
         public string MaMon { get; set; }
         public string TenMon { get; set; }
+        /// <summary>= SoLuotChamRieng (giữ tên cũ).</summary>
         public int SoLuotDanhGia { get; set; }
+        /// <summary>Số đơn được đánh giá có món này.</summary>
+        public int SoLuotTrongDon { get; set; }
+        /// <summary>Số lượt khách chấm sao riêng cho món.</summary>
+        public int SoLuotChamRieng { get; set; }
+        /// <summary>Trung bình sao chỉ trên các lượt chấm riêng; null nếu chưa có.</summary>
         public double? DiemTrungBinh { get; set; }
+        /// <summary>Trung bình sao chung của các đơn có món này (chỉ để tham khảo).</summary>
+        public double? DiemTheoDon { get; set; }
+        /// <summary>Đủ lượt chấm riêng để kết luận (≥ 3).</summary>
+        public bool DuDuLieu { get; set; }
         public int SoSao1 { get; set; }
         public int SoSao2 { get; set; }
         public int SoSao3 { get; set; }

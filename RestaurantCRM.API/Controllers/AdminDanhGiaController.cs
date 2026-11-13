@@ -25,52 +25,47 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // GET: api/AdminDanhGia/PhanTichMon - Tổng hợp đánh giá theo món ăn.
+        // Chỉ tính trên CHI_TIET_DANH_GIA của đánh giá đang hiển thị. Điểm món chỉ lấy các lượt khách chấm riêng
+        // (SoSao != NULL); sao chung của đơn chỉ đưa ra để tham khảo (DiemTheoDon).
         [HttpGet("PhanTichMon")]
         public async Task<IActionResult> GetPhanTichMon()
         {
+            const int NguongDuDuLieu = 3;
+
             var ctDanhGias = await _service.Query<ChiTietDanhGia>()
+                .Where(ct => ct.MaDanhGiaNavigation.TrangThai)
                 .Select(ct => new
                 {
                     ct.MaMon,
                     TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
-                    SoSao = (int?)ct.SoSao,
+                    ct.SoSao,
+                    SoSaoDon = ct.MaDanhGiaNavigation.SoSao,
                     ct.NoiDung,
                     NgayDanhGia = ct.MaDanhGiaNavigation.NgayDanhGia
                 })
                 .ToListAsync();
 
-            var legacyDanhGias = await _service.Query<DanhGia>()
-                .Where(d => d.MaMon != null)
-                .Select(d => new
-                {
-                    d.MaMon,
-                    TenMon = d.MaMonNavigation != null ? d.MaMonNavigation.TenMon : (d.MaMon != null ? d.MaMon : "Đánh giá chung đơn hàng"),
-                    d.SoSao,
-                    d.NoiDung,
-                    d.NgayDanhGia
-                })
-                .ToListAsync();
-
-            var danhGias = ctDanhGias.Concat(legacyDanhGias).ToList();
-
-            var ketQua = danhGias
+            var ketQua = ctDanhGias
                 .GroupBy(d => d.MaMon)
                 .Select(g =>
                 {
-                    var diem = g.Where(d => d.SoSao.HasValue && d.SoSao >= 1 && d.SoSao <= 5)
-                        .Select(d => d.SoSao!.Value)
-                        .ToList();
+                    var diem = g.Where(d => d.SoSao is >= 1 and <= 5).Select(d => d.SoSao!.Value).ToList();
+                    var diemDon = g.Where(d => d.SoSaoDon is >= 1 and <= 5).Select(d => d.SoSaoDon!.Value).ToList();
                     return new
                     {
                         MaMon = g.Key,
                         TenMon = g.Select(d => d.TenMon).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? g.Key,
-                        SoLuotDanhGia = g.Count(),
+                        SoLuotTrongDon = g.Count(),
+                        SoLuotChamRieng = diem.Count,
+                        SoLuotDanhGia = diem.Count, // giữ tên cũ cho App, = SoLuotChamRieng
                         DiemTrungBinh = diem.Count == 0 ? (double?)null : Math.Round(diem.Average(), 2),
                         SoSao1 = diem.Count(s => s == 1),
                         SoSao2 = diem.Count(s => s == 2),
                         SoSao3 = diem.Count(s => s == 3),
                         SoSao4 = diem.Count(s => s == 4),
                         SoSao5 = diem.Count(s => s == 5),
+                        DiemTheoDon = diemDon.Count == 0 ? (double?)null : Math.Round(diemDon.Average(), 2),
+                        DuDuLieu = diem.Count >= NguongDuDuLieu,
                         NhanXet = g.Where(d => !string.IsNullOrWhiteSpace(d.NoiDung))
                             .OrderByDescending(d => d.NgayDanhGia)
                             .Select(d => new
@@ -82,7 +77,9 @@ namespace RestaurantCRM.API.Controllers
                             .ToList()
                     };
                 })
-                .OrderByDescending(mon => mon.SoLuotDanhGia)
+                // Món đủ dữ liệu trước, điểm thấp lên đầu; món chưa đủ dữ liệu xếp sau
+                .OrderByDescending(mon => mon.DuDuLieu)
+                .ThenBy(mon => mon.DuDuLieu ? mon.DiemTrungBinh : null)
                 .ThenBy(mon => mon.TenMon)
                 .ToList();
 
@@ -147,7 +144,7 @@ namespace RestaurantCRM.API.Controllers
                     TongSoTraLoi = d.TraLoiDanhGia.Count,
                     d.DaXuLy,
                     TrangThaiXuLy = d.DaXuLy ? "Đã xử lý" : "Chưa xử lý",
-                    ChiTietMon = d.ChiTietDanhGia.OrderBy(ct => ct.SoSao).Select(ct => new
+                    ChiTietMon = d.ChiTietDanhGia.OrderBy(ct => ct.SoSao == null).ThenBy(ct => ct.SoSao).Select(ct => new
                     {
                         ct.MaMon,
                         TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
@@ -190,7 +187,7 @@ namespace RestaurantCRM.API.Controllers
                     TongSoTraLoi = x.TraLoiDanhGia.Count,
                     x.DaXuLy,
                     TrangThaiXuLy = x.DaXuLy ? "Đã xử lý" : "Chưa xử lý",
-                    ChiTietMon = x.ChiTietDanhGia.OrderBy(ct => ct.SoSao).Select(ct => new
+                    ChiTietMon = x.ChiTietDanhGia.OrderBy(ct => ct.SoSao == null).ThenBy(ct => ct.SoSao).Select(ct => new
                     {
                         ct.MaMon,
                         TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
@@ -287,6 +284,11 @@ namespace RestaurantCRM.API.Controllers
             if (traLoi == null) return NotFound("Không tìm thấy câu trả lời.");
 
             _service.Remove(traLoi);
+
+            // Không còn câu trả lời → phản hồi quay lại "Chưa xử lý" để nhân viên xử lý lại
+            var danhGia = await _service.FindAsync<DanhGia>(id);
+            if (danhGia != null) danhGia.DaXuLy = false;
+
             await _service.SaveChangesAsync();
             return Ok(new { message = "Đã xóa câu trả lời." });
         }
@@ -315,9 +317,8 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy phản hồi.");
             }
 
-            // Bảo toàn dữ liệu: chuyển trạng thái sang ẩn và đánh dấu đã xử lý
+            // Bảo toàn dữ liệu: chỉ chuyển sang ẩn, giống PUT {id}/TrangThai (ẩn không đổi trạng thái xử lý)
             danhGia.TrangThai = false;
-            danhGia.DaXuLy = true;
             _service.Update(danhGia);
             await _service.SaveChangesAsync();
 

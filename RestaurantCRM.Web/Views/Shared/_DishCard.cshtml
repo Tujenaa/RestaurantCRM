@@ -31,7 +31,7 @@
     <div class="dish-card__body">
         <div class="dish-card__meta">
             <span class="dish-card__category">@Model.LoaiMon</span>
-            <span class="dish-card__rating" title="Điểm đánh giá trung bình từ khách hàng">@Model.DiemDanhGiaTrungBinh.ToString("0.0")/5</span>
+            <span class="dish-card__rating" title="Điểm đánh giá trung bình từ khách hàng">@(Model.SoLuongDanhGia > 0 ? $"{Model.DiemDanhGiaTrungBinh:0.0}/5" : "Chưa có đánh giá")</span>
         </div>
 
         <h3 class="dish-card__title">

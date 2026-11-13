@@ -1,3 +1,4 @@
+using RestaurantCRM.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
@@ -127,6 +128,8 @@ public class KhaoSatController(KhaoSatService api) : Controller
                
                 return RedirectToAction(nameof(Submit));
             }
+            if (TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(message))
+                return this.DangXuatVaVeDangNhap();
             ModelState.AddModelError("", message);
         }
         catch (HttpRequestException)

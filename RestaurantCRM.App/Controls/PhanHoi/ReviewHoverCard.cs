@@ -140,6 +140,14 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             if (!_shown || row != _shownRow) ShowRow(row);
         }
 
+        /// <summary>" · 2 chấm riêng" hoặc " · không đánh giá riêng món nào" (món SoSao NULL = không đánh giá riêng).</summary>
+        private static string MoTaChamRieng(System.Collections.Generic.List<DanhGiaMonDto> mons)
+        {
+            int chamRieng = 0;
+            foreach (var m in mons) if (m != null && m.SoSao.HasValue) chamRieng++;
+            return chamRieng == 0 ? " · không đánh giá riêng món nào" : " · " + chamRieng + " chấm riêng";
+        }
+
         private void ShowRow(int rowIndex)
         {
             if (_gridDisposed || rowIndex < 0 || rowIndex >= _grid.Rows.Count) return;
@@ -151,7 +159,9 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             _title.Text = review.DoiTuong;
             _meta.Text = "Ngày gửi: " + (review.NgayDanhGia.HasValue ? review.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—")
                 + (review.ChiTietMon != null && review.ChiTietMon.Count > 0
-                    ? "  ·  " + review.ChiTietMon.Count + " món" + (review.SoMonBiChe > 0 ? " · " + review.SoMonBiChe + " món bị chê" : "")
+                    ? "  ·  " + review.ChiTietMon.Count + " món"
+                      + MoTaChamRieng(review.ChiTietMon)
+                      + (review.SoMonBiChe > 0 ? " · " + review.SoMonBiChe + " món bị chê" : "")
                     : "");
             _meta.ForeColor = review.CanChuY ? ThemeManager.Red : ThemeManager.Muted;
             int stars = Math.Max(0, Math.Min(5, review.SoSao ?? 0));

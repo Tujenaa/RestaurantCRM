@@ -32,7 +32,8 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             BackColor = Color.White;
         }
 
-        public static bool BiChe(DanhGiaMonDto m) { return m != null && m.SoSao > 0 && m.SoSao <= 2; }
+        /// <summary>Món khách chấm riêng ≤ 2 sao. Món không đánh giá riêng (SoSao NULL) không bao giờ bị coi là chê.</summary>
+        public static bool BiChe(DanhGiaMonDto m) { return m != null && m.SoSao.HasValue && m.SoSao.Value <= 2; }
 
         private string HeadText()
         {
@@ -81,12 +82,13 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
                 }
 
                 int x = r.X + CardPad, top = r.Y + CardPad, inner = r.Width - CardPad * 2;
-                int sao = Math.Max(0, Math.Min(5, m.SoSao));
-                string stars = new string('★', sao) + new string('☆', 5 - sao) + "  " + sao + "/5";
+                bool coSao = m.SoSao.HasValue;
+                int sao = Math.Max(0, Math.Min(5, m.SoSao ?? 0));
+                string stars = coSao ? new string('★', sao) + new string('☆', 5 - sao) + "  " + sao + "/5" : "không đánh giá riêng";
                 // Ký tự ★ vẽ bằng font dự phòng nên rộng hơn số đo: chừa thêm chỗ, căn phải, không cắt "…"
                 int starW = (int)(TextRenderer.MeasureText(g, stars, _fStar).Width * 1.25f) + 12;
                 TextRenderer.DrawText(g, stars, _fStar, new Rectangle(r.Right - CardPad - starW, top, starW, _fName.Height + 4),
-                    che ? ThemeManager.Red : ThemeManager.Amber, TextFormatFlags.Right | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+                    che ? ThemeManager.Red : coSao ? ThemeManager.Amber : ThemeManager.Muted, TextFormatFlags.Right | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
                 string name = (che ? "⚠ " : "") + (string.IsNullOrWhiteSpace(m.TenMon) ? m.MaMon : m.TenMon);
                 TextRenderer.DrawText(g, name, _fName, new Rectangle(x, top, inner - starW - 8, _fName.Height), che ? ThemeManager.Red : ThemeManager.Ink, One);
 

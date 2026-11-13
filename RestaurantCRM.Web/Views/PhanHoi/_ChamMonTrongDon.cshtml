@@ -1,0 +1,80 @@
+@model List<DishReviewInputItem>
+@*
+    Khối chấm sao từng món trong đơn (dùng chung cho form Đánh giá và Chỉnh sửa đánh giá).
+    Chấm món là tùy chọn: món chưa chấm riêng hiển thị mờ theo sao chung và được lưu là "không đánh giá riêng".
+    Hành vi do /js/cham-mon.js điều khiển.
+*@
+@{
+    var dishes = Model ?? new List<DishReviewInputItem>();
+}
+
+@if (dishes.Count > 0)
+{
+    <div style="margin-bottom:26px; border-top:1px solid var(--line); padding-top:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div>
+                <strong style="font-size:14.5px; color:var(--ink); display:block;">Đánh giá món ăn trong đơn</strong>
+                <small style="color:var(--muted); font-size:12.5px;">Không bắt buộc — bấm sao hoặc viết nhận xét để chấm riêng món. Món không đánh giá riêng sẽ không tính vào điểm của món.</small>
+            </div>
+            <span style="font-size:12px; font-weight:700; color:var(--muted);">@dishes.Count món</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            @for (var i = 0; i < dishes.Count; i++)
+            {
+                var item = dishes[i];
+                <div class="dish-review" data-index="@i" data-cham-rieng="@(item.ChamRieng ? "true" : "false")" style="background:#fafafa; border:1px solid var(--line); border-radius:12px; padding:12px 16px;">
+                    <input type="hidden" name="ChiTietMonDanhGia[@i].MaMon" value="@item.MaMon" />
+                    <input type="hidden" name="ChiTietMonDanhGia[@i].TenMon" value="@item.TenMon" />
+                    <input type="hidden" name="ChiTietMonDanhGia[@i].DuongDanAnh" value="@item.DuongDanAnh" />
+                    <input type="hidden" name="ChiTietMonDanhGia[@i].DanhGia" class="dish-rating-val" value="@item.DanhGia" />
+                    <input type="hidden" name="ChiTietMonDanhGia[@i].ChamRieng" class="dish-cham-rieng" value="@(item.ChamRieng ? "true" : "false")" />
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                            @if (!string.IsNullOrEmpty(item.DuongDanAnh))
+                            {
+                                <img src="@item.DuongDanAnh" alt="@item.TenMon" style="width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" />
+                            }
+                            <span style="font-size:14px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                @item.TenMon
+                            </span>
+                        </div>
+
+                        <!-- Rating sao từng món -->
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;">
+                            <div class="dish-rating-row" style="display:flex; align-items:center; gap:8px;">
+                                <div class="dish-stars" style="display:inline-flex; gap:2px; font-size:22px; cursor:pointer;">
+                                    @for (var s = 1; s <= 5; s++)
+                                    {
+                                        <button type="button" class="dish-star-btn @(s <= item.DanhGia ? "on" : "")" data-rating="@s" aria-label="@s sao" style="background:none; border:none; cursor:pointer; font-size:22px; line-height:1; padding:0; color:@(s <= item.DanhGia ? "#f59e0b" : "#d1d5db");">★</button>
+                                    }
+                                </div>
+                                <span class="dish-rating-lbl" style="font-weight:700; color:#b45309; font-size:12.5px; min-width:32px; text-align:right;">@item.DanhGia★</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="dish-mode-tag" style="font-size:11.5px; font-weight:600; color:var(--muted);">
+                                    @(item.ChamRieng ? "Bạn đã chấm riêng" : "Theo điểm chung")
+                                </span>
+                                <button type="button" class="dish-use-order" style="display:@(item.ChamRieng ? "inline-block" : "none"); background:none; border:1px solid var(--line); border-radius:6px; padding:1px 8px; font-size:11.5px; font-weight:600; color:var(--muted); cursor:pointer;">
+                                    Dùng điểm chung
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ô nhập nhận xét riêng cho từng món -->
+                    <div style="margin-top:10px;">
+                        <input type="text"
+                               class="dish-comment"
+                               name="ChiTietMonDanhGia[@i].NoiDung"
+                               value="@item.NoiDung"
+                               maxlength="1000"
+                               placeholder="Nhận xét hương vị, cách chế biến món @item.TenMon (không bắt buộc)..."
+                               style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px; background:#ffffff; font-family:inherit; box-sizing:border-box;" />
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}

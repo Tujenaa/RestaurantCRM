@@ -208,7 +208,7 @@ public class MonAnService
             BieuTuong = icon,
             Tag = tag,
             Tone = tone,
-            DiemDanhGiaTrungBinh = 5.0,
+            DiemDanhGiaTrungBinh = 0,
             SoLuongDanhGia = 0
         };
     }

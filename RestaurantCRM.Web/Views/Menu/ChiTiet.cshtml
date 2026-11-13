@@ -74,7 +74,7 @@
                 <div class="dish-meta-header">
                     <span class="category-badge">@dish.LoaiMon</span>
                     <span class="sku-badge">Mã món: <strong>@dish.MaMon</strong></span>
-                    <span class="rating-badge" title="Điểm đánh giá trung bình từ thực khách">Đánh giá @dish.DiemDanhGiaTrungBinh.ToString("0.0")/5 (@(dish.SoLuongDanhGia > 0 ? $"{dish.SoLuongDanhGia} đánh giá" : "Chưa có đánh giá"))</span>
+                    <span class="rating-badge" title="Điểm đánh giá trung bình từ thực khách">@(dish.SoLuongDanhGia > 0 ? $"Đánh giá {dish.DiemDanhGiaTrungBinh:0.0}/5 ({dish.SoLuongDanhGia} đánh giá)" : "Chưa có đánh giá")</span>
                 </div>
 
                 <h1 class="dish-title">@dish.TenMon</h1>
@@ -234,15 +234,27 @@
         <div style="display:grid; grid-template-columns: 280px 1fr; gap:36px; align-items:start;">
             <!-- Cột trái: Tóm tắt điểm số sao trung bình -->
             <div style="background:#fdfaf6; border:1px solid #fed7aa; border-radius:16px; padding:24px; text-align:center;">
-                <div style="font-size:48px; font-weight:900; color:#c2410c; line-height:1;">
-                    @dish.DiemDanhGiaTrungBinh.ToString("0.0")
-                </div>
-                <div style="color:#f59e0b; font-size:24px; margin:8px 0; letter-spacing:2px;">
-                    @String.Concat(Enumerable.Repeat("★", (int)Math.Round(dish.DiemDanhGiaTrungBinh)))@String.Concat(Enumerable.Repeat("☆", 5 - (int)Math.Round(dish.DiemDanhGiaTrungBinh)))
-                </div>
-                <div style="font-size:14px; font-weight:600; color:#4b5563;">
-                    Dựa trên @(Model.DanhGias.Count > 0 ? Model.DanhGias.Count : dish.SoLuongDanhGia) lượt đánh giá
-                </div>
+                @if (dish.SoLuongDanhGia > 0)
+                {
+                    <div style="font-size:48px; font-weight:900; color:#c2410c; line-height:1;">
+                        @dish.DiemDanhGiaTrungBinh.ToString("0.0")
+                    </div>
+                    <div style="color:#f59e0b; font-size:24px; margin:8px 0; letter-spacing:2px;">
+                        @String.Concat(Enumerable.Repeat("★", (int)Math.Round(dish.DiemDanhGiaTrungBinh)))@String.Concat(Enumerable.Repeat("☆", 5 - (int)Math.Round(dish.DiemDanhGiaTrungBinh)))
+                    </div>
+                    <div style="font-size:14px; font-weight:600; color:#4b5563;">
+                        Dựa trên @dish.SoLuongDanhGia lượt chấm điểm món
+                    </div>
+                }
+                else
+                {
+                    <div style="font-size:20px; font-weight:800; color:#c2410c; line-height:1.3;">
+                        Chưa có đánh giá
+                    </div>
+                    <div style="font-size:13px; color:#6b7280; margin-top:6px;">
+                        Món này chưa có lượt chấm điểm riêng nào.
+                    </div>
+                }
                 <hr style="border:none; border-top:1px dashed #fdba74; margin:16px 0;" />
                 <div style="font-size:12.5px; color:#6b7280; line-height:1.5;">
                     100% đánh giá từ khách hàng đã đặt món và thưởng thức thực tế.
@@ -274,16 +286,19 @@
                                             <small class="muted" style="font-size:12px;">Đã dùng bữa · @review.NgayGui.ToString("dd/MM/yyyy · HH:mm")</small>
                                         </div>
                                     </div>
-                                    <div class="stars" style="color:#f59e0b; font-size:16px; letter-spacing:2px;">
-                                        @String.Concat(Enumerable.Repeat("★", review.DanhGia))@String.Concat(Enumerable.Repeat("☆", 5 - review.DanhGia))
-                                    </div>
+                                    @if (review.DanhGia.HasValue)
+                                    {
+                                        <div class="stars" style="color:#f59e0b; font-size:16px; letter-spacing:2px;">
+                                            @String.Concat(Enumerable.Repeat("★", review.DanhGia.Value))@String.Concat(Enumerable.Repeat("☆", 5 - review.DanhGia.Value))
+                                        </div>
+                                    }
                                 </div>
 
                                 @if (!string.IsNullOrWhiteSpace(review.NoiDung))
                                 {
                                     <p style="margin:10px 0; color:#334155; line-height:1.6; font-size:14px;">@review.NoiDung</p>
                                 }
-                                else
+                                else if (review.DanhGia.HasValue)
                                 {
                                     <p style="margin:8px 0; color:var(--muted); font-style:italic; font-size:13.5px;">Khách hàng đã chấm @review.DanhGia★.</p>
                                 }

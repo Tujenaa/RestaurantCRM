@@ -3,19 +3,11 @@ using System.Collections.Generic;
 
 namespace RestaurantCRM.API.DTOs
 {
-    public class ReviewRequest
-    {
-        public string MaKhachHang { get; set; } = null!;
-        public string? MaMon { get; set; }
-        public string? MaHoaDon { get; set; }
-        public int SoSao { get; set; }
-        public string? NoiDung { get; set; }
-    }
-
     public class DishReviewItemDto
     {
         public string MaMon { get; set; } = null!;
-        public int SoSao { get; set; }
+        /// <summary>NULL = khách không bấm sao riêng cho món (nếu có nhận xét thì lấy sao chung).</summary>
+        public int? SoSao { get; set; }
         public string? NoiDung { get; set; }
     }
 
@@ -43,7 +35,8 @@ namespace RestaurantCRM.API.DTOs
         public string MaMon { get; set; } = null!;
         public string TenMon { get; set; } = null!;
         public string? DuongDanAnh { get; set; }
-        public int SoSao { get; set; }
+        /// <summary>NULL = món không được chấm riêng.</summary>
+        public int? SoSao { get; set; }
         public string? NoiDung { get; set; }
     }
 

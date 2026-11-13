@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -11,10 +12,7 @@ namespace RestaurantCRM.API.Controllers
     [ApiController]
     public class AdminKhachHangController : ControllerBase
     {
-        private static readonly string[] TrangThaiHopLe = { "Active", "Locked" };
-        private static readonly string[] GioiTinhHopLe = { "Nam", "Nữ", "Khác" };
-        private static readonly Regex SoDienThoaiRegex = new Regex(@"^0\d{9,10}$");
-        private static readonly Regex EmailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+        private static readonly string[] TrangThaiHopLe = KhachHangValidator.TrangThaiHopLe;
 
         private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
@@ -343,41 +341,11 @@ namespace RestaurantCRM.API.Controllers
 
         // ── Hàm hỗ trợ ───────────────────────────────────────────────────────
 
-        private static string? ChuanHoa(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+        private static string? ChuanHoa(string? s) => KhachHangValidator.ChuanHoa(s);
 
         private static string? KiemTraDuLieu(string? hoTen, string? soDienThoai, string? email, DateOnly? ngaySinh,
             string? gioiTinh, string? trangThai, bool batBuocHoTen)
-        {
-            if (batBuocHoTen && string.IsNullOrWhiteSpace(hoTen))
-                return "Họ tên không được để trống.";
-            if (!string.IsNullOrWhiteSpace(hoTen) && hoTen.Trim().Length > 100)
-                return "Họ tên tối đa 100 ký tự.";
-
-            var sdt = ChuanHoa(soDienThoai);
-            if (sdt != null && !SoDienThoaiRegex.IsMatch(sdt))
-                return "Số điện thoại không hợp lệ (bắt đầu bằng 0, gồm 10–11 chữ số).";
-
-            var mail = ChuanHoa(email);
-            if (mail != null && (!EmailRegex.IsMatch(mail) || mail.Length > 100))
-                return "Email không hợp lệ.";
-
-            if (ngaySinh.HasValue)
-            {
-                var homNay = DateOnly.FromDateTime(DateTime.Today);
-                if (ngaySinh.Value > homNay) return "Ngày sinh không được lớn hơn ngày hiện tại.";
-                if (ngaySinh.Value < homNay.AddYears(-120)) return "Ngày sinh không hợp lệ.";
-            }
-
-            var gt = ChuanHoa(gioiTinh);
-            if (gt != null && !GioiTinhHopLe.Contains(gt))
-                return "Giới tính chỉ nhận 'Nam', 'Nữ' hoặc 'Khác'.";
-
-            var tt = ChuanHoa(trangThai);
-            if (tt != null && !TrangThaiHopLe.Contains(tt))
-                return "Trạng thái không hợp lệ. Chỉ chấp nhận 'Active' hoặc 'Locked'.";
-
-            return null;
-        }
+            => KhachHangValidator.KiemTraDuLieu(hoTen, soDienThoai, email, ngaySinh, gioiTinh, trangThai, batBuocHoTen);
 
         /// <summary>Sinh mã khách hàng tiếp theo dạng KH01, KH02, ... (bỏ qua các mã không theo số).</summary>
         private async Task<string> TaoMaKhachHangAsync()

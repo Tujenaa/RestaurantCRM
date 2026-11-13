@@ -181,6 +181,13 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Đơn hàng phải có ít nhất 1 món.");
             }
 
+            // Khách tự đặt đơn (không qua nhân viên) phải có tài khoản đang hoạt động
+            if (string.IsNullOrEmpty(request.MaNhanVien) && !string.IsNullOrWhiteSpace(request.MaKhachHang))
+            {
+                var loiKhach = await RestaurantCRM.API.Services.KhachHangValidator.KiemTraHoatDongAsync(_service, request.MaKhachHang);
+                if (loiKhach != null) return BadRequest(loiKhach);
+            }
+
             using var transaction = await _service.BeginTransactionAsync();
             try
             {

@@ -10,6 +10,11 @@ namespace RestaurantCRM.API.DTOs
         public string? DiaChi { get; set; }
     }
 
+    public class UpdateAddressRequest
+    {
+        public string? DiaChi { get; set; }
+    }
+
     public class ChangePasswordRequest
     {
         public string MatKhauCu { get; set; } = null!;

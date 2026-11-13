@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -18,25 +19,22 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // GET: api/DanhGia/MonAn/{maMon} - Lấy danh sách đánh giá của một món ăn
+        // Chỉ lấy lượt khách chấm riêng món (có số sao) hoặc có nhận xét món, của đánh giá đang hiển thị.
         [HttpGet("MonAn/{maMon}")]
         public async Task<IActionResult> GetDanhGiaByMonAn(string maMon)
         {
-            // 1. Lấy từ bảng CHI_TIET_DANH_GIA (chuẩn Master-Detail)
             var ctReviews = await _service.Query<ChiTietDanhGia>()
                 .Where(ct => ct.MaMon == maMon && ct.MaDanhGiaNavigation.TrangThai)
-                .Include(ct => ct.MaDanhGiaNavigation)
-                    .ThenInclude(d => d.MaKhachHangNavigation)
-                .Include(ct => ct.MaDanhGiaNavigation)
-                    .ThenInclude(d => d.TraLoiDanhGia)
-                        .ThenInclude(t => t.MaNhanVienNavigation)
+                .Where(ct => ct.SoSao != null || (ct.NoiDung != null && ct.NoiDung.Trim() != ""))
+                .OrderByDescending(ct => ct.MaDanhGiaNavigation.NgayDanhGia)
                 .Select(ct => new
                 {
                     MaDanhGia = ct.MaChiTietDanhGia,
-                    SoSao = (int?)ct.SoSao,
-                    NoiDung = ct.NoiDung,
+                    ct.SoSao,
+                    ct.NoiDung,
                     NgayDanhGia = ct.MaDanhGiaNavigation.NgayDanhGia,
-                    TenKhachHang = ct.MaDanhGiaNavigation.MaKhachHangNavigation != null 
-                        ? ct.MaDanhGiaNavigation.MaKhachHangNavigation.HoTen 
+                    TenKhachHang = ct.MaDanhGiaNavigation.MaKhachHangNavigation != null
+                        ? ct.MaDanhGiaNavigation.MaKhachHangNavigation.HoTen
                         : "Khách ẩn danh",
                     HoiThoai = ct.MaDanhGiaNavigation.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
                     {
@@ -48,34 +46,7 @@ namespace RestaurantCRM.API.Controllers
                 })
                 .ToListAsync();
 
-            // 2. Lấy thêm từ bảng DANH_GIA cũ (nếu có bản ghi legacy)
-            var legacyReviews = await _service.Query<DanhGia>()
-                .Where(d => d.MaMon == maMon && d.TrangThai)
-                .Include(d => d.MaKhachHangNavigation)
-                .Include(d => d.TraLoiDanhGia)
-                    .ThenInclude(t => t.MaNhanVienNavigation)
-                .Select(d => new
-                {
-                    MaDanhGia = d.MaDanhGia,
-                    SoSao = d.SoSao,
-                    NoiDung = d.NoiDung,
-                    NgayDanhGia = d.NgayDanhGia,
-                    TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
-                    HoiThoai = d.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
-                    {
-                        t.MaTraLoi,
-                        t.NoiDung,
-                        t.NgayGui,
-                        NguoiTraLoi = t.MaNhanVienNavigation.HoTen
-                    })
-                })
-                .ToListAsync();
-
-            var combined = ctReviews.Concat(legacyReviews)
-                .OrderByDescending(x => x.NgayDanhGia)
-                .ToList();
-
-            return Ok(combined);
+            return Ok(ctReviews);
         }
 
         // GET: api/DanhGia/KhachHang/{maKhachHang} - Lấy lịch sử đánh giá của riêng một khách hàng
@@ -188,6 +159,8 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // POST: api/DanhGia/DonHang - Gửi đánh giá toàn bộ đơn hàng (chuẩn Master-Detail)
+        // Sao chung bắt buộc; chấm từng món là tùy chọn. Mỗi món trong đơn có đúng 1 dòng CHI_TIET_DANH_GIA,
+        // món khách không đánh giá riêng có SoSao = NULL (không lấy sao chung gán cho món).
         [HttpPost("DonHang")]
         public async Task<IActionResult> CreateOrderReviewBatch(OrderReviewBatchRequest request)
         {
@@ -201,6 +174,27 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Số sao đánh giá chung phải từ 1 đến 5.");
             }
 
+            var hoaDon = await _service.Query<HoaDon>()
+                .Where(h => h.MaHoaDon == request.MaHoaDon)
+                .Select(h => new { h.MaKhachHang, h.TrangThai })
+                .FirstOrDefaultAsync();
+            if (hoaDon == null)
+            {
+                return BadRequest("Không tìm thấy đơn hàng.");
+            }
+            if (hoaDon.TrangThai != "Completed")
+            {
+                return BadRequest("Chỉ được đánh giá đơn hàng đã hoàn tất.");
+            }
+            if (string.IsNullOrWhiteSpace(request.MaKhachHang)
+                || !string.Equals(hoaDon.MaKhachHang, request.MaKhachHang, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Đơn hàng này không thuộc tài khoản của bạn.");
+            }
+
+            var loiKhach = await KhachHangValidator.KiemTraHoatDongAsync(_service, request.MaKhachHang);
+            if (loiKhach != null) return BadRequest(loiKhach);
+
             // Kiểm tra xem đơn hàng này đã từng được đánh giá chưa
             bool daDanhGia = await _service.Query<DanhGia>().AnyAsync(d => d.MaHoaDon == request.MaHoaDon);
             if (daDanhGia)
@@ -208,7 +202,13 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Đơn hàng này đã được đánh giá trước đó.");
             }
 
-            // 1. Bản ghi Master: Đánh giá chung toàn đơn hàng
+            var monTrongDon = await LayMonTrongDonAsync(request.MaHoaDon);
+            if (monTrongDon.Count == 0)
+            {
+                return BadRequest("Đơn hàng không có món để đánh giá.");
+            }
+
+            // 1. Bản ghi Master: Đánh giá chung toàn đơn hàng (không gắn món)
             var dgChung = new DanhGia
             {
                 MaDanhGia = "DG" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
@@ -223,53 +223,46 @@ namespace RestaurantCRM.API.Controllers
             };
             _service.Add(dgChung);
 
-            // 2. Các bản ghi Detail: CHI_TIET_DANH_GIA cho TỪNG món trong đơn.
-            //    Món khách chấm riêng → lấy sao/nhận xét của khách; món còn lại thừa hưởng số sao chung, không nhận xét.
-            var custom = (request.ChiTietMon ?? new List<DishReviewItemDto>())
-                .Where(m => !string.IsNullOrWhiteSpace(m.MaMon))
-                .GroupBy(m => m.MaMon.Trim())
-                .ToDictionary(g => g.Key, g => g.First());
-
-            var monTrongDon = await LayMonTrongDonAsync(request.MaHoaDon);
-            // Đơn không có dữ liệu món (dữ liệu lạ) → giữ hành vi cũ: dùng danh sách gửi lên
-            var dsMon = monTrongDon.Count > 0 ? monTrongDon : custom.Keys.ToList();
-
-            foreach (var maMon in dsMon)
+            // 2. Các bản ghi Detail: 1 dòng cho mỗi món trong đơn. Món gửi lên không thuộc đơn bị bỏ qua.
+            var chamRieng = GomMonChamRieng(request.ChiTietMon);
+            foreach (var maMon in monTrongDon)
             {
-                int soSaoMon = request.SoSaoChung;
-                string? noiDungMon = null;
-                if (custom.TryGetValue(maMon, out var item))
-                {
-                    soSaoMon = item.SoSao >= 1 && item.SoSao <= 5 ? item.SoSao : request.SoSaoChung;
-                    noiDungMon = !string.IsNullOrWhiteSpace(item.NoiDung) ? item.NoiDung.Trim() : null;
-                }
+                var (soSao, noiDung) = chamRieng.TryGetValue(maMon, out var item)
+                    ? TinhDiemMon(item, request.SoSaoChung)
+                    : (null, null);
 
                 _service.Add(new ChiTietDanhGia
                 {
                     MaChiTietDanhGia = "CT" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                     MaDanhGia = dgChung.MaDanhGia,
                     MaMon = maMon,
-                    SoSao = soSaoMon,
-                    NoiDung = noiDungMon
+                    SoSao = soSao,
+                    NoiDung = noiDung
                 });
             }
 
             await _service.SaveChangesAsync();
 
-            return Ok(new 
-            { 
-                message = "Đánh giá đơn hàng thành công", 
+            return Ok(new
+            {
+                message = "Đánh giá đơn hàng thành công",
                 maDanhGia = dgChung.MaDanhGia
             });
         }
 
         // PUT: api/DanhGia/DonHang - Chỉnh sửa đánh giá của đơn hàng (Master & Detail)
+        // Món có trong ChiTietMon → cập nhật theo lựa chọn của khách; món không gửi kèm → không đánh giá riêng (NULL).
         [HttpPut("DonHang")]
         public async Task<IActionResult> UpdateOrderReviewBatch(UpdateOrderReviewRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.MaHoaDon))
             {
                 return BadRequest("Vui lòng cung cấp mã đơn hàng.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.MaKhachHang))
+            {
+                return BadRequest("Thiếu mã khách hàng.");
             }
 
             if (request.SoSaoChung < 1 || request.SoSaoChung > 5)
@@ -288,71 +281,50 @@ namespace RestaurantCRM.API.Controllers
             }
 
             // Kiểm tra quyền sở hữu
-            if (!string.IsNullOrWhiteSpace(request.MaKhachHang) && !string.IsNullOrWhiteSpace(dg.MaKhachHang)
-                && !string.Equals(dg.MaKhachHang, request.MaKhachHang, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(dg.MaKhachHang, request.MaKhachHang, StringComparison.OrdinalIgnoreCase))
             {
-                return Forbid("Bạn không có quyền chỉnh sửa đánh giá này.");
+                return BadRequest("Bạn không có quyền chỉnh sửa đánh giá này.");
             }
 
-            // 1. Cập nhật bản ghi Master (giữ số sao cũ để nhận biết món đang "thừa hưởng")
-            int? soSaoCu = dg.SoSao;
+            var loiKhach = await KhachHangValidator.KiemTraHoatDongAsync(_service, request.MaKhachHang);
+            if (loiKhach != null) return BadRequest(loiKhach);
+
+            // 1. Cập nhật bản ghi Master (giữ nguyên ngày đánh giá; khách sửa thì nhân viên cần xem lại)
             dg.SoSao = request.SoSaoChung;
             dg.NoiDung = string.IsNullOrWhiteSpace(request.NoiDungChung) ? null : request.NoiDungChung.Trim();
-            dg.NgayDanhGia = DateTime.Now;
+            if (dg.DaXuLy) dg.DaXuLy = false;
 
-            var monTrongDon = await LayMonTrongDonAsync(request.MaHoaDon);
-            var thuocDon = monTrongDon.ToHashSet();
-            var daGui = new HashSet<string>();
-
-            // 2a. Món khách gửi kèm: cập nhật / thêm theo giá trị khách chọn
-            foreach (var item in request.ChiTietMon ?? new List<DishReviewItemDto>())
+            // 2. Từng dòng chi tiết: món gửi kèm → theo khách chọn; món không gửi kèm → không đánh giá riêng
+            var chamRieng = GomMonChamRieng(request.ChiTietMon);
+            foreach (var ct in dg.ChiTietDanhGia)
             {
-                if (string.IsNullOrWhiteSpace(item.MaMon)) continue;
-                var maMon = item.MaMon.Trim();
-                if (thuocDon.Count > 0 && !thuocDon.Contains(maMon)) continue;   // bỏ món không thuộc đơn
-                if (!daGui.Add(maMon)) continue;
-
-                var existingCt = dg.ChiTietDanhGia.FirstOrDefault(ct => ct.MaMon == maMon);
-                int soSaoMon = item.SoSao >= 1 && item.SoSao <= 5 ? item.SoSao : request.SoSaoChung;
-                string? noiDungMon = !string.IsNullOrWhiteSpace(item.NoiDung) ? item.NoiDung.Trim() : null;
-
-                if (existingCt != null)
+                if (chamRieng.TryGetValue(ct.MaMon, out var item))
                 {
-                    existingCt.SoSao = soSaoMon;
-                    existingCt.NoiDung = noiDungMon;
+                    (ct.SoSao, ct.NoiDung) = TinhDiemMon(item, request.SoSaoChung);
                 }
                 else
                 {
-                    _service.Add(new ChiTietDanhGia
-                    {
-                        MaChiTietDanhGia = "CT" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
-                        MaDanhGia = dg.MaDanhGia,
-                        MaMon = maMon,
-                        SoSao = soSaoMon,
-                        NoiDung = noiDungMon
-                    });
+                    ct.SoSao = null;
+                    ct.NoiDung = null;
                 }
             }
 
-            // 2b. Món không gửi kèm, đang thừa hưởng (không nhận xét, sao = sao chung cũ) → đồng bộ theo sao chung mới
-            foreach (var ct in dg.ChiTietDanhGia)
+            // 3. Món trong đơn chưa có dòng chi tiết (đánh giá cũ) → bổ sung
+            var monTrongDon = await LayMonTrongDonAsync(request.MaHoaDon);
+            var daCo = dg.ChiTietDanhGia.Select(ct => ct.MaMon).ToHashSet();
+            foreach (var maMon in monTrongDon.Where(m => !daCo.Contains(m)))
             {
-                if (ct.MaMon == null || daGui.Contains(ct.MaMon)) continue;
-                if (string.IsNullOrWhiteSpace(ct.NoiDung) && ct.SoSao == soSaoCu)
-                    ct.SoSao = request.SoSaoChung;
-            }
+                var (soSao, noiDung) = chamRieng.TryGetValue(maMon, out var item)
+                    ? TinhDiemMon(item, request.SoSaoChung)
+                    : (null, null);
 
-            // 2c. Món trong đơn chưa có dòng chi tiết (đánh giá cũ) → bổ sung với sao chung
-            var daCo = dg.ChiTietDanhGia.Where(ct => ct.MaMon != null).Select(ct => ct.MaMon!).ToHashSet();
-            foreach (var maMon in monTrongDon.Where(m => !daCo.Contains(m) && !daGui.Contains(m)))
-            {
                 _service.Add(new ChiTietDanhGia
                 {
                     MaChiTietDanhGia = "CT" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                     MaDanhGia = dg.MaDanhGia,
                     MaMon = maMon,
-                    SoSao = request.SoSaoChung,
-                    NoiDung = null
+                    SoSao = soSao,
+                    NoiDung = noiDung
                 });
             }
 
@@ -361,42 +333,25 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new { message = "Cập nhật đánh giá thành công" });
         }
 
-        // POST: api/DanhGia - Gửi đánh giá món ăn lẻ
-        [HttpPost]
-        public async Task<IActionResult> CreateDanhGia(ReviewRequest request)
+        /// <summary>Gom các món khách gửi kèm (bỏ mã rỗng; trùng mã thì lấy dòng đầu).</summary>
+        private static Dictionary<string, DishReviewItemDto> GomMonChamRieng(List<DishReviewItemDto>? ds)
         {
-            if (request.SoSao < 1 || request.SoSao > 5)
-            {
-                return BadRequest("Số sao phải từ 1 đến 5.");
-            }
+            return (ds ?? new List<DishReviewItemDto>())
+                .Where(m => !string.IsNullOrWhiteSpace(m.MaMon))
+                .GroupBy(m => m.MaMon.Trim())
+                .ToDictionary(g => g.Key, g => g.First());
+        }
 
-            if (!string.IsNullOrWhiteSpace(request.MaHoaDon))
-            {
-                bool daTonTai = await _service.Query<DanhGia>().AnyAsync(d => 
-                    d.MaHoaDon == request.MaHoaDon && d.MaMon == request.MaMon);
-                if (daTonTai)
-                {
-                    return BadRequest("Món ăn này trong đơn hàng đã được gửi đánh giá trước đó.");
-                }
-            }
-
-            var danhGia = new DanhGia
-            {
-                MaDanhGia = "DG" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
-                MaKhachHang = request.MaKhachHang,
-                MaMon = request.MaMon,
-                MaHoaDon = request.MaHoaDon,
-                SoSao = request.SoSao,
-                NoiDung = request.NoiDung,
-                NgayDanhGia = DateTime.Now,
-                TrangThai = true,
-                DaXuLy = false
-            };
-
-            _service.Add(danhGia);
-            await _service.SaveChangesAsync();
-
-            return Ok(new { message = "Đánh giá thành công", maDanhGia = danhGia.MaDanhGia });
+        /// <summary>
+        /// Quy tắc chấm món: có sao hợp lệ → dùng sao đó; chỉ có nhận xét → lấy sao chung (khách đã có ý kiến về món);
+        /// không có gì → không đánh giá riêng (NULL).
+        /// </summary>
+        private static (int? SoSao, string? NoiDung) TinhDiemMon(DishReviewItemDto item, int soSaoChung)
+        {
+            string? noiDung = string.IsNullOrWhiteSpace(item.NoiDung) ? null : item.NoiDung.Trim();
+            if (item.SoSao is >= 1 and <= 5) return (item.SoSao, noiDung);
+            if (noiDung != null) return (soSaoChung, noiDung);
+            return (null, null);
         }
 
         /// <summary>Danh sách mã món (không trùng) thực sự có trong đơn hàng.</summary>

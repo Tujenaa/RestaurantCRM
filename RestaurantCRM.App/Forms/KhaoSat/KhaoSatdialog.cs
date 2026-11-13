@@ -33,6 +33,12 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly Label _lblError = new Label();
         private string _noteText = "";
         private bool _noteWarn;
+        // Nút bị vô hiệu không tự hiện ToolTip trong WinForms → hiện thủ công khi rê chuột trên vùng nút
+        private readonly ToolTip _tip = new ToolTip { InitialDelay = 200, AutoPopDelay = 8000 };
+        private Control _tipDangHien;
+
+        private const string LyDoDaDong = "Khảo sát đã đóng, không thể sửa nội dung câu hỏi.";
+        private const string LyDoDaCoPhieu = "Khảo sát đã có người trả lời, không thể thêm hoặc sửa câu hỏi, tùy chọn để tránh sai lệch kết quả. Hãy tạo khảo sát mới.";
 
         /// <summary>Mã khảo sát (đã có hoặc vừa tạo).</summary>
         public string MaKhaoSat { get; private set; }
@@ -72,6 +78,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 b.SizeChanged += (s, e) => PlaceToolbar();
             }
             PlaceToolbar();
+            Body.MouseMove += HienTooltipNutKhoa;
+            Body.MouseLeave += (s, e) => { _tip.Hide(Body); _tipDangHien = null; };
+            Disposed += (s, e) => _tip.Dispose();
 
             BuildGrid();
             _grid.SetBounds(L, 172, W, 330);
@@ -157,7 +166,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             if (!coKS)
                 SetNote("Nhấn \"Tạo khảo sát\" để lưu tiêu đề, sau đó thêm câu hỏi ngay trong hộp thoại này.", false);
             else if (_ks.TrangThaiHienThi == "Đã đóng")
-                SetNote("Khảo sát đã đóng: không thêm được câu hỏi mới. Mở lại khảo sát ở danh sách nếu cần thu thêm câu trả lời.", true);
+                SetNote("Khảo sát đã đóng: không thể sửa nội dung câu hỏi. Chỉ còn sửa được tiêu đề.", true);
+            else if (_ks.SoNguoiTraLoi > 0)
+                SetNote("Đã có " + _ks.SoNguoiTraLoi + " phiếu trả lời: không thể thêm / sửa câu hỏi để tránh sai lệch kết quả. Hãy tạo khảo sát mới.", true);
             else if (_ks.TrangThaiHienThi == "Đang mở")
                 SetNote("Khảo sát đang mở (" + _ks.SoNguoiTraLoi + " phiếu). Thay đổi câu hỏi sẽ hiển thị ngay với khách đang trả lời.", true);
             else
@@ -214,10 +225,11 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         {
             bool coKS = _ks != null;
             bool dong = coKS && _ks.TrangThaiHienThi == "Đã đóng";
+            bool coPhieu = coKS && _ks.SoNguoiTraLoi > 0;
             var c = SelectedCauHoi();
-            _btnThemCH.Enabled = coKS && !dong;
-            _btnSuaCH.Enabled = c != null;
-            _btnXoaCH.Enabled = c != null;
+            _btnThemCH.Enabled = coKS && !dong && !coPhieu;
+            _btnSuaCH.Enabled = c != null && !dong && !coPhieu;
+            _btnXoaCH.Enabled = c != null && !dong;   // khảo sát đã có phiếu vẫn được xóa câu hỏi chưa ai trả lời
             _btnXemTruoc.Enabled = coKS;
             _btnDoiTuong.Enabled = coKS;
             _btnDoiTuong.Text = coKS ? "Đối tượng: " + _ks.DoiTuongHienThi.ToLowerInvariant() : "Đối tượng";
@@ -290,10 +302,40 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             }
         }
 
+        /// <summary>Lý do không được thêm / sửa câu hỏi (null nếu được phép).</summary>
+        private string LyDoKhoaSua()
+        {
+            if (_ks == null) return null;
+            if (_ks.TrangThaiHienThi == "Đã đóng") return LyDoDaDong;
+            if (_ks.SoNguoiTraLoi > 0) return LyDoDaCoPhieu;
+            return null;
+        }
+
+        private void HienTooltipNutKhoa(object sender, MouseEventArgs e)
+        {
+            Control nut = null;
+            string lyDo = null;
+            foreach (var b in new Control[] { _btnThemCH, _btnSuaCH, _btnXoaCH })
+            {
+                if (b.Enabled || !b.Visible || !b.Bounds.Contains(e.Location)) continue;
+                lyDo = b == _btnXoaCH
+                    ? (_ks != null && _ks.TrangThaiHienThi == "Đã đóng" ? LyDoDaDong : null)
+                    : LyDoKhoaSua();
+                nut = b;
+                break;
+            }
+            if (lyDo == null) { if (_tipDangHien != null) { _tip.Hide(Body); _tipDangHien = null; } return; }
+            if (_tipDangHien == nut) return;
+            _tipDangHien = nut;
+            _tip.Show(lyDo, Body, nut.Left, nut.Bottom + 4, 6000);
+        }
+
         private async Task SuaCauHoiAsync()
         {
             var c = SelectedCauHoi();
             if (c == null) return;
+            var lyDoKhoa = LyDoKhoaSua();
+            if (lyDoKhoa != null) { Notify.Warn(this, lyDoKhoa, "Không thể sửa"); return; }
             using (var dlg = new CauHoiKhaoSatDialog(MaKhaoSat, c))
             {
                 Notify.ShowDialog(dlg, this);
@@ -309,6 +351,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         {
             var c = SelectedCauHoi();
             if (c == null) return;
+            if (_ks != null && _ks.TrangThaiHienThi == "Đã đóng") { Notify.Warn(this, LyDoDaDong, "Không thể xóa"); return; }
             if (c.DaCoTraLoi)
             {
                 Notify.Warn(this, "Câu hỏi này đã có khách trả lời nên không thể xóa (cần giữ dữ liệu thống kê).", "Không thể xóa");

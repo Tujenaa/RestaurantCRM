@@ -1,3 +1,4 @@
+using RestaurantCRM.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
@@ -254,20 +255,40 @@ public class TaiKhoanController : Controller
             return RedirectToAction(nameof(DangNhap));
         }
 
+        if (!ModelState.IsValid)
+        {
+            var loi = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+            TempData["ThongBao"] = "Cập nhật thất bại: " + (loi ?? "Dữ liệu không hợp lệ.");
+            return RedirectToAction(nameof(Index), new { tab = "profile" });
+        }
+
+        var cleanEmail = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim();
+        var cleanSoDienThoai = string.IsNullOrWhiteSpace(model.SoDienThoai) ? null : model.SoDienThoai.Trim();
+        var cleanGioiTinh = string.IsNullOrWhiteSpace(model.GioiTinh) ? null : model.GioiTinh.Trim();
+
         try
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
             DateOnly? ngaySinh = model.NgaySinh.HasValue ? DateOnly.FromDateTime(model.NgaySinh.Value) : null;
-            var cleanEmail = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim();
-            var cleanGioiTinh = string.IsNullOrWhiteSpace(model.GioiTinh) ? null : (model.GioiTinh.Trim().Length > 10 ? model.GioiTinh.Trim().Substring(0, 10) : model.GioiTinh.Trim());
+
+            // Gửi đủ các trường; địa chỉ lấy từ dữ liệu hiện có của khách trên hệ thống (không lấy từ Session).
+            // Ô nào để trống thì API giữ nguyên giá trị cũ.
+            var hienTai = await LayThongTinHienTaiAsync(client, maKhachHang);
+            if (cleanEmail == null && cleanSoDienThoai == null
+                && string.IsNullOrWhiteSpace(hienTai?.Email) && string.IsNullOrWhiteSpace(hienTai?.SoDienThoai))
+            {
+                TempData["ThongBao"] = "Cập nhật thất bại: Vui lòng nhập ít nhất email hoặc số điện thoại.";
+                return RedirectToAction(nameof(Index), new { tab = "profile" });
+            }
+
             var payload = new
             {
                 HoTen = model.HoTen?.Trim(),
-                SoDienThoai = model.SoDienThoai?.Trim(),
+                SoDienThoai = cleanSoDienThoai,
                 Email = cleanEmail,
                 NgaySinh = ngaySinh,
                 GioiTinh = cleanGioiTinh,
-                DiaChi = HttpContext.Session.GetString("DiaChiGiaoHang") ?? ""
+                DiaChi = hienTai?.DiaChi
             };
 
             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
@@ -276,14 +297,15 @@ public class TaiKhoanController : Controller
             if (response.IsSuccessStatusCode)
             {
                 HttpContext.Session.SetString("HoTen", model.HoTen?.Trim() ?? "");
-                HttpContext.Session.SetString("Email", cleanEmail ?? "");
-                HttpContext.Session.SetString("SoDienThoai", model.SoDienThoai?.Trim() ?? "");
+                if (cleanEmail != null) HttpContext.Session.SetString("Email", cleanEmail);
+                if (cleanSoDienThoai != null) HttpContext.Session.SetString("SoDienThoai", cleanSoDienThoai);
 
                 TempData["ThongBao"] = "🎉 Cập nhật thông tin thành công!";
             }
             else
             {
                 var err = await response.Content.ReadAsStringAsync();
+                if (TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(err)) return this.DangXuatVaVeDangNhap();
                 TempData["ThongBao"] = "Cập nhật thất bại: " + (string.IsNullOrWhiteSpace(err) ? "Lỗi không xác định." : err.Trim('"'));
             }
         }
@@ -343,6 +365,7 @@ public class TaiKhoanController : Controller
             else
             {
                 var err = await response.Content.ReadAsStringAsync();
+                if (TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(err)) return this.DangXuatVaVeDangNhap();
                 TempData["ThongBao"] = "Đổi mật khẩu thất bại: " + (string.IsNullOrWhiteSpace(err) ? "Mật khẩu cũ không chính xác." : err.Trim('"'));
             }
         }
@@ -366,24 +389,64 @@ public class TaiKhoanController : Controller
         }
 
         var cleanAddress = (diaChi ?? "").Trim();
-        HttpContext.Session.SetString("DiaChiGiaoHang", cleanAddress);
+        if (cleanAddress.Length == 0)
+        {
+            TempData["ThongBao"] = "Vui lòng nhập địa chỉ giao hàng.";
+            return RedirectToAction(nameof(Index), new { tab = "addresses" });
+        }
+        if (cleanAddress.Length > 255)
+        {
+            TempData["ThongBao"] = "Địa chỉ giao hàng tối đa 255 ký tự.";
+            return RedirectToAction(nameof(Index), new { tab = "addresses" });
+        }
 
         try
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
-            var payload = new
-            {
-                HoTen = HttpContext.Session.GetString("HoTen"),
-                SoDienThoai = HttpContext.Session.GetString("SoDienThoai"),
-                Email = HttpContext.Session.GetString("Email"),
-                DiaChi = cleanAddress
-            };
+            var payload = new { DiaChi = cleanAddress };
             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            await client.PutAsync($"/api/KhachHang/ThongTin/{Uri.EscapeDataString(maKhachHang)}", content);
-        }
-        catch { }
+            var response = await client.PutAsync($"/api/KhachHang/DiaChi/{Uri.EscapeDataString(maKhachHang)}", content);
 
-        TempData["ThongBao"] = "🎉 Cập nhật địa chỉ giao hàng thành công!";
+            if (response.IsSuccessStatusCode)
+            {
+                HttpContext.Session.SetString("DiaChiGiaoHang", cleanAddress);
+                TempData["ThongBao"] = "🎉 Cập nhật địa chỉ giao hàng thành công!";
+            }
+            else
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                if (TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(err)) return this.DangXuatVaVeDangNhap();
+                TempData["ThongBao"] = "Cập nhật địa chỉ thất bại: " + (string.IsNullOrWhiteSpace(err) ? "Lỗi không xác định." : err.Trim('"'));
+            }
+        }
+        catch (HttpRequestException)
+        {
+            TempData["ThongBao"] = "Không kết nối được đến máy chủ API.";
+        }
+
         return RedirectToAction(nameof(Index), new { tab = "addresses" });
+    }
+
+    private sealed class ThongTinKhachHangApi
+    {
+        public string? Email { get; set; }
+        public string? SoDienThoai { get; set; }
+        public string? DiaChi { get; set; }
+    }
+
+    /// <summary>Lấy thông tin hiện có của khách từ API (null nếu không lấy được).</summary>
+    private static async Task<ThongTinKhachHangApi?> LayThongTinHienTaiAsync(HttpClient client, string maKhachHang)
+    {
+        try
+        {
+            var response = await client.GetAsync($"/api/KhachHang/ThongTin/{Uri.EscapeDataString(maKhachHang)}");
+            if (!response.IsSuccessStatusCode) return null;
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ThongTinKhachHangApi>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 }

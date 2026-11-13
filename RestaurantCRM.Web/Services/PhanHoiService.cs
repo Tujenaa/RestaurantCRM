@@ -111,14 +111,19 @@ public class PhanHoiService
     /// </summary>
     public async Task<(double AverageRating, int ReviewCount)> GetDishRatingSummaryAsync(string maMon)
     {
-        var reviews = await GetByMonAnAsync(maMon);
-        if (reviews == null || reviews.Count == 0)
-        {
-            return (5.0, 0);
-        }
+        return TinhTomTatDiem(await GetByMonAnAsync(maMon));
+    }
 
-        double avg = reviews.Average(r => r.DanhGia);
-        return (Math.Round(avg, 1), reviews.Count);
+    /// <summary>
+    /// Điểm trung bình chỉ tính trên các lượt khách chấm sao riêng cho món; không có lượt nào → (0, 0).
+    /// </summary>
+    public static (double AverageRating, int ReviewCount) TinhTomTatDiem(IEnumerable<PhanHoiItemViewModel>? reviews)
+    {
+        var diem = (reviews ?? Enumerable.Empty<PhanHoiItemViewModel>())
+            .Where(r => r.DanhGia is >= 1 and <= 5)
+            .Select(r => r.DanhGia!.Value)
+            .ToList();
+        return diem.Count == 0 ? (0, 0) : (Math.Round(diem.Average(), 1), diem.Count);
     }
 
     /// <summary>
@@ -226,12 +231,7 @@ public class PhanHoiService
                 MaHoaDon = maHoaDon.Trim(),
                 SoSaoChung = Math.Clamp(orderRating, 1, 5),
                 NoiDungChung = string.IsNullOrWhiteSpace(orderComment) ? null : orderComment.Trim(),
-                ChiTietMon = dishReviews?.Select(d => new
-                {
-                    MaMon = d.MaMon,
-                    SoSao = Math.Clamp(d.DanhGia, 1, 5),
-                    NoiDung = string.IsNullOrWhiteSpace(d.NoiDung) ? null : d.NoiDung.Trim()
-                }).ToList()
+                ChiTietMon = MonChamRieng(dishReviews)
             };
 
             var response = await client.PostAsJsonAsync("/api/DanhGia/DonHang", payload);
@@ -241,7 +241,7 @@ public class PhanHoiService
             }
 
             var errContent = await response.Content.ReadAsStringAsync();
-            return (false, string.IsNullOrWhiteSpace(errContent) ? "Không thể gửi đánh giá. Vui lòng thử lại sau." : errContent);
+            return (false, string.IsNullOrWhiteSpace(errContent) ? "Không thể gửi đánh giá. Vui lòng thử lại sau." : errContent.Trim().Trim('"'));
         }
         catch (Exception ex)
         {
@@ -274,12 +274,7 @@ public class PhanHoiService
                 MaHoaDon = maHoaDon.Trim(),
                 SoSaoChung = Math.Clamp(orderRating, 1, 5),
                 NoiDungChung = string.IsNullOrWhiteSpace(orderComment) ? null : orderComment.Trim(),
-                ChiTietMon = dishReviews?.Select(d => new
-                {
-                    MaMon = d.MaMon,
-                    SoSao = Math.Clamp(d.DanhGia, 1, 5),
-                    NoiDung = string.IsNullOrWhiteSpace(d.NoiDung) ? null : d.NoiDung.Trim()
-                }).ToList()
+                ChiTietMon = MonChamRieng(dishReviews)
             };
 
             var response = await client.PutAsJsonAsync("/api/DanhGia/DonHang", payload);
@@ -289,7 +284,7 @@ public class PhanHoiService
             }
 
             var errContent = await response.Content.ReadAsStringAsync();
-            return (false, string.IsNullOrWhiteSpace(errContent) ? "Không thể cập nhật đánh giá. Vui lòng thử lại sau." : errContent);
+            return (false, string.IsNullOrWhiteSpace(errContent) ? "Không thể cập nhật đánh giá. Vui lòng thử lại sau." : errContent.Trim().Trim('"'));
         }
         catch (Exception ex)
         {
@@ -299,39 +294,20 @@ public class PhanHoiService
     }
 
     /// <summary>
-    /// Thêm đánh giá món ăn
+    /// Chỉ gửi món khách chấm riêng (bấm sao) hoặc có nhận xét. Món chỉ có nhận xét gửi SoSao = null
+    /// để API lấy sao chung; món không gửi → API lưu NULL (không đánh giá riêng).
     /// </summary>
-    public async Task<bool> AddReviewAsync(string maMon, string tenMon, int rating, string noiDung, string? maDonHang = null, string? customerName = null, string? customerId = null)
+    private static List<object> MonChamRieng(List<DishReviewInputItem>? dishReviews)
     {
-        if (string.IsNullOrWhiteSpace(customerId) || string.IsNullOrWhiteSpace(maMon))
-        {
-            return false;
-        }
-
-        try
-        {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var payload = new
+        return (dishReviews ?? new List<DishReviewInputItem>())
+            .Where(d => !string.IsNullOrWhiteSpace(d.MaMon) && (d.ChamRieng || !string.IsNullOrWhiteSpace(d.NoiDung)))
+            .Select(d => (object)new
             {
-                MaKhachHang = customerId.Trim(),
-                MaMon = maMon,
-                MaHoaDon = maDonHang,
-                SoSao = Math.Clamp(rating, 1, 5),
-                NoiDung = noiDung
-            };
-            var response = await client.PostAsJsonAsync("/api/DanhGia", payload);
-            if (response.IsSuccessStatusCode)
-            {
-                _logger.LogInformation("Đã lưu đánh giá {MaMon} lên API thành công.", maMon);
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("Không thể gửi đánh giá lên API ({Message}).", ex.Message);
-        }
-
-        return false;
+                MaMon = d.MaMon,
+                SoSao = d.ChamRieng ? Math.Clamp(d.DanhGia, 1, 5) : (int?)null,
+                NoiDung = string.IsNullOrWhiteSpace(d.NoiDung) ? null : d.NoiDung.Trim()
+            })
+            .ToList();
     }
 
     /// <summary>
@@ -371,7 +347,7 @@ public class PhanHoiService
             TenMon = dto.TenMon ?? (string.IsNullOrEmpty(dto.MaMon) ? "Đánh giá chung đơn hàng" : "Món ngon Lẩu Phố"),
             MaDonHang = dto.MaHoaDon,
             TenKhachHang = dto.TenKhachHang ?? "Khách hàng",
-            DanhGia = dto.SoSao ?? 5,
+            DanhGia = dto.SoSao,
             NoiDung = dto.NoiDung ?? "",
             NgayGui = dto.NgayDanhGia ?? DateTime.Now,
             TraLois = (dto.HoiThoai ?? new List<ApiTraLoiDto>())
@@ -412,7 +388,7 @@ public class PhanHoiService
         public string? MaMon { get; set; }
         public string? TenMon { get; set; }
         public string? DuongDanAnh { get; set; }
-        public int SoSao { get; set; }
+        public int? SoSao { get; set; }
         public string? NoiDung { get; set; }
     }
 

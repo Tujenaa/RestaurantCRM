@@ -22,7 +22,8 @@ public class PhanHoiItemViewModel
     public string? MaDonHang { get; set; }
     public string? MaKhachHang { get; set; }
     public string TenKhachHang { get; set; } = "Khách hàng";
-    public int DanhGia { get; set; }
+    /// <summary>NULL = lượt chỉ có nhận xét món, không chấm sao.</summary>
+    public int? DanhGia { get; set; }
     public string NoiDung { get; set; } = "";
     public DateTime NgayGui { get; set; }
     public List<TraLoiDanhGiaViewModel> TraLois { get; set; } = new();
@@ -33,8 +34,11 @@ public class DishReviewInputItem
     public string MaMon { get; set; } = "";
     public string TenMon { get; set; } = "";
     public string? DuongDanAnh { get; set; }
+    /// <summary>Số sao hiển thị; chỉ có ý nghĩa khi ChamRieng = true.</summary>
     public int DanhGia { get; set; } = 5;
     public string? NoiDung { get; set; }
+    /// <summary>true = khách bấm sao riêng hoặc viết nhận xét cho món; false = món theo điểm chung (lưu NULL).</summary>
+    public bool ChamRieng { get; set; }
 }
 
 public class PhanHoiViewModel
@@ -66,7 +70,8 @@ public class ChiTietMonDanhGiaItemViewModel
     public string MaMon { get; set; } = "";
     public string TenMon { get; set; } = "";
     public string? DuongDanAnh { get; set; }
-    public int SoSao { get; set; }
+    /// <summary>NULL = món không được chấm riêng.</summary>
+    public int? SoSao { get; set; }
     public string? NoiDung { get; set; }
 }
 

@@ -1,3 +1,4 @@
+using RestaurantCRM.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantCRM.Web.Models;
 using RestaurantCRM.Web.Services;
@@ -268,6 +269,11 @@ public class GioHangController : Controller
 
         var orderedItems = cart.ItemsDaChon;
         var result = await _donHangService.CreateOrderAsync(model, orderCustomerId, voucherCode, orderedItems);
+
+        if (!result.Success && TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(result.ErrorMessage))
+        {
+            return this.DangXuatVaVeDangNhap();
+        }
 
         if (!result.Success)
         {

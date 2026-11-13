@@ -101,6 +101,7 @@ namespace RestaurantCRM.API.Controllers
                 khaoSat.NgayTao,
                 khaoSat.MaNhanVien,
                 SoNguoiTraLoi = soPhieu,
+                DaCoPhieu = soPhieu > 0,
                 SoDoiTuong = soDoiTuongKs,
                 CauHoi = SapXep(khaoSat.CauHoiKhaoSat, c => c.MaCauHoi).Select(c => new
                 {
@@ -288,8 +289,8 @@ namespace RestaurantCRM.API.Controllers
             var khaoSat = await _service.FindAsync<KhaoSat>(id);
             if (khaoSat == null)
                 return NotFound("Không tìm thấy khảo sát.");
-            if (khaoSat.TrangThai == DaDong)
-                return BadRequest("Khảo sát đã đóng, không thể thêm câu hỏi.");
+            var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: true);
+            if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
 
             var loi = KiemTraCauHoi(request?.NoiDung, request?.LoaiCauHoi, request?.TuyChons);
             if (loi != null) return BadRequest(loi);
@@ -333,6 +334,9 @@ namespace RestaurantCRM.API.Controllers
             var loi = KiemTraCauHoi(request?.NoiDung, request?.LoaiCauHoi, request?.TuyChons);
             if (loi != null) return BadRequest(loi);
 
+            var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: false);
+            if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
+
             var loaiMoi = ChuanHoaLoai(request!.LoaiCauHoi)!;
             var loaiCu = ChuanHoaLoai(cauHoi.LoaiCauHoi);
             bool daCoTraLoi = await _service.Query<CauTraLoi>().AnyAsync(ct => ct.MaCauHoi == cauHoiId);
@@ -340,6 +344,16 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Câu hỏi đã có người trả lời nên không thể đổi loại câu hỏi.");
 
             var giuLai = loaiMoi == TracNghiem ? LamSachTuyChon(request.TuyChons) : new List<string>();
+
+            // Khảo sát đã có phiếu: không được sửa nội dung câu hỏi hay thêm tùy chọn mới
+            // (vẫn được bỏ tùy chọn chưa ai chọn — đã kiểm tra bên dưới).
+            bool doiNoiDung = (cauHoi.NoiDungCauHoi ?? "").Trim() != request.NoiDung!.Trim();
+            bool themTuyChon = giuLai.Any(t => !cauHoi.TuyChonCauHoi.Any(x => (x.NoiDungTuyChon ?? "").Trim() == t));
+            if (doiNoiDung || themTuyChon)
+            {
+                lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: true);
+                if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
+            }
             var canXoa = cauHoi.TuyChonCauHoi.Where(t => !giuLai.Contains((t.NoiDungTuyChon ?? "").Trim())).ToList();
             if (canXoa.Count > 0)
             {
@@ -380,6 +394,9 @@ namespace RestaurantCRM.API.Controllers
             if (cauHoi == null)
                 return NotFound("Không tìm thấy câu hỏi.");
 
+            var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: false);
+            if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
+
             bool daCoCauTraLoi = await _service.Query<CauTraLoi>().AnyAsync(ct => ct.MaCauHoi == cauHoiId);
             if (daCoCauTraLoi)
                 return BadRequest("Câu hỏi này đã có câu trả lời, không thể xóa.");
@@ -403,6 +420,9 @@ namespace RestaurantCRM.API.Controllers
 
             if (cauHoi == null)
                 return NotFound("Không tìm thấy câu hỏi.");
+
+            var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: true);
+            if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
 
             if (ChuanHoaLoai(cauHoi.LoaiCauHoi) == TuLuan)
                 return BadRequest("Câu hỏi tự luận không cần tùy chọn.");
@@ -441,6 +461,9 @@ namespace RestaurantCRM.API.Controllers
             if (tuyChon == null)
                 return NotFound("Không tìm thấy tùy chọn.");
 
+            var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: true);
+            if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
+
             if (request == null || string.IsNullOrWhiteSpace(request.NoiDungTuyChon))
                 return BadRequest("Nội dung tùy chọn không được để trống.");
             if (request.NoiDungTuyChon.Trim().Length > 255)
@@ -465,6 +488,9 @@ namespace RestaurantCRM.API.Controllers
                 .FirstOrDefaultAsync(t => t.MaTuyChon == tuyChonId && t.MaCauHoi == cauHoiId);
             if (tuyChon == null)
                 return NotFound("Không tìm thấy tùy chọn.");
+
+            var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: false);
+            if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
 
             bool daCoLuaChon = await _service.Query<CauTraLoi>()
                 .AnyAsync(ct => ct.MaTuyChon == tuyChonId);
@@ -631,6 +657,26 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // ── Hàm hỗ trợ ───────────────────────────────────────────────────────
+
+        private const string ThongBaoDaDong = "Khảo sát đã đóng, không thể sửa nội dung.";
+        private const string ThongBaoDaCoPhieu = "Khảo sát đã có người trả lời, không thể sửa nội dung để tránh sai lệch kết quả. Hãy tạo khảo sát mới.";
+
+        /// <summary>
+        /// Lý do không được sửa nội dung khảo sát (câu hỏi / tùy chọn), hoặc null nếu được sửa.
+        /// Khảo sát đã đóng: chặn mọi thao tác. Khảo sát đã có phiếu: chỉ chặn khi <paramref name="chanKhiCoPhieu"/> = true
+        /// (thêm câu hỏi, sửa nội dung câu hỏi, thêm / sửa tùy chọn).
+        /// </summary>
+        private async Task<string?> LyDoKhoaNoiDungAsync(string maKhaoSat, bool chanKhiCoPhieu)
+        {
+            var trangThai = await _service.Query<KhaoSat>()
+                .Where(k => k.MaKhaoSat == maKhaoSat)
+                .Select(k => k.TrangThai)
+                .FirstOrDefaultAsync();
+            if (ChuanHoaTrangThai(trangThai) == DaDong) return ThongBaoDaDong;
+            if (chanKhiCoPhieu && await _service.Query<PhieuTraLoi>().AnyAsync(p => p.MaKhaoSat == maKhaoSat))
+                return ThongBaoDaCoPhieu;
+            return null;
+        }
 
         /// <summary>Quy đổi trạng thái về giá trị hợp lệ của CSDL (Draft / Open / Closed).</summary>
         public static string? ChuanHoaTrangThai(string? s) => AdminKhaoSatService.ChuanHoaTrangThai(s);

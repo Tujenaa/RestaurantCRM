@@ -80,14 +80,16 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _dishes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             _dishes.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "TenMon", HeaderText = "Món ăn", FillWeight = 180 });
-            _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Luot", HeaderText = "Lượt", FillWeight = 45, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
-            _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Diem", HeaderText = "Điểm TB", FillWeight = 55, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
+            _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Luot", HeaderText = "Lượt chấm riêng / Lượt trong đơn", FillWeight = 95, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
+            _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Diem", HeaderText = "Điểm TB (chấm riêng)", FillWeight = 80, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
+            _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "DiemDon", HeaderText = "Điểm theo đơn", FillWeight = 60, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
             _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao1", HeaderText = "1 sao", FillWeight = 45, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
             _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao2", HeaderText = "2 sao", FillWeight = 45, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
             _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao3", HeaderText = "3 sao", FillWeight = 45, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
             _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao4", HeaderText = "4 sao", FillWeight = 45, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
             _dishes.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao5", HeaderText = "5 sao", FillWeight = 45, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
             UiStyler.StyleGrid(_dishes);
+            _dishes.CellFormatting += DishesCellFormatting;
             root.Controls.Add(_dishes);
 
             _commentsTitle.Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold);
@@ -174,9 +176,10 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             var filtered = _data.Where(mon =>
             {
                 if (!UiStyler.MatchesSearch(q, mon.TenMon, mon.MaMon)) return false;
+                // Lọc theo điểm chỉ xét món đủ dữ liệu chấm riêng
                 double avg = mon.DiemTrungBinh ?? 0;
-                if (filterIdx == 1 && avg < 4.0) return false;
-                if (filterIdx == 2 && (avg <= 0 || avg >= 3.5)) return false;
+                if (filterIdx == 1 && (!mon.DuDuLieu || avg < 4.0)) return false;
+                if (filterIdx == 2 && (!mon.DuDuLieu || avg <= 0 || avg >= 3.5)) return false;
                 if (filterIdx == 3 && (mon.SoSao1 + mon.SoSao2) <= 0) return false;
                 return true;
             }).ToList();
@@ -186,16 +189,18 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             {
                 int row = _dishes.Rows.Add(
                     mon.TenMon ?? mon.MaMon ?? "Món ăn",
-                    mon.SoLuotDanhGia,
-                    mon.DiemTrungBinh.HasValue ? mon.DiemTrungBinh.Value.ToString("0.00") + " / 5" : "—",
+                    mon.SoLuotChamRieng + " / " + mon.SoLuotTrongDon,
+                    !mon.DuDuLieu ? "Chưa đủ dữ liệu"
+                        : mon.DiemTrungBinh.HasValue ? mon.DiemTrungBinh.Value.ToString("0.00") + " / 5" : "—",
+                    mon.DiemTheoDon.HasValue ? mon.DiemTheoDon.Value.ToString("0.00") + " / 5" : "—",
                     mon.SoSao1, mon.SoSao2, mon.SoSao3, mon.SoSao4, mon.SoSao5);
                 _dishes.Rows[row].Tag = mon;
             }
 
-            int tong = filtered.Sum(x => x.SoLuotDanhGia);
+            int tong = filtered.Sum(x => x.SoLuotChamRieng);
             _summary.Text = _data.Count == 0
                 ? "Chưa có đánh giá nào gắn với món ăn."
-                : $"Hiển thị {filtered.Count}/{_data.Count} món · {tong:N0} lượt đánh giá";
+                : $"Hiển thị {filtered.Count}/{_data.Count} món · {tong:N0} lượt chấm riêng";
 
             if (_dishes.Rows.Count > 0)
             {
@@ -210,6 +215,31 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 _emptyComments.Text = "Không có món ăn nào khớp bộ lọc.";
                 _emptyComments.Visible = true;
                 _emptyComments.BringToFront();
+            }
+        }
+
+        private Font _fontDam;
+
+        /// <summary>Chỉ tô đỏ món đủ dữ liệu và bị chấm thấp (≤ 2 sao); món chưa đủ dữ liệu hiển thị chữ xám.</summary>
+        private void DishesCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+            var mon = _dishes.Rows[e.RowIndex].Tag as PhanTichDanhGiaMonDto;
+            if (mon == null) return;
+            string col = _dishes.Columns[e.ColumnIndex].Name;
+            if (mon.DuDuLieu && mon.DiemTrungBinh.HasValue && mon.DiemTrungBinh.Value <= 2)
+            {
+                e.CellStyle.ForeColor = ThemeManager.Red;
+                e.CellStyle.SelectionForeColor = ThemeManager.Red;
+                if (col == "TenMon" || col == "Diem")
+                {
+                    if (_fontDam == null) _fontDam = new Font(_dishes.Font, FontStyle.Bold);
+                    e.CellStyle.Font = _fontDam;
+                }
+            }
+            else if (!mon.DuDuLieu && col == "Diem")
+            {
+                e.CellStyle.ForeColor = ThemeManager.Muted;
             }
         }
 

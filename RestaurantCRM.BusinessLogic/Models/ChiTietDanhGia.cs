@@ -10,7 +10,8 @@ public partial class ChiTietDanhGia
 
     public string MaMon { get; set; } = null!;
 
-    public int SoSao { get; set; }
+    /// <summary>NULL = khách không đánh giá riêng món này.</summary>
+    public int? SoSao { get; set; }
 
     public string? NoiDung { get; set; }
 

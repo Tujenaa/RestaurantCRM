@@ -37,7 +37,18 @@ namespace RestaurantCRM.API.Controllers
                 .Where(k => k.TrangThai == "Open")
                 .OrderByDescending(k => k.NgayTao)
                 .ToListAsync();
-            var khaoSat = dsMo.FirstOrDefault(k => DuocThamGia(k, maKhachHang));
+
+            // Bỏ qua khảo sát khách đã nộp phiếu, chỉ trả khảo sát khách chưa làm
+            var daLam = new HashSet<string>();
+            if (!string.IsNullOrEmpty(maKhachHang))
+            {
+                daLam = (await _service.Query<PhieuTraLoi>()
+                        .Where(p => p.MaKhachHang == maKhachHang && p.MaKhaoSat != null)
+                        .Select(p => p.MaKhaoSat!)
+                        .ToListAsync())
+                    .ToHashSet();
+            }
+            var khaoSat = dsMo.FirstOrDefault(k => DuocThamGia(k, maKhachHang) && !daLam.Contains(k.MaKhaoSat));
 
             if (khaoSat == null)
             {
@@ -73,8 +84,13 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Thông tin khảo sát hoặc khách hàng không hợp lệ.");
             }
 
+            var loiKhach = await KhachHangValidator.KiemTraHoatDongAsync(_service, request.MaKhachHang);
+            if (loiKhach != null) return BadRequest(loiKhach);
+
             var khaoSat = await _service.Query<KhaoSat>()
                 .Include(k => k.DoiTuongKhaoSat)
+                .Include(k => k.CauHoiKhaoSat)
+                    .ThenInclude(c => c.TuyChonCauHoi)
                 .FirstOrDefaultAsync(k => k.MaKhaoSat == request.MaKhaoSat && k.TrangThai == "Open");
             if (khaoSat == null)
             {
@@ -88,6 +104,11 @@ namespace RestaurantCRM.API.Controllers
             var daGui = await _service.Query<PhieuTraLoi>()
             .AnyAsync(p => p.MaKhaoSat == request.MaKhaoSat && p.MaKhachHang == request.MaKhachHang);
             if (daGui) return BadRequest("Bạn đã hoàn thành khảo sát này rồi.");
+
+            // Kiểm tra toàn bộ câu trả lời trước khi lưu; sai ở đâu thì không lưu gì
+            var (loiTraLoi, cauTraLois) = KiemTraCauTraLoi(khaoSat, request.Answers);
+            if (loiTraLoi != null) return BadRequest(loiTraLoi);
+
             var phieuTraLoi = new PhieuTraLoi
             {
                 MaPhieuTraLoi = "PTL" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
@@ -98,20 +119,16 @@ namespace RestaurantCRM.API.Controllers
 
             _service.Add(phieuTraLoi);
 
-            if (request.Answers != null && request.Answers.Any())
+            foreach (var (maCauHoi, maTuyChon, noiDung) in cauTraLois)
             {
-                foreach (var answer in request.Answers)
+                _service.Add(new CauTraLoi
                 {
-                    var cauTraLoi = new CauTraLoi
-                    {
-                        MaCauTraLoi = "CTL" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
-                        MaPhieuTraLoi = phieuTraLoi.MaPhieuTraLoi,
-                        MaCauHoi = answer.MaCauHoi,
-                        MaTuyChon = answer.MaTuyChon,
-                        NoiDungTuDien = answer.NoiDungTuDien
-                    };
-                    _service.Add(cauTraLoi);
-                }
+                    MaCauTraLoi = "CTL" + Guid.NewGuid().ToString().Substring(0, 7).ToUpper(),
+                    MaPhieuTraLoi = phieuTraLoi.MaPhieuTraLoi,
+                    MaCauHoi = maCauHoi,
+                    MaTuyChon = maTuyChon,
+                    NoiDungTuDien = noiDung
+                });
             }
 
             // Đánh dấu hoàn thành đối tượng khảo sát nếu khách hàng có trong danh sách
@@ -124,6 +141,60 @@ namespace RestaurantCRM.API.Controllers
             await _service.SaveChangesAsync();
 
             return Ok(new { message = "Gửi phản hồi thành công" });
+        }
+
+        private const int DoDaiTuLuanToiDa = 2000;
+
+        /// <summary>
+        /// Kiểm tra phiếu trả lời. Trả về lỗi đầu tiên, hoặc danh sách dòng CAU_TRA_LOI cần lưu.
+        /// Trắc nghiệm: bắt buộc, tùy chọn phải thuộc đúng câu hỏi, bỏ qua nội dung tự điền.
+        /// Tự luận: không có tùy chọn, trim, tối đa 2000 ký tự; để trống thì không lưu dòng.
+        /// </summary>
+        private static (string? Loi, List<(string MaCauHoi, string? MaTuyChon, string? NoiDung)> CauTraLois)
+            KiemTraCauTraLoi(KhaoSat khaoSat, List<AnswerItem>? answers)
+        {
+            var ketQua = new List<(string, string?, string?)>();
+            if (answers == null || answers.Count == 0)
+                return ("Vui lòng trả lời các câu hỏi của khảo sát.", ketQua);
+
+            var cauHois = khaoSat.CauHoiKhaoSat.ToDictionary(c => c.MaCauHoi);
+            var daTraLoi = new HashSet<string>();
+
+            foreach (var answer in answers)
+            {
+                var maCauHoi = answer?.MaCauHoi?.Trim();
+                if (string.IsNullOrEmpty(maCauHoi) || !cauHois.TryGetValue(maCauHoi, out var cauHoi))
+                    return ("Câu trả lời không thuộc khảo sát này.", ketQua);
+                if (!daTraLoi.Add(maCauHoi))
+                    return ($"Câu hỏi \"{cauHoi.NoiDungCauHoi}\" bị trả lời trùng.", ketQua);
+
+                var maTuyChon = string.IsNullOrWhiteSpace(answer!.MaTuyChon) ? null : answer.MaTuyChon.Trim();
+                if (AdminKhaoSatService.ChuanHoaLoai(cauHoi.LoaiCauHoi) == AdminKhaoSatService.TracNghiem)
+                {
+                    if (maTuyChon == null)
+                        return ($"Vui lòng chọn đáp án cho câu hỏi \"{cauHoi.NoiDungCauHoi}\".", ketQua);
+                    if (!cauHoi.TuyChonCauHoi.Any(t => t.MaTuyChon == maTuyChon))
+                        return ($"Đáp án không hợp lệ cho câu hỏi \"{cauHoi.NoiDungCauHoi}\".", ketQua);
+                    ketQua.Add((maCauHoi, maTuyChon, null));
+                }
+                else
+                {
+                    if (maTuyChon != null)
+                        return ($"Câu hỏi \"{cauHoi.NoiDungCauHoi}\" là câu tự luận, không có lựa chọn.", ketQua);
+                    var noiDung = answer.NoiDungTuDien?.Trim();
+                    if (noiDung?.Length > DoDaiTuLuanToiDa)
+                        return ($"Câu trả lời cho \"{cauHoi.NoiDungCauHoi}\" tối đa {DoDaiTuLuanToiDa} ký tự.", ketQua);
+                    if (!string.IsNullOrEmpty(noiDung))
+                        ketQua.Add((maCauHoi, null, noiDung));
+                }
+            }
+
+            var thieu = cauHois.Values.FirstOrDefault(c =>
+                AdminKhaoSatService.ChuanHoaLoai(c.LoaiCauHoi) == AdminKhaoSatService.TracNghiem && !daTraLoi.Contains(c.MaCauHoi));
+            if (thieu != null)
+                return ($"Vui lòng trả lời câu hỏi \"{thieu.NoiDungCauHoi}\".", ketQua);
+
+            return (null, ketQua);
         }
         // GET: api/KhaoSat/DanhSach?maKhachHang=KH01
         [HttpGet("DanhSach")]

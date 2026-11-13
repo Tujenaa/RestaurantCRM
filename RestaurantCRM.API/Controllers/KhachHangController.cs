@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
 using RestaurantCRM.API.Helpers;
+using RestaurantCRM.API.Services;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -26,11 +27,20 @@ namespace RestaurantCRM.API.Controllers
         [HttpPost("DangKy")]
         public async Task<IActionResult> DangKy(RegisterRequest request)
         {
-            if (await _service.Query<KhachHang>().AnyAsync(k => k.Email == request.Email && !string.IsNullOrEmpty(request.Email)))
+            var email = KhachHangValidator.ChuanHoa(request.Email);
+            var sdt = KhachHangValidator.ChuanHoa(request.SoDienThoai);
+            var gioiTinh = KhachHangValidator.ChuanHoa(request.GioiTinh);
+
+            var loi = KhachHangValidator.KiemTraDuLieu(request.HoTen, sdt, email, request.NgaySinh, gioiTinh, null, batBuocHoTen: true)
+                      ?? KhachHangValidator.KiemTraLienHe(sdt, email)
+                      ?? KhachHangValidator.KiemTraMatKhau(request.MatKhau);
+            if (loi != null) return BadRequest(loi);
+
+            if (email != null && await _service.Query<KhachHang>().AnyAsync(k => k.Email == email))
             {
                 return BadRequest("Email đã được sử dụng.");
             }
-            if (await _service.Query<KhachHang>().AnyAsync(k => k.SoDienThoai == request.SoDienThoai && !string.IsNullOrEmpty(request.SoDienThoai)))
+            if (sdt != null && await _service.Query<KhachHang>().AnyAsync(k => k.SoDienThoai == sdt))
             {
                 return BadRequest("Số điện thoại đã được sử dụng.");
             }
@@ -40,11 +50,11 @@ namespace RestaurantCRM.API.Controllers
             var khachHang = new KhachHang
             {
                 MaKhachHang = newMaKhachHang,
-                HoTen = request.HoTen,
-                SoDienThoai = request.SoDienThoai,
-                Email = request.Email,
+                HoTen = request.HoTen.Trim(),
+                SoDienThoai = sdt,
+                Email = email,
                 NgaySinh = request.NgaySinh,
-                GioiTinh = string.IsNullOrWhiteSpace(request.GioiTinh) ? null : (request.GioiTinh.Trim().Length > 10 ? request.GioiTinh.Trim().Substring(0, 10) : request.GioiTinh.Trim()),
+                GioiTinh = gioiTinh,
                 MatKhau = BCrypt.Net.BCrypt.HashPassword(request.MatKhau),
                 TrangThai = "Active"
             };
@@ -136,16 +146,12 @@ namespace RestaurantCRM.API.Controllers
 
         // PUT: api/KhachHang/ThongTin/{id} - Cập nhật thông tin cá nhân khách hàng
         [HttpPut("ThongTin/{id}")]
+        // Cập nhật từng phần: HoTen bắt buộc; SoDienThoai, Email, NgaySinh, GioiTinh, DiaChi để trống thì giữ giá trị cũ.
+        // Sau khi gộp với dữ liệu cũ phải còn ít nhất email hoặc số điện thoại.
         public async Task<IActionResult> CapNhatThongTin(string id, UpdateProfileRequest request)
         {
-            if (!string.IsNullOrEmpty(request.Email) && await _service.Query<KhachHang>().AnyAsync(k => k.Email == request.Email && k.MaKhachHang != id))
-            {
-                return BadRequest("Email đã được sử dụng bởi người khác.");
-            }
-            if (!string.IsNullOrEmpty(request.SoDienThoai) && await _service.Query<KhachHang>().AnyAsync(k => k.SoDienThoai == request.SoDienThoai && k.MaKhachHang != id))
-            {
-                return BadRequest("Số điện thoại đã được sử dụng bởi người khác.");
-            }
+            var loiTrangThai = await KhachHangValidator.KiemTraHoatDongAsync(_service, id);
+            if (loiTrangThai != null) return BadRequest(loiTrangThai);
 
             var khachHang = await _service.FindAsync<KhachHang>(id);
             if (khachHang == null)
@@ -153,22 +159,73 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy thông tin khách hàng.");
             }
 
-            khachHang.HoTen = request.HoTen;
-            khachHang.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
-            khachHang.SoDienThoai = request.SoDienThoai;
-            khachHang.NgaySinh = request.NgaySinh;
-            khachHang.GioiTinh = string.IsNullOrWhiteSpace(request.GioiTinh) ? null : (request.GioiTinh.Length > 10 ? request.GioiTinh.Substring(0, 10) : request.GioiTinh);
-            khachHang.DiaChi = request.DiaChi;
+            var hoTen = KhachHangValidator.ChuanHoa(request.HoTen);
+            var soDienThoai = KhachHangValidator.ChuanHoa(request.SoDienThoai) ?? khachHang.SoDienThoai;
+            var email = KhachHangValidator.ChuanHoa(request.Email) ?? khachHang.Email;
+            var ngaySinh = request.NgaySinh ?? khachHang.NgaySinh;
+            var gioiTinh = KhachHangValidator.ChuanHoa(request.GioiTinh) ?? khachHang.GioiTinh;
+            var diaChi = KhachHangValidator.ChuanHoa(request.DiaChi) ?? khachHang.DiaChi;
+
+            var loi = KhachHangValidator.KiemTraDuLieu(hoTen, soDienThoai, email, request.NgaySinh,
+                          KhachHangValidator.ChuanHoa(request.GioiTinh), null, batBuocHoTen: true)
+                      ?? KhachHangValidator.KiemTraLienHe(soDienThoai, email);
+            if (loi != null) return BadRequest(loi);
+            if (diaChi?.Length > 255) return BadRequest("Địa chỉ tối đa 255 ký tự.");
+
+            if (email != null && await _service.Query<KhachHang>().AnyAsync(k => k.Email == email && k.MaKhachHang != id))
+            {
+                return BadRequest("Email đã được sử dụng bởi người khác.");
+            }
+            if (soDienThoai != null && await _service.Query<KhachHang>().AnyAsync(k => k.SoDienThoai == soDienThoai && k.MaKhachHang != id))
+            {
+                return BadRequest("Số điện thoại đã được sử dụng bởi người khác.");
+            }
+
+            khachHang.HoTen = hoTen;
+            khachHang.SoDienThoai = soDienThoai;
+            khachHang.Email = email;
+            khachHang.NgaySinh = ngaySinh;
+            khachHang.GioiTinh = gioiTinh;
+            khachHang.DiaChi = diaChi;
 
             await _service.SaveChangesAsync();
 
             return Ok("Cập nhật thông tin thành công.");
         }
 
+        // PUT: api/KhachHang/DiaChi/{id} - Chỉ cập nhật địa chỉ giao hàng
+        [HttpPut("DiaChi/{id}")]
+        public async Task<IActionResult> CapNhatDiaChi(string id, UpdateAddressRequest request)
+        {
+            var diaChi = request.DiaChi?.Trim();
+            if (string.IsNullOrEmpty(diaChi)) return BadRequest("Vui lòng nhập địa chỉ.");
+            if (diaChi.Length > 255) return BadRequest("Địa chỉ tối đa 255 ký tự.");
+
+            var loiTrangThai = await KhachHangValidator.KiemTraHoatDongAsync(_service, id);
+            if (loiTrangThai != null) return BadRequest(loiTrangThai);
+
+            var khachHang = await _service.FindAsync<KhachHang>(id);
+            if (khachHang == null)
+            {
+                return NotFound("Không tìm thấy thông tin khách hàng.");
+            }
+
+            khachHang.DiaChi = diaChi;
+            await _service.SaveChangesAsync();
+
+            return Ok("Cập nhật địa chỉ thành công.");
+        }
+
         // PUT: api/KhachHang/DoiMatKhau/{id} - Đổi mật khẩu
         [HttpPut("DoiMatKhau/{id}")]
         public async Task<IActionResult> DoiMatKhau(string id, ChangePasswordRequest request)
         {
+            var loiTrangThai = await KhachHangValidator.KiemTraHoatDongAsync(_service, id);
+            if (loiTrangThai != null) return BadRequest(loiTrangThai);
+
+            var loiMatKhau = KhachHangValidator.KiemTraMatKhau(request.MatKhauMoi);
+            if (loiMatKhau != null) return BadRequest("Mật khẩu mới phải có tối thiểu 6 ký tự.");
+
             var khachHang = await _service.FindAsync<KhachHang>(id);
             if (khachHang == null)
             {

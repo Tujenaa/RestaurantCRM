@@ -51,12 +51,12 @@
 }
 
 <div style="max-width:780px; margin:0 auto 40px; display:flex; flex-direction:column; gap:20px;">
-    <!-- Thẻ mức độ hài lòng chung -->
+    <!-- Thẻ mức độ hài lòng về đơn hàng -->
     <div class="panel" style="background:#ffffff; border:1px solid var(--line); border-radius:16px; padding:24px 28px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
             <div>
                 <span style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">
-                    Mức độ hài lòng chung
+                    Mức độ hài lòng về đơn hàng
                 </span>
                 <div style="font-size:17px; font-weight:750; color:var(--ink); margin-top:2px;">
                     Đơn hàng #@Model.MaHoaDon
@@ -114,10 +114,17 @@
                                 </div>
                             </div>
                             <div style="text-align:right; flex-shrink:0;">
-                                <div style="color:#f59e0b; font-size:18px; letter-spacing:2px;">
-                                    @String.Concat(Enumerable.Repeat("★", dish.SoSao))@String.Concat(Enumerable.Repeat("☆", 5 - dish.SoSao))
-                                </div>
-                                <span style="font-weight:700; color:#b45309; font-size:12px;">@dish.SoSao★</span>
+                                @if (dish.SoSao.HasValue)
+                                {
+                                    <div style="color:#f59e0b; font-size:18px; letter-spacing:2px;">
+                                        @String.Concat(Enumerable.Repeat("★", dish.SoSao.Value))@String.Concat(Enumerable.Repeat("☆", 5 - dish.SoSao.Value))
+                                    </div>
+                                    <span style="font-weight:700; color:#b45309; font-size:12px;">@dish.SoSao★</span>
+                                }
+                                else
+                                {
+                                    <span style="font-weight:600; color:var(--muted); font-size:12.5px;">— không đánh giá riêng</span>
+                                }
                             </div>
                         </div>
 
@@ -127,7 +134,7 @@
                                 @dish.NoiDung
                             </div>
                         }
-                        else
+                        else if (dish.SoSao.HasValue)
                         {
                             <div style="margin-top:6px; font-size:12.5px; color:var(--muted); font-style:italic;">
                                 (Chấm @dish.SoSao★ · Không có nhận xét văn bản)

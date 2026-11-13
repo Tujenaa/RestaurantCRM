@@ -62,7 +62,7 @@
             <span asp-validation-for="MaDonHang" class="validation" style="color:#d32f2f; font-size:12px;"></span>
         </div>
 
-        <!-- Mức độ hài lòng chung -->
+        <!-- Mức độ hài lòng về đơn hàng -->
         <div style="margin-bottom:24px; text-align:center; padding:20px; background:#faf7f5; border-radius:14px; border:1px solid #f5ebe6;">
             <label style="font-weight:700; display:block; margin-bottom:10px; font-size:15px; color:var(--ink);">
                 Bạn cảm thấy đơn hàng này như thế nào?
@@ -89,64 +89,8 @@
             <span asp-validation-for="NoiDung" class="validation" style="color:#d32f2f; font-size:12px;"></span>
         </div>
 
-        <!-- Đánh giá từng món ăn trong đơn (nếu có) -->
-        @if (dishes.Count > 0)
-        {
-            <div style="margin-bottom:26px; border-top:1px solid var(--line); padding-top:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                    <div>
-                        <strong style="font-size:14.5px; color:var(--ink); display:block;">Đánh giá món ăn trong đơn</strong>
-                        <small style="color:var(--muted); font-size:12.5px;">Mặc định theo số sao chung — bấm sao của món để chấm riêng (không bắt buộc)</small>
-                    </div>
-                    <span style="font-size:12px; font-weight:700; color:var(--muted);">@dishes.Count món</span>
-                </div>
-
-                <div style="display:flex; flex-direction:column; gap:12px;">
-                    @for (var i = 0; i < dishes.Count; i++)
-                    {
-                        var item = dishes[i];
-                        <div style="background:#fafafa; border:1px solid var(--line); border-radius:12px; padding:12px 16px;">
-                            <input type="hidden" name="ChiTietMonDanhGia[@i].MaMon" value="@item.MaMon" />
-                            <input type="hidden" name="ChiTietMonDanhGia[@i].TenMon" value="@item.TenMon" />
-                            <input type="hidden" name="ChiTietMonDanhGia[@i].DuongDanAnh" value="@item.DuongDanAnh" />
-                            <input type="hidden" name="ChiTietMonDanhGia[@i].DanhGia" id="dish_rating_val_@i" value="@item.DanhGia" />
-
-                            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
-                                <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-                                    @if (!string.IsNullOrEmpty(item.DuongDanAnh))
-                                    {
-                                        <img src="@item.DuongDanAnh" alt="@item.TenMon" style="width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" />
-                                    }
-                                    <span style="font-size:14px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                        @item.TenMon
-                                    </span>
-                                </div>
-
-                                <!-- Rating sao từng món -->
-                                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                                    <div class="dish-stars" data-index="@i" data-manual="@(item.DanhGia != Model.DanhGia ? "true" : "false")" style="display:inline-flex; gap:2px; font-size:22px; cursor:pointer;">
-                                        @for (var s = 1; s <= 5; s++)
-                                        {
-                                            <button type="button" class="dish-star-btn @(s <= item.DanhGia ? "on" : "")" data-dish-index="@i" data-rating="@s" style="background:none; border:none; cursor:pointer; font-size:22px; line-height:1; padding:0; color:@(s <= item.DanhGia ? "#f59e0b" : "#d1d5db");">★</button>
-                                        }
-                                    </div>
-                                    <span id="dish_rating_lbl_@i" style="font-weight:700; color:#b45309; font-size:12.5px; min-width:32px; text-align:right;">@item.DanhGia★</span>
-                                </div>
-                            </div>
-
-                            <!-- Ô nhập nhận xét riêng cho từng món -->
-                            <div style="margin-top:10px;">
-                                <input type="text"
-                                       name="ChiTietMonDanhGia[@i].NoiDung"
-                                       value="@item.NoiDung"
-                                       placeholder="Nhận xét hương vị, cách chế biến món @item.TenMon (không bắt buộc)..."
-                                       style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px; background:#ffffff; font-family:inherit; box-sizing:border-box;" />
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
+        <!-- Đánh giá từng món ăn trong đơn (không bắt buộc) -->
+        <partial name="_ChamMonTrongDon" model="dishes" />
 
         <div style="display:flex; gap:12px; align-items:center; padding-top:8px;">
             <button class="btn" type="submit" style="flex:1; padding:13px; font-size:15px; font-weight:700; border-radius:10px;">
@@ -161,6 +105,7 @@
 
 @section Scripts {
     <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
+    <script src="~/js/cham-mon.js" asp-append-version="true"></script>
     <script>
         const ratingLabels = {
             1: 'Rất không hài lòng',
@@ -173,29 +118,6 @@
         const stars = document.querySelectorAll('#ratingStars button');
         const hiddenInput = document.getElementById('DanhGia');
         const label = document.getElementById('ratingLabel');
-
-        // Cập nhật sao, nhãn và input ẩn của một món
-        function setDishRating(container, rating) {
-            const dishIndex = container.getAttribute('data-index');
-            const valInput = document.getElementById('dish_rating_val_' + dishIndex);
-            const lbl = document.getElementById('dish_rating_lbl_' + dishIndex);
-            if (valInput) valInput.value = rating;
-            if (lbl) lbl.textContent = rating + '★';
-            container.querySelectorAll('.dish-star-btn').forEach((b, idx) => {
-                if (idx < rating) {
-                    b.style.color = '#f59e0b';
-                    b.classList.add('on');
-                } else {
-                    b.style.color = '#d1d5db';
-                    b.classList.remove('on');
-                }
-            });
-        }
-
-        // Món chưa được chấm tay sẽ đi theo số sao chung
-        function syncDishesWithOrder(val) {
-            document.querySelectorAll('.dish-stars[data-manual="false"]').forEach(c => setDishRating(c, val));
-        }
 
         stars.forEach(star => {
             star.addEventListener('click', function () {
@@ -213,22 +135,9 @@
                         s.classList.remove('on');
                     }
                 });
-                syncDishesWithOrder(val);
+                if (window.ChamMon) window.ChamMon.dongBoTheoDiemChung(val);
             });
         });
 
-        // Bấm sao của món → món đó được chấm riêng, không đồng bộ theo sao chung nữa
-        document.querySelectorAll('.dish-star-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const container = this.closest('.dish-stars');
-                if (!container) return;
-                container.setAttribute('data-manual', 'true');
-                setDishRating(container, parseInt(this.getAttribute('data-rating')));
-            });
-        });
-
-        // Khi trang tải (kể cả hiển thị lại sau lỗi): các món đi theo sao chung hiện tại
-        const initialRating = parseInt(hiddenInput.value);
-        if (initialRating >= 1 && initialRating <= 5) syncDishesWithOrder(initialRating);
     </script>
 }

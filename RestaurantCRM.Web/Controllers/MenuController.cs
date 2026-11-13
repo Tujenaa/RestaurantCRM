@@ -146,13 +146,19 @@ public class MenuController : Controller
 
         // Lấy danh sách đánh giá thực tế và số sao trung bình của món
         var reviews = await _phanHoiService.GetByMonAnAsync(id);
-        var summary = await _phanHoiService.GetDishRatingSummaryAsync(id);
+        var summary = PhanHoiService.TinhTomTatDiem(reviews);
         dish.DiemDanhGiaTrungBinh = summary.AverageRating;
         dish.SoLuongDanhGia = summary.ReviewCount;
 
         // Get related dishes in the same category
         var related = await _monAnService.GetAllAsync(dish.MaLoaiMon);
         var filteredRelated = related.Where(d => d.ConHang && !string.Equals(d.MaMon, id, StringComparison.OrdinalIgnoreCase)).Take(4).ToList();
+        foreach (var d in filteredRelated)
+        {
+            var tomTat = await _phanHoiService.GetDishRatingSummaryAsync(d.MaMon);
+            d.DiemDanhGiaTrungBinh = tomTat.AverageRating;
+            d.SoLuongDanhGia = tomTat.ReviewCount;
+        }
 
         var viewModel = new MonAnChiTietViewModel
         {
@@ -177,6 +183,10 @@ public class MenuController : Controller
         {
             return NotFound();
         }
+
+        var summary = await _phanHoiService.GetDishRatingSummaryAsync(id);
+        dish.DiemDanhGiaTrungBinh = summary.AverageRating;
+        dish.SoLuongDanhGia = summary.ReviewCount;
 
         return PartialView("_MonAnQuickView", dish);
     }
