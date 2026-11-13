@@ -313,6 +313,9 @@ footer{background:#2a1a12;color:#d9c6b4;padding:46px 22px 26px}.footer-inner{max
 .btn-submit-cart{flex:1.5;padding:14px 24px;font-size:15px;font-weight:800;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 24px rgba(184,70,27,0.25)}
 .btn-outline-cart{flex:1;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;font-weight:700;font-size:14px;display:grid;place-items:center;text-decoration:none;transition:all .15s}
 .btn-outline-cart:hover{border-color:var(--red);color:var(--red)}
+.dish-back-row{margin-top:12px}
+.dish-back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;font-weight:600;text-decoration:none;transition:color .15s}
+.dish-back-link:hover{color:var(--ink)}
 .dish-out-of-stock-card{display:flex;gap:16px;background:#fff1e3;border:1px solid #f6d5b8;border-radius:16px;padding:20px;margin-bottom:28px}
 .dish-out-of-stock-card h4{margin:0 0 6px;font-size:16px;color:#b8461b}
 .dish-out-of-stock-card p{margin:0 0 14px;font-size:13px;color:#795548}

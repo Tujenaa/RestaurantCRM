@@ -168,6 +168,10 @@
                                 Xem giỏ hàng
                             </a>
                         </div>
+
+                        <div class="dish-back-row">
+                            <a href="@Url.Action("Index", "Menu", new { loai = dish.MaLoaiMon })" class="dish-back-link js-dish-back">← Quay lại</a>
+                        </div>
                     </form>
                 }
                 else
@@ -191,6 +195,10 @@
                             <a asp-controller="Menu" asp-action="Index" class="btn btn-outline-cart">
                                 Xem các món khác
                             </a>
+                        </div>
+
+                        <div class="dish-back-row">
+                            <a href="@Url.Action("Index", "Menu", new { loai = dish.MaLoaiMon })" class="dish-back-link js-dish-back">← Quay lại</a>
                         </div>
                     </div>
                 }
@@ -338,6 +346,19 @@
 
 @section Scripts {
     <script>
+        // Nút "Quay lại": về đúng trang vừa xem (giữ bộ lọc, trang, vị trí cuộn).
+        // Nếu mở trực tiếp (tab mới/bookmark) thì dùng href dự phòng về Thực đơn theo danh mục.
+        document.querySelectorAll('.js-dish-back').forEach(function(back) {
+            back.addEventListener('click', function(e) {
+                var sameOrigin = false;
+                try { sameOrigin = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (err) {}
+                if (sameOrigin && history.length > 1) {
+                    e.preventDefault();
+                    history.back();
+                }
+            });
+        });
+
         (function() {
             const unitPrice = @((dish.DonGiaSauGiam > 0 && dish.DonGiaSauGiam < dish.DonGia) ? dish.DonGiaSauGiam : dish.DonGia);
             const maxQuantity = @dish.SoLuong;

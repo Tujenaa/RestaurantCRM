@@ -460,7 +460,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
         }
 
         private async Task CheckoutAsync()
-        {
+        { 
             if (_cartService.DistinctCount == 0)
             {
                 MessageBox.Show(this, "Vui lòng chọn ít nhất một món ăn vào giỏ hàng.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
