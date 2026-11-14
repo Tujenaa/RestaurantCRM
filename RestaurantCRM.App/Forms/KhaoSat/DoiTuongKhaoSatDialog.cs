@@ -181,7 +181,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             {
                 var tKhach = _khService.GetAllAsync();
                 var tDoiTuong = _service.GetDoiTuongAsync(_maKhaoSat);
-                await Task.WhenAll(tKhach, tDoiTuong);
+                var tDaTraLoi = _service.GetNguoiDaTraLoiAsync(_maKhaoSat);
+                await Task.WhenAll(tKhach, tDoiTuong, tDaTraLoi);
                 if (IsDisposed) return;
 
                 var doiTuong = tDoiTuong.Result;
@@ -193,7 +194,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 {
                     if (string.IsNullOrEmpty(d.MaKhachHang)) continue;
                     _chon[d.MaKhachHang] = true;
-                    if (d.DaHoanThanh) _daTraLoi.Add(d.MaKhachHang);
+                }
+                // Người đã nộp phiếu lấy từ PHIEU_TRA_LOI (kể cả khi khảo sát đang công khai):
+                // luôn được chọn sẵn và khóa ô, không thể bỏ khỏi danh sách đối tượng
+                foreach (var ma in tDaTraLoi.Result)
+                {
+                    if (string.IsNullOrEmpty(ma) || !_chon.ContainsKey(ma)) continue;
+                    _daTraLoi.Add(ma);
+                    _chon[ma] = true;
                 }
 
                 _rendering = true;
@@ -203,7 +211,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             }
             catch (ApiException ex)
             {
-                if (!IsDisposed) { _lblError.Text = ex.Message; _lblCount.Text = ""; }
+                if (!IsDisposed) { BaoLoi(ex.Message); _lblCount.Text = ""; }
             }
             finally
             {
@@ -260,17 +268,36 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
         private void ApDungTieuChi()
         {
-            int n = 0;
+            int n = 0, giuThem = 0;
             foreach (var k in _khach)
             {
-                bool chon = KhopTieuChi(k) || _daTraLoi.Contains(k.MaKhachHang);
+                bool khop = KhopTieuChi(k);
+                bool daTraLoi = _daTraLoi.Contains(k.MaKhachHang);
+                bool chon = khop || daTraLoi;
                 _chon[k.MaKhachHang] = chon;
                 if (chon) n++;
+                if (!khop && daTraLoi) giuThem++;
             }
             _tieuChiDaApDung = true;
             _txtSearch.Text = "";
             Render();
-            _lblError.Text = n == 0 ? "Không có khách hàng nào thỏa tiêu chí." : "";
+            if (n == 0) BaoLoi("Không có khách hàng nào thỏa tiêu chí.");
+            else if (giuThem > 0) BaoTin($"Đã giữ thêm {giuThem} khách đã trả lời khảo sát dù không khớp tiêu chí.");
+            else _lblError.Text = "";
+        }
+
+        /// <summary>Hiện lỗi (chữ đỏ) trên nhãn thông báo.</summary>
+        private void BaoLoi(string text)
+        {
+            _lblError.ForeColor = ThemeManager.Red;
+            _lblError.Text = text;
+        }
+
+        /// <summary>Hiện thông tin (không phải lỗi) trên nhãn thông báo.</summary>
+        private void BaoTin(string text)
+        {
+            _lblError.ForeColor = ThemeManager.Primary;
+            _lblError.Text = text;
         }
 
         /// <summary>Khách hiển thị: theo ô tìm (hỗ trợ không dấu); ẩn khách bị khóa trừ khi đã được chọn.</summary>
@@ -355,9 +382,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 ds = _chon.Where(p => p.Value).Select(p => p.Key).ToList();
                 if (ds.Count == 0)
                 {
-                    _lblError.Text = _rdTieuChi.Checked
+                    BaoLoi(_rdTieuChi.Checked
                         ? "Không có khách hàng nào thỏa tiêu chí. Hãy đổi tiêu chí hoặc chọn \"Tất cả khách hàng\"."
-                        : "Hãy chọn ít nhất một khách hàng, hoặc chọn \"Tất cả khách hàng\".";
+                        : "Hãy chọn ít nhất một khách hàng, hoặc chọn \"Tất cả khách hàng\".");
                     return;
                 }
             }
@@ -366,7 +393,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             var r = await _service.SetDoiTuongAsync(_maKhaoSat, ds);
             if (IsDisposed) return;
             SetBusy(false);
-            if (!r.Success) { _lblError.Text = r.Message; return; }
+            if (!r.Success) { BaoLoi(r.Message); return; }
 
             DataChanged = true;
             SoDoiTuong = ds.Count;

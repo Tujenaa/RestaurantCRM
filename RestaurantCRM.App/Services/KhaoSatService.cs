@@ -97,6 +97,12 @@ namespace RestaurantCRM.AdminApp.Services
             return await GetAsync<List<DoiTuongKhaoSatDto>>(Base + "/" + E(maKhaoSat) + "/DoiTuong") ?? new List<DoiTuongKhaoSatDto>();
         }
 
+        /// <summary>Mã các khách đã nộp phiếu (kể cả khi khảo sát đang công khai).</summary>
+        public async Task<List<string>> GetNguoiDaTraLoiAsync(string maKhaoSat)
+        {
+            return await GetAsync<List<string>>(Base + "/" + E(maKhaoSat) + "/NguoiDaTraLoi") ?? new List<string>();
+        }
+
         /// <param name="maKhachHangs">Danh sách khách được mời; rỗng = tất cả khách hàng.</param>
         public Task<ApiResult> SetDoiTuongAsync(string maKhaoSat, IEnumerable<string> maKhachHangs)
         {

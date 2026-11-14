@@ -539,6 +539,22 @@ namespace RestaurantCRM.API.Controllers
             }));
         }
 
+        // GET: api/AdminKhaoSat/{id}/NguoiDaTraLoi - Mã các khách đã nộp phiếu (lấy từ PHIEU_TRA_LOI, kể cả khi khảo sát công khai)
+        [HttpGet("{id}/NguoiDaTraLoi")]
+        public async Task<IActionResult> GetNguoiDaTraLoi(string id)
+        {
+            if (!await _service.Query<KhaoSat>().AnyAsync(k => k.MaKhaoSat == id))
+                return NotFound("Không tìm thấy khảo sát.");
+
+            var ds = await _service.Query<PhieuTraLoi>()
+                .Where(p => p.MaKhaoSat == id && p.MaKhachHang != null)
+                .Select(p => p.MaKhachHang!)
+                .Distinct()
+                .ToListAsync();
+
+            return Ok(ds);
+        }
+
         // PUT: api/AdminKhaoSat/{id}/DoiTuong - Thay toàn bộ danh sách đối tượng. Danh sách rỗng = tất cả khách hàng.
         [HttpPut("{id}/DoiTuong")]
         public async Task<IActionResult> SetDoiTuong(string id, [FromBody] DoiTuongUpdateRequest request)
@@ -567,18 +583,26 @@ namespace RestaurantCRM.API.Controllers
                 .Select(p => p.MaKhachHang!)
                 .ToListAsync()).ToHashSet();
 
-            var hienCo = await _service.Query<DoiTuongKhaoSat>()
-                .Include(d => d.MaKhachHangNavigation)
-                .Where(d => d.MaKhaoSat == id)
-                .ToListAsync();
-
-            // Chỉ áp dụng khi đang giới hạn đối tượng: không được bỏ khách đã trả lời
+            // Danh sách giới hạn phải bao gồm mọi khách đã nộp phiếu. Kiểm tra trên phiếu thật (không dựa vào
+            // DOI_TUONG hiện có) để chặn cả trường hợp chuyển từ công khai sang giới hạn.
             if (hopLe.Count > 0)
             {
-                var biBo = hienCo.FirstOrDefault(d => d.MaKhachHang != null && !hopLe.Contains(d.MaKhachHang) && daTraLoi.Contains(d.MaKhachHang));
-                if (biBo != null)
-                    return BadRequest($"Khách hàng \"{biBo.MaKhachHangNavigation?.HoTen ?? biBo.MaKhachHang}\" đã trả lời khảo sát, không thể bỏ khỏi danh sách đối tượng.");
+                var thieu = daTraLoi.Where(m => !hopLe.Contains(m)).OrderBy(m => m).ToList();
+                if (thieu.Count > 0)
+                {
+                    var viDu = thieu.Take(3).ToList();
+                    var tenViDu = await _service.Query<KhachHang>()
+                        .Where(k => viDu.Contains(k.MaKhachHang))
+                        .Select(k => k.HoTen ?? k.MaKhachHang)
+                        .ToListAsync();
+                    return BadRequest($"Có {thieu.Count} khách đã trả lời khảo sát nhưng không nằm trong danh sách mới " +
+                                      $"(ví dụ: {string.Join(", ", tenViDu)}). Danh sách đối tượng phải bao gồm tất cả người đã trả lời.");
+                }
             }
+
+            var hienCo = await _service.Query<DoiTuongKhaoSat>()
+                .Where(d => d.MaKhaoSat == id)
+                .ToListAsync();
 
             var canXoa = hienCo.Where(d => d.MaKhachHang == null || !hopLe.Contains(d.MaKhachHang)).ToList();
             _service.RemoveRange(canXoa);
