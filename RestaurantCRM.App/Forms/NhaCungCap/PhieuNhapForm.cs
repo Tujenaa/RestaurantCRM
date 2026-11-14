@@ -285,7 +285,7 @@ namespace RestaurantCRM.AdminApp.Forms.NhaCungCap
                 return;
             }
             string ma = item.MaPhieuNhap;
-            if (ma == _sideMa) return;   // đang hiển thị (hoặc đang tải) đúng phiếu này rồi
+            if (ma == _sideMa) return;   // Hiển thị (hoặc đang tải) đúng phiếu này rồi
             _sideMa = ma;
 
             PhieuNhapDto detail;

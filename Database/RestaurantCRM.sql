@@ -242,9 +242,11 @@ CREATE TABLE DANH_GIA (
     maMon VARCHAR(20) FOREIGN KEY REFERENCES MON_AN(maMon),
     soSao INT,
     noiDung NVARCHAR(MAX),
-    ngayDanhGia DATETIME,
+    ngayDanhGia DATETIME,                                              -- lần gửi đầu tiên, không đổi; thống kê theo thời gian dùng cột này
+    ngayCapNhat DATETIME NULL,                                         -- lần khách sửa gần nhất; NULL = chưa từng sửa
     trangThai BIT NOT NULL CONSTRAINT DF_DANH_GIA_trangThai DEFAULT 1,  -- 1 = hiển thị, 0 = ẩn
-    daXuLy BIT NOT NULL CONSTRAINT DF_DANH_GIA_daXuLy DEFAULT 0       -- 1 = nhân viên đã xử lý (đã xem / đã trả lời)
+    daXuLy BIT NOT NULL CONSTRAINT DF_DANH_GIA_daXuLy DEFAULT 0,      -- 1 = nhân viên đã xử lý (đã xem / đã trả lời)
+    CONSTRAINT CK_DANH_GIA_ngayCapNhat CHECK (ngayCapNhat IS NULL OR ngayCapNhat >= ngayDanhGia)
 );
 
 -- Mỗi đơn hàng chỉ có 1 đánh giá (chặn gửi trùng khi bấm 2 lần)

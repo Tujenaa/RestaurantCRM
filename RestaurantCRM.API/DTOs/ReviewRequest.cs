@@ -49,6 +49,8 @@ namespace RestaurantCRM.API.DTOs
         public int SoSaoChung { get; set; }
         public string? NoiDungChung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
+        /// <summary>Lần khách sửa gần nhất; null = chưa từng sửa.</summary>
+        public DateTime? NgayCapNhat { get; set; }
         public List<DishReviewDetailItemDto> ChiTietMon { get; set; } = new();
         public List<ReviewReplyDetailDto> HoiThoai { get; set; } = new();
     }

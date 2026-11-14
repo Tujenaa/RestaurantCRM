@@ -18,6 +18,7 @@ GO
 -- Quy mô: 24 khách hàng, 92 hóa đơn (440 dòng chi tiết), 58 đánh giá
 -- (277 dòng chi tiết đánh giá, trong đó 102 món được chấm riêng), 29 câu trả lời đánh giá,
 -- 7 khảo sát (30 câu hỏi, 78 đối tượng, 56 phiếu trả lời).
+-- 3 đánh giá đã được khách sửa (DG052, DG053, DG054 – DG054 sửa sau khi nhà hàng trả lời).
 --
 -- Quy ước dữ liệu:
 --  * Khuyến mãi theo món / theo loại: giảm mỗi đơn vị = MIN(đơn giá x %, giamToiDa);
@@ -1830,6 +1831,15 @@ INSERT INTO TRA_LOI_DANH_GIA (maTraLoi, maDanhGia, maNhanVien, noiDung, ngayGui)
 ('TL028','DG048','NV05',N'Cảm ơn anh/chị đã ủng hộ nhà hàng. Hẹn gặp lại anh/chị ở đơn tiếp theo!','2026-08-24T15:37:00'),
 ('TL029','DG051','NV05',N'Cảm ơn anh/chị đã góp ý, nhà hàng đã ghi nhận và sẽ cải thiện chất lượng món ăn.','2026-09-24T02:28:00'),
 ('TL030','DG054','NV15',N'Nhà hàng xin ghi nhận phản hồi và sẽ rà soát lại thời gian giao hàng.','2026-10-20T10:53:00');
+GO
+
+-- Khách sửa đánh giá (ngayCapNhat = lần sửa gần nhất; ngayDanhGia giữ nguyên lần gửi đầu)
+--   DG052: đã sửa, chưa có trả lời (chờ xử lý)
+--   DG053: đã sửa, nhân viên đã đánh dấu xử lý
+--   DG054: khách sửa SAU khi nhà hàng trả lời (TL030 lúc 20/10 10:53) → quay lại hàng chờ
+UPDATE DANH_GIA SET ngayCapNhat = '2026-10-02T09:10:00' WHERE maDanhGia = 'DG052';
+UPDATE DANH_GIA SET ngayCapNhat = '2026-10-05T10:00:00' WHERE maDanhGia = 'DG053';
+UPDATE DANH_GIA SET ngayCapNhat = '2026-10-22T19:40:00', daXuLy = 0 WHERE maDanhGia = 'DG054';
 GO
 
 -- 8. Khảo sát (KS006: nháp, KS007: đang mở cho tất cả khách, chưa có phiếu)

@@ -18,7 +18,9 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
         public int? SoSao { get; set; }
         public string NoiDung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
-        /// <summary>true = đang hiển thị trên website, false = đã ẩn.</summary>
+        /// <summary>Lần khách sửa đánh giá gần nhất; null = chưa từng sửa.</summary>
+        public DateTime? NgayCapNhat { get; set; }
+        /// <summary>true = Hiển thị trên website, false = đã ẩn.</summary>
         public bool HienThi { get; set; }
         public string TenKhachHang { get; set; }
         public string SoDienThoai { get; set; }
@@ -38,8 +40,36 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
 
         public bool DaTraLoi { get { return TongSoTraLoi > 0 || (HoiThoai != null && HoiThoai.Count > 0); } }
         public bool LaDaXuLy { get { return DaXuLy; } }
-        /// <summary>Chỉ còn 2 trạng thái xử lý; ẩn/hiện trên website là thông tin riêng.</summary>
-        public string TrangThaiHienThi { get { return LaDaXuLy ? "Đã xử lý" : "Chưa xử lý"; } }
+
+        /// <summary>Khách đã sửa đánh giá.</summary>
+        public bool DaChinhSua { get { return NgayCapNhat.HasValue; } }
+        /// <summary>Lần trả lời (gửi hoặc sửa) gần nhất của nhà hàng.</summary>
+        public DateTime? NgayTraLoiCuoi
+        {
+            get { return HoiThoai == null ? null : HoiThoai.Where(t => t.NgayGui.HasValue).Select(t => t.NgayGui).DefaultIfEmpty(null).Max(); }
+        }
+        /// <summary>Khách sửa đánh giá sau lần trả lời gần nhất của nhà hàng (so ngày, không suy từ DaXuLy).</summary>
+        public bool SuaSauPhanHoi
+        {
+            get { var tl = NgayTraLoiCuoi; return NgayCapNhat.HasValue && tl.HasValue && NgayCapNhat.Value > tl.Value; }
+        }
+        /// <summary>Hoạt động mới nhất của khách: lần sửa, nếu chưa sửa thì lần gửi.</summary>
+        public DateTime? NgayHoatDong { get { return NgayCapNhat ?? NgayDanhGia; } }
+
+        /// <summary>
+        /// Trạng thái xử lý suy ra từ dữ liệu: Đã xử lý / Cần xem lại (khách sửa sau phản hồi) / Chưa xử lý.
+        /// Ẩn/hiện trên website là thông tin riêng.
+        /// </summary>
+        public string TrangThaiHienThi
+        {
+            get
+            {
+                // Gọn 3 trạng thái: "đã sửa" xem ở cột Ngày gửi (✎), "chưa trả lời" xem ở khung chi tiết / bộ lọc Loại
+                if (LaDaXuLy) return "Đã xử lý";
+                if (SuaSauPhanHoi) return "Cần xem lại";   // khách sửa sau khi nhà hàng trả lời
+                return "Chưa xử lý";
+            }
+        }
         public string DoiTuong { get { return string.IsNullOrWhiteSpace(TenMon) ? (string.IsNullOrWhiteSpace(MaHoaDon) ? "Dịch vụ chung" : "Đơn " + MaHoaDon) : TenMon; } }
     }
 

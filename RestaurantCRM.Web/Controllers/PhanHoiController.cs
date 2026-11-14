@@ -284,7 +284,8 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
 
         if (result.Success)
         {
-            TempData["ThongBao"] = $"Cập nhật đánh giá cho đơn hàng #{model.MaDonHang} thành công!";
+            // "Đã cập nhật đánh giá" hoặc "Không có thay đổi" (theo API)
+            TempData["ThongBao"] = result.Message;
             return RedirectToAction(nameof(ChiTiet), new { maHoaDon = model.MaDonHang });
         }
         if (TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(result.Message))

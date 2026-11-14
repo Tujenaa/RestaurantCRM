@@ -19,6 +19,9 @@ public partial class DanhGia
 
     public DateTime? NgayDanhGia { get; set; }
 
+    /// <summary>Lần khách sửa đánh giá gần nhất; null = chưa từng sửa. Thao tác của nhân viên không đổi cột này.</summary>
+    public DateTime? NgayCapNhat { get; set; }
+
     public bool TrangThai { get; set; } = true;
 
     /// <summary>Nhân viên đã xử lý phản hồi (bấm "Đã xem" hoặc đã trả lời).</summary>

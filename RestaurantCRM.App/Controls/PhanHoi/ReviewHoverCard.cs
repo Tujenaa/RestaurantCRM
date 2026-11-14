@@ -158,6 +158,7 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             if (_shown && rowIndex == _shownRow) return;
             _title.Text = review.DoiTuong;
             _meta.Text = "Ngày gửi: " + (review.NgayDanhGia.HasValue ? review.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—")
+                + (review.NgayCapNhat.HasValue ? "  ·  Đã sửa " + review.NgayCapNhat.Value.ToString("dd/MM HH:mm") : "")
                 + (review.ChiTietMon != null && review.ChiTietMon.Count > 0
                     ? "  ·  " + review.ChiTietMon.Count + " món"
                       + MoTaChamRieng(review.ChiTietMon)
@@ -168,7 +169,7 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             _stars.Text = new string('★', stars) + new string('☆', 5 - stars)
                 + (review.SoSao.HasValue ? "  " + review.SoSao.Value + " / 5" : "  Chưa có số sao");
             _comment.Text = string.IsNullOrWhiteSpace(review.NoiDung) ? "(Khách chỉ chấm sao, không để lại nội dung)" : review.NoiDung;
-            _state.Text = review.HienThi ? "ĐANG HIỂN THỊ" : "ĐÃ ẨN";
+            _state.Text = review.HienThi ? "Hiển thị" : "ĐÃ ẨN";
             _state.ForeColor = review.HienThi ? ThemeManager.Green : ThemeManager.Muted;
             _state.BackColor = review.HienThi ? ThemeManager.GreenSoft : ThemeManager.Surface2;
 

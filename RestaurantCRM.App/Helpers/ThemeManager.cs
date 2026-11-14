@@ -152,7 +152,8 @@ namespace RestaurantCRM.AdminApp.Helpers
             // Thứ tự kiểm tra quan trọng: "sắp hết hàng" phải ra vàng trước khi khớp "hết hàng" (đỏ)
             string[] amber = { "sắp", "chờ", "pending", "chuẩn bị", "preparing", "nháp", "draft", "chưa", "lowstock", "low stock", "tạm dừng" };
             string[] red = { "hủy", "huỷ", "cancel", "hết hàng", "đã hết", "hết nl", "outofstock", "out of stock", "hethang", "khóa", "ngừng", "ngưng",
-                             "đóng", "closed", "inactive", "ẩn", "hết hạn", "expired", "từ chối", "kết thúc", "discontinued", "thất bại", "lỗi" };
+                             "đóng", "closed", "inactive", "ẩn", "hết hạn", "expired", "từ chối", "kết thúc", "discontinued", "thất bại", "lỗi",
+                             "cần xem lại" };
             string[] blue = { "đang giao", "delivering", "đang phục vụ", "xác nhận", "confirmed", "đang xử lý", "processing", "mới" };
             string[] green = { "hoàn thành", "completed", "active", "hoạt động", "đang diễn ra", "còn hàng", "instock", "in stock", "đã thanh toán",
                                "đã duyệt", "hiển thị", "đang bán", "còn món", "mở", "đã giao", "đủ hàng", "còn đủ", "kích hoạt", "sẵn sàng",

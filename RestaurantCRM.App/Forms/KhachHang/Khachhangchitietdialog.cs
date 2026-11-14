@@ -173,7 +173,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                     string.IsNullOrWhiteSpace(d.TenMon) ? "Đánh giá dịch vụ" : d.TenMon,
                     stars > 0 ? new string('★', stars) + " " + stars + "/5" : "—",
                     string.IsNullOrWhiteSpace(d.NoiDung) ? "(Không có nhận xét bằng chữ)" : d.NoiDung,
-                    d.HienThi ? "Đang hiển thị" : "Đã ẩn");
+                    d.HienThi ? "Hiển thị" : "Đã ẩn");
             }
             _historyTabs.TabPages[1].Text = "Đánh giá (" + reviews.Count + ")";
             _emptyRatings.Visible = reviews.Count == 0;

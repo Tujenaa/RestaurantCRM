@@ -179,6 +179,7 @@ public class PhanHoiService
                         SoSaoChung = dto.SoSaoChung,
                         NoiDungChung = dto.NoiDungChung,
                         NgayDanhGia = dto.NgayDanhGia,
+                        NgayCapNhat = dto.NgayCapNhat,
                         ChiTietMon = (dto.ChiTietMon ?? new()).Select(ct => new ChiTietMonDanhGiaItemViewModel
                         {
                             MaChiTietDanhGia = ct.MaChiTietDanhGia ?? "",
@@ -280,7 +281,9 @@ public class PhanHoiService
             var response = await client.PutAsJsonAsync("/api/DanhGia/DonHang", payload);
             if (response.IsSuccessStatusCode)
             {
-                return (true, "Cập nhật đánh giá thành công!");
+                // API trả "Đã cập nhật đánh giá" hoặc "Không có thay đổi" (bấm Lưu mà không sửa gì)
+                var ketQua = await response.Content.ReadFromJsonAsync<ApiCapNhatDto>();
+                return (true, string.IsNullOrWhiteSpace(ketQua?.message) ? "Đã cập nhật đánh giá" : ketQua.message);
             }
 
             var errContent = await response.Content.ReadAsStringAsync();
@@ -350,6 +353,7 @@ public class PhanHoiService
             DanhGia = dto.SoSao,
             NoiDung = dto.NoiDung ?? "",
             NgayGui = dto.NgayDanhGia ?? DateTime.Now,
+            NgayCapNhat = dto.NgayCapNhat,
             TraLois = (dto.HoiThoai ?? new List<ApiTraLoiDto>())
                 .OrderByDescending(t => t.NgayGui ?? DateTime.MinValue)
                 .Select(t => new TraLoiDanhGiaViewModel
@@ -361,6 +365,12 @@ public class PhanHoiService
                     NgayGui = t.NgayGui ?? DateTime.Now
                 }).ToList()
         };
+    }
+
+    private class ApiCapNhatDto
+    {
+        public string? message { get; set; }
+        public bool coThayDoi { get; set; }
     }
 
     private class ApiKiemTraDto
@@ -378,6 +388,7 @@ public class PhanHoiService
         public int SoSaoChung { get; set; }
         public string? NoiDungChung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
+        public DateTime? NgayCapNhat { get; set; }
         public List<ApiDishReviewDetailDto>? ChiTietMon { get; set; }
         public List<ApiTraLoiDto>? HoiThoai { get; set; }
     }
@@ -401,6 +412,7 @@ public class PhanHoiService
         public int? SoSao { get; set; }
         public string? NoiDung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
+        public DateTime? NgayCapNhat { get; set; }
         public string? TenKhachHang { get; set; }
         public List<ApiTraLoiDto>? HoiThoai { get; set; }
     }

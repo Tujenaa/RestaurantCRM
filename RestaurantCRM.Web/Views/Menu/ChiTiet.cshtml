@@ -283,7 +283,8 @@
                                         </div>
                                         <div>
                                             <strong style="font-size:14.5px; display:block;">@review.TenKhachHang</strong>
-                                            <small class="muted" style="font-size:12px;">Đã dùng bữa · @review.NgayGui.ToString("dd/MM/yyyy · HH:mm")</small>
+                                            <small class="muted" style="font-size:12px;">Đã dùng bữa · @review.NgayGui.ToString("dd/MM/yyyy · HH:mm")@if (review.NgayCapNhat.HasValue)
+                                            {<text> <span title="Khách đã chỉnh sửa lúc @review.NgayCapNhat.Value.ToString("dd/MM/yyyy HH:mm")">(đã chỉnh sửa)</span></text>}</small>
                                         </div>
                                     </div>
                                     @if (review.DanhGia.HasValue)
@@ -318,7 +319,7 @@
                                                         <strong style="color:@(reply.NguoiGui == "NhanVien" ? "#1d4ed8" : "#334155");">
                                                             @(reply.NguoiGui == "NhanVien" ? reply.NguoiTraLoi + " (Nhà hàng)" : reply.NguoiTraLoi)
                                                         </strong>
-                                                        <span class="muted" style="font-size:11px;">@reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")</span>
+                                                        <span class="muted" style="font-size:11px;">Phản hồi lúc @reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")</span>
                                                     </div>
                                                     <div style="color:#1e293b; line-height:1.45;">@reply.NoiDung</div>
                                                 </div>

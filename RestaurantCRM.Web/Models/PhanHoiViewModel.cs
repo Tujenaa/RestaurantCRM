@@ -26,6 +26,8 @@ public class PhanHoiItemViewModel
     public int? DanhGia { get; set; }
     public string NoiDung { get; set; } = "";
     public DateTime NgayGui { get; set; }
+    /// <summary>Lần khách sửa đánh giá gần nhất; null = chưa sửa.</summary>
+    public DateTime? NgayCapNhat { get; set; }
     public List<TraLoiDanhGiaViewModel> TraLois { get; set; } = new();
 }
 
@@ -86,6 +88,8 @@ public class ChiTietDanhGiaDonHangViewModel
     public string? NoiDungChung { get; set; }
     public DateTime? NgayDanhGia { get; set; }
     public DateTime? NgayGui { get => NgayDanhGia; set => NgayDanhGia = value; }
+    /// <summary>Lần khách sửa đánh giá gần nhất; null = chưa sửa.</summary>
+    public DateTime? NgayCapNhat { get; set; }
     public List<ChiTietMonDanhGiaItemViewModel> ChiTietMon { get; set; } = new();
     public List<TraLoiDanhGiaViewModel> HoiThoai { get; set; } = new();
     public List<TraLoiDanhGiaViewModel> TraLois { get => HoiThoai; set => HoiThoai = value; }

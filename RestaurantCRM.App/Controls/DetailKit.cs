@@ -35,7 +35,7 @@ namespace RestaurantCRM.AdminApp.Controls
         private readonly Label _gridEmpty = new Label { TextAlign = ContentAlignment.MiddleCenter, UseMnemonic = false, Visible = false };
         private Button _button;
 
-        // Dữ liệu đang hiển thị
+        // Dữ liệu Hiển thị
         private string _code, _pillText;
         private Color _pillFore, _pillBack;
         private bool _autoPill = true;

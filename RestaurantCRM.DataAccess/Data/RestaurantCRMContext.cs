@@ -302,6 +302,9 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.NgayDanhGia)
                 .HasColumnType("datetime")
                 .HasColumnName("ngayDanhGia");
+            entity.Property(e => e.NgayCapNhat)
+                .HasColumnType("datetime")
+                .HasColumnName("ngayCapNhat");
             entity.Property(e => e.NoiDung).HasColumnName("noiDung");
             entity.Property(e => e.SoSao).HasColumnName("soSao");
             entity.Property(e => e.TrangThai).HasColumnName("trangThai");

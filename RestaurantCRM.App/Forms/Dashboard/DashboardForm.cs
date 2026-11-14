@@ -276,7 +276,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
             {
                 kpi1 = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ", "👥", ThemeManager.Primary);
                 kpi2 = new UcThongKe("Điểm đánh giá", "...", "Trung bình", "⭐", ThemeManager.Amber);
-                kpi3 = new UcThongKe("Lượt đánh giá", "...", "Đang hiển thị", "💬", ThemeManager.Violet);
+                kpi3 = new UcThongKe("Lượt đánh giá", "...", "Tính cả đánh giá đã ẩn", "💬", ThemeManager.Violet);
                 kpi4 = new UcThongKe("Khảo sát mở", "...", "Đang diễn ra", "📋", ThemeManager.Teal);
             }
             var kpis = new[] { kpi1, kpi2, kpi3, kpi4 };
@@ -600,7 +600,8 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                         {
                             c1?.SetValue(metrics.TongKhachHang.ToString("N0"));
                             c2?.SetValue(metrics.DiemDanhGiaTb.ToString("0.0") + " / 5");
-                            c3?.SetValue(metrics.TongDanhGia.ToString("N0"));
+                            c3?.SetValue(metrics.TongDanhGia.ToString("N0"),
+                                metrics.SoDanhGiaSuaSauPhanHoi.ToString("N0") + " khách sửa sau phản hồi");
                             c4?.SetValue(metrics.KhaoSatDangMo.ToString("N0"));
                         }
                     });

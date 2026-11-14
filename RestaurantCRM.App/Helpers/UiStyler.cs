@@ -381,6 +381,8 @@ namespace RestaurantCRM.AdminApp.Helpers
         private static bool IsStatusColumn(DataGridViewColumn col)
         {
             if (col == null) return false;
+            // Cột có tiêu đề ngắn (vd. "Hiển thị") có thể tự đánh dấu là cột trạng thái bằng Tag = "status"
+            if (string.Equals(col.Tag as string, "status", StringComparison.OrdinalIgnoreCase)) return true;
             string h = ((col.HeaderText ?? "") + " " + (col.Name ?? "") + " " + (col.DataPropertyName ?? "")).ToLowerInvariant();
             return h.Contains("trạng thái") || h.Contains("tình trạng") || h.Contains("status") || h.Contains("trangthai") || h.Contains("tinhtrang");
         }

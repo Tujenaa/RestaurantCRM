@@ -60,7 +60,6 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         // Đổi trạng thái xử lý 2 chiều: "✓ Đã xử lý" <-> "↺ Chưa xử lý"
         private readonly Button _btnDaXem = new Button { Text = "✓ Đánh dấu đã xử lý" };
         private readonly Button _btnAnHien = new Button { Text = "Ẩn phản hồi" };
-        private readonly Button _btnXoa = new Button { Text = "Xóa phản hồi" };
 
         // Khung chi tiết bên phải
         private readonly Panel _detail = new Panel { Width = 340 };
@@ -76,12 +75,13 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             UseMnemonic = false,
             Text = "✓  Đã xử lý"
         };
-        private readonly TextBox _txtReply = new TextBox { Multiline = true, BorderStyle = BorderStyle.None, MaxLength = 2000, ScrollBars = ScrollBars.None };
+        private const int DoDaiTraLoiToiDa = 1000;   // khớp giới hạn của API
+        private readonly TextBox _txtReply = new TextBox { Multiline = true, BorderStyle = BorderStyle.None, MaxLength = DoDaiTraLoiToiDa, ScrollBars = ScrollBars.None };
         private readonly Label _replyHint = new Label { Text = "Nhập nội dung trả lời khách hàng...", AutoSize = true, UseMnemonic = false, Cursor = Cursors.IBeam };
         private readonly Panel _replyBox = new Panel();
         private readonly Button _btnGui = new Button { Text = "Gửi trả lời" };
         private readonly Button _btnMau = new Button { Text = "Mẫu câu" };
-        private readonly Label _lblDem = new Label { Text = "Ctrl+Enter để gửi · 0/2000", AutoSize = false, TextAlign = ContentAlignment.MiddleRight };
+        private readonly Label _lblDem = new Label { Text = "Ctrl+Enter để gửi · 0/1000", AutoSize = false, TextAlign = ContentAlignment.MiddleRight };
         private readonly Label _empty = new Label
         {
             Dock = DockStyle.Fill,
@@ -90,6 +90,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             Text = "Chọn một phản hồi trong danh sách\nđể xem nội dung và trả lời khách hàng."
         };
         private ReviewHoverCard _hoverCard;
+        // Khung soạn đang ở chế độ sửa câu trả lời (khách sửa đánh giá sau phản hồi)
+        private bool _dangSuaTraLoi;
 
         public PhanHoiForm()
         {
@@ -106,7 +108,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             ButtonSkin.SetKind(_btnPhanTich, ButtonSkin.Kind.Secondary);
             PageKit.FitButton(_btnPhanTich, 116);
 
-            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Cần chú ý", "Chưa xử lý", "Đã xử lý", "Đã ẩn" });
+            _cboTrangThai.Items.AddRange(new object[] { "Tất cả", "Cần chú ý", LocCanXuLy, LocSuaSauPhanHoi, "Đã xử lý", "Đã ẩn" });
             _cboTrangThai.SelectedIndex = 0;
             _cboSoSao.Items.AddRange(new object[] { SaoTatCa, "5 sao", "4 sao", "3 sao", "2 sao", "1 sao", SaoTieuCuc });
             _cboSoSao.SelectedIndex = 0;
@@ -134,7 +136,6 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 CountLabel = _lblCount,
                 Grid = _grid,
                 SecondaryActions = new[] { _btnDaXem, _btnAnHien },
-                DangerActions = new[] { _btnXoa },
                 FooterInfo = _lblFooter,
                 SidePanel = _detail,
                 SideWidth = 400,
@@ -145,12 +146,13 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             // Bảng hẹp vì có khung chi tiết bên phải: không xuống dòng, cột co được nhỏ
             _grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
             foreach (DataGridViewColumn c in _grid.Columns)
-                c.MinimumWidth = c.Name == "NoiDung" ? 120 : c.Name == "SoSao" ? 92
-                    : c.Name == "TrangThai" ? 104 : c.Name == "HienThi" ? 100 : c.Name == "ChuY" ? 34 : 56;
-            if (_grid.Columns["ChuY"] != null)
+                c.MinimumWidth = c.Name == "Ngay" ? 96 : c.Name == "SoSao" ? 92
+                    : c.Name == "TrangThai" ? 104 : c.Name == "HienThi" ? 100 : c.Name == "ChuY" || c.Name == "Chon" ? 34 : c.Name == "MaDG" ? 64 : 56;
+            foreach (var hep in new[] { "ChuY", "Chon" })
             {
-                _grid.Columns["ChuY"].Width = 34;
-                _grid.Columns["ChuY"].FillWeight = 12;
+                if (_grid.Columns[hep] == null) continue;
+                _grid.Columns[hep].Width = 34;
+                _grid.Columns[hep].FillWeight = 12;
             }
 
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
@@ -158,9 +160,13 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _cboTrangThai.SelectedIndexChanged += (s, e) => ApplyFilter();
             _cboSoSao.SelectedIndexChanged += (s, e) => ApplyFilter();
             _cboThoiGian.SelectedIndexChanged += (s, e) => ApplyFilter();
+            // Ô tick: lưu ngay khi bấm (không chờ rời ô); bấm tiêu đề cột tick để chọn/bỏ tất cả
+            _grid.CurrentCellDirtyStateChanged += (s, e) => { if (_grid.IsCurrentCellDirty) _grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
+            _grid.CellValueChanged += Grid_ChonThayDoi;
+            _grid.ColumnHeaderMouseClick += (s, e) => { if (e.ColumnIndex >= 0 && _grid.Columns[e.ColumnIndex].Name == "Chon") ChonTatCaDangHien(); };
+            new ToolTip(components).SetToolTip(_cboThoiGian, "Tính theo ngày gửi hoặc ngày khách sửa gần nhất");
             _cboNoiDung.SelectedIndexChanged += (s, e) => ApplyFilter();
             _grid.SelectionChanged += (s, e) => ShowDetail(SelectedDto());
-            _grid.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) { e.Handled = true; XoaPhanHoi(); } };
             // Sao luôn màu vàng (UiStyler đặt lại màu chữ chung của bảng nên phải gán khi định dạng ô)
             _grid.CellFormatting += (s, e) =>
             {
@@ -174,6 +180,17 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                     var d = e.RowIndex >= 0 ? _grid.Rows[e.RowIndex].Tag as PhanHoiDto : null;
                     e.CellStyle.ForeColor = e.CellStyle.SelectionForeColor = d != null && !d.HienThi ? ThemeManager.Muted : ThemeManager.Amber;
                 }
+                if (e.ColumnIndex >= 0 && e.RowIndex >= 0 && _grid.Columns[e.ColumnIndex].Name == "Ngay")
+                {
+                    var d = _grid.Rows[e.RowIndex].Tag as PhanHoiDto;
+                    if (d != null)
+                    {
+                        e.Value = NgayGuiHienThi(d);
+                        e.FormattingApplied = true;
+                        // Khách sửa sau khi nhà hàng trả lời: tô cam để nhân viên chú ý xem lại
+                        if (d.SuaSauPhanHoi) e.CellStyle.ForeColor = e.CellStyle.SelectionForeColor = ThemeManager.Amber;
+                    }
+                }
             };
 
             _btnLamMoi.Click += async (s, e) => await LoadDataAsync();
@@ -184,7 +201,6 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             };
             _btnDaXem.Click += (s, e) => DanhDauDaXem();
             _btnAnHien.Click += (s, e) => DoiAnHien();
-            _btnXoa.Click += (s, e) => XoaPhanHoi();
             _btnGui.Click += async (s, e) => await GuiTraLoiAsync();
 
             ShowDetail(null);
@@ -197,25 +213,38 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         {
             var g = _grid;
             g.AllowUserToAddRows = false; g.AllowUserToDeleteRows = false; g.AllowUserToResizeRows = false;
-            g.ReadOnly = true; g.MultiSelect = false; g.RowHeadersVisible = false; g.AutoGenerateColumns = false;
+            // Chỉ cột tick được sửa; các cột chữ đặt ReadOnly trong AddCol
+            g.ReadOnly = false; g.MultiSelect = false; g.RowHeadersVisible = false; g.AutoGenerateColumns = false;
             g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
+            // Tick chọn nhiều đánh giá để đánh dấu "Đã xử lý" một lần; bấm tiêu đề để chọn/bỏ tất cả dòng đang hiện
+            g.Columns.Add(new DataGridViewCheckBoxColumn
+            {
+                Name = "Chon",
+                HeaderText = "☐",
+                Width = 34,
+                SortMode = DataGridViewColumnSortMode.NotSortable,
+                ToolTipText = "Tick để đánh dấu đã xử lý nhiều đánh giá; bấm tiêu đề để chọn/bỏ tất cả"
+            });
             var chuY = AddCol("ChuY", "⚠", 34);
             chuY.ToolTipText = "Cần chú ý: chấm 1–2 sao hoặc có món bị chấm thấp";
             chuY.SortMode = DataGridViewColumnSortMode.NotSortable;
+            AddCol("MaDG", "Mã ĐG", 70);
             var sao = AddCol("SoSao", "Đánh giá", 96);
             sao.ToolTipText = "Bấm tiêu đề cột để sắp xếp theo số sao";
             sao.DefaultCellStyle.ForeColor = ThemeManager.Amber;
             sao.DefaultCellStyle.SelectionForeColor = ThemeManager.Amber;
-            AddCol("NoiDung", "Nội dung", 260);
-            AddCol("Ngay", "Ngày gửi", 88).DefaultCellStyle.Format = "dd/MM/yyyy";
-            AddCol("HienThi", "Trạng thái hiển thị", 100);
+            // Một ngày: ngày khách sửa gần nhất (có ✎) nếu đã sửa, không thì ngày gửi.
+            // Giá trị ô là NgayHoatDong để bấm tiêu đề sắp xếp đúng theo ngày đang hiển thị.
+            var ngay = AddCol("Ngay", "Ngày", 104);
+            ngay.ToolTipText = "Ngày gửi; ✎ = ngày khách sửa gần nhất";
+            AddCol("HienThi", "Hiển thị", 100).Tag = "status";   // tô pill màu như cột trạng thái
             AddCol("TrangThai", "Xử lý", 108);
         }
 
         private DataGridViewColumn AddCol(string name, string header, int width)
         {
-            var c = new DataGridViewTextBoxColumn { Name = name, HeaderText = header, Width = width, SortMode = DataGridViewColumnSortMode.Automatic };
+            var c = new DataGridViewTextBoxColumn { Name = name, HeaderText = header, Width = width, SortMode = DataGridViewColumnSortMode.Automatic, ReadOnly = true };
             _grid.Columns.Add(c);
             return c;
         }
@@ -251,7 +280,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _txtReply.LostFocus += (s, e) => _replyBox.Invalidate();
             _txtReply.TextChanged += (s, e) =>
             {
-                _lblDem.Text = "Ctrl+Enter để gửi · " + _txtReply.TextLength + "/2000";
+                _lblDem.Text = "Ctrl+Enter để gửi · " + _txtReply.TextLength + "/" + DoDaiTraLoiToiDa;
                 _btnGui.Enabled = _current != null && _txtReply.Text.Trim().Length > 0;
             };
             _txtReply.KeyDown += async (s, e) =>
@@ -345,8 +374,15 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 TextRenderer.DrawText(g, sub, fSmall, new Rectangle(56, 27, w - 56, 18), ThemeManager.Muted, F);
 
                 int x = CrmPaint.Stars(g, d.SoSao ?? 0, 0, 60, 11F);
-                string meta = "  " + (d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("HH:mm · dd/MM/yyyy") : "") + "  ·  Về: " + d.DoiTuong;
+                string meta = "  Gửi lúc " + (d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("HH:mm dd/MM/yyyy") : "—") + "  ·  Về: " + d.DoiTuong;
                 TextRenderer.DrawText(g, meta, fSmall, new Rectangle(x + 4, 62, w - x - 4, 18), ThemeManager.Ink2, F);
+                if (d.NgayCapNhat.HasValue)
+                {
+                    string sua = "✎ Sửa lần cuối lúc " + d.NgayCapNhat.Value.ToString("HH:mm dd/MM/yyyy")
+                                 + (d.SuaSauPhanHoi ? "  ·  sau khi nhà hàng trả lời" : "");
+                    TextRenderer.DrawText(g, sua, fSmall, new Rectangle(0, 82, w, 18),
+                        d.SuaSauPhanHoi ? ThemeManager.Amber : ThemeManager.Muted, F);
+                }
             }
             using (var p = new Pen(ThemeManager.Line)) g.DrawLine(p, 0, _head.Height - 1, w, _head.Height - 1);
         }
@@ -364,6 +400,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             try
             {
                 _all = await _service.GetAllAsync(null, PhanHoiService.LocTatCa);
+                // Bỏ tick những đánh giá không còn hoặc đã được xử lý (ở nơi khác)
+                var conCho = new HashSet<string>(_all.Where(x => !x.LaDaXuLy).Select(x => x.MaDanhGia));
+                _daChon.RemoveWhere(ma => !conCho.Contains(ma));
                 UpdateKpis();
                 ApplyFilter(chonMa);
             }
@@ -383,7 +422,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         {
             var coSao = _all.Where(d => d.SoSao.HasValue && d.SoSao > 0).ToList();
             _kTong.Text = "Tổng phản hồi: " + _all.Count.ToString("N0");
-            _kCho.Text = "Chưa xử lý: " + _all.Count(d => !d.LaDaXuLy).ToString("N0");
+            _kCho.Text = "Cần xử lý: " + _all.Count(d => !d.LaDaXuLy).ToString("N0");
             _kDiem.Text = "Điểm trung bình: " + (coSao.Count == 0 ? "—" : coSao.Average(d => d.SoSao.Value).ToString("0.0") + " / 5");
             _kAn.Text = "Cần chú ý: " + _all.Count(d => d.CanChuY && !d.LaDaXuLy).ToString("N0");
         }
@@ -405,20 +444,18 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             {
                 if (tt == "Đã ẩn") { if (d.HienThi) return false; }
                 else if (tt == "Cần chú ý") { if (!d.CanChuY) return false; }
-                else if (tt != "Tất cả" && d.TrangThaiHienThi != tt) return false;
+                // Hàng chờ: mọi đánh giá DaXuLy = 0 (khách sửa đánh giá cũng đưa DaXuLy về 0)
+                else if (tt == LocCanXuLy) { if (d.LaDaXuLy) return false; }
+                // Theo dữ liệu: khách sửa sau lần trả lời gần nhất, kể cả khi nhân viên đã giữ câu trả lời cũ
+                else if (tt == LocSuaSauPhanHoi) { if (!d.SuaSauPhanHoi) return false; }
+                else if (tt == "Đã xử lý") { if (!d.LaDaXuLy) return false; }
 
                 if (locSao == SaoTieuCuc) { if (!d.SoSao.HasValue || d.SoSao.Value > 3) return false; }
                 else if (saoChinhXac > 0 && (d.SoSao ?? 0) != saoChinhXac) return false;
 
-                if (timeIdx > 0)
-                {
-                    if (!d.NgayDanhGia.HasValue) return false;
-                    DateTime dt = d.NgayDanhGia.Value.Date;
-                    if (timeIdx == 1 && dt != today) return false;
-                    if (timeIdx == 2 && dt < today.AddDays(-6)) return false;
-                    if (timeIdx == 3 && dt < today.AddDays(-29)) return false;
-                    if (timeIdx == 4 && (dt.Month != today.Month || dt.Year != today.Year)) return false;
-                }
+                // Khớp nếu ngày gửi HOẶC ngày khách sửa gần nhất nằm trong khoảng thời gian đã chọn
+                if (timeIdx > 0 && !TrongKhoang(d.NgayDanhGia, timeIdx, today) && !TrongKhoang(d.NgayCapNhat, timeIdx, today))
+                    return false;
 
                 if (ndIdx == 1 && string.IsNullOrWhiteSpace(d.NoiDung) && (d.ChiTietMon == null || !d.ChiTietMon.Any(m => !string.IsNullOrWhiteSpace(m.NoiDung))))
                     return false;
@@ -428,45 +465,187 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 if (q.Length == 0) return true;
                 return _scopes.Matches(q, d);
             })
-            // Ưu tiên: chưa xử lý + cần chú ý → chưa xử lý → đã xử lý; trong mỗi nhóm mới nhất lên trước
+            // Ưu tiên: chưa xử lý + cần chú ý → chưa xử lý → đã xử lý; trong mỗi nhóm hoạt động mới nhất
+            // của khách (lần sửa, nếu chưa sửa thì lần gửi) lên trước
             .OrderBy(d => d.LaDaXuLy ? 2 : (d.CanChuY ? 0 : 1))
-            .ThenByDescending(d => d.NgayDanhGia ?? DateTime.MinValue)
+            .ThenByDescending(d => d.NgayHoatDong ?? DateTime.MinValue)
             .ToList();
 
+            _dangVeLuoi = true;
             _grid.SuspendLayout();
             _grid.Rows.Clear();
             int chon = -1;
             foreach (var d in list)
             {
-                int i = _grid.Rows.Add(d.CanChuY ? "⚠" : "", Sao(d.SoSao ?? 0), MotDong(d.NoiDung), (object)d.NgayDanhGia,
-                    d.HienThi ? "Đang hiển thị" : "Đã ẩn", d.TrangThaiHienThi);
+                int i = _grid.Rows.Add(_daChon.Contains(d.MaDanhGia), d.CanChuY ? "⚠" : "", d.MaDanhGia, Sao(d.SoSao ?? 0), (object)d.NgayHoatDong,
+                    d.HienThi ? "Hiển thị" : "Đã ẩn", d.TrangThaiHienThi);
                 _grid.Rows[i].Tag = d;
+                _grid.Rows[i].Cells["Ngay"].ToolTipText = NgayTooltip(d);
                 if (!d.HienThi) _grid.Rows[i].DefaultCellStyle.ForeColor = ThemeManager.Muted;
                 if (chonMa != null && d.MaDanhGia == chonMa) chon = i;
             }
             _grid.ResumeLayout();
+            _dangVeLuoi = false;
             _grid.ClearSelection();
             if (chon >= 0)
             {
                 _grid.Rows[chon].Selected = true;
-                _grid.CurrentCell = _grid.Rows[chon].Cells[0];
+                _grid.CurrentCell = _grid.Rows[chon].Cells["MaDG"];
             }
             else
             {
                 // Chưa chọn phản hồi nào: không để lưới tự chọn dòng đầu, khung bên phải để trống
                 _grid.CurrentCell = null;
             }
-            _lblCount.Text = list.Count == _all.Count ? "Hiển thị " + list.Count + " phản hồi" : "Hiển thị " + list.Count + " / " + _all.Count + " phản hồi";
+            _soDongHienThi = list.Count;
+            CapNhatTieuDeChon();
+            CapNhatDem();
             ShowDetail(SelectedDto());
         }
 
+        // ── Tick chọn nhiều để đánh dấu "Đã xử lý" ───────────────────────────
+
+        /// <summary>Mã các đánh giá đang được tick; giữ qua lọc / sắp xếp / tải lại.</summary>
+        private readonly HashSet<string> _daChon = new HashSet<string>();
+        private bool _dangVeLuoi;
+        private int _soDongHienThi;
+
+        private void CapNhatDem()
+        {
+            string dem = _soDongHienThi == _all.Count ? "Hiển thị " + _soDongHienThi + " phản hồi" : "Hiển thị " + _soDongHienThi + " / " + _all.Count + " phản hồi";
+            _lblCount.Text = _daChon.Count > 0 ? dem + " · Đã chọn " + _daChon.Count : dem;
+        }
+
+        /// <summary>Tiêu đề cột tick: ☑ khi mọi dòng đang hiện đều được tick.</summary>
+        private void CapNhatTieuDeChon()
+        {
+            bool tatCa = _grid.Rows.Count > 0 && _grid.Rows.Cast<DataGridViewRow>().All(r => r.Tag is PhanHoiDto d && _daChon.Contains(d.MaDanhGia));
+            _grid.Columns["Chon"].HeaderText = tatCa ? "☑" : "☐";
+        }
+
+        /// <summary>Số đánh giá đang tick mà chưa xử lý (sẽ được chuyển sang Đã xử lý).</summary>
+        private List<PhanHoiDto> DaChonChuaXuLy()
+        {
+            return _all.Where(d => _daChon.Contains(d.MaDanhGia) && !d.LaDaXuLy).ToList();
+        }
+
+        private void Grid_ChonThayDoi(object sender, DataGridViewCellEventArgs e)
+        {
+            if (_dangVeLuoi || e.RowIndex < 0 || _grid.Columns[e.ColumnIndex].Name != "Chon") return;
+            var d = _grid.Rows[e.RowIndex].Tag as PhanHoiDto;
+            if (d == null) return;
+            if (Equals(_grid.Rows[e.RowIndex].Cells["Chon"].Value, true)) _daChon.Add(d.MaDanhGia);
+            else _daChon.Remove(d.MaDanhGia);
+            CapNhatTieuDeChon();
+            CapNhatDem();
+            CapNhatNutXuLy();
+        }
+
+        /// <summary>Bấm tiêu đề cột tick: chọn hết các dòng đang hiện, hoặc bỏ hết nếu đã chọn hết.</summary>
+        private void ChonTatCaDangHien()
+        {
+            var dongs = _grid.Rows.Cast<DataGridViewRow>().Select(r => r.Tag as PhanHoiDto).Where(d => d != null).ToList();
+            bool chonHet = !dongs.All(d => _daChon.Contains(d.MaDanhGia));
+            foreach (var d in dongs)
+            {
+                if (chonHet) _daChon.Add(d.MaDanhGia); else _daChon.Remove(d.MaDanhGia);
+            }
+            _dangVeLuoi = true;
+            foreach (DataGridViewRow r in _grid.Rows) r.Cells["Chon"].Value = chonHet;
+            _dangVeLuoi = false;
+            CapNhatTieuDeChon();
+            CapNhatDem();
+            CapNhatNutXuLy();
+        }
+
+        /// <summary>
+        /// Có tick: nút đánh dấu hàng loạt "✓ Đánh dấu đã xử lý (N)". Không tick: đổi 2 chiều cho dòng đang chọn như cũ.
+        /// </summary>
+        private void CapNhatNutXuLy()
+        {
+            var d = _current;
+            if (_daChon.Count > 0)
+            {
+                int n = DaChonChuaXuLy().Count;
+                _btnDaXem.Text = "✓ Đánh dấu đã xử lý (" + n + ")";
+                _btnDaXem.Enabled = n > 0;
+            }
+            else
+            {
+                _btnDaXem.Text = d != null && d.LaDaXuLy ? "↺ Chuyển về chưa xử lý" : "✓ Đánh dấu đã xử lý";
+                _btnDaXem.Enabled = d != null;
+            }
+            PageKit.FitButton(_btnDaXem, 120);
+        }
+
+        private async Task DanhDauDaXuLyHangLoatAsync()
+        {
+            var ds = DaChonChuaXuLy();
+            if (ds.Count == 0) return;
+            if (!Notify.Confirm(this, "Đánh dấu " + ds.Count + " đánh giá đã chọn là đã xử lý?", "Đánh dấu đã xử lý")) return;
+
+            _btnDaXem.Enabled = false;
+            _btnDaXem.Text = "Đang xử lý...";
+            int thanhCong = 0;
+            var loi = new List<string>();
+            foreach (var d in ds)
+            {
+                var r = await _service.SetProcessedAsync(d.MaDanhGia, true);
+                if (IsDisposed) return;
+                if (r.Success) thanhCong++; else loi.Add(d.MaDanhGia + ": " + r.Message);
+            }
+
+            _daChon.Clear();
+            await LoadDataAsync(_current?.MaDanhGia);
+            if (loi.Count == 0) Notify.Info(this, "Đã chuyển " + thanhCong + " đánh giá sang Đã xử lý.");
+            else Notify.Error(this, "Đã chuyển " + thanhCong + " đánh giá sang Đã xử lý; " + loi.Count + " đánh giá bị lỗi.\n" + loi[0]);
+        }
+
+        private const string LocCanXuLy = "Cần xử lý";
+        private const string LocSuaSauPhanHoi = "Khách sửa sau phản hồi";
+
         private static bool Has(string s, string q) { return s != null && s.ToLowerInvariant().Contains(q); }
         private static string Sao(int n) { n = Math.Max(0, Math.Min(5, n)); return new string('★', n) + new string('☆', 5 - n); }
-        private static string MotDong(string s)
+
+        /// <summary>Ngày có nằm trong khoảng của bộ lọc Thời gian không (1 Hôm nay, 2 7 ngày qua, 3 30 ngày qua, 4 Tháng này).</summary>
+        private static bool TrongKhoang(DateTime? ngay, int timeIdx, DateTime today)
         {
-            if (string.IsNullOrWhiteSpace(s)) return "(không có nội dung)";
-            s = s.Replace("\r", " ").Replace("\n", " ").Trim();
-            return s.Length > 120 ? s.Substring(0, 117) + "..." : s;
+            if (!ngay.HasValue) return false;
+            DateTime dt = ngay.Value.Date;
+            switch (timeIdx)
+            {
+                case 1: return dt == today;
+                case 2: return dt >= today.AddDays(-6);
+                case 3: return dt >= today.AddDays(-29);
+                case 4: return dt.Month == today.Month && dt.Year == today.Year;
+                default: return true;
+            }
+        }
+
+        /// <summary>Đã sửa: "✎ 22/10/2026" (ngày sửa gần nhất); chưa sửa: "20/10/2026" (ngày gửi).</summary>
+        private static string NgayGuiHienThi(PhanHoiDto d)
+        {
+            if (d.NgayCapNhat.HasValue) return "✎ " + d.NgayCapNhat.Value.ToString("dd/MM/yyyy");
+            return d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("dd/MM/yyyy") : "—";
+        }
+
+        /// <summary>Gợi ý khi di chuột vào ô ngày: đủ ngày gửi và ngày sửa.</summary>
+        private static string NgayTooltip(PhanHoiDto d)
+        {
+            string gui = "Gửi lúc " + (d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("HH:mm dd/MM/yyyy") : "—");
+            return d.NgayCapNhat.HasValue ? gui + "\nSửa lần cuối lúc " + d.NgayCapNhat.Value.ToString("HH:mm dd/MM/yyyy") : gui;
+        }
+
+        /// <summary>Câu trả lời gần nhất của nhà hàng (theo ngày gửi/sửa).</summary>
+        private static TraLoiPhanHoiDto TraLoiMoiNhat(PhanHoiDto d)
+        {
+            return d?.HoiThoai == null ? null : d.HoiThoai.OrderByDescending(t => t.NgayGui ?? DateTime.MinValue).FirstOrDefault();
+        }
+
+        /// <summary>Khách sửa sau phản hồi và chưa xử lý → nhân viên được sửa câu trả lời hiện có.</summary>
+        private static bool LaCheDoSuaTraLoi(PhanHoiDto d)
+        {
+            return d != null && d.SuaSauPhanHoi && !d.LaDaXuLy && TraLoiMoiNhat(d) != null;
         }
 
         private PhanHoiDto SelectedDto()
@@ -483,8 +662,12 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _current = d;
             bool has = d != null;
             _empty.Visible = !has;
-            // Đã xử lý (hoặc đã trả lời 1 lần) => đóng khung soạn trả lời
-            bool dong = has && (d.LaDaXuLy || d.DaTraLoi);
+            // Đã xử lý (hoặc đã trả lời 1 lần) => đóng khung soạn trả lời.
+            // Ngoại lệ: khách sửa đánh giá sau khi nhà hàng trả lời và chưa xử lý → mở khung để sửa câu trả lời.
+            bool suaTraLoi = LaCheDoSuaTraLoi(d);
+            bool cheDoDoi = suaTraLoi != _dangSuaTraLoi;
+            _dangSuaTraLoi = suaTraLoi;
+            bool dong = has && (d.LaDaXuLy || d.DaTraLoi) && !suaTraLoi;
             _head.Visible = has; _thread.Visible = has;
             _composer.Visible = has && !dong;
             _closedNote.Visible = dong;
@@ -495,16 +678,17 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             if (has) _empty.SendToBack(); else _empty.BringToFront();
 
             _btnAnHien.Enabled = has;
-            _btnDaXem.Enabled = has;
-            _btnDaXem.Text = has && d.LaDaXuLy ? "↺ Chuyển về chưa xử lý" : "✓ Đánh dấu đã xử lý";
-            PageKit.FitButton(_btnDaXem, 120);
-            _btnXoa.Enabled = has;
+            CapNhatNutXuLy();
             _btnAnHien.Text = has && !d.HienThi ? "Hiện lại phản hồi" : "Ẩn phản hồi";
             _lblFooter.Text = has
                 ? (d.TenKhachHang ?? "Khách ẩn danh") + " · " + d.TrangThaiHienThi + (d.DaTraLoi ? " · đã trả lời" : "")
                 : "Chọn một phản hồi để xem và trả lời";
 
-            if (doiDong) _txtReply.Text = "";
+            if (doiDong || cheDoDoi)
+                _txtReply.Text = suaTraLoi ? (TraLoiMoiNhat(d).NoiDung ?? "") : "";
+            _btnGui.Text = suaTraLoi ? "Cập nhật trả lời" : "Gửi trả lời";
+            PageKit.FitButton(_btnGui, 112);
+            _replyHint.Text = suaTraLoi ? "Sửa lại câu trả lời cho phù hợp với đánh giá mới..." : "Nhập nội dung trả lời khách hàng...";
             _btnGui.Enabled = has && _txtReply.Text.Trim().Length > 0;
             _txtReply.Enabled = has;
             _head.Invalidate();
@@ -530,6 +714,20 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 });
                 if (d.ChiTietMon != null && d.ChiTietMon.Count > 0)
                     _thread.Controls.Add(new DanhGiaMonList(d.ChiTietMon));
+                if (d.SuaSauPhanHoi)
+                {
+                    _thread.Controls.Add(new Label
+                    {
+                        Text = "⚠ Khách đã chỉnh sửa sau khi nhà hàng trả lời. Hãy xem lại câu trả lời.",
+                        AutoSize = false,
+                        Height = 34,
+                        UseMnemonic = false,
+                        ForeColor = ThemeManager.Amber,
+                        BackColor = ThemeManager.AmberSoft,
+                        Font = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold),
+                        TextAlign = ContentAlignment.MiddleCenter
+                    });
+                }
                 foreach (var t in d.HoiThoai ?? new List<TraLoiPhanHoiDto>())
                 {
                     var traLoi = t;
@@ -592,11 +790,16 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
                 return;
             }
 
+            // Khách sửa sau phản hồi → cập nhật câu trả lời hiện có thay vì gửi câu mới
+            var traLoiCu = LaCheDoSuaTraLoi(d) ? TraLoiMoiNhat(d) : null;
+            string chuNut = _btnGui.Text;
             _btnGui.Enabled = false; _txtReply.Enabled = false;
             _btnGui.Text = "Đang gửi...";
-            var r = await _service.ReplyAsync(d.MaDanhGia, nd);
+            var r = traLoiCu != null
+                ? await _service.UpdateReplyAsync(d.MaDanhGia, traLoiCu.MaTraLoi, nd)
+                : await _service.ReplyAsync(d.MaDanhGia, nd);
             if (IsDisposed) return;
-            _btnGui.Text = "Gửi trả lời";
+            _btnGui.Text = chuNut;
             _txtReply.Enabled = true;
             if (!r.Success) { _btnGui.Enabled = true; Notify.Error(this, r.Message); return; }
 
@@ -617,6 +820,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
         private async void DanhDauDaXem()
         {
+            // Có đánh giá đang tick → đánh dấu đã xử lý hàng loạt
+            if (_daChon.Count > 0) { await DanhDauDaXuLyHangLoatAsync(); return; }
             var d = _current;
             if (d == null) return;
             _btnDaXem.Enabled = false;
@@ -637,22 +842,6 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             if (IsDisposed) return;
             if (!r.Success) { _btnAnHien.Enabled = true; Notify.Error(this, r.Message); return; }
             await LoadDataAsync(d.MaDanhGia);
-        }
-
-        private async void XoaPhanHoi()
-        {
-            var d = _current;
-            if (d == null) return;
-            string hoi = "Bạn có chắc chắn muốn gỡ bỏ phản hồi " + d.MaDanhGia + " của " + (d.TenKhachHang ?? "khách hàng") + " khỏi website?\n\n"
-                         + "Lưu ý: Phản hồi sẽ được ẩn khỏi website công khai, nhưng toàn bộ nội dung và lịch sử trả lời vẫn được bảo lưu an toàn trong hệ thống.";
-            if (!Notify.Confirm(this, hoi, "Ẩn phản hồi khỏi website", true)) return;
-            _btnXoa.Enabled = false;
-            var r = await _service.DeleteAsync(d.MaDanhGia);
-            if (IsDisposed) return;
-            if (!r.Success) { _btnXoa.Enabled = true; Notify.Error(this, r.Message); return; }
-            Notify.Info(this, r.Message ?? "Đã ẩn phản hồi khỏi website thành công.");
-            _current = null;
-            await LoadDataAsync();
         }
     }
 }

@@ -45,6 +45,13 @@ namespace RestaurantCRM.AdminApp.Services
                 new PhanHoiReplyRequest { NguoiGuiId = UserSession.CurrentUserId, NoiDung = noiDung }, "Đã gửi trả lời.");
         }
 
+        /// <summary>Sửa câu trả lời hiện có (khi khách đã sửa đánh giá sau phản hồi). Người sửa = nhân viên đang đăng nhập.</summary>
+        public Task<ApiResult> UpdateReplyAsync(string maDanhGia, string maTraLoi, string noiDung)
+        {
+            return PutAsync(Base + "/" + E(maDanhGia) + "/Reply/" + E(maTraLoi),
+                new PhanHoiReplyRequest { NguoiGuiId = UserSession.CurrentUserId, NoiDung = noiDung }, "Đã cập nhật câu trả lời.");
+        }
+
         public Task<ApiResult> DeleteReplyAsync(string maDanhGia, string maTraLoi)
         {
             return DeleteAsync(Base + "/" + E(maDanhGia) + "/Reply/" + E(maTraLoi), "Đã xóa câu trả lời.");

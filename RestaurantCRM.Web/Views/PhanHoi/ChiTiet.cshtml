@@ -26,7 +26,8 @@
         <div>
             <h1 class="page-title" style="font-size:24px; margin:0 0 4px;">Đánh giá đơn hàng #@Model.MaHoaDon</h1>
             <p style="color:var(--muted); font-size:13.5px; margin:0;">
-                Gửi lúc @(Model.NgayGui?.ToString("dd/MM/yyyy · HH:mm") ?? "")
+                Đánh giá ngày @(Model.NgayDanhGia?.ToString("dd/MM/yyyy") ?? "")@if (Model.NgayCapNhat.HasValue)
+                {<text> · đã chỉnh sửa @Model.NgayCapNhat.Value.ToString("dd/MM/yyyy")</text>}
             </p>
         </div>
         <div>
@@ -161,7 +162,7 @@
                             @reply.NoiDung
                         </div>
                         <div style="font-size:12px; color:var(--muted); margin-top:4px;">
-                            Người phản hồi: <strong>@(string.IsNullOrEmpty(reply.NguoiTraLoi) ? "Ban Quản Trị Lẩu Phố" : reply.NguoiTraLoi)</strong> · @reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")
+                            Người phản hồi: <strong>@(string.IsNullOrEmpty(reply.NguoiTraLoi) ? "Ban Quản Trị Lẩu Phố" : reply.NguoiTraLoi)</strong> · Nhà hàng phản hồi lúc @reply.NgayGui.ToString("dd/MM/yyyy · HH:mm")
                         </div>
                     </div>
                 }

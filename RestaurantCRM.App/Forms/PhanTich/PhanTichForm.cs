@@ -120,7 +120,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
 
             _kKhach = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ", "👥", ThemeManager.Primary);
             _kDiem = new UcThongKe("Điểm đánh giá", "...", "Trung bình", "⭐", ThemeManager.Amber);
-            _kLuot = new UcThongKe("Lượt đánh giá", "...", "Đang hiển thị", "💬", ThemeManager.Violet);
+            _kLuot = new UcThongKe("Lượt đánh giá", "...", "Tính cả đánh giá đã ẩn", "💬", ThemeManager.Violet);
             _kKhaoSat = new UcThongKe("Khảo sát mở", "...", "Đang diễn ra", "📋", ThemeManager.Teal);
 
             var allKpi = new[] { _kKhach, _kDiem, _kLuot, _kKhaoSat };

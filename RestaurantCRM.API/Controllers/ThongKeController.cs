@@ -142,6 +142,10 @@ namespace RestaurantCRM.API.Controllers
                 ? await danhGias.AverageAsync(d => (double?)d.SoSao) ?? 5.0
                 : 5.0;
             var tongDanhGia = await danhGias.CountAsync();
+            // Khách sửa đánh giá sau lần trả lời gần nhất của nhà hàng
+            var soDanhGiaSuaSauPhanHoi = await danhGias.CountAsync(d =>
+                d.NgayCapNhat != null && d.TraLoiDanhGia.Any() &&
+                d.NgayCapNhat > d.TraLoiDanhGia.Max(t => t.NgayGui));
             var khaoSatDangMo = await _service.Query<KhaoSat>()
                 .CountAsync(k => k.TrangThai == "Đang diễn ra" || k.TrangThai == "Hoạt động" || k.TrangThai == "Active");
 
@@ -163,6 +167,7 @@ namespace RestaurantCRM.API.Controllers
                 TongKhachHang = tongKhachHang,
                 DiemDanhGiaTb = Math.Round(diemDanhGiaTb, 1),
                 TongDanhGia = tongDanhGia,
+                SoDanhGiaSuaSauPhanHoi = soDanhGiaSuaSauPhanHoi,
                 KhaoSatDangMo = khaoSatDangMo
             });
         }

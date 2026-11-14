@@ -498,7 +498,7 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
                 return;
             }
 
-            if (item.MaHoaDon == _sideMa) return;   // đang hiển thị (hoặc đang tải) đúng đơn này rồi
+            if (item.MaHoaDon == _sideMa) return;   // Hiển thị (hoặc đang tải) đúng đơn này rồi
             _sideMa = item.MaHoaDon;
 
             HoaDonDetailDto detail;

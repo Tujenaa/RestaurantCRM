@@ -16,6 +16,8 @@ namespace RestaurantCRM.AdminApp.Models {
         public int TongKhachHang { get; set; }
         public double DiemDanhGiaTb { get; set; }
         public int TongDanhGia { get; set; }
+        /// <summary>Số đánh giá khách sửa sau lần trả lời gần nhất của nhà hàng.</summary>
+        public int SoDanhGiaSuaSauPhanHoi { get; set; }
         public int KhaoSatDangMo { get; set; }
     }
 }

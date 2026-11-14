@@ -94,7 +94,7 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // GET: api/AdminDanhGia?search=&trangThai=&soSao=
-        //   trangThai: (bỏ trống) = chỉ phản hồi đang hiển thị (giữ như cũ cho Dashboard)
+        //   trangThai: (bỏ trống) = chỉ phản hồi Hiển thị (giữ như cũ cho Dashboard)
         //              TatCa | ChuaXuLy | DaXuLy | DaAn  (ChuaTraLoi / DaTraLoi giữ để tương thích)
         //   search: tìm theo mã, tên khách hàng, tên món, nội dung
         [HttpGet]
@@ -146,6 +146,7 @@ namespace RestaurantCRM.API.Controllers
                     d.SoSao,
                     d.NoiDung,
                     d.NgayDanhGia,
+                    d.NgayCapNhat,
                     HienThi = d.TrangThai,
                     TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
                     TongSoTraLoi = d.TraLoiDanhGia.Count,
@@ -188,6 +189,7 @@ namespace RestaurantCRM.API.Controllers
                     x.SoSao,
                     x.NoiDung,
                     x.NgayDanhGia,
+                    x.NgayCapNhat,
                     HienThi = x.TrangThai,
                     TenKhachHang = x.MaKhachHangNavigation != null ? x.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
                     SoDienThoai = x.MaKhachHangNavigation != null ? x.MaKhachHangNavigation.SoDienThoai : null,
@@ -226,15 +228,12 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy phản hồi.");
             }
 
-            if (request == null || string.IsNullOrWhiteSpace(request.NoiDung))
-                return BadRequest("Nội dung trả lời không được để trống.");
+            var loi = KiemTraNoiDungTraLoi(request?.NoiDung);
+            if (loi != null) return BadRequest(loi);
             if (await _service.Query<TraLoiDanhGia>().AnyAsync(t => t.MaDanhGia == id))
                 return BadRequest("Phản hồi này đã được trả lời. Mỗi phản hồi chỉ trả lời 1 lần.");
-            if (request.NoiDung.Trim().Length > 2000)
-                return BadRequest("Nội dung trả lời tối đa 2000 ký tự.");
-            if (string.IsNullOrWhiteSpace(request.NguoiGuiId) ||
-                !await _service.Query<NhanVien>().AnyAsync(n => n.MaNhanVien == request.NguoiGuiId))
-                return BadRequest("Không xác định được nhân viên trả lời. Vui lòng đăng nhập lại.");
+            loi = await KiemTraNhanVienTraLoiAsync(request!.NguoiGuiId);
+            if (loi != null) return BadRequest(loi);
 
             var traLoi = new TraLoiDanhGia
             {
@@ -258,6 +257,60 @@ namespace RestaurantCRM.API.Controllers
             }
 
             return Ok(new { message = "Gửi trả lời thành công.", maTraLoi = traLoi.MaTraLoi });
+        }
+
+        // PUT: api/AdminDanhGia/{id}/Reply/{maTraLoi} - Sửa câu trả lời (dùng khi khách đã sửa đánh giá sau phản hồi).
+        // ngayGui = lúc sửa, người trả lời = người sửa; đánh giá chuyển sang "Đã xử lý". Không đổi ngayCapNhat của đánh giá.
+        [HttpPut("{id}/Reply/{maTraLoi}")]
+        public async Task<IActionResult> UpdateReply(string id, string maTraLoi, ReplyRequest request)
+        {
+            var traLoi = await _service.Query<TraLoiDanhGia>()
+                .FirstOrDefaultAsync(t => t.MaTraLoi == maTraLoi && t.MaDanhGia == id);
+            if (traLoi == null) return NotFound("Không tìm thấy câu trả lời của phản hồi này.");
+
+            var loi = KiemTraNoiDungTraLoi(request?.NoiDung)
+                      ?? await KiemTraNhanVienTraLoiAsync(request!.NguoiGuiId);
+            if (loi != null) return BadRequest(loi);
+
+            var danhGia = await _service.FindAsync<DanhGia>(id);
+            if (danhGia == null) return NotFound("Không tìm thấy phản hồi.");
+
+            traLoi.NoiDung = request.NoiDung!.Trim();
+            traLoi.NgayGui = DateTime.Now;
+            traLoi.MaNhanVien = request.NguoiGuiId;
+            danhGia.DaXuLy = true;
+            await _service.SaveChangesAsync();
+
+            return Ok(new { message = "Đã cập nhật câu trả lời.", maTraLoi });
+        }
+
+        private const int DoDaiTraLoiToiDa = 1000;
+        private static readonly string[] VaiTroDuocTraLoi = { "VT01", "VT05" };
+
+        /// <summary>Nội dung trả lời bắt buộc, tối đa 1000 ký tự. Trả về lỗi hoặc null.</summary>
+        private static string? KiemTraNoiDungTraLoi(string? noiDung)
+        {
+            if (string.IsNullOrWhiteSpace(noiDung)) return "Nội dung trả lời không được để trống.";
+            if (noiDung.Trim().Length > DoDaiTraLoiToiDa) return $"Nội dung trả lời tối đa {DoDaiTraLoiToiDa} ký tự.";
+            return null;
+        }
+
+        /// <summary>Người trả lời phải là nhân viên đang hoạt động, vai trò Admin (VT01) hoặc CRM (VT05).</summary>
+        private async Task<string?> KiemTraNhanVienTraLoiAsync(string? maNhanVien)
+        {
+            if (string.IsNullOrWhiteSpace(maNhanVien))
+                return "Không xác định được nhân viên trả lời. Vui lòng đăng nhập lại.";
+
+            var nv = await _service.Query<NhanVien>()
+                .Where(n => n.MaNhanVien == maNhanVien)
+                .Select(n => new { n.TrangThai, n.MaVaiTro })
+                .FirstOrDefaultAsync();
+            if (nv == null) return "Không xác định được nhân viên trả lời. Vui lòng đăng nhập lại.";
+            if (!string.Equals(nv.TrangThai, "Active", StringComparison.OrdinalIgnoreCase))
+                return "Tài khoản nhân viên không còn hoạt động, không thể trả lời đánh giá.";
+            if (nv.MaVaiTro == null || !VaiTroDuocTraLoi.Contains(nv.MaVaiTro))
+                return "Chỉ nhân viên quản trị hoặc CRM mới được trả lời đánh giá.";
+            return null;
         }
 
         // PUT: api/AdminDanhGia/{id}/XuLy - Admin đổi trạng thái xử lý (Chưa xử lý <-> Đã xử lý), không cần trả lời
