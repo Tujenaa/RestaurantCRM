@@ -707,7 +707,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             {
                 _thread.Controls.Add(new ChatBubble
                 {
-                    Author = string.IsNullOrWhiteSpace(d.TenKhachHang) ? "Khách hàng" : d.TenKhachHang,
+                    // Thời gian là lần gửi gốc; nội dung đã sửa thì ghi rõ để nhân viên biết
+                    Author = (string.IsNullOrWhiteSpace(d.TenKhachHang) ? "Khách hàng" : d.TenKhachHang)
+                             + (d.NgayCapNhat.HasValue ? " (đã sửa " + d.NgayCapNhat.Value.ToString("dd/MM") + ")" : ""),
                     Time = d.NgayDanhGia,
                     Body = string.IsNullOrWhiteSpace(d.NoiDung) ? "(Khách chỉ chấm sao, không để lại nội dung)" : d.NoiDung,
                     Mine = false

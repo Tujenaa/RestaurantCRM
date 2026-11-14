@@ -28,6 +28,8 @@
             <p style="color:var(--muted); font-size:13.5px; margin:0;">
                 Đánh giá ngày @(Model.NgayDanhGia?.ToString("dd/MM/yyyy") ?? "")@if (Model.NgayCapNhat.HasValue)
                 {<text> · đã chỉnh sửa @Model.NgayCapNhat.Value.ToString("dd/MM/yyyy")</text>}
+                @if (!Model.HienThi)
+                {<span style="display:inline-block; margin-left:6px; padding:1px 8px; border-radius:999px; background:#f1f5f9; color:#64748b; font-size:11.5px; font-weight:600;" title="Nhà hàng đã ẩn đánh giá này khỏi trang công khai. Bạn vẫn xem được tại đây.">Không hiển thị công khai</span>}
             </p>
         </div>
         <div>

@@ -152,12 +152,12 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new { message = "Gửi phản hồi thành công" });
         }
 
-        private const int DoDaiTuLuanToiDa = 2000;
+        private const int DoDaiTuLuanToiDa = 1000;   // khớp ô nhập trên Web
 
         /// <summary>
         /// Kiểm tra phiếu trả lời. Trả về lỗi đầu tiên, hoặc danh sách dòng CAU_TRA_LOI cần lưu.
         /// Trắc nghiệm: bắt buộc, tùy chọn phải thuộc đúng câu hỏi, bỏ qua nội dung tự điền.
-        /// Tự luận: không có tùy chọn, trim, tối đa 2000 ký tự; để trống thì không lưu dòng.
+        /// Tự luận: không có tùy chọn, trim, tối đa 1000 ký tự; để trống thì không lưu dòng.
         /// </summary>
         private static (string? Loi, List<(string MaCauHoi, string? MaTuyChon, string? NoiDung)> CauTraLois)
             KiemTraCauTraLoi(KhaoSat khaoSat, List<AnswerItem>? answers)

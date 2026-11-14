@@ -28,6 +28,8 @@ public class PhanHoiItemViewModel
     public DateTime NgayGui { get; set; }
     /// <summary>Lần khách sửa đánh giá gần nhất; null = chưa sửa.</summary>
     public DateTime? NgayCapNhat { get; set; }
+    /// <summary>false = nhà hàng đã ẩn khỏi trang công khai (chỉ khách thấy trong lịch sử của mình).</summary>
+    public bool HienThi { get; set; } = true;
     public List<TraLoiDanhGiaViewModel> TraLois { get; set; } = new();
 }
 
@@ -90,6 +92,8 @@ public class ChiTietDanhGiaDonHangViewModel
     public DateTime? NgayGui { get => NgayDanhGia; set => NgayDanhGia = value; }
     /// <summary>Lần khách sửa đánh giá gần nhất; null = chưa sửa.</summary>
     public DateTime? NgayCapNhat { get; set; }
+    /// <summary>false = nhà hàng đã ẩn khỏi trang công khai.</summary>
+    public bool HienThi { get; set; } = true;
     public List<ChiTietMonDanhGiaItemViewModel> ChiTietMon { get; set; } = new();
     public List<TraLoiDanhGiaViewModel> HoiThoai { get; set; } = new();
     public List<TraLoiDanhGiaViewModel> TraLois { get => HoiThoai; set => HoiThoai = value; }

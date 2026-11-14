@@ -15,7 +15,7 @@ namespace RestaurantCRM.API.Services
 
         public static readonly string[] TrangThaiHopLe = { "Active", "Locked" };
         public static readonly string[] GioiTinhHopLe = { "Nam", "Nữ", "Khác" };
-        public static readonly Regex SoDienThoaiRegex = new Regex(@"^0\d{9,10}$");
+        public static readonly Regex SoDienThoaiRegex = new Regex(@"^0\d{9}$");
         public static readonly Regex EmailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
         public static string? ChuanHoa(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
@@ -31,7 +31,7 @@ namespace RestaurantCRM.API.Services
 
             var sdt = ChuanHoa(soDienThoai);
             if (sdt != null && !SoDienThoaiRegex.IsMatch(sdt))
-                return "Số điện thoại không hợp lệ (bắt đầu bằng 0, gồm 10–11 chữ số).";
+                return "Số điện thoại không hợp lệ (bắt đầu bằng 0, gồm 10 chữ số).";
 
             var mail = ChuanHoa(email);
             if (mail != null && (!EmailRegex.IsMatch(mail) || mail.Length > 100))

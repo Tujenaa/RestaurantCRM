@@ -51,13 +51,13 @@ namespace RestaurantCRM.API.Controllers
             return Ok(ctReviews);
         }
 
-        // GET: api/DanhGia/KhachHang/{maKhachHang} - Lấy lịch sử đánh giá của riêng một khách hàng
+        // GET: api/DanhGia/KhachHang/{maKhachHang} - Lấy lịch sử đánh giá của riêng một khách hàng.
+        // Gồm cả đánh giá bị ẩn (ẩn chỉ để không hiện công khai); HienThi cho Web gắn nhãn "Không hiển thị công khai".
         [HttpGet("KhachHang/{maKhachHang}")]
         public async Task<IActionResult> GetDanhGiaByKhachHang(string maKhachHang)
         {
             var danhGias = await _service.Query<DanhGia>()
                 .Where(d => d.MaKhachHang == maKhachHang)
-                .Where(d => d.TrangThai)
                 .Include(d => d.MaKhachHangNavigation)
                 .Include(d => d.MaMonNavigation)
                 .Include(d => d.TraLoiDanhGia)
@@ -74,6 +74,7 @@ namespace RestaurantCRM.API.Controllers
                     d.NoiDung,
                     d.NgayDanhGia,
                     d.NgayCapNhat,
+                    HienThi = d.TrangThai,
                     TenKhachHang = d.MaKhachHangNavigation != null ? d.MaKhachHangNavigation.HoTen : "Khách hàng",
                     HoiThoai = d.TraLoiDanhGia.OrderByDescending(t => t.NgayGui).Select(t => new
                     {
@@ -141,6 +142,7 @@ namespace RestaurantCRM.API.Controllers
                 NoiDungChung = dg.NoiDung,
                 NgayDanhGia = dg.NgayDanhGia,
                 NgayCapNhat = dg.NgayCapNhat,
+                HienThi = dg.TrangThai,
                 ChiTietMon = dg.ChiTietDanhGia.Select(ct => new DishReviewDetailItemDto
                 {
                     MaChiTietDanhGia = ct.MaChiTietDanhGia,
@@ -292,10 +294,10 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy đánh giá của đơn hàng này để cập nhật.");
             }
 
-            // Kiểm tra quyền sở hữu
+            // Kiểm tra quyền sở hữu. Trả cùng câu như khi không tồn tại để không lộ mã đơn của người khác.
             if (!string.Equals(dg.MaKhachHang, request.MaKhachHang, StringComparison.OrdinalIgnoreCase))
             {
-                return BadRequest("Bạn không có quyền chỉnh sửa đánh giá này.");
+                return NotFound("Không tìm thấy đánh giá của đơn hàng này để cập nhật.");
             }
 
             var loiKhach = await KhachHangValidator.KiemTraHoatDongAsync(_service, request.MaKhachHang);

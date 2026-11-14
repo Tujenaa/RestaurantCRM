@@ -188,16 +188,10 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         }
 
         var detail = await phanHoiService.GetOrderReviewDetailAsync(maHoaDon);
-        if (detail == null)
+        // Không có, hoặc không phải của khách đang đăng nhập: cùng một thông báo để không lộ mã đơn của người khác
+        if (detail == null || !string.Equals(detail.MaKhachHang, customerId, StringComparison.OrdinalIgnoreCase))
         {
-            TempData["Loi"] = $"Chưa tìm thấy đánh giá cho đơn hàng #{maHoaDon}.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // Chỉ chủ đánh giá mới được xem
-        if (!string.Equals(detail.MaKhachHang, customerId, StringComparison.OrdinalIgnoreCase))
-        {
-            TempData["Loi"] = "Bạn không có quyền xem đánh giá này.";
+            TempData["Loi"] = $"Không tìm thấy đánh giá cho đơn hàng #{maHoaDon}.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -221,16 +215,10 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         }
 
         var detail = await phanHoiService.GetOrderReviewDetailAsync(maHoaDon);
-        if (detail == null)
+        // Không có, hoặc không phải của khách đang đăng nhập: cùng một thông báo để không lộ mã đơn của người khác
+        if (detail == null || !string.Equals(detail.MaKhachHang, customerId, StringComparison.OrdinalIgnoreCase))
         {
-            TempData["Loi"] = $"Chưa có đánh giá cho đơn hàng #{maHoaDon} để chỉnh sửa.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // Chỉ chủ đánh giá mới được sửa
-        if (!string.Equals(detail.MaKhachHang, customerId, StringComparison.OrdinalIgnoreCase))
-        {
-            TempData["Loi"] = "Bạn không có quyền chỉnh sửa đánh giá này.";
+            TempData["Loi"] = $"Không tìm thấy đánh giá cho đơn hàng #{maHoaDon}.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -296,43 +284,5 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         TempData["Loi"] = result.Message;
         model.DonHangHienTai = await donHangService.GetOrderDetailAsync(model.MaDonHang);
         return View(model);
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> PhanHoiLai(string maDanhGia, string noiDung, string? returnUrl = null)
-    {
-        var token = HttpContext.Session.GetString("Token");
-        var customerId = HttpContext.Session.GetString("MaKhachHang");
-        var customerName = HttpContext.Session.GetString("HoTen") ?? "Khách hàng";
-
-        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(customerId))
-        {
-            TempData["ThongBao"] = "Vui lòng đăng nhập để gửi phản hồi.";
-            return RedirectToAction("DangNhap", "TaiKhoan");
-        }
-
-        if (string.IsNullOrWhiteSpace(maDanhGia) || string.IsNullOrWhiteSpace(noiDung))
-        {
-            TempData["Loi"] = "Nội dung phản hồi không được để trống.";
-            return Redirect(returnUrl ?? Url.Action(nameof(Index))!);
-        }
-
-        bool success = await phanHoiService.AddReplyAsync(maDanhGia, noiDung, customerName, customerId);
-        if (success)
-        {
-            TempData["ThongBao"] = "Phản hồi của bạn đã được gửi thành công!";
-        }
-        else
-        {
-            TempData["Loi"] = "Không thể gửi phản hồi lúc này. Vui lòng thử lại sau.";
-        }
-
-        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-        {
-            return Redirect(returnUrl);
-        }
-
-        return RedirectToAction(nameof(Index));
     }
 }

@@ -71,7 +71,7 @@
                         </div>
                         <div class="field">
                             <label asp-for="SoDienThoai">Số điện thoại</label>
-                            <input asp-for="SoDienThoai" placeholder="Nhập số điện thoại (hoặc email)" />
+                            <input asp-for="SoDienThoai" placeholder="Nhập số điện thoại (hoặc email)" inputmode="numeric" maxlength="10" pattern="0[0-9]{9}" title="Số điện thoại gồm 10 chữ số, bắt đầu bằng 0" />
                         </div>
                     </div>
                     <div class="two">
@@ -125,7 +125,7 @@
         <div data-account-panel="register" hidden="@(activeTab != "register")">
             <h3>Tạo tài khoản Lẩu Phố</h3><form asp-action="DangKy" method="post" data-gui-mot-lan>
                 <div class="field"><label for="regName">Họ và tên *</label><input id="regName" name="hoTen" required maxlength="100" placeholder="Nguyễn Văn A" /></div>
-                <div class="two"><div class="field"><label for="regPhone">Số điện thoại *</label><input id="regPhone" name="soDienThoai" required type="tel" placeholder="0901 234 567" /></div><div class="field"><label for="regEmail">Email</label><input id="regEmail" name="email" type="email" placeholder="ban@email.com" /></div></div>
+                <div class="two"><div class="field"><label for="regPhone">Số điện thoại *</label><input id="regPhone" name="soDienThoai" required type="tel" placeholder="0901234567" inputmode="numeric" maxlength="10" pattern="0[0-9]{9}" title="Số điện thoại gồm 10 chữ số, bắt đầu bằng 0" /></div><div class="field"><label for="regEmail">Email</label><input id="regEmail" name="email" type="email" placeholder="ban@email.com" /></div></div>
                 <div class="field"><label for="regPassword">Mật khẩu *</label><input id="regPassword" name="matKhau" type="password" required minlength="6" placeholder="Ít nhất 6 ký tự" oninvalid="this.setCustomValidity(this.validity.tooShort ? 'Vui lòng nhập mật khẩu tối thiểu 6 ký tự.' : (this.validity.valueMissing ? 'Vui lòng nhập mật khẩu.' : ''))" oninput="this.setCustomValidity('')" /></div><button class="btn" type="submit">Tạo tài khoản</button>
             </form><p class="muted account-caption">Tài khoản mới sẽ được tạo trên hệ thống.</p>
         </div>

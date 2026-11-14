@@ -378,7 +378,7 @@ namespace RestaurantCRM.API.Controllers
 
             // 2. Phân tích giới tính
             var genderGroups = khachHangs
-                .GroupBy(k => string.IsNullOrWhiteSpace(k.GioiTinh) ? "Khác / Chưa rõ" : k.GioiTinh.Trim())
+                .GroupBy(k => string.IsNullOrWhiteSpace(k.GioiTinh) ? "Chưa rõ" : k.GioiTinh.Trim())
                 .Select(g => new GioiTinhStatDto
                 {
                     TenGioiTinh = g.Key,

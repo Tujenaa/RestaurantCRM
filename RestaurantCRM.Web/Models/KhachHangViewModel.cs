@@ -8,7 +8,7 @@ public class KhachHangViewModel
     [StringLength(100)]
     public string HoTen { get; set; } = "";
     // Không bắt buộc riêng: chỉ cần có email hoặc số điện thoại (kiểm tra ở controller + API)
-    [Phone(ErrorMessage = "Số điện thoại chưa đúng định dạng.")]
+    [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.")]
     public string? SoDienThoai { get; set; } = "";
     [EmailAddress(ErrorMessage = "Email chưa đúng định dạng.")]
     public string? Email { get; set; }

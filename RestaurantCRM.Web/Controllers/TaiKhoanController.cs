@@ -271,15 +271,14 @@ public class TaiKhoanController : Controller
             var client = _httpClientFactory.CreateClient("ApiClient");
             DateOnly? ngaySinh = model.NgaySinh.HasValue ? DateOnly.FromDateTime(model.NgaySinh.Value) : null;
 
-            // Gửi đủ các trường; địa chỉ lấy từ dữ liệu hiện có của khách trên hệ thống (không lấy từ Session).
-            // Ô nào để trống thì API giữ nguyên giá trị cũ.
-            var hienTai = await LayThongTinHienTaiAsync(client, maKhachHang);
-            if (cleanEmail == null && cleanSoDienThoai == null
-                && string.IsNullOrWhiteSpace(hienTai?.Email) && string.IsNullOrWhiteSpace(hienTai?.SoDienThoai))
+            // Gửi đủ các trường; ô nào để trống là xóa giá trị đó (form đã điền sẵn giá trị cũ).
+            // Địa chỉ sửa ở form riêng nên lấy từ dữ liệu hiện có của khách trên hệ thống (không lấy từ Session).
+            if (cleanEmail == null && cleanSoDienThoai == null)
             {
                 TempData["ThongBao"] = "Cập nhật thất bại: Vui lòng nhập ít nhất email hoặc số điện thoại.";
                 return RedirectToAction(nameof(Index), new { tab = "profile" });
             }
+            var hienTai = await LayThongTinHienTaiAsync(client, maKhachHang);
 
             var payload = new
             {
@@ -297,8 +296,9 @@ public class TaiKhoanController : Controller
             if (response.IsSuccessStatusCode)
             {
                 HttpContext.Session.SetString("HoTen", model.HoTen?.Trim() ?? "");
-                if (cleanEmail != null) HttpContext.Session.SetString("Email", cleanEmail);
-                if (cleanSoDienThoai != null) HttpContext.Session.SetString("SoDienThoai", cleanSoDienThoai);
+                // Ô trống đã bị xóa trên hệ thống → bỏ khỏi Session
+                if (cleanEmail != null) HttpContext.Session.SetString("Email", cleanEmail); else HttpContext.Session.Remove("Email");
+                if (cleanSoDienThoai != null) HttpContext.Session.SetString("SoDienThoai", cleanSoDienThoai); else HttpContext.Session.Remove("SoDienThoai");
 
                 TempData["ThongBao"] = "🎉 Cập nhật thông tin thành công!";
             }

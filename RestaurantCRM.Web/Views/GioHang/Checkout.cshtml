@@ -43,7 +43,7 @@
             </div>
             <div class="field">
                 <label asp-for="DatHang.SoDienThoai">Số điện thoại liên hệ *</label>
-                <input asp-for="DatHang.SoDienThoai" type="tel" placeholder="Ví dụ: 0901 234 567" required />
+                <input asp-for="DatHang.SoDienThoai" type="tel" placeholder="Ví dụ: 0901234567" required inputmode="numeric" maxlength="10" pattern="0[0-9]{9}" title="Số điện thoại gồm 10 chữ số, bắt đầu bằng 0" />
                 <span asp-validation-for="DatHang.SoDienThoai" class="text-danger" style="font-size:12px;"></span>
             </div>
         </div>

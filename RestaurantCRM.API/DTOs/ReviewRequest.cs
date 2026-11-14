@@ -51,6 +51,8 @@ namespace RestaurantCRM.API.DTOs
         public DateTime? NgayDanhGia { get; set; }
         /// <summary>Lần khách sửa gần nhất; null = chưa từng sửa.</summary>
         public DateTime? NgayCapNhat { get; set; }
+        /// <summary>false = đánh giá bị ẩn khỏi trang công khai (chủ đánh giá vẫn xem được).</summary>
+        public bool HienThi { get; set; } = true;
         public List<DishReviewDetailItemDto> ChiTietMon { get; set; } = new();
         public List<ReviewReplyDetailDto> HoiThoai { get; set; } = new();
     }

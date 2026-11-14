@@ -12,13 +12,13 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
     /// <summary>Hộp thoại thêm / sửa khách hàng, kiểm tra dữ liệu trước khi gửi API.</summary>
     public class KhachHangDialog : CrmDialog
     {
-        private static readonly Regex PhoneRegex = new Regex(@"^0\d{9,10}$");
+        private static readonly Regex PhoneRegex = new Regex(@"^0\d{9}$");
         private static readonly Regex EmailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
         private readonly KhachHangService _service = new KhachHangService();
         private readonly KhachHangDto _edit;
         private readonly TextBox _txtHoTen = new TextBox { MaxLength = 100 };
-        private readonly TextBox _txtSdt = new TextBox { MaxLength = 11 };
+        private readonly TextBox _txtSdt = new TextBox { MaxLength = 10 };
         private readonly TextBox _txtEmail = new TextBox { MaxLength = 100 };
         private readonly ComboBox _cboGioiTinh = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly DateTimePicker _dtNgaySinh = new DateTimePicker { Format = DateTimePickerFormat.Custom, CustomFormat = "dd/MM/yyyy", ShowCheckBox = true };
@@ -102,7 +102,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             if (hoTen.Length == 0) return Fail(_txtHoTen, "Vui lòng nhập họ và tên khách hàng.");
             if (hoTen.Length < 2) return Fail(_txtHoTen, "Họ và tên quá ngắn.");
             if (sdt.Length == 0) return Fail(_txtSdt, "Vui lòng nhập số điện thoại.");
-            if (!PhoneRegex.IsMatch(sdt)) return Fail(_txtSdt, "Số điện thoại phải bắt đầu bằng 0 và có 10–11 chữ số.");
+            if (!PhoneRegex.IsMatch(sdt)) return Fail(_txtSdt, "Số điện thoại phải bắt đầu bằng 0 và có 10 chữ số.");
             if (email.Length > 0 && !EmailRegex.IsMatch(email)) return Fail(_txtEmail, "Email không đúng định dạng (ví dụ: ten@gmail.com).");
             if (_dtNgaySinh.Checked && _dtNgaySinh.Value.Date > DateTime.Today) return Fail(_dtNgaySinh, "Ngày sinh không được lớn hơn hôm nay.");
 

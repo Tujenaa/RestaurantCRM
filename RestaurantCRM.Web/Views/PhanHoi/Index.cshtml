@@ -79,6 +79,8 @@ else
                         <p style="margin:4px 0 0; font-size:13px; color:var(--muted);">
                             Đánh giá ngày @reviewChung.NgayGui.ToString("dd/MM/yyyy")@if (reviewChung.NgayCapNhat.HasValue)
                             {<text> · đã chỉnh sửa @reviewChung.NgayCapNhat.Value.ToString("dd/MM/yyyy")</text>}
+                            @if (!reviewChung.HienThi)
+                {<span style="display:inline-block; margin-left:6px; padding:1px 8px; border-radius:999px; background:#f1f5f9; color:#64748b; font-size:11.5px; font-weight:600;" title="Nhà hàng đã ẩn đánh giá này khỏi trang công khai. Bạn vẫn xem được tại đây.">Không hiển thị công khai</span>}
                         </p>
                     </div>
 

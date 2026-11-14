@@ -180,6 +180,7 @@ public class PhanHoiService
                         NoiDungChung = dto.NoiDungChung,
                         NgayDanhGia = dto.NgayDanhGia,
                         NgayCapNhat = dto.NgayCapNhat,
+                        HienThi = dto.HienThi,
                         ChiTietMon = (dto.ChiTietMon ?? new()).Select(ct => new ChiTietMonDanhGiaItemViewModel
                         {
                             MaChiTietDanhGia = ct.MaChiTietDanhGia ?? "",
@@ -313,34 +314,6 @@ public class PhanHoiService
             .ToList();
     }
 
-    /// <summary>
-    /// Thêm phản hồi trao đổi lại cho một đánh giá
-    /// </summary>
-    public async Task<bool> AddReplyAsync(string maDanhGia, string noiDung, string senderName = "Khách hàng", string? customerId = null)
-    {
-        if (string.IsNullOrWhiteSpace(customerId) || string.IsNullOrWhiteSpace(maDanhGia))
-        {
-            return false;
-        }
-
-        try
-        {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var payload = new
-            {
-                NguoiGuiId = customerId.Trim(),
-                NoiDung = noiDung
-            };
-            var response = await client.PostAsJsonAsync($"/api/DanhGia/{maDanhGia}/Reply", payload);
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("Lỗi gọi API reply: {Message}", ex.Message);
-            return false;
-        }
-    }
-
     private static PhanHoiItemViewModel MapFromApi(ApiDanhGiaDto dto)
     {
         return new PhanHoiItemViewModel
@@ -354,6 +327,7 @@ public class PhanHoiService
             NoiDung = dto.NoiDung ?? "",
             NgayGui = dto.NgayDanhGia ?? DateTime.Now,
             NgayCapNhat = dto.NgayCapNhat,
+            HienThi = dto.HienThi,
             TraLois = (dto.HoiThoai ?? new List<ApiTraLoiDto>())
                 .OrderByDescending(t => t.NgayGui ?? DateTime.MinValue)
                 .Select(t => new TraLoiDanhGiaViewModel
@@ -389,6 +363,7 @@ public class PhanHoiService
         public string? NoiDungChung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
         public DateTime? NgayCapNhat { get; set; }
+        public bool HienThi { get; set; } = true;
         public List<ApiDishReviewDetailDto>? ChiTietMon { get; set; }
         public List<ApiTraLoiDto>? HoiThoai { get; set; }
     }
@@ -413,6 +388,8 @@ public class PhanHoiService
         public string? NoiDung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
         public DateTime? NgayCapNhat { get; set; }
+        /// <summary>Trang món chỉ nhận đánh giá đang hiển thị; lịch sử của chính khách có cả đánh giá bị ẩn.</summary>
+        public bool HienThi { get; set; } = true;
         public string? TenKhachHang { get; set; }
         public List<ApiTraLoiDto>? HoiThoai { get; set; }
     }

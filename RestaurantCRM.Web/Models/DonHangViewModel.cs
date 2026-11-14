@@ -57,7 +57,7 @@ public class DatHangViewModel
     public string HoTen { get; set; } = "";
 
     [Required(ErrorMessage = "Vui lòng nhập số điện thoại liên hệ.")]
-    [RegularExpression(@"^[0-9+(). -]{9,15}$", ErrorMessage = "Số điện thoại chưa đúng định dạng.")]
+    [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.")]
     public string SoDienThoai { get; set; } = "";
 
     [Required(ErrorMessage = "Vui lòng nhập địa chỉ nhận hàng.")]

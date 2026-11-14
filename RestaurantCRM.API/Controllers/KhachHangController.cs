@@ -143,8 +143,8 @@ namespace RestaurantCRM.API.Controllers
 
         // PUT: api/KhachHang/ThongTin/{id} - Cập nhật thông tin cá nhân khách hàng
         [HttpPut("ThongTin/{id}")]
-        // Cập nhật từng phần: HoTen bắt buộc; SoDienThoai, Email, NgaySinh, GioiTinh, DiaChi để trống thì giữ giá trị cũ.
-        // Sau khi gộp với dữ liệu cũ phải còn ít nhất email hoặc số điện thoại.
+        // Ghi đè toàn bộ hồ sơ theo dữ liệu gửi lên: HoTen bắt buộc; SoDienThoai, Email, NgaySinh, GioiTinh, DiaChi
+        // để trống là xóa giá trị (form Web đã điền sẵn giá trị cũ). Phải còn ít nhất email hoặc số điện thoại.
         public async Task<IActionResult> CapNhatThongTin(string id, UpdateProfileRequest request)
         {
             var loiTrangThai = await KhachHangValidator.KiemTraHoatDongAsync(_service, id);
@@ -157,14 +157,14 @@ namespace RestaurantCRM.API.Controllers
             }
 
             var hoTen = KhachHangValidator.ChuanHoa(request.HoTen);
-            var soDienThoai = KhachHangValidator.ChuanHoa(request.SoDienThoai) ?? khachHang.SoDienThoai;
-            var email = KhachHangValidator.ChuanHoa(request.Email) ?? khachHang.Email;
-            var ngaySinh = request.NgaySinh ?? khachHang.NgaySinh;
-            var gioiTinh = KhachHangValidator.ChuanHoa(request.GioiTinh) ?? khachHang.GioiTinh;
-            var diaChi = KhachHangValidator.ChuanHoa(request.DiaChi) ?? khachHang.DiaChi;
+            var soDienThoai = KhachHangValidator.ChuanHoa(request.SoDienThoai);
+            var email = KhachHangValidator.ChuanHoa(request.Email);
+            var ngaySinh = request.NgaySinh;
+            var gioiTinh = KhachHangValidator.ChuanHoa(request.GioiTinh);
+            var diaChi = KhachHangValidator.ChuanHoa(request.DiaChi);
 
-            var loi = KhachHangValidator.KiemTraDuLieu(hoTen, soDienThoai, email, request.NgaySinh,
-                          KhachHangValidator.ChuanHoa(request.GioiTinh), null, batBuocHoTen: true)
+            var loi = KhachHangValidator.KiemTraDuLieu(hoTen, soDienThoai, email, ngaySinh,
+                          gioiTinh, null, batBuocHoTen: true)
                       ?? KhachHangValidator.KiemTraLienHe(soDienThoai, email);
             if (loi != null) return BadRequest(loi);
             if (diaChi?.Length > 255) return BadRequest("Địa chỉ tối đa 255 ký tự.");
