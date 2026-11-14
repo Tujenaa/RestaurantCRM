@@ -136,11 +136,12 @@ namespace RestaurantCRM.API.Controllers
 
             // 3. Phân hệ Khách hàng
             var tongKhachHang = await _service.Query<KhachHang>().CountAsync();
-            var danhGiaHienThi = _service.Query<DanhGia>().Where(d => d.TrangThai);
-            var diemDanhGiaTb = await danhGiaHienThi.AnyAsync()
-                ? await danhGiaHienThi.AverageAsync(d => (double?)d.SoSao) ?? 5.0
+            // Tính cả đánh giá đã ẩn: ẩn chỉ để không hiện trên website, không được làm đẹp số liệu nội bộ
+            var danhGias = _service.Query<DanhGia>();
+            var diemDanhGiaTb = await danhGias.AnyAsync()
+                ? await danhGias.AverageAsync(d => (double?)d.SoSao) ?? 5.0
                 : 5.0;
-            var tongDanhGia = await danhGiaHienThi.CountAsync();
+            var tongDanhGia = await danhGias.CountAsync();
             var khaoSatDangMo = await _service.Query<KhaoSat>()
                 .CountAsync(k => k.TrangThai == "Đang diễn ra" || k.TrangThai == "Hoạt động" || k.TrangThai == "Active");
 

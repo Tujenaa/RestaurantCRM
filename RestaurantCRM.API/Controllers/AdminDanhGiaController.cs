@@ -26,23 +26,25 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // GET: api/AdminDanhGia/PhanTichMon - Tổng hợp đánh giá theo món ăn.
-        // Chỉ tính trên CHI_TIET_DANH_GIA của đánh giá đang hiển thị. Điểm món chỉ lấy các lượt khách chấm riêng
-        // (SoSao != NULL); sao chung của đơn chỉ đưa ra để tham khảo (DiemTheoDon).
+        // Tính trên mọi CHI_TIET_DANH_GIA, kể cả đánh giá đã ẩn (ẩn chỉ để không hiện trên website).
+        // Điểm món chỉ lấy các lượt khách chấm riêng (SoSao != NULL); sao chung của đơn chỉ để tham khảo (DiemTheoDon).
+        // NhanXet: các lượt chấm riêng (có sao) hoặc có nhận xét của món, kèm mã đánh giá, sao món và sao đơn.
         [HttpGet("PhanTichMon")]
         public async Task<IActionResult> GetPhanTichMon()
         {
             const int NguongDuDuLieu = 3;
 
             var ctDanhGias = await _service.Query<ChiTietDanhGia>()
-                .Where(ct => ct.MaDanhGiaNavigation.TrangThai)
                 .Select(ct => new
                 {
+                    ct.MaDanhGia,
                     ct.MaMon,
                     TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
                     ct.SoSao,
                     SoSaoDon = ct.MaDanhGiaNavigation.SoSao,
                     ct.NoiDung,
-                    NgayDanhGia = ct.MaDanhGiaNavigation.NgayDanhGia
+                    NgayDanhGia = ct.MaDanhGiaNavigation.NgayDanhGia,
+                    HienThi = ct.MaDanhGiaNavigation.TrangThai
                 })
                 .ToListAsync();
 
@@ -67,13 +69,17 @@ namespace RestaurantCRM.API.Controllers
                         SoSao5 = diem.Count(s => s == 5),
                         DiemTheoDon = diemDon.Count == 0 ? (double?)null : Math.Round(diemDon.Average(), 2),
                         DuDuLieu = diem.Count >= NguongDuDuLieu,
-                        NhanXet = g.Where(d => !string.IsNullOrWhiteSpace(d.NoiDung))
+                        NhanXet = g.Where(d => d.SoSao != null || !string.IsNullOrWhiteSpace(d.NoiDung))
                             .OrderByDescending(d => d.NgayDanhGia)
                             .Select(d => new
                             {
+                                d.MaDanhGia,
                                 d.SoSao,
+                                d.SoSaoDon,
+                                ChamRieng = d.SoSao != null,
                                 d.NoiDung,
-                                d.NgayDanhGia
+                                d.NgayDanhGia,
+                                d.HienThi
                             })
                             .ToList()
                     };

@@ -531,7 +531,7 @@ namespace RestaurantCRM.AdminApp.Forms.Dashboard
                 {
                     if (_role == "Khách hàng" || _role == "CRM")
                     {
-                        var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<DanhGiaFeedDto>>(http, "api/AdminDanhGia");
+                        var data = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<List<DanhGiaFeedDto>>(http, "api/AdminDanhGia?trangThai=TatCa");
                         if (data != null)
                             foreach (var d in data)
                             {

@@ -94,7 +94,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             _commentsTitle.Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold);
             _commentsTitle.ForeColor = ThemeManager.Ink;
-            _commentsTitle.Text = "Nhận xét của khách hàng";
+            _commentsTitle.Text = "Lượt chấm của khách hàng";
             _commentsTitle.TextAlign = ContentAlignment.MiddleLeft;
             root.Controls.Add(_commentsTitle);
 
@@ -106,15 +106,19 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             _comments.RowHeadersVisible = false;
             _comments.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             _comments.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            var giua = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter };
+            _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "MaDG", HeaderText = "Mã ĐG", FillWeight = 20 });
             _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày gửi", FillWeight = 24 });
-            _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao", HeaderText = "Số sao", FillWeight = 16 });
-            _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "NoiDung", HeaderText = "Nội dung nhận xét", FillWeight = 160 });
+            _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "SaoMon", HeaderText = "Sao món", FillWeight = 13, DefaultCellStyle = giua });
+            _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "SaoDon", HeaderText = "Sao đơn", FillWeight = 13, DefaultCellStyle = giua });
+            _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "Loai", HeaderText = "Loại", FillWeight = 17, DefaultCellStyle = giua });
+            _comments.Columns.Add(new DataGridViewTextBoxColumn { Name = "NoiDung", HeaderText = "Nhận xét", FillWeight = 120 });
             _comments.Columns["NoiDung"].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             _comments.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             UiStyler.StyleGrid(_comments);
             root.Controls.Add(_comments);
 
-            _emptyComments.Text = "Chọn một món để xem nhận xét.";
+            _emptyComments.Text = "Chọn một món để xem lượt chấm.";
             _emptyComments.Dock = DockStyle.None;
             _emptyComments.TextAlign = ContentAlignment.MiddleCenter;
             _emptyComments.ForeColor = ThemeManager.Muted;
@@ -210,7 +214,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             }
             else
             {
-                _commentsTitle.Text = "Nhận xét của khách hàng";
+                _commentsTitle.Text = "Lượt chấm của khách hàng";
                 _comments.Rows.Clear();
                 _emptyComments.Text = "Không có món ăn nào khớp bộ lọc.";
                 _emptyComments.Visible = true;
@@ -251,7 +255,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private void ShowComments(PhanTichDanhGiaMonDto mon)
         {
             if (mon == null) return;
-            _commentsTitle.Text = "Nhận xét: " + (mon.TenMon ?? mon.MaMon ?? "Món ăn");
+            _commentsTitle.Text = "Lượt chấm riêng: " + (mon.TenMon ?? mon.MaMon ?? "Món ăn");
             _comments.Rows.Clear();
             int saoFilter = _cboFilterCommentSao.SelectedIndex;
             var comments = (mon.NhanXet ?? new System.Collections.Generic.List<PhanTichNhanXetDto>()).Where(c =>
@@ -264,14 +268,20 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
             foreach (var item in comments)
             {
-                _comments.Rows.Add(
+                string noiDung = string.IsNullOrWhiteSpace(item.NoiDung) ? "—" : item.NoiDung;
+                int row = _comments.Rows.Add(
+                    string.IsNullOrWhiteSpace(item.MaDanhGia) ? "—" : item.MaDanhGia,
                     item.NgayDanhGia.HasValue ? item.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—",
                     item.SoSao.HasValue ? item.SoSao.Value + " / 5" : "—",
-                    item.NoiDung);
+                    item.SoSaoDon.HasValue ? item.SoSaoDon.Value + " / 5" : "—",
+                    item.ChamRieng ? "Chấm riêng" : "Theo đơn",
+                    item.HienThi ? noiDung : "[Đã ẩn] " + noiDung);
+                // Đánh giá đã ẩn trên website: vẫn tính vào thống kê, tô mờ để nhân viên phân biệt
+                if (!item.HienThi) _comments.Rows[row].DefaultCellStyle.ForeColor = ThemeManager.Muted;
             }
 
             bool none = _comments.Rows.Count == 0;
-            _emptyComments.Text = saoFilter > 0 ? "Không có nhận xét nào ở mức sao này." : "Món này chưa có nhận xét bằng chữ.";
+            _emptyComments.Text = saoFilter > 0 ? "Không có lượt chấm nào ở mức sao này." : "Món này chưa có lượt chấm riêng.";
             _emptyComments.Visible = none;
             if (none) _emptyComments.BringToFront(); else _comments.BringToFront();
             LayoutContent(_dishes.Parent);

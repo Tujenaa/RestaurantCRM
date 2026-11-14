@@ -98,8 +98,16 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
 
     public class PhanTichNhanXetDto
     {
+        public string MaDanhGia { get; set; }
+        /// <summary>Sao khách chấm riêng cho món (NULL = không chấm riêng).</summary>
         public int? SoSao { get; set; }
+        /// <summary>Sao chung của cả đơn.</summary>
+        public int? SoSaoDon { get; set; }
+        /// <summary>true = món có sao riêng (khách bấm sao hoặc viết nhận xét cho món).</summary>
+        public bool ChamRieng { get; set; }
         public string NoiDung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
+        /// <summary>false = đánh giá đã bị ẩn trên website (vẫn tính vào thống kê).</summary>
+        public bool HienThi { get; set; } = true;
     }
 }
