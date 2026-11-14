@@ -1,6 +1,11 @@
 USE RestaurantCRM;
 GO
 
+-- Bắt buộc khi insert vào bảng có UNIQUE INDEX có điều kiện WHERE (sqlcmd mặc định QUOTED_IDENTIFIER OFF)
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================================
 -- DỮ LIỆU MẪU cho CSDL RestaurantCRM – khớp RestaurantCRM.sql (bản có
 -- CHI_TIET_DANH_GIA.soSao cho phép NULL). Chạy RestaurantCRM.sql trước, rồi chạy file này.
@@ -26,7 +31,7 @@ GO
 --      - Mỗi hóa đơn Completed có tối đa 1 đánh giá, của đúng khách đặt đơn; DANH_GIA.maMon = NULL.
 --      - DANH_GIA.soSao là sao chung khách chấm cho cả đơn.
 --      - CHI_TIET_DANH_GIA: mỗi món trong đơn đúng 1 dòng. soSao = NULL nghĩa là khách
---        không đánh giá riêng món đó; món có nhận xét luôn có soSao.
+--        không đánh giá  món đó; món có nhận xét luôn có soSao.
 --      - Mỗi đánh giá tối đa 1 câu trả lời của nhân viên CRM/admin; đã trả lời thì daXuLy = 1.
 --  * KHẢO SÁT: khảo sát không có dòng DOI_TUONG_KHAO_SAT là khảo sát cho tất cả khách.
 --    Mỗi khách tối đa 1 phiếu / khảo sát; phiếu trả lời đủ mọi câu trắc nghiệm, tùy chọn đúng câu hỏi;
@@ -40,7 +45,7 @@ GO
 --  * KH024: giới tính 'Khác'.
 --  * HD092: đơn khách vãng lai (maKhachHang = NULL) lập tại quầy.
 --  * HD088–HD091 (đang xử lý) và 9 đơn đã hủy (HD003, HD010, ...) → không được đánh giá.
---  * DG055: sao chung 2★, không đánh giá riêng món nào → cờ "Cần chú ý" bật nhưng không món nào bị tính là chê.
+--  * DG055: sao chung 2★, không đánh giá  món nào → cờ "Cần chú ý" bật nhưng không món nào bị tính là chê.
 --  * DG056: sao chung 5★ nhưng 1 món chấm riêng 1★   → "Cần chú ý" do món bị chê.
 --  * DG057: chỉ chấm riêng sao cho 1 món, không nhận xét; đã xử lý mà không trả lời.
 --  * DG058: phản hồi đã ẩn khỏi website.
@@ -1454,7 +1459,7 @@ INSERT INTO LICH_SU_TRANG_THAI (maLichSu, maHoaDon, trangThai, thoiGian, ghiChu)
 GO
 
 -- 7. Đánh giá: 1 đánh giá / hóa đơn hoàn tất; maMon = NULL
---    CHI_TIET_DANH_GIA: mỗi món trong đơn đúng 1 dòng; soSao NULL = khách không đánh giá riêng món đó
+--    CHI_TIET_DANH_GIA: mỗi món trong đơn đúng 1 dòng; soSao NULL = khách không đánh giá  món đó
 INSERT INTO DANH_GIA (maDanhGia, maKhachHang, maHoaDon, maMon, soSao, noiDung, ngayDanhGia, trangThai, daXuLy) VALUES
 ('DG001','KH002','HD001',NULL,2,N'Nước lẩu quá mặn, mong nhà hàng kiểm tra lại công thức.','2026-01-06T12:51:00',1,1),
 ('DG002','KH017','HD002',NULL,4,N'Chất lượng tốt, đóng gói gọn gàng, sẽ đặt lại vào dịp khác.','2026-01-07T00:47:00',1,1),

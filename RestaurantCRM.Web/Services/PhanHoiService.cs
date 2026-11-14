@@ -295,7 +295,7 @@ public class PhanHoiService
 
     /// <summary>
     /// Chỉ gửi món khách chấm riêng (bấm sao) hoặc có nhận xét. Món chỉ có nhận xét gửi SoSao = null
-    /// để API lấy sao chung; món không gửi → API lưu NULL (không đánh giá riêng).
+    /// để API lấy sao chung; món không gửi → API lưu NULL (không đánh giá ).
     /// </summary>
     private static List<object> MonChamRieng(List<DishReviewInputItem>? dishReviews)
     {

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Helpers;
 
 namespace RestaurantCRM.API.Controllers
 {
@@ -240,7 +241,15 @@ namespace RestaurantCRM.API.Controllers
 
             _service.Add(traLoi);
             danhGia.DaXuLy = true;
-            await _service.SaveChangesAsync();
+            try
+            {
+                await _service.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (DbErrorHelper.IsUniqueViolation(ex))
+            {
+                // 2 nhân viên trả lời cùng lúc: lần sau vướng UNIQUE(maDanhGia)
+                return BadRequest("Phản hồi này đã được trả lời. Mỗi phản hồi chỉ trả lời 1 lần.");
+            }
 
             return Ok(new { message = "Gửi trả lời thành công.", maTraLoi = traLoi.MaTraLoi });
         }

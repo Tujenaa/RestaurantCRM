@@ -32,7 +32,7 @@
 }
 
 <div style="max-width:760px; margin:0 auto 40px;">
-    <form class="panel review-form-card" asp-action="Gui" method="post" style="box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding:28px 32px; border-radius:18px; border:1px solid var(--line); background:#ffffff;">
+    <form class="panel review-form-card" asp-action="Gui" method="post" data-gui-mot-lan style="box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding:28px 32px; border-radius:18px; border:1px solid var(--line); background:#ffffff;">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="All" class="validation" style="color:#d32f2f; margin-bottom:16px;"></div>
 

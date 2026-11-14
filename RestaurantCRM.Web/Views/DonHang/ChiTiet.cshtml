@@ -122,7 +122,7 @@
                 </form>
             }
 
-            <form asp-action="MuaLai" method="post">
+            <form asp-action="MuaLai" method="post" data-gui-mot-lan>
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.MaDonHang" />
                 <button class="btn" type="submit">

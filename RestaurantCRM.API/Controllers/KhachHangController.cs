@@ -45,11 +45,8 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest("Số điện thoại đã được sử dụng.");
             }
 
-            var newMaKhachHang = "KH" + DateTime.Now.Ticks.ToString().Substring(8, 6);
-
             var khachHang = new KhachHang
             {
-                MaKhachHang = newMaKhachHang,
                 HoTen = request.HoTen.Trim(),
                 SoDienThoai = sdt,
                 Email = email,
@@ -59,8 +56,8 @@ namespace RestaurantCRM.API.Controllers
                 TrangThai = "Active"
             };
 
-            _service.Add(khachHang);
-            await _service.SaveChangesAsync();
+            var loiLuu = await KhachHangMoiHelper.LuuKhachHangMoiAsync(_service, khachHang);
+            if (loiLuu != null) return BadRequest(loiLuu);
 
             return Ok(new { message = "Đăng ký thành công", maKhachHang = khachHang.MaKhachHang });
         }

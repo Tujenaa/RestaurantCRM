@@ -22,6 +22,11 @@ GO
 USE RestaurantCRM;
 GO
 
+-- Bắt buộc cho các UNIQUE INDEX có điều kiện WHERE (sqlcmd mặc định QUOTED_IDENTIFIER OFF)
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- 1. Tài khoản & phân quyền (admin là nhân viên có vai trò ADMIN)
 CREATE TABLE VAI_TRO (
     maVaiTro VARCHAR(20) PRIMARY KEY,
@@ -242,12 +247,16 @@ CREATE TABLE DANH_GIA (
     daXuLy BIT NOT NULL CONSTRAINT DF_DANH_GIA_daXuLy DEFAULT 0       -- 1 = nhân viên đã xử lý (đã xem / đã trả lời)
 );
 
+-- Mỗi đơn hàng chỉ có 1 đánh giá (chặn gửi trùng khi bấm 2 lần)
+CREATE UNIQUE INDEX UQ_DANH_GIA_maHoaDon ON DANH_GIA(maHoaDon) WHERE maHoaDon IS NOT NULL;
+
 CREATE TABLE CHI_TIET_DANH_GIA (
     maChiTietDanhGia VARCHAR(20) PRIMARY KEY,
     maDanhGia VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES DANH_GIA(maDanhGia) ON DELETE CASCADE,
     maMon VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES MON_AN(maMon),
-    soSao INT NULL CONSTRAINT CK_CHI_TIET_DANH_GIA_soSao CHECK (soSao IS NULL OR soSao BETWEEN 1 AND 5),  -- NULL = khách không đánh giá riêng món này
-    noiDung NVARCHAR(MAX) NULL
+    soSao INT NULL CONSTRAINT CK_CHI_TIET_DANH_GIA_soSao CHECK (soSao IS NULL OR soSao BETWEEN 1 AND 5),  -- NULL = khách không đánh giá  món này
+    noiDung NVARCHAR(MAX) NULL,
+    CONSTRAINT UQ_CHI_TIET_DANH_GIA_maDanhGia_maMon UNIQUE (maDanhGia, maMon)  -- mỗi món 1 dòng trong 1 đánh giá
 );
 
 CREATE TABLE LICH_SU_TRANG_THAI (
@@ -287,12 +296,20 @@ CREATE TABLE DOI_TUONG_KHAO_SAT (
     daHoanThanh BIT
 );
 
+-- Mỗi khách chỉ xuất hiện 1 lần trong danh sách đối tượng của 1 khảo sát
+CREATE UNIQUE INDEX UQ_DOI_TUONG_KHAO_SAT_maKhaoSat_maKhachHang ON DOI_TUONG_KHAO_SAT(maKhaoSat, maKhachHang)
+    WHERE maKhaoSat IS NOT NULL AND maKhachHang IS NOT NULL;
+
 CREATE TABLE PHIEU_TRA_LOI (
     maPhieuTraLoi VARCHAR(20) PRIMARY KEY,
     maKhaoSat VARCHAR(20) FOREIGN KEY REFERENCES KHAO_SAT(maKhaoSat),
     maKhachHang VARCHAR(20) FOREIGN KEY REFERENCES KHACH_HANG(maKhachHang),
     ngayTraLoi DATETIME
 );
+
+-- Mỗi khách chỉ gửi 1 phiếu trả lời cho 1 khảo sát
+CREATE UNIQUE INDEX UQ_PHIEU_TRA_LOI_maKhaoSat_maKhachHang ON PHIEU_TRA_LOI(maKhaoSat, maKhachHang)
+    WHERE maKhaoSat IS NOT NULL AND maKhachHang IS NOT NULL;
 
 CREATE TABLE CAU_TRA_LOI (
     maCauTraLoi VARCHAR(20) PRIMARY KEY,
@@ -302,10 +319,11 @@ CREATE TABLE CAU_TRA_LOI (
     noiDungTuDien NVARCHAR(MAX)
 );
 
--- 8. Nhân viên phản hồi đánh giá của khách (một đánh giá có thể có nhiều phản hồi)
+-- 8. Nhân viên trả lời đánh giá của khách (mỗi đánh giá chỉ được trả lời 1 lần)
 CREATE TABLE TRA_LOI_DANH_GIA (
     maTraLoi VARCHAR(20) PRIMARY KEY,
-    maDanhGia VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES DANH_GIA(maDanhGia),
+    maDanhGia VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES DANH_GIA(maDanhGia)
+        CONSTRAINT UQ_TRA_LOI_DANH_GIA_maDanhGia UNIQUE,
     maNhanVien VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
     noiDung NVARCHAR(MAX),
     ngayGui DATETIME

@@ -1,7 +1,7 @@
 @model List<DishReviewInputItem>
 @*
     Khối chấm sao từng món trong đơn (dùng chung cho form Đánh giá và Chỉnh sửa đánh giá).
-    Chấm món là tùy chọn: món chưa chấm riêng hiển thị mờ theo sao chung và được lưu là "không đánh giá riêng".
+    Chấm món là tùy chọn: món chưa chấm riêng hiển thị mờ theo sao chung và được lưu là "không đánh giá ".
     Hành vi do /js/cham-mon.js điều khiển.
 *@
 @{
@@ -14,7 +14,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
             <div>
                 <strong style="font-size:14.5px; color:var(--ink); display:block;">Đánh giá món ăn trong đơn</strong>
-                <small style="color:var(--muted); font-size:12.5px;">Không bắt buộc — bấm sao hoặc viết nhận xét để chấm riêng món. Món không đánh giá riêng sẽ không tính vào điểm của món.</small>
+                <small style="color:var(--muted); font-size:12.5px;">Không bắt buộc — bấm sao hoặc viết nhận xét để chấm riêng món. Món không đánh giá  sẽ không tính vào điểm của món.</small>
             </div>
             <span style="font-size:12px; font-weight:700; color:var(--muted);">@dishes.Count món</span>
         </div>

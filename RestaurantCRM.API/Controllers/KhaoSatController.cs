@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Helpers;
 using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
@@ -138,7 +139,15 @@ namespace RestaurantCRM.API.Controllers
                 doiTuong.DaHoanThanh = true;
             }
 
-            await _service.SaveChangesAsync();
+            try
+            {
+                await _service.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (DbErrorHelper.IsUniqueViolation(ex))
+            {
+                // Gửi 2 lần cùng lúc: lần sau vướng UNIQUE(maKhaoSat, maKhachHang)
+                return BadRequest("Bạn đã hoàn thành khảo sát này rồi.");
+            }
 
             return Ok(new { message = "Gửi phản hồi thành công" });
         }

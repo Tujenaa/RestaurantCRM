@@ -158,6 +158,7 @@ footer{background:#2a1a12;color:#d9c6b4;padding:46px 22px 26px}.footer-inner{max
 .cart-item--unavailable .cart-item-actions{opacity:1 !important;pointer-events:auto !important}
 .cart-select-all{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;cursor:pointer;margin:0}
 .btn.is-disabled{background:#cfc8c1;border-color:#cfc8c1;color:#fff;pointer-events:none;cursor:not-allowed}
+.btn.is-sending,.btn:disabled.is-sending{opacity:.6;cursor:wait;pointer-events:none;transform:none}
 .dish-card__media{position:relative;height:190px;background:var(--cream);overflow:hidden}
 .dish-card__img-link{display:block;width:100%;height:100%}
 .dish-card__img{width:100%;height:100%;object-fit:cover;transition:transform .4s ease;display:block}

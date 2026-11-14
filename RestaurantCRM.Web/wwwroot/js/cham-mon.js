@@ -1,5 +1,5 @@
 // Chấm sao từng món trong form đánh giá đơn hàng (Views/PhanHoi/_ChamMonTrongDon.cshtml).
-// - Món chưa chấm riêng: hiển thị mờ, sao đi theo sao chung, nhãn "Theo điểm chung"; khi lưu là "không đánh giá riêng".
+// - Món chưa chấm riêng: hiển thị mờ, sao đi theo sao chung, nhãn "Theo điểm chung"; khi lưu là "không đánh giá ".
 // - Bấm sao của món hoặc gõ nhận xét: món thành "chấm riêng", thôi đồng bộ theo sao chung.
 // - Nút "Dùng điểm chung": bỏ chấm riêng, xóa nhận xét, sao quay lại theo sao chung.
 // Trang gọi window.ChamMon.dongBoTheoDiemChung(soSao) mỗi khi khách đổi sao chung.

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Helpers;
 using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
@@ -160,7 +161,7 @@ namespace RestaurantCRM.API.Controllers
 
         // POST: api/DanhGia/DonHang - Gửi đánh giá toàn bộ đơn hàng (chuẩn Master-Detail)
         // Sao chung bắt buộc; chấm từng món là tùy chọn. Mỗi món trong đơn có đúng 1 dòng CHI_TIET_DANH_GIA,
-        // món khách không đánh giá riêng có SoSao = NULL (không lấy sao chung gán cho món).
+        // món khách không đánh giá  có SoSao = NULL (không lấy sao chung gán cho món).
         [HttpPost("DonHang")]
         public async Task<IActionResult> CreateOrderReviewBatch(OrderReviewBatchRequest request)
         {
@@ -241,7 +242,15 @@ namespace RestaurantCRM.API.Controllers
                 });
             }
 
-            await _service.SaveChangesAsync();
+            try
+            {
+                await _service.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (DbErrorHelper.IsUniqueViolation(ex))
+            {
+                // Gửi 2 lần cùng lúc: lần sau vướng UNIQUE(maHoaDon)
+                return BadRequest("Đơn hàng này đã được đánh giá trước đó.");
+            }
 
             return Ok(new
             {
@@ -251,7 +260,7 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // PUT: api/DanhGia/DonHang - Chỉnh sửa đánh giá của đơn hàng (Master & Detail)
-        // Món có trong ChiTietMon → cập nhật theo lựa chọn của khách; món không gửi kèm → không đánh giá riêng (NULL).
+        // Món có trong ChiTietMon → cập nhật theo lựa chọn của khách; món không gửi kèm → không đánh giá  (NULL).
         [HttpPut("DonHang")]
         public async Task<IActionResult> UpdateOrderReviewBatch(UpdateOrderReviewRequest request)
         {
@@ -294,7 +303,7 @@ namespace RestaurantCRM.API.Controllers
             dg.NoiDung = string.IsNullOrWhiteSpace(request.NoiDungChung) ? null : request.NoiDungChung.Trim();
             if (dg.DaXuLy) dg.DaXuLy = false;
 
-            // 2. Từng dòng chi tiết: món gửi kèm → theo khách chọn; món không gửi kèm → không đánh giá riêng
+            // 2. Từng dòng chi tiết: món gửi kèm → theo khách chọn; món không gửi kèm → không đánh giá 
             var chamRieng = GomMonChamRieng(request.ChiTietMon);
             foreach (var ct in dg.ChiTietDanhGia)
             {
@@ -328,7 +337,15 @@ namespace RestaurantCRM.API.Controllers
                 });
             }
 
-            await _service.SaveChangesAsync();
+            try
+            {
+                await _service.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (DbErrorHelper.IsUniqueViolation(ex))
+            {
+                // 2 lần cập nhật cùng lúc cùng bổ sung dòng chi tiết cho 1 món
+                return BadRequest("Đánh giá vừa được cập nhật ở nơi khác, vui lòng tải lại trang.");
+            }
 
             return Ok(new { message = "Cập nhật đánh giá thành công" });
         }
@@ -344,7 +361,7 @@ namespace RestaurantCRM.API.Controllers
 
         /// <summary>
         /// Quy tắc chấm món: có sao hợp lệ → dùng sao đó; chỉ có nhận xét → lấy sao chung (khách đã có ý kiến về món);
-        /// không có gì → không đánh giá riêng (NULL).
+        /// không có gì → không đánh giá  (NULL).
         /// </summary>
         private static (int? SoSao, string? NoiDung) TinhDiemMon(DishReviewItemDto item, int soSaoChung)
         {

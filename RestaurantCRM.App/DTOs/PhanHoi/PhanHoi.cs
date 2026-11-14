@@ -31,7 +31,7 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
         /// <summary>Đánh giá từng món của đơn (bảng CHI_TIET_DANH_GIA).</summary>
         public List<DanhGiaMonDto> ChiTietMon { get; set; } = new List<DanhGiaMonDto>();
 
-        /// <summary>Số món khách chấm riêng ở mức thấp (≤ 2 sao). Món không đánh giá riêng (SoSao NULL) không tính.</summary>
+        /// <summary>Số món khách chấm riêng ở mức thấp (≤ 2 sao). Món không đánh giá  (SoSao NULL) không tính.</summary>
         public int SoMonBiChe { get { return ChiTietMon == null ? 0 : ChiTietMon.Count(m => m.SoSao.HasValue && m.SoSao.Value <= 2); } }
         /// <summary>Cần chú ý: điểm chung 1–2 sao hoặc có món bị chấm thấp.</summary>
         public bool CanChuY { get { return (SoSao.HasValue && SoSao.Value > 0 && SoSao.Value <= 2) || SoMonBiChe > 0; } }
@@ -47,7 +47,7 @@ namespace RestaurantCRM.AdminApp.DTOs.PhanHoi
     {
         public string MaMon { get; set; }
         public string TenMon { get; set; }
-        /// <summary>NULL = khách không đánh giá riêng món này.</summary>
+        /// <summary>NULL = khách không đánh giá  món này.</summary>
         public int? SoSao { get; set; }
         public string NoiDung { get; set; }
     }

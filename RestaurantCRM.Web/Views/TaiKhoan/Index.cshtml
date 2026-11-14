@@ -123,7 +123,7 @@
         </div>
         <div data-account-panel="login" hidden="@(activeTab != "login")"><h3>Đăng nhập</h3><p class="muted">Đăng nhập để xem lịch sử đơn và thông tin thành viên.</p><a class="btn" asp-action="DangNhap">Mở trang đăng nhập</a><p class="account-register-prompt"><button class="text-btn" type="button" data-account="register">Chưa có tài khoản? Đăng ký</button></p></div>
         <div data-account-panel="register" hidden="@(activeTab != "register")">
-            <h3>Tạo tài khoản Lẩu Phố</h3><form asp-action="DangKy" method="post">
+            <h3>Tạo tài khoản Lẩu Phố</h3><form asp-action="DangKy" method="post" data-gui-mot-lan>
                 <div class="field"><label for="regName">Họ và tên *</label><input id="regName" name="hoTen" required maxlength="100" placeholder="Nguyễn Văn A" /></div>
                 <div class="two"><div class="field"><label for="regPhone">Số điện thoại *</label><input id="regPhone" name="soDienThoai" required type="tel" placeholder="0901 234 567" /></div><div class="field"><label for="regEmail">Email</label><input id="regEmail" name="email" type="email" placeholder="ban@email.com" /></div></div>
                 <div class="field"><label for="regPassword">Mật khẩu *</label><input id="regPassword" name="matKhau" type="password" required minlength="6" placeholder="Ít nhất 6 ký tự" oninvalid="this.setCustomValidity(this.validity.tooShort ? 'Vui lòng nhập mật khẩu tối thiểu 6 ký tự.' : (this.validity.valueMissing ? 'Vui lòng nhập mật khẩu.' : ''))" oninput="this.setCustomValidity('')" /></div><button class="btn" type="submit">Tạo tài khoản</button>

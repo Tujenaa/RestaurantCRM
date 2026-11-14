@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Helpers;
 using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
@@ -602,7 +603,15 @@ namespace RestaurantCRM.API.Controllers
                 }
             }
 
-            await _service.SaveChangesAsync();
+            try
+            {
+                await _service.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (DbErrorHelper.IsUniqueViolation(ex))
+            {
+                // 2 lần lưu danh sách đối tượng cùng lúc
+                return BadRequest("Danh sách đối tượng vừa được thay đổi ở nơi khác, vui lòng tải lại và thử lại.");
+            }
 
             string thongBao = hopLe.Count == 0
                 ? "Khảo sát áp dụng cho tất cả khách hàng."

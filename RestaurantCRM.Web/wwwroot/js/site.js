@@ -66,6 +66,52 @@
     }
   });
 
+  // 3. Chặn gửi 2 lần: form có data-gui-mot-lan chỉ gửi 1 request dù khách bấm nhiều lần.
+  //    Listener gắn trên document nên chạy sau jQuery Validation của form.
+  const khoaNutGui = form => {
+    form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(btn => {
+      btn.dataset.chuGoc = btn.tagName === 'BUTTON' ? btn.innerHTML : btn.value;
+      btn.disabled = true;
+      btn.classList.add('is-sending');
+      if (btn.tagName === 'BUTTON') btn.innerHTML = 'Đang gửi...';
+      else btn.value = 'Đang gửi...';
+    });
+  };
+
+  const moKhoaNutGui = form => {
+    delete form.dataset.dangGui;
+    form.querySelectorAll('.is-sending').forEach(btn => {
+      if (btn.dataset.chuGoc !== undefined) {
+        if (btn.tagName === 'BUTTON') btn.innerHTML = btn.dataset.chuGoc;
+        else btn.value = btn.dataset.chuGoc;
+        delete btn.dataset.chuGoc;
+      }
+      btn.disabled = false;
+      btn.classList.remove('is-sending');
+    });
+  };
+
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (!form || !form.hasAttribute || !form.hasAttribute('data-gui-mot-lan')) return;
+
+    // Đang gửi rồi → bỏ qua lần bấm này
+    if (form.dataset.dangGui === '1') {
+      event.preventDefault();
+      return;
+    }
+    // Dữ liệu sai (jQuery Validation đã chặn) → không khóa, để khách sửa và bấm lại
+    if (event.defaultPrevented) return;
+
+    form.dataset.dangGui = '1';
+    khoaNutGui(form);
+  });
+
+  // Khách bấm Back, trình duyệt lấy lại trang từ bộ nhớ đệm → mở khóa nút
+  window.addEventListener('pageshow', () => {
+    document.querySelectorAll('form[data-gui-mot-lan]').forEach(moKhoaNutGui);
+  });
+
   document.addEventListener('submit', async event => {
     const form = event.target;
     if (form && (form.id === 'cartVoucherForm' || form.id === 'checkoutVoucherForm' || form.classList.contains('qty') || form.hasAttribute('data-preserve-scroll'))) {

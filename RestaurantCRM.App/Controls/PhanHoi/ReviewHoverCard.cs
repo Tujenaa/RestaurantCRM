@@ -140,12 +140,12 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
             if (!_shown || row != _shownRow) ShowRow(row);
         }
 
-        /// <summary>" · 2 chấm riêng" hoặc " · không đánh giá riêng món nào" (món SoSao NULL = không đánh giá riêng).</summary>
+        /// <summary>" · 2 chấm riêng" hoặc " · không đánh giá  món nào" (món SoSao NULL = không đánh giá ).</summary>
         private static string MoTaChamRieng(System.Collections.Generic.List<DanhGiaMonDto> mons)
         {
             int chamRieng = 0;
             foreach (var m in mons) if (m != null && m.SoSao.HasValue) chamRieng++;
-            return chamRieng == 0 ? " · không đánh giá riêng món nào" : " · " + chamRieng + " chấm riêng";
+            return chamRieng == 0 ? " · không đánh giá  món nào" : " · " + chamRieng + " chấm riêng";
         }
 
         private void ShowRow(int rowIndex)

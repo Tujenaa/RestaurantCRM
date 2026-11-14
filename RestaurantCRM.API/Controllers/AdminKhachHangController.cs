@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.API.DTOs;
+using RestaurantCRM.API.Helpers;
 using RestaurantCRM.API.Services;
 
 namespace RestaurantCRM.API.Controllers
@@ -195,7 +196,6 @@ namespace RestaurantCRM.API.Controllers
 
             var khachHang = new KhachHang
             {
-                MaKhachHang = await TaoMaKhachHangAsync(),
                 HoTen = request.HoTen.Trim(),
                 SoDienThoai = sdt,
                 Email = email,
@@ -206,8 +206,8 @@ namespace RestaurantCRM.API.Controllers
                 TrangThai = ChuanHoa(request.TrangThai) ?? "Active"
             };
 
-            _service.Add(khachHang);
-            await _service.SaveChangesAsync();
+            var loiLuu = await KhachHangMoiHelper.LuuKhachHangMoiAsync(_service, khachHang);
+            if (loiLuu != null) return BadRequest(loiLuu);
 
             return Ok(new { message = "Thêm khách hàng thành công.", maKhachHang = khachHang.MaKhachHang });
         }
@@ -345,23 +345,5 @@ namespace RestaurantCRM.API.Controllers
 
         private static string? KiemTraDuLieu(string? hoTen, string? soDienThoai, string? email, DateOnly? ngaySinh,
             string? gioiTinh, string? trangThai, bool batBuocHoTen)
-            => KhachHangValidator.KiemTraDuLieu(hoTen, soDienThoai, email, ngaySinh, gioiTinh, trangThai, batBuocHoTen);
-
-        /// <summary>Sinh mã khách hàng tiếp theo dạng KH01, KH02, ... (bỏ qua các mã không theo số).</summary>
-        private async Task<string> TaoMaKhachHangAsync()
-        {
-            var codes = await _service.ListAsync<KhachHang, string>(k => k.MaKhachHang.StartsWith("KH"), k => k.MaKhachHang);
-            int max = 0;
-            foreach (var code in codes)
-            {
-                if (code.Length > 2 && code.Length <= 8 && int.TryParse(code.Substring(2), out int n) && n > max)
-                    max = n;
-            }
-
-            int next = max + 1;
-            while (await _service.AnyAsync<KhachHang>(k => k.MaKhachHang == $"KH{next:D2}"))
-                next++;
-            return $"KH{next:D2}";
-        }
-    }
+            => KhachHangValidator.KiemTraDuLieu(hoTen, soDienThoai, email, ngaySinh, gioiTinh, trangThai, batBuocHoTen);    }
 }

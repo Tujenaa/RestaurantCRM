@@ -230,6 +230,33 @@ namespace RestaurantCRM.BusinessLogic.Services
             return $"{prefix}{nextNum:D3}";
         }
 
+        /// <summary>
+        /// Sinh mã khách hàng tiếp theo dạng KH001, KH002, ... Dùng chung cho đăng ký (Web) và thêm khách (quản trị).
+        /// Chỉ tính các mã có phần số tối đa 5 chữ số để bỏ qua mã cũ sinh theo thời gian (vd. KH834512).
+        /// </summary>
+        public static async Task<string> GenerateMaKhachHangAsync(IRestaurantService service)
+        {
+            const string prefix = "KH";
+            var codes = await service.ListAsync<KhachHang, string>(x => x.MaKhachHang.StartsWith(prefix), x => x.MaKhachHang);
+
+            int maxNum = 0;
+            foreach (var code in codes)
+            {
+                var numStr = code.Substring(prefix.Length);
+                if (numStr.Length is >= 1 and <= 5 && int.TryParse(numStr, out int val) && val > maxNum)
+                {
+                    maxNum = val;
+                }
+            }
+
+            int nextNum = maxNum + 1;
+            while (await service.AnyAsync<KhachHang>(x => x.MaKhachHang == $"{prefix}{nextNum:D3}"))
+            {
+                nextNum++;
+            }
+            return $"{prefix}{nextNum:D3}";
+        }
+
         public static async Task<string> GenerateMaHoaDonAsync(IRestaurantService service)
         {
             string prefix = $"HD{DateTime.Now:yyMMdd}-";

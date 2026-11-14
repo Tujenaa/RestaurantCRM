@@ -194,6 +194,13 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
             return RedirectToAction(nameof(Index));
         }
 
+        // Chỉ chủ đánh giá mới được xem
+        if (!string.Equals(detail.MaKhachHang, customerId, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Loi"] = "Bạn không có quyền xem đánh giá này.";
+            return RedirectToAction(nameof(Index));
+        }
+
         return View(detail);
     }
 
@@ -217,6 +224,13 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         if (detail == null)
         {
             TempData["Loi"] = $"Chưa có đánh giá cho đơn hàng #{maHoaDon} để chỉnh sửa.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Chỉ chủ đánh giá mới được sửa
+        if (!string.Equals(detail.MaKhachHang, customerId, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Loi"] = "Bạn không có quyền chỉnh sửa đánh giá này.";
             return RedirectToAction(nameof(Index));
         }
 

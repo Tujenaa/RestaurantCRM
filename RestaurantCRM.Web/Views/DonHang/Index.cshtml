@@ -150,7 +150,7 @@
 
             @if (order.TrangThaiLoc == "done")
             {
-                <form asp-action="MuaLai" method="post" style="display:inline;">
+                <form asp-action="MuaLai" method="post" data-gui-mot-lan style="display:inline;">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@order.MaDonHang" />
                     <button class="btn small" type="submit">
@@ -172,7 +172,7 @@
             }
             else if (order.TrangThaiLoc == "cancel")
             {
-                <form asp-action="MuaLai" method="post" style="display:inline;">
+                <form asp-action="MuaLai" method="post" data-gui-mot-lan style="display:inline;">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@order.MaDonHang" />
                     <button class="btn secondary small" type="submit">
