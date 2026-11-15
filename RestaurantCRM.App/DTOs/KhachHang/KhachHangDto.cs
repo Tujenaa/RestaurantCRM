@@ -40,6 +40,8 @@ namespace RestaurantCRM.AdminApp.DTOs.KhachHang
     {
         public int SoDanhGia { get; set; }
         public int SoKhaoSatDaTraLoi { get; set; }
+        /// <summary>Tổng số đơn hoàn tất (mẫu số của "Tỷ lệ đơn" ở tab Món hay gọi).</summary>
+        public int SoDonHoanTat { get; set; }
         public List<KhachHangHoaDonDto> LichSuHoaDon { get; set; } = new List<KhachHangHoaDonDto>();
         public List<KhachHangDanhGiaDto> LichSuDanhGia { get; set; } = new List<KhachHangDanhGiaDto>();
         public List<KhachHangKhaoSatDto> LichSuKhaoSat { get; set; } = new List<KhachHangKhaoSatDto>();
@@ -77,7 +79,20 @@ namespace RestaurantCRM.AdminApp.DTOs.KhachHang
     {
         public string MaMon { get; set; }
         public string TenMon { get; set; }
+        public string TenLoaiMon { get; set; }
+        /// <summary>Số đơn hoàn tất có món này (nhiều phần trong 1 đơn vẫn tính 1 lần).</summary>
+        public int SoLanGoi { get; set; }
+        /// <summary>% = SoLanGoi / tổng số đơn hoàn tất của khách.</summary>
+        public double TyLeDon { get; set; }
+        /// <summary>Tổng số phần đã mua (tham khảo).</summary>
         public int SoLuongDaMua { get; set; }
+        public DateTime? LanGanNhat { get; set; }
+        /// <summary>"Hay gọi" | "Đã thử".</summary>
+        public string MucDo { get; set; }
+        /// <summary>Món nằm trong danh sách khách tự khai yêu thích (♥).</summary>
+        public bool YeuThich { get; set; }
+
+        public bool HayGoi { get { return MucDo == "Hay gọi"; } }
     }
 
     /// <summary>Dữ liệu gửi lên khi thêm / sửa khách hàng.</summary>

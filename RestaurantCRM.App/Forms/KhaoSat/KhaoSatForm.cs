@@ -40,6 +40,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly Label _kPhieu = new Label { Text = "Phiếu trả lời: —" };
         private readonly Button _btnThem = new Button { Text = "Tạo khảo sát" };
         private readonly Button _btnLamMoi = new Button { Text = "Làm mới" };
+        private readonly Button _btnSoThich = new Button { Text = "Hồ sơ sở thích" };
         private readonly Button _btnSua = new Button { Text = "Sửa & câu hỏi" };
         private readonly Button _btnXemTruoc = new Button { Text = "Xem trước" };
         private readonly Button _btnDoiTuong = new Button { Text = "Đối tượng" };
@@ -67,7 +68,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 Title = new Label { Text = "Khảo sát" },
                 Subtitle = new Label { Text = "Tạo bộ câu hỏi, mở cho khách trả lời và theo dõi kết quả." },
                 PrimaryActions = new[] { _btnThem },
-                HeaderActions = new Control[] { _btnLamMoi },
+                HeaderActions = new Control[] { _btnSoThich, _btnLamMoi },
                 KpiLabels = new[] { _kTong, _kMo, _kNhap, _kPhieu },
                 Search = _txtSearch,
                 SearchPlaceholder = "Tìm mã, tiêu đề khảo sát, người tạo...",
@@ -97,6 +98,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
             _btnThem.Click += (s, e) => TaoMoi();
             _btnLamMoi.Click += async (s, e) => await LoadDataAsync();
+            _btnSoThich.Click += async (s, e) => await MoHoSoSoThichAsync();
             _btnSua.Click += (s, e) => Sua();
             _btnXemTruoc.Click += (s, e) => XemTruoc();
             _btnDoiTuong.Click += (s, e) => DoiTuong();
@@ -236,6 +238,33 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 Notify.ShowDialog(dlg, this);
                 if (dlg.DataChanged) await LoadDataAsync(k.MaKhaoSat);
             }
+        }
+
+        /// <summary>
+        /// Mở màn hình sửa danh mục "Hồ sơ sở thích" (bộ khảo sát đặc biệt, không nằm trong danh sách).
+        /// Chưa có thì hỏi rồi tạo (R1).
+        /// </summary>
+        private async Task MoHoSoSoThichAsync()
+        {
+            _btnSoThich.Enabled = false;
+            try
+            {
+                string ma = await _service.GetMaBoSoThichAsync();
+                if (IsDisposed) return;
+                if (ma == null)
+                {
+                    if (!Notify.Confirm(this, "Chưa có \"Hồ sơ sở thích\".\n\nTạo hồ sơ để khách tự khai báo khẩu vị, chế độ ăn, món yêu thích, dị ứng...? "
+                        + "Hồ sơ luôn mở cho mọi khách và không nằm trong danh sách khảo sát.", "Tạo hồ sơ sở thích")) return;
+                    var r = await _service.CreateBoSoThichAsync(UserSession.CurrentUserId);
+                    if (IsDisposed) return;
+                    if (!r.Success) { Notify.Error(this, r.Message); return; }
+                    ma = r.Field("maKhaoSat");
+                    if (string.IsNullOrWhiteSpace(ma)) return;
+                }
+                using (var dlg = new KhaoSatDialog(ma)) Notify.ShowDialog(dlg, this);
+            }
+            catch (ApiException ex) { if (!IsDisposed) Notify.Error(this, ex.Message); }
+            finally { if (!IsDisposed) _btnSoThich.Enabled = true; }
         }
 
         private async void XemTruoc()

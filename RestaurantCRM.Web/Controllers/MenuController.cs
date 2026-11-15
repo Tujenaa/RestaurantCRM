@@ -10,12 +10,16 @@ public class MenuController : Controller
 {
     private readonly MonAnService _monAnService;
     private readonly PhanHoiService _phanHoiService;
+    private readonly KhaoSatService _khaoSatService;
 
-    public MenuController(MonAnService monAnService, PhanHoiService phanHoiService)
+    public MenuController(MonAnService monAnService, PhanHoiService phanHoiService, KhaoSatService khaoSatService)
     {
         _monAnService = monAnService;
         _phanHoiService = phanHoiService;
+        _khaoSatService = khaoSatService;
     }
+
+    private string? MaKhachHang => HttpContext.Session.GetString("MaKhachHang");
 
     [HttpGet("")]
     [HttpGet("Index")]
@@ -160,14 +164,57 @@ public class MenuController : Controller
             d.SoLuongDanhGia = tomTat.ReviewCount;
         }
 
+        // Nút ♥: chỉ hiện khi nhà hàng đã có câu "Món yêu thích" trong hồ sơ sở thích
+        var yeuThich = new MonYeuThichViewModel();
+        try
+        {
+            yeuThich = await _khaoSatService.GetMonYeuThichAsync(MaKhachHang);
+        }
+        catch (HttpRequestException)
+        {
+            // Không lấy được thì ẩn nút ♥, trang món vẫn hiển thị bình thường
+        }
+
         var viewModel = new MonAnChiTietViewModel
         {
             MonAn = dish,
             MonLienQuan = filteredRelated,
-            DanhGias = reviews
+            DanhGias = reviews,
+            CoNutYeuThich = yeuThich.CoMonYeuThich,
+            DaYeuThich = yeuThich.MaMons.Contains(dish.MaMon, StringComparer.OrdinalIgnoreCase),
+            DaDangNhap = !string.IsNullOrEmpty(MaKhachHang)
         };
 
         return View(viewModel);
+    }
+
+    // POST: /Menu/YeuThich/{maMon} (AJAX) - Bật / tắt ♥ món. Chưa đăng nhập: 401 kèm đường dẫn đăng nhập.
+    [HttpPost("YeuThich/{maMon}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> YeuThich(string maMon, [FromForm] bool yeuThich)
+    {
+        var maKh = MaKhachHang;
+        if (string.IsNullOrEmpty(maKh))
+        {
+            var quayLai = Url.Action(nameof(ChiTiet), new { id = maMon });
+            return StatusCode(401, new { dangNhapUrl = Url.Action("DangNhap", "TaiKhoan", new { returnUrl = quayLai }) });
+        }
+
+        try
+        {
+            var (ok, message) = await _khaoSatService.DatMonYeuThichAsync(maKh, maMon, yeuThich);
+            if (!ok && TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(message))
+            {
+                HttpContext.Session.Clear();
+                TempData["ThongBao"] = "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ nhà hàng để được hỗ trợ.";
+                return StatusCode(401, new { dangNhapUrl = Url.Action("DangNhap", "TaiKhoan") });
+            }
+            return ok ? Ok(new { yeuThich, message }) : BadRequest(new { message });
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(503, new { message = "Không kết nối được đến máy chủ API." });
+        }
     }
 
     [HttpGet("QuickView/{id}")]

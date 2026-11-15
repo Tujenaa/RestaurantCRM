@@ -17,6 +17,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
     ///  - Tự luận: không cần tùy chọn.
     ///  - Chế độ thêm có nút "Lưu & thêm câu khác" để nhập liên tiếp nhiều câu hỏi.
     ///  - Khi sửa: tùy chọn đổi chữ được cập nhật giữ nguyên mã (không mất lượt chọn cũ); câu đã có người trả lời không đổi loại được.
+    ///  - "Cho chọn nhiều đáp án" (chonNhieu) cho câu trắc nghiệm.
+    ///  - Hồ sơ sở thích: câu "Món yêu thích" có đáp án là món ăn (chọn từ danh sách món, tối thiểu 1 món).
     /// </summary>
     public class CauHoiKhaoSatDialog : CrmDialog
     {
@@ -27,12 +29,27 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             public string Ma;      // null = tùy chọn mới chưa lưu
             public string Text;
             public string Goc;     // nội dung lúc tải (để biết có đổi chữ không)
+            public string MaMon;   // đáp án gắn món (câu "Món yêu thích")
+            public bool NgungBan;
             public override string ToString() { return Text; }
+        }
+
+        private class MonItem
+        {
+            public string Ma;
+            public string Ten;
+            public override string ToString() { return Ten + "  (" + Ma + ")"; }
         }
 
         private readonly KhaoSatService _service = new KhaoSatService();
         private readonly string _maKhaoSat;
         private readonly CauHoiDto _edit;
+        private readonly bool _laSoThich;
+
+        private readonly CheckBox _chkChonNhieu = new CheckBox { Text = "Cho chọn nhiều đáp án", AutoSize = true };
+        private readonly CheckBox _chkMonYeuThich = new CheckBox { Text = "Câu \"Món yêu thích\" (đáp án là món ăn)", AutoSize = true };
+        private readonly ComboBox _cboMon = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+        private bool _daTaiMon;
 
         private readonly TextBox _txtNoiDung = new TextBox { Multiline = true, MaxLength = 500, ScrollBars = ScrollBars.None };
         private readonly ComboBox _cboLoai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -52,13 +69,16 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         /// <summary>Mã câu hỏi lưu gần nhất (để danh sách chọn lại).</summary>
         public string MaCauHoiCuoi { get; private set; }
 
-        public CauHoiKhaoSatDialog(string maKhaoSat, CauHoiDto edit)
+        /// <param name="laSoThich">Đang sửa bộ hồ sơ sở thích.</param>
+        /// <param name="coCauMonKhac">Hồ sơ sở thích đã có câu "Món yêu thích" khác (mỗi hồ sơ chỉ 1 câu).</param>
+        public CauHoiKhaoSatDialog(string maKhaoSat, CauHoiDto edit, bool laSoThich = false, bool coCauMonKhac = false)
             : base(edit == null ? "Thêm câu hỏi" : "Sửa câu hỏi",
                    edit == null ? "Nhập nội dung, chọn loại câu hỏi và các tùy chọn trả lời." : "Mã câu hỏi: " + edit.MaCauHoi + (edit.DaCoTraLoi ? " · đã có khách trả lời" : ""),
                    DlgWidth, 466, edit == null ? "Lưu câu hỏi" : "Lưu thay đổi")
         {
             _maKhaoSat = maKhaoSat;
             _edit = edit;
+            _laSoThich = laSoThich;
             const int L = Gutter, W = DlgWidth - Gutter * 2;
 
             Field(Body, "Nội dung câu hỏi", _txtNoiDung, L, 4, W, true);
@@ -66,12 +86,22 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             UiStyler.SetPlaceholder(_txtNoiDung, "Ví dụ: Anh/chị đánh giá thế nào về chất lượng món ăn?");
 
             Field(Body, "Loại câu hỏi", _cboLoai, L, 98, 300, true);
-            _cboLoai.Items.AddRange(new object[] { "Trắc nghiệm — khách chọn một đáp án", "Tự luận — khách tự nhập câu trả lời" });
+            _cboLoai.Items.AddRange(new object[] { "Trắc nghiệm — khách chọn đáp án", "Tự luận — khách tự nhập câu trả lời" });
             if (edit != null && edit.DaCoTraLoi)
             {
                 _cboLoai.Enabled = false;
-                Hint(Body, "Đã có người trả lời nên không đổi loại được.", L + 316, 132, W - 316);
+                Hint(Body, "Đã có người trả lời nên không đổi loại được.", L + 316, 148, W - 316);
             }
+
+            _chkChonNhieu.Location = new Point(L + 316, 100);
+            _chkChonNhieu.Font = new Font(ThemeManager.FontFamily, 9F);
+            Body.Controls.Add(_chkChonNhieu);
+            _chkMonYeuThich.Location = new Point(L + 316, 124);
+            _chkMonYeuThich.Font = new Font(ThemeManager.FontFamily, 9F);
+            bool laCauMonHienTai = edit != null && edit.LaCauMonYeuThich;
+            // Chỉ hồ sơ sở thích mới có câu món yêu thích, và mỗi hồ sơ chỉ có 1 câu
+            _chkMonYeuThich.Visible = laSoThich && (laCauMonHienTai || !coCauMonKhac);
+            Body.Controls.Add(_chkMonYeuThich);
 
             // Khối tùy chọn (chỉ hiện với trắc nghiệm)
             _pnlTuyChon.SetBounds(L, 166, W, 262);
@@ -91,6 +121,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             int colX = W - 92;
             _txtTuyChonMoi.SetBounds(0, 28, colX - 10, 30);
             _pnlTuyChon.Controls.Add(_txtTuyChonMoi);
+            _cboMon.SetBounds(0, 28, colX - 10, 30);
+            _pnlTuyChon.Controls.Add(_cboMon);
             UiStyler.SetPlaceholder(_txtTuyChonMoi, "Nhập tùy chọn rồi nhấn Enter (ví dụ: Rất hài lòng)");
             _btnThemTC.Location = new Point(colX, 24);
             _pnlTuyChon.Controls.Add(_btnThemTC);
@@ -138,12 +170,30 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             {
                 _txtNoiDung.Text = edit.NoiDungCauHoi ?? "";
                 _cboLoai.SelectedIndex = edit.LaTracNghiem ? 0 : 1;
+                _chkChonNhieu.Checked = edit.ChonNhieu;
+                _chkMonYeuThich.Checked = laCauMonHienTai;
+                // Không bỏ được vai trò câu món yêu thích (API chặn); muốn bỏ thì xóa câu hỏi
+                if (laCauMonHienTai) _chkMonYeuThich.Enabled = false;
                 foreach (var t in edit.TuyChon)
-                    _lst.Items.Add(new OptItem { Ma = t.MaTuyChon, Text = t.NoiDungTuyChon ?? "", Goc = t.NoiDungTuyChon ?? "" });
+                    _lst.Items.Add(new OptItem { Ma = t.MaTuyChon, Text = t.NoiDungTuyChon ?? "", Goc = t.NoiDungTuyChon ?? "", MaMon = t.MaMon, NgungBan = t.NgungBan });
             }
             else _cboLoai.SelectedIndex = 0;
 
-            _cboLoai.SelectedIndexChanged += (s, e) => { _lblError.Text = ""; UpdateUi(); };
+            _cboLoai.SelectedIndexChanged += (s, e) => { _lblError.Text = ""; if (!LaTracNghiem) _chkChonNhieu.Checked = false; UpdateUi(); };
+            _chkChonNhieu.CheckedChanged += (s, e) => UpdateUi();
+            _chkMonYeuThich.CheckedChanged += async (s, e) =>
+            {
+                _lblError.Text = "";
+                if (_chkMonYeuThich.Checked)
+                {
+                    _cboLoai.SelectedIndex = 0;
+                    _chkChonNhieu.Checked = true;
+                    // Đáp án thường không dùng được trong câu món yêu thích
+                    foreach (var it in Items.Where(i => i.MaMon == null).ToList()) _lst.Items.Remove(it);
+                    await TaiMonAsync();
+                }
+                UpdateUi();
+            };
             _txtNoiDung.TextChanged += (s, e) => _lblError.Text = "";
             _txtTuyChonMoi.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ThemTuyChon(); } };
             _txtTuyChonMoi.Enter += (s, e) => AcceptButton = null;
@@ -157,11 +207,31 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
             PrimaryButton.Click += async (s, e) => await LuuAsync(false);
             AcceptButton = PrimaryButton;
-            Shown += (s, e) => _txtNoiDung.Focus();
+            Shown += async (s, e) =>
+            {
+                _txtNoiDung.Focus();
+                if (_chkMonYeuThich.Checked) await TaiMonAsync();
+            };
             UpdateUi();
         }
 
         private bool LaTracNghiem { get { return _cboLoai.SelectedIndex != 1; } }
+        private bool LaCauMon { get { return _chkMonYeuThich.Visible && _chkMonYeuThich.Checked; } }
+        private int SoToiThieu { get { return LaCauMon ? 1 : 2; } }
+
+        /// <summary>Tải danh sách món (còn kinh doanh) cho ô chọn món của câu "Món yêu thích".</summary>
+        private async Task TaiMonAsync()
+        {
+            if (_daTaiMon) return;
+            _daTaiMon = true;
+            var mons = await new MonAnService().GetAllAsync();
+            if (IsDisposed) return;
+            _cboMon.Items.Clear();
+            foreach (var m in mons.Where(m => m.TrangThai && !string.IsNullOrWhiteSpace(m.MaMonAn)).OrderBy(m => m.TenMonAn))
+                _cboMon.Items.Add(new MonItem { Ma = m.MaMonAn, Ten = m.TenMonAn ?? m.MaMonAn });
+            if (_cboMon.Items.Count > 0) _cboMon.SelectedIndex = 0;
+            else _lblError.Text = "Không tải được danh sách món ăn.";
+        }
 
         private List<OptItem> Items { get { return _lst.Items.Cast<OptItem>().ToList(); } }
 
@@ -169,12 +239,17 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         {
             _pnlTuyChon.Visible = LaTracNghiem;
             _lblTuLuan.Visible = !LaTracNghiem;
+            _chkChonNhieu.Enabled = LaTracNghiem && !LaCauMon;
+            _cboLoai.Enabled = !LaCauMon && !(_edit != null && _edit.DaCoTraLoi);
+            _cboMon.Visible = LaCauMon;
+            _txtTuyChonMoi.Visible = !LaCauMon;
             bool sel = _lst.SelectedItem != null;
             _btnSuaTC.Enabled = sel;
             _btnXoaTC.Enabled = sel;
             int n = _lst.Items.Count;
-            _lblSoTC.Text = n + " tùy chọn" + (n < 2 ? " · cần ít nhất 2" : "");
-            _lblSoTC.ForeColor = n < 2 ? ThemeManager.Amber : ThemeManager.Muted;
+            int toiThieu = SoToiThieu;
+            _lblSoTC.Text = n + (LaCauMon ? " món" : " tùy chọn") + (n < toiThieu ? " · cần ít nhất " + toiThieu : "");
+            _lblSoTC.ForeColor = n < toiThieu ? ThemeManager.Amber : ThemeManager.Muted;
         }
 
         private void DrawOption(object sender, DrawItemEventArgs e)
@@ -194,7 +269,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 TextRenderer.DrawText(g, chu, f, circle, sel ? ThemeManager.Primary : ThemeManager.Muted,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
-            string tag = it.Ma == null ? "mới" : (it.Text != it.Goc ? "đã sửa" : null);
+            string tag = it.Ma == null ? "mới" : (it.Text != it.Goc ? "đã sửa" : (it.NgungBan ? "ngừng bán" : null));
             int tagW = 0;
             if (tag != null)
             {
@@ -223,6 +298,17 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
         private void ThemTuyChon()
         {
+            if (LaCauMon)
+            {
+                var mon = _cboMon.SelectedItem as MonItem;
+                if (mon == null) { _lblError.Text = "Vui lòng chọn món."; return; }
+                if (Items.Any(i => i.MaMon == mon.Ma)) { _lblError.Text = "Món \"" + mon.Ten + "\" đã có trong danh sách."; return; }
+                _lst.Items.Add(new OptItem { Text = mon.Ten, MaMon = mon.Ma });
+                _lst.SelectedIndex = _lst.Items.Count - 1;
+                _lblError.Text = "";
+                UpdateUi();
+                return;
+            }
             string t = _txtTuyChonMoi.Text.Trim();
             if (t.Length == 0) { _txtTuyChonMoi.Focus(); return; }
             if (TrungTuyChon(t, null)) { _lblError.Text = "Tùy chọn \"" + t + "\" đã có trong danh sách."; _txtTuyChonMoi.SelectAll(); _txtTuyChonMoi.Focus(); return; }
@@ -272,6 +358,11 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             if (nd.Length < 5) return Fail(_txtNoiDung, "Nội dung câu hỏi quá ngắn.");
             if (LaTracNghiem)
             {
+                if (LaCauMon)
+                {
+                    if (!Items.Any(i => i.MaMon != null)) return Fail(_cboMon, "Câu \"Món yêu thích\" cần ít nhất 1 món.");
+                    return true;
+                }
                 if (_txtTuyChonMoi.Text.Trim().Length > 0)
                     return Fail(_txtTuyChonMoi, "Bạn đang nhập dở một tùy chọn — nhấn Thêm (hoặc xóa chữ trong ô) trước khi lưu.");
                 if (_lst.Items.Count < 2) return Fail(_txtTuyChonMoi, "Câu hỏi trắc nghiệm cần ít nhất 2 tùy chọn.");
@@ -293,7 +384,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             {
                 NoiDung = _txtNoiDung.Text.Trim(),
                 LoaiCauHoi = LaTracNghiem ? KhaoSatConst.TracNghiem : KhaoSatConst.TuLuan,
-                TuyChons = LaTracNghiem ? Items.Select(i => i.Text.Trim()).ToList() : new List<string>()
+                TuyChons = LaTracNghiem && !LaCauMon ? Items.Select(i => i.Text.Trim()).ToList() : new List<string>(),
+                ChonNhieu = LaTracNghiem && (LaCauMon || _chkChonNhieu.Checked),
+                LaCauMonYeuThich = LaCauMon,
+                MaMons = LaCauMon ? Items.Where(i => i.MaMon != null).Select(i => i.MaMon).ToList() : new List<string>()
             };
         }
 

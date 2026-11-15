@@ -13,6 +13,9 @@ public partial class CauHoiKhaoSat
 
     public string? LoaiCauHoi { get; set; }
 
+    /// <summary>Câu trắc nghiệm cho chọn nhiều đáp án.</summary>
+    public bool ChonNhieu { get; set; }
+
     public virtual ICollection<CauTraLoi> CauTraLoi { get; set; } = new List<CauTraLoi>();
 
     public virtual KhaoSat? MaKhaoSatNavigation { get; set; }

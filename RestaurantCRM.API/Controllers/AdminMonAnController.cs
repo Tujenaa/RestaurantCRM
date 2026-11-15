@@ -427,6 +427,7 @@ namespace RestaurantCRM.API.Controllers
                 .Include(m => m.DanhGia)
                 .Include(m => m.KmTheoSp)
                 .Include(m => m.DinhLuong)
+                .Include(m => m.TuyChonCauHoi)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)
@@ -434,12 +435,13 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy món ăn để xóa.");
             }
 
-            bool hasHistory = monAn.ChiTietHoaDon.Any() || monAn.DanhGia.Any() || monAn.KmTheoSp.Any();
+            // Món nằm trong danh mục "Món yêu thích" của hồ sơ sở thích (FK TUY_CHON_CAU_HOI.maMon) cũng là dữ liệu lịch sử
+            bool hasHistory = monAn.ChiTietHoaDon.Any() || monAn.DanhGia.Any() || monAn.KmTheoSp.Any() || monAn.TuyChonCauHoi.Any();
             if (hasHistory)
             {
                 if (monAn.TrangThai == "Discontinued")
                 {
-                    return BadRequest("Món ăn này đã ở trạng thái 'Ngừng kinh doanh' và có dữ liệu lịch sử liên quan (hóa đơn bán/đánh giá). Hệ thống bảo lưu toàn bộ dữ liệu lịch sử và không xóa khỏi cơ sở dữ liệu.");
+                    return BadRequest("Món ăn này đã ở trạng thái 'Ngừng kinh doanh' và có dữ liệu lịch sử liên quan (hóa đơn bán/đánh giá/món yêu thích của khách). Hệ thống bảo lưu toàn bộ dữ liệu lịch sử và không xóa khỏi cơ sở dữ liệu.");
                 }
 
                 // Tự động chuyển sang trạng thái Ngừng kinh doanh
@@ -447,7 +449,7 @@ namespace RestaurantCRM.API.Controllers
                 _service.Update(monAn);
                 await _service.SaveChangesAsync();
 
-                return Ok(new { Message = "Món ăn đã phát sinh dữ liệu lịch sử (hóa đơn bán hàng/đánh giá). Hệ thống đã tự động chuyển món sang trạng thái 'Ngừng kinh doanh' để bảo toàn dữ liệu doanh thu." });
+                return Ok(new { Message = "Món ăn đã phát sinh dữ liệu lịch sử (hóa đơn bán hàng/đánh giá/món yêu thích của khách). Hệ thống đã tự động chuyển món sang trạng thái 'Ngừng kinh doanh' để bảo toàn dữ liệu." });
             }
 
             // Nếu chưa từng phát sinh dữ liệu: xóa định lượng và xóa vĩnh viễn món ăn

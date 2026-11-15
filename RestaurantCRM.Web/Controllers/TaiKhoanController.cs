@@ -13,11 +13,13 @@ public class TaiKhoanController : Controller
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly GioHangService _gioHangService;
+    private readonly KhaoSatService _khaoSatService;
 
-    public TaiKhoanController(IHttpClientFactory httpClientFactory, GioHangService gioHangService)
+    public TaiKhoanController(IHttpClientFactory httpClientFactory, GioHangService gioHangService, KhaoSatService khaoSatService)
     {
         _httpClientFactory = httpClientFactory;
         _gioHangService = gioHangService;
+        _khaoSatService = khaoSatService;
     }
 
     [HttpGet]
@@ -233,8 +235,9 @@ public class TaiKhoanController : Controller
 
         if (response.IsSuccessStatusCode)
         {
+            // Đăng nhập xong sẽ chuyển tới "Sở thích của tôi" (có nút "Để sau", không bắt buộc)
             TempData["ThongBao"] = "🎉 Tạo tài khoản thành công! Vui lòng đăng nhập bằng số điện thoại/email vừa đăng ký.";
-            return RedirectToAction(nameof(DangNhap));
+            return RedirectToAction(nameof(DangNhap), new { returnUrl = Url.Action(nameof(SoThich), new { moi = true }) });
         }
         else
         {
@@ -425,6 +428,56 @@ public class TaiKhoanController : Controller
         }
 
         return RedirectToAction(nameof(Index), new { tab = "addresses" });
+    }
+
+    // GET: /TaiKhoan/SoThich - "Sở thích của tôi"
+    [HttpGet]
+    public async Task<IActionResult> SoThich(bool moi = false)
+    {
+        var maKhachHang = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(maKhachHang))
+        {
+            TempData["ThongBao"] = "Vui lòng đăng nhập để khai báo sở thích.";
+            return RedirectToAction(nameof(DangNhap), new { returnUrl = Url.Action(nameof(SoThich)) });
+        }
+
+        SoThichViewModel model;
+        try
+        {
+            model = await _khaoSatService.GetSoThichAsync(maKhachHang);
+        }
+        catch (HttpRequestException)
+        {
+            TempData["ThongBao"] = "Không kết nối được đến máy chủ API.";
+            return RedirectToAction(nameof(Index));
+        }
+        model.KhachMoi = moi;
+        return View(model);
+    }
+
+    // POST: /TaiKhoan/SoThich - Lưu (ghi đè) hồ sơ sở thích
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SoThich(SoThichFormInput input)
+    {
+        var maKhachHang = HttpContext.Session.GetString("MaKhachHang");
+        if (string.IsNullOrEmpty(maKhachHang))
+        {
+            TempData["ThongBao"] = "Vui lòng đăng nhập lại.";
+            return RedirectToAction(nameof(DangNhap));
+        }
+
+        try
+        {
+            var (ok, message) = await _khaoSatService.LuuSoThichAsync(maKhachHang, input ?? new SoThichFormInput());
+            if (!ok && TaiKhoanBiKhoaHelper.LaTaiKhoanBiKhoa(message)) return this.DangXuatVaVeDangNhap();
+            TempData["ThongBao"] = ok ? "🎉 " + message : "Lưu sở thích thất bại: " + message;
+        }
+        catch (HttpRequestException)
+        {
+            TempData["ThongBao"] = "Không kết nối được đến máy chủ API.";
+        }
+        return RedirectToAction(nameof(SoThich));
     }
 
     private sealed class ThongTinKhachHangApi

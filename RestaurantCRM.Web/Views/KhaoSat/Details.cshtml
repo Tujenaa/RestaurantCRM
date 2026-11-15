@@ -26,6 +26,10 @@
         var q = Model.CauHoi[i];
         <div class="survey-q">
             <h4>@(i + 1). @q.NoiDungCauHoi@(q.IsTuDien ? "" : " *")</h4>
+            @if (q.IsNhieu)
+            {
+                <p class="muted">Có thể chọn nhiều đáp án.</p>
+            }
             <input type="hidden" name="Answers[@i].MaCauHoi" value="@q.MaCauHoi" />
 
             @if (q.IsTuDien)

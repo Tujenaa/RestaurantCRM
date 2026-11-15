@@ -25,6 +25,7 @@ namespace RestaurantCRM.API.Services
         public const string DaDong = "Closed";
         public const string TracNghiem = "Option";
         public const string TuLuan = "Text";
+        public const string GhiChuChonNhieu = "Câu chọn nhiều, tổng có thể vượt 100%.";
 
         /// <summary>Quy đổi trạng thái về giá trị hợp lệ của CSDL (Draft / Open / Closed).</summary>
         public static string? ChuanHoaTrangThai(string? s)
@@ -49,7 +50,8 @@ namespace RestaurantCRM.API.Services
             }
         }
 
-        public static string? KiemTraCauHoi(string? noiDung, string? loaiCauHoi, List<string>? tuyChons)
+        public static string? KiemTraCauHoi(string? noiDung, string? loaiCauHoi, List<string>? tuyChons,
+            bool chonNhieu = false, bool boQuaTuyChon = false)
         {
             if (string.IsNullOrWhiteSpace(noiDung))
                 return "Nội dung câu hỏi không được để trống.";
@@ -59,6 +61,12 @@ namespace RestaurantCRM.API.Services
             var loai = ChuanHoaLoai(loaiCauHoi);
             if (loai == null)
                 return "Loại câu hỏi không hợp lệ. Chấp nhận 'Option' (trắc nghiệm) hoặc 'Text' (tự luận).";
+
+            if (chonNhieu && loai != TracNghiem)
+                return "Chỉ câu trắc nghiệm mới cho chọn nhiều đáp án.";
+
+            // Câu món yêu thích: đáp án là món ăn, kiểm tra riêng
+            if (boQuaTuyChon) return null;
 
             if (loai == TracNghiem)
             {
@@ -123,6 +131,8 @@ namespace RestaurantCRM.API.Services
                         ch.MaCauHoi,
                         ch.NoiDungCauHoi,
                         LoaiCauHoi = "TracNghiem",
+                        ch.ChonNhieu,
+                        GhiChu = ch.ChonNhieu ? GhiChuChonNhieu : null,
                         SoLuotTraLoi = soLuotTraLoi,
                         KetQuaTN = thongKeTuyChon,
                         KetQuaTuLuan = (object?)null,
@@ -141,6 +151,8 @@ namespace RestaurantCRM.API.Services
                         ch.MaCauHoi,
                         ch.NoiDungCauHoi,
                         LoaiCauHoi = "TuLuan",
+                        ChonNhieu = false,
+                        GhiChu = (string?)null,
                         SoLuotTraLoi = soLuotTraLoi,
                         KetQuaTN = (object?)null,
                         KetQuaTuLuan = tuLuan.Select(c => c.NoiDungTuDien).ToList(),

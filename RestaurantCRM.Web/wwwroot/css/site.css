@@ -581,3 +581,19 @@ footer{background:#2a1a12;color:#d9c6b4;padding:46px 22px 26px}.footer-inner{max
   box-shadow: 0 4px 12px rgba(184,70,27,.25);
   cursor: default;
 }
+
+/* Mục dạng liên kết trong khung trái trang Tài khoản (vd. "Sở thích của tôi"), cùng kiểu với nút */
+.side-menu a.side-link{display:flex;width:100%;text-align:left;padding:12px;border-radius:10px;color:var(--muted);font-weight:650;font-size:13px;text-decoration:none}
+.side-menu a.side-link:hover{background:var(--cream);color:var(--red)}
+@media (max-width:650px){.side-menu a.side-link{white-space:nowrap;width:auto}}
+
+/* Menu thả xuống dưới tên tài khoản (header) */
+.account-menu{position:relative}
+.account-trigger{border:0;background:transparent;cursor:pointer;font-family:inherit}
+.account-caret{font-size:11px;color:var(--muted)}
+.account-dropdown{display:none;position:absolute;right:0;top:100%;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(44,24,16,.12);padding:6px;z-index:50}
+.account-menu:hover .account-dropdown,.account-menu:focus-within .account-dropdown{display:block}
+.account-dropdown a{display:block;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap}
+.account-dropdown a:hover,.account-dropdown a.active{background:var(--cream);color:var(--red)}
+/* Màn hình nhỏ ẩn tên khách: vẫn hiện nút mở menu */
+@media(max-width:650px){.account-trigger::before{content:'Tài khoản'}}

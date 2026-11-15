@@ -16,14 +16,13 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
 {
     /// <summary>
     /// Màn hình phân tích khách hàng đa tab:
-    /// - 4 thẻ KPI tổng hợp (Khách hàng, Điểm đánh giá, Lượt đánh giá, Khảo sát mở).
     /// - Tab 1: Cơ cấu độ tuổi & Giới tính (Biểu đồ phân bố GDI+ & Bảng chi tiết từng nhóm tuổi).
-    /// - Tab 2: Sở thích ẩm thực (Món ưa chuộng) (Top món trực quan & Bảng chi tiết lượt gọi, doanh thu).
-    /// - Tab 3: Xếp hạng & Chi tiêu (Top chi tiêu & Bảng danh sách khách hàng tiêu biểu).
+    /// - Tab 2: Món bán chạy (theo đơn hoàn tất): Top món & bảng lượt gọi, doanh thu.
+    /// - Tab 3: Sở thích (khách tự khai): % khách chọn từng đáp án của hồ sơ sở thích, Top 10 món được ♥.
+    /// - Tab 4: Xếp hạng & Chi tiêu (Top chi tiêu & Bảng danh sách khách hàng tiêu biểu).
     /// </summary>
     public class PhanTichForm : Form
     {
-        private readonly UcThongKe _kKhach, _kDiem, _kLuot, _kKhaoSat;
         private TabControl _tabMain;
 
         // Tab 1: Độ tuổi & Giới tính
@@ -38,6 +37,11 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
         private ComboBox _cboLoaiFood;
         private List<MonUaThichItemDto> _allFoodItems = new List<MonUaThichItemDto>();
         private bool _updatingFoodFilter;
+
+        // Tab 2: Khách tự khai (hồ sơ sở thích)
+        private UcTopList _topTim;
+        private UcDataGridView _dgvTuKhai;
+        private Label _lblTuKhai;
 
         // Tab 3: Chi tiêu khách hàng
         private UcTopList _topSpending;
@@ -105,32 +109,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
             };
             ParentChanged += (s, e) => place();
 
-            // 2. Bốn thẻ KPI đầu trang
-            var kpis = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                Height = 136,
-                ColumnCount = 4,
-                RowCount = 1,
-                BackColor = ThemeManager.Bg,
-                Margin = new Padding(0)
-            };
-            kpis.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            for (int i = 0; i < 4; i++) kpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-
-            _kKhach = new UcThongKe("Khách hàng", "...", "Tổng hồ sơ", "👥", ThemeManager.Primary);
-            _kDiem = new UcThongKe("Điểm đánh giá", "...", "Trung bình", "⭐", ThemeManager.Amber);
-            _kLuot = new UcThongKe("Lượt đánh giá", "...", "Tính cả đánh giá đã ẩn", "💬", ThemeManager.Violet);
-            _kKhaoSat = new UcThongKe("Khảo sát mở", "...", "Đang diễn ra", "📋", ThemeManager.Teal);
-
-            var allKpi = new[] { _kKhach, _kDiem, _kLuot, _kKhaoSat };
-            for (int i = 0; i < 4; i++)
-            {
-                allKpi[i].Dock = DockStyle.Fill;
-                kpis.Controls.Add(allKpi[i], i, 0);
-            }
-
-            // 3. Khung TabControl dạng Pill hiện đại
+            // 2. Khung TabControl dạng Pill hiện đại
             var tabHost = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -147,13 +126,13 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
             // Dựng 3 Tab phân tích
             BuildTabDoTuoi();
             BuildTabSoThich();
+            BuildTabTuKhai();
             BuildTabChiTieu();
 
             tabHost.Controls.Add(_tabMain);
             TabSkin.Attach(_tabMain);
 
             Controls.Add(tabHost);
-            Controls.Add(kpis);
             Controls.Add(header);
             tabHost.BringToFront();
             place();
@@ -235,7 +214,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
         // ================= TAB 2: SỞ THÍCH ẨM THỰC (MÓN ƯA CHUỘNG) =================
         private void BuildTabSoThich()
         {
-            var tab = new TabPage("Sở thích ẩm thực") { BackColor = ThemeManager.Bg };
+            var tab = new TabPage("Món bán chạy") { BackColor = ThemeManager.Bg };
 
             var split = new TableLayoutPanel
             {
@@ -252,7 +231,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
             _topFood = new UcTopList
             {
                 Dock = DockStyle.Fill,
-                Title = "Top món ưa thích nhất",
+                Title = "Món bán chạy (theo đơn hoàn tất)",
                 Subtitle = "XẾP HẠNG THEO LƯỢT ĐẶT MÓN",
                 Unit = "phần",
                 Margin = new Padding(0, 0, 8, 0)
@@ -265,7 +244,7 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
 
             var lblGridTitle = new Label
             {
-                Text = "DANH SÁCH MÓN ĂN ĐƯỢC ƯA CHUỘNG (DỰA TRÊN ĐƠN HOÀN THÀNH)",
+                Text = "MÓN BÁN CHẠY (THEO ĐƠN HOÀN TẤT)",
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
                 ForeColor = ThemeManager.Ink,
                 Dock = DockStyle.Top,
@@ -316,6 +295,72 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
             split.Controls.Add(rightCard, 1, 0);
 
             tab.Controls.Add(split);
+            _tabMain.TabPages.Add(tab);
+        }
+
+        // ================= TAB 3: SỞ THÍCH (KHÁCH TỰ KHAI) =================
+        private void BuildTabTuKhai()
+        {
+            var tab = new TabPage("Sở thích") { BackColor = ThemeManager.Bg };
+
+            // ── Khách tự khai (hồ sơ sở thích) — tách riêng, không trộn với dữ liệu đơn hàng ──
+            var splitTuKhai = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = ThemeManager.Bg,
+                Padding = new Padding(0, 8, 0, 0)
+            };
+            splitTuKhai.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            splitTuKhai.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 400F));
+            splitTuKhai.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            _topTim = new UcTopList
+            {
+                Dock = DockStyle.Fill,
+                Title = "Top 10 món được ♥ nhiều nhất",
+                Subtitle = "SỐ KHÁCH ĐÃ ♥",
+                Unit = "khách",
+                Margin = new Padding(0, 0, 8, 0)
+            };
+
+            var cardTuKhai = PageKit.NewCard();
+            cardTuKhai.Dock = DockStyle.Fill;
+            cardTuKhai.Margin = new Padding(4, 0, 0, 0);
+            cardTuKhai.Padding = new Padding(16, 14, 16, 14);
+            var lblTuKhaiTitle = new Label
+            {
+                Text = "SỞ THÍCH",
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.Ink,
+                Dock = DockStyle.Top,
+                Height = 28
+            };
+            _lblTuKhai = new Label { Dock = DockStyle.Top, AutoSize = false, Height = 44, ForeColor = ThemeManager.Muted, Font = new Font("Segoe UI", 9F), Text = "Đang tải...", UseMnemonic = false };
+            _dgvTuKhai = new UcDataGridView { Dock = DockStyle.Fill };
+            _dgvTuKhai.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _dgvTuKhai.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Câu hỏi", FillWeight = 170 });
+            _dgvTuKhai.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Đáp án", FillWeight = 130 });
+            var cSoKhach = new DataGridViewTextBoxColumn { HeaderText = "Số khách chọn", FillWeight = 70 };
+            cSoKhach.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            _dgvTuKhai.Columns.Add(cSoKhach);
+            var cTyLeTk = new DataGridViewTextBoxColumn { HeaderText = "Tỷ lệ", FillWeight = 55 };
+            cTyLeTk.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            cTyLeTk.DefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _dgvTuKhai.Columns.Add(cTyLeTk);
+            var cTren = new DataGridViewTextBoxColumn { HeaderText = "Trên số khách", FillWeight = 70 };
+            cTren.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            _dgvTuKhai.Columns.Add(cTren);
+            cardTuKhai.Controls.Add(_dgvTuKhai);
+            cardTuKhai.Controls.Add(_lblTuKhai);
+            cardTuKhai.Controls.Add(lblTuKhaiTitle);
+            _dgvTuKhai.BringToFront();
+
+            splitTuKhai.Controls.Add(_topTim, 0, 0);
+            splitTuKhai.Controls.Add(cardTuKhai, 1, 0);
+
+            tab.Controls.Add(splitTuKhai);
             _tabMain.TabPages.Add(tab);
         }
 
@@ -412,30 +457,93 @@ namespace RestaurantCRM.AdminApp.Forms.PhanTich
 
         private async Task LoadDataAsync()
         {
-            var kpiTask = LoadMetricsAsync();
             var demographicTask = LoadDemographicsAndPreferencesAsync();
             var customerSpendTask = LoadTopCustomersAsync();
-            await Task.WhenAll(kpiTask, demographicTask, customerSpendTask);
+            var tuKhaiTask = LoadSoThichTuKhaiAsync();
+            await Task.WhenAll(demographicTask, customerSpendTask, tuKhaiTask);
         }
 
-        private async Task LoadMetricsAsync()
+        /// <summary>
+        /// "Khách tự khai": với mỗi câu trắc nghiệm của hồ sơ sở thích, % khách chọn từng đáp án.
+        /// Mẫu số của mỗi câu = số khách đã trả lời câu đó (khách chỉ bấm ♥ không bị tính là "không chọn" ở câu khẩu vị).
+        /// </summary>
+        private async Task LoadSoThichTuKhaiAsync()
         {
             try
             {
-                using (var http = new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/"), Timeout = TimeSpan.FromSeconds(15) })
+                var ksService = new KhaoSatService();
+                var ma = await ksService.GetMaBoSoThichAsync();
+                if (IsDisposed) return;
+                _dgvTuKhai.Rows.Clear();
+                if (ma == null)
                 {
-                    var m = await http.GetFromJsonAsync<DashboardMetricsDto>("api/ThongKe/DashboardMetrics");
-                    if (m == null || IsDisposed) return;
-                    _kKhach.SetValue(m.TongKhachHang.ToString("N0"));
-                    _kDiem.SetValue(m.DiemDanhGiaTb.ToString("0.0") + " / 5");
-                    _kLuot.SetValue(m.TongDanhGia.ToString("N0"));
-                    _kKhaoSat.SetValue(m.KhaoSatDangMo.ToString("N0"));
+                    _lblTuKhai.Text = "Chưa có hồ sơ sở thích (tạo ở màn hình Khảo sát → \"Hồ sơ sở thích\").";
+                    _topTim.Subtitle = "CHƯA CÓ HỒ SƠ SỞ THÍCH";
+                    _topTim.SetItems(new List<KeyValuePair<string, double>>());
+                    return;
                 }
+
+                var tBo = ksService.GetByIdAsync(ma);
+                var tKhai = ksService.GetSoThichKhachHangAsync();
+                var tKhach = new KhachHangService().GetAllAsync();
+                await Task.WhenAll(tBo, tKhai, tKhach);
+                if (IsDisposed) return;
+
+                var bo = tBo.Result;
+                var khai = tKhai.Result;
+                int tongKhach = tKhach.Result?.Count ?? 0;
+                _lblTuKhai.Text = "Trên " + khai.Count.ToString("N0") + "/" + tongKhach.ToString("N0") + " khách đã khai báo sở thích." + Environment.NewLine
+                                  + "% mỗi câu tính trên số khách đã trả lời câu đó; câu chọn nhiều có tổng có thể vượt 100%.";
+
+                // Đếm số khách chọn từng đáp án và số khách trả lời từng câu
+                var demDapAn = new Dictionary<string, int>();
+                var demCau = new Dictionary<string, int>();
+                foreach (var k in khai)
+                {
+                    foreach (var t in (k.MaTuyChons ?? new List<string>()).Distinct())
+                        demDapAn[t] = (demDapAn.TryGetValue(t, out var n) ? n : 0) + 1;
+                    foreach (var c in (k.MaCauHois ?? new List<string>()).Distinct())
+                        demCau[c] = (demCau.TryGetValue(c, out var n) ? n : 0) + 1;
+                }
+
+                var tim = new List<KeyValuePair<string, double>>();
+                foreach (var c in bo?.CauHoi ?? new List<RestaurantCRM.AdminApp.DTOs.KhaoSat.CauHoiDto>())
+                {
+                    if (!c.LaTracNghiem) continue;
+                    int mau = demCau.TryGetValue(c.MaCauHoi, out var m) ? m : 0;
+                    if (c.LaCauMonYeuThich)
+                    {
+                        foreach (var t in c.TuyChon)
+                        {
+                            int so = demDapAn.TryGetValue(t.MaTuyChon, out var x) ? x : 0;
+                            if (so > 0) tim.Add(new KeyValuePair<string, double>((t.TenMon ?? t.NoiDungTuyChon) + (t.NgungBan ? " (ngừng bán)" : ""), so));
+                        }
+                        continue;
+                    }
+                    bool dau = true;
+                    foreach (var t in c.TuyChon)
+                    {
+                        int so = demDapAn.TryGetValue(t.MaTuyChon, out var x) ? x : 0;
+                        double tyLe = mau > 0 ? so * 100.0 / mau : 0;
+                        // Ghi câu hỏi trên mọi dòng để không mất ngữ cảnh khi cuộn; dòng đầu mỗi câu in đậm
+                        int r = _dgvTuKhai.Rows.Add(c.NoiDungCauHoi + (c.ChonNhieu ? " (chọn nhiều)" : ""),
+                            t.NoiDungTuyChon, so.ToString("N0"), tyLe.ToString("0.0") + "%", mau.ToString("N0") + " khách");
+                        if (dau) _dgvTuKhai.Rows[r].Cells[0].Style.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                        else _dgvTuKhai.Rows[r].Cells[0].Style.ForeColor = ThemeManager.Muted;
+                        dau = false;
+                    }
+                }
+
+                tim = tim.OrderByDescending(x => x.Value).ThenBy(x => x.Key).Take(10).ToList();
+                _topTim.Subtitle = tim.Count == 0 ? "CHƯA CÓ MÓN NÀO ĐƯỢC ♥" : "SỐ KHÁCH ĐÃ ♥";
+                _topTim.SetItems(tim);
             }
-            catch
+            catch (ApiException ex)
             {
-                var all = new[] { _kKhach, _kDiem, _kLuot, _kKhaoSat };
-                foreach (var k in all) if (!k.IsDisposed) k.SetValue("—", "Chưa kết nối API");
+                if (IsDisposed) return;
+                _lblTuKhai.Text = "Không tải được hồ sơ sở thích: " + ex.Message;
+                _topTim.Subtitle = "KHÔNG TẢI ĐƯỢC DỮ LIỆU API";
+                _topTim.SetItems(new List<KeyValuePair<string, double>>());
             }
         }
 

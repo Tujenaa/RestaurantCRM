@@ -16,7 +16,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
     /// <summary>
     /// Chọn đối tượng khảo sát:
     ///  - Tất cả khách hàng (khảo sát công khai, không lưu dòng DOI_TUONG_KHAO_SAT nào);
-    ///  - Theo tiêu chí (giới tính, độ tuổi) — áp dụng tại thời điểm lưu thành danh sách khách cụ thể;
+    ///  - Theo tiêu chí (giới tính, độ tuổi, sở thích khách tự khai) — áp dụng tại thời điểm lưu thành danh sách khách cụ thể.
+    ///    Các tiêu chí kết hợp AND; tiêu chí sở thích khớp khi khách đã chọn ít nhất 1 trong các đáp án được tick;
     ///  - Chọn bất kỳ khách hàng nào.
     /// Khách đã trả lời khảo sát luôn nằm trong danh sách và không bỏ chọn được.
     /// </summary>
@@ -37,7 +38,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private bool _rendering;
 
         private readonly RadioButton _rdTatCa = new RadioButton { Text = "Tất cả khách hàng", AutoSize = true };
-        private readonly RadioButton _rdTieuChi = new RadioButton { Text = "Theo tiêu chí (giới tính, độ tuổi)", AutoSize = true };
+        private readonly RadioButton _rdTieuChi = new RadioButton { Text = "Theo tiêu chí (giới tính, tuổi, sở thích)", AutoSize = true };
         private readonly RadioButton _rdCuThe = new RadioButton { Text = "Chọn khách hàng cụ thể", AutoSize = true };
 
         private readonly Panel _pnlTieuChi = new Panel();
@@ -46,6 +47,21 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly NumericUpDown _nudTuTuoi = new NumericUpDown { Minimum = 0, Maximum = 120, Value = 18 };
         private readonly NumericUpDown _nudDenTuoi = new NumericUpDown { Minimum = 0, Maximum = 120, Value = 35 };
         private readonly Button _btnApDung;
+
+        // Tiêu chí "Theo sở thích" (hồ sơ sở thích)
+        private readonly CheckBox _chkSoThich = new CheckBox { Text = "Theo sở thích (khớp ≥ 1 đáp án):", AutoSize = true };
+        private readonly Button _btnChonSoThich;
+        private readonly Label _lblSoThich = new Label { AutoSize = false, AutoEllipsis = true, UseMnemonic = false };
+        private readonly List<DapAnSoThich> _dapAnSoThich = new List<DapAnSoThich>();
+        private readonly HashSet<string> _tcSoThichDaChon = new HashSet<string>();
+        private readonly Dictionary<string, HashSet<string>> _soThichKhach = new Dictionary<string, HashSet<string>>();
+
+        private class DapAnSoThich
+        {
+            public string MaTuyChon;
+            public string Nhan;   // "Câu hỏi: Đáp án"
+            public override string ToString() { return Nhan; }
+        }
 
         private readonly TextBox _txtSearch = new TextBox();
         private readonly Button _btnChonTatCa;
@@ -81,7 +97,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             }
 
             // ── Tiêu chí ──
-            _pnlTieuChi.SetBounds(L, 42, W, 44);
+            _pnlTieuChi.SetBounds(L, 42, W, 76);
             _pnlTieuChi.BackColor = ThemeManager.Surface2;
             Body.Controls.Add(_pnlTieuChi);
 
@@ -97,18 +113,28 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             var lblTuoi = new Label { Text = "tuổi", AutoSize = true, Location = new Point(500, 14), ForeColor = ThemeManager.Ink2, BackColor = Color.Transparent };
             _btnApDung = MakeButton("Áp dụng tiêu chí", ButtonSkin.Kind.Soft, 120);
             _btnApDung.Margin = Padding.Empty;
-            _pnlTieuChi.Controls.AddRange(new Control[] { lblGt, _cboGioiTinh, _chkTuoi, _nudTuTuoi, lblDen, _nudDenTuoi, lblTuoi, _btnApDung });
+            _chkSoThich.Location = new Point(12, 48);
+            _chkSoThich.BackColor = Color.Transparent;
+            _btnChonSoThich = MakeButton("Chọn đáp án...", ButtonSkin.Kind.Secondary, 110);
+            _btnChonSoThich.Margin = Padding.Empty;
+            _btnChonSoThich.Location = new Point(236, 42);
+            _lblSoThich.SetBounds(360, 48, 340, 20);
+            _lblSoThich.ForeColor = ThemeManager.Ink2;
+            _lblSoThich.BackColor = Color.Transparent;
+            _pnlTieuChi.Controls.AddRange(new Control[] { lblGt, _cboGioiTinh, _chkTuoi, _nudTuTuoi, lblDen, _nudDenTuoi, lblTuoi, _btnApDung,
+                _chkSoThich, _btnChonSoThich, _lblSoThich });
             _pnlTieuChi.Resize += (s, e) => _btnApDung.Location = new Point(_pnlTieuChi.Width - _btnApDung.Width - 8, (_pnlTieuChi.Height - _btnApDung.Height) / 2);
             _btnApDung.Location = new Point(_pnlTieuChi.Width - _btnApDung.Width - 8, (_pnlTieuChi.Height - _btnApDung.Height) / 2);
+            CapNhatNhanSoThich();
 
-            Hint(Body, "Tiêu chí được áp dụng lúc lưu: khách thỏa điều kiện sẽ được thêm vào danh sách. Khách đăng ký sau sẽ không tự được thêm — mở lại và áp dụng lại nếu cần.", L, 92, W);
+            Hint(Body, "Tiêu chí được áp dụng lúc lưu: khách thỏa điều kiện sẽ được thêm vào danh sách. Khách đăng ký sau sẽ không tự được thêm — mở lại và áp dụng lại nếu cần.", L, 124, W);
 
             // ── Tìm + chọn nhanh ──
-            _txtSearch.SetBounds(L, 120, 300, 26);
+            _txtSearch.SetBounds(L, 152, 300, 26);
             UiStyler.SetPlaceholder(_txtSearch, "Tìm theo mã, họ tên, số điện thoại...");
             Body.Controls.Add(_txtSearch);
 
-            _lblCount.SetBounds(L + 312, 124, 260, 20);
+            _lblCount.SetBounds(L + 312, 156, 260, 20);
             _lblCount.ForeColor = ThemeManager.Muted;
             _lblCount.UseMnemonic = false;
             Body.Controls.Add(_lblCount);
@@ -116,13 +142,13 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _btnBoChon = MakeButton("Bỏ chọn tất cả", ButtonSkin.Kind.Secondary, 110);
             _btnChonTatCa = MakeButton("Chọn tất cả", ButtonSkin.Kind.Secondary, 96);
             int right = DlgWidth - Gutter;
-            _btnBoChon.Location = new Point(right - _btnBoChon.Width, 118);
-            _btnChonTatCa.Location = new Point(_btnBoChon.Left - 8 - _btnChonTatCa.Width, 118);
+            _btnBoChon.Location = new Point(right - _btnBoChon.Width, 150);
+            _btnChonTatCa.Location = new Point(_btnBoChon.Left - 8 - _btnChonTatCa.Width, 150);
             Body.Controls.Add(_btnBoChon);
             Body.Controls.Add(_btnChonTatCa);
 
             BuildGrid();
-            _grid.SetBounds(L, 158, W, 400);
+            _grid.SetBounds(L, 190, W, 368);
             Body.Controls.Add(_grid);
 
             _lblError.SetBounds(L, 564, W, 26);
@@ -137,6 +163,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _nudTuTuoi.ValueChanged += (s, e) => _tieuChiDaApDung = false;
             _nudDenTuoi.ValueChanged += (s, e) => _tieuChiDaApDung = false;
             _btnApDung.Click += (s, e) => ApDungTieuChi();
+            _chkSoThich.CheckedChanged += (s, e) => { _tieuChiDaApDung = false; CapNhatNhanSoThich(); };
+            _btnChonSoThich.Click += (s, e) => ChonDapAnSoThich();
             _txtSearch.TextChanged += (s, e) => Render();
             _btnChonTatCa.Click += (s, e) => DatChonDangHienThi(true);
             _btnBoChon.Click += (s, e) => DatChonDangHienThi(false);
@@ -184,6 +212,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 var tDaTraLoi = _service.GetNguoiDaTraLoiAsync(_maKhaoSat);
                 await Task.WhenAll(tKhach, tDoiTuong, tDaTraLoi);
                 if (IsDisposed) return;
+                await TaiSoThichAsync();
+                if (IsDisposed) return;
 
                 var doiTuong = tDoiTuong.Result;
                 _khach = tKhach.Result.OrderBy(k => k.MaKhachHang).ToList();
@@ -219,6 +249,86 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             }
         }
 
+        /// <summary>Tải danh mục đáp án của hồ sơ sở thích và đáp án từng khách đã khai báo.</summary>
+        private async Task TaiSoThichAsync()
+        {
+            _dapAnSoThich.Clear();
+            _soThichKhach.Clear();
+            try
+            {
+                var ma = await _service.GetMaBoSoThichAsync();
+                if (ma != null)
+                {
+                    var tBo = _service.GetByIdAsync(ma);
+                    var tKhach = _service.GetSoThichKhachHangAsync();
+                    await Task.WhenAll(tBo, tKhach);
+                    foreach (var c in tBo.Result?.CauHoi ?? new List<CauHoiDto>())
+                    {
+                        if (!c.LaTracNghiem) continue;
+                        foreach (var t in c.TuyChon)
+                            _dapAnSoThich.Add(new DapAnSoThich { MaTuyChon = t.MaTuyChon, Nhan = c.NoiDungCauHoi + ": " + t.NoiDungTuyChon });
+                    }
+                    foreach (var k in tKhach.Result)
+                        if (!string.IsNullOrEmpty(k.MaKhachHang))
+                            _soThichKhach[k.MaKhachHang] = new HashSet<string>(k.MaTuyChons ?? new List<string>());
+                }
+            }
+            catch (ApiException)
+            {
+                // Không tải được sở thích: chỉ tắt tiêu chí này, các tiêu chí khác vẫn dùng được
+                _dapAnSoThich.Clear();
+            }
+            if (IsDisposed) return;
+            bool co = _dapAnSoThich.Count > 0;
+            if (!co) _chkSoThich.Checked = false;
+            _chkSoThich.Text = co ? "Theo sở thích (khớp ≥ 1 đáp án):" : "Theo sở thích (chưa có hồ sơ sở thích)";
+            CapNhatNhanSoThich();
+        }
+
+        private void CapNhatNhanSoThich()
+        {
+            bool co = _dapAnSoThich.Count > 0;
+            _chkSoThich.Enabled = co && !_chiXem;
+            _btnChonSoThich.Enabled = co && !_chiXem && _chkSoThich.Checked;
+            var nhan = _dapAnSoThich.Where(d => _tcSoThichDaChon.Contains(d.MaTuyChon)).Select(d => d.Nhan).ToList();
+            _lblSoThich.Text = nhan.Count == 0 ? (_chkSoThich.Checked ? "Chưa chọn đáp án nào" : "") : string.Join("; ", nhan);
+            _lblSoThich.ForeColor = _chkSoThich.Checked && nhan.Count == 0 ? ThemeManager.Amber : ThemeManager.Ink2;
+        }
+
+        private void ChonDapAnSoThich()
+        {
+            using (var dlg = new ChonSoThichDialog(_dapAnSoThich, _tcSoThichDaChon))
+            {
+                if (Notify.ShowDialog(dlg, this) != DialogResult.OK) return;
+                _tcSoThichDaChon.Clear();
+                foreach (var m in dlg.DaChon) _tcSoThichDaChon.Add(m);
+                _tieuChiDaApDung = false;
+                CapNhatNhanSoThich();
+            }
+        }
+
+        /// <summary>Hộp chọn các đáp án của hồ sơ sở thích dùng làm tiêu chí.</summary>
+        private class ChonSoThichDialog : CrmDialog
+        {
+            private readonly CheckedListBox _lst = new CheckedListBox { CheckOnClick = true, IntegralHeight = false, BorderStyle = BorderStyle.FixedSingle };
+            public List<string> DaChon { get; private set; } = new List<string>();
+
+            public ChonSoThichDialog(List<DapAnSoThich> dapAns, HashSet<string> daChon)
+                : base("Chọn đáp án sở thích", "Khách khớp khi đã chọn ít nhất 1 trong các đáp án được tick.", 560, 360, "Chọn")
+            {
+                _lst.SetBounds(Gutter, 4, 560 - Gutter * 2, 340);
+                _lst.Font = new Font(ThemeManager.FontFamily, 9.5F);
+                foreach (var d in dapAns) _lst.Items.Add(d, daChon.Contains(d.MaTuyChon));
+                Body.Controls.Add(_lst);
+                PrimaryButton.Click += (s, e) =>
+                {
+                    DaChon = _lst.CheckedItems.Cast<DapAnSoThich>().Select(d => d.MaTuyChon).ToList();
+                    DialogResult = DialogResult.OK;
+                    Close();
+                };
+            }
+        }
+
         private void CapNhatCheDo()
         {
             if (_rendering) return;
@@ -228,6 +338,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             foreach (var rd in new[] { _rdTatCa, _rdTieuChi, _rdCuThe }) rd.Enabled = sua;
             _pnlTieuChi.Enabled = tieuChi && sua;
             _nudTuTuoi.Enabled = _nudDenTuoi.Enabled = tieuChi && sua && _chkTuoi.Checked;
+            CapNhatNhanSoThich();
             _grid.Enabled = !tatCa;
             _txtSearch.Enabled = !tatCa;
             _btnChonTatCa.Enabled = _btnBoChon.Enabled = !tatCa && sua;
@@ -263,11 +374,22 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 var tuoi = TinhTuoi(k);
                 if (!tuoi.HasValue || tuoi.Value < tu || tuoi.Value > den) return false;
             }
+            // Theo sở thích (AND với các tiêu chí trên): đã chọn ít nhất 1 trong các đáp án được tick
+            if (_chkSoThich.Checked)
+            {
+                HashSet<string> cuaKhach;
+                if (!_soThichKhach.TryGetValue(k.MaKhachHang, out cuaKhach) || !cuaKhach.Overlaps(_tcSoThichDaChon)) return false;
+            }
             return true;
         }
 
         private void ApDungTieuChi()
         {
+            if (_chkSoThich.Checked && _tcSoThichDaChon.Count == 0)
+            {
+                BaoLoi("Bạn đã bật \"Theo sở thích\" nhưng chưa chọn đáp án nào.");
+                return;
+            }
             int n = 0, giuThem = 0;
             foreach (var k in _khach)
             {
@@ -378,8 +500,12 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             }
             else
             {
-                if (_rdTieuChi.Checked && !_tieuChiDaApDung) ApDungTieuChi();
-                ds = _chon.Where(p => p.Value).Select(p => p.Key).ToList();
+                if (_rdTieuChi.Checked && !_tieuChiDaApDung)
+                {
+                    ApDungTieuChi();
+                    if (!_tieuChiDaApDung) return;   // tiêu chí chưa hợp lệ (vd. bật sở thích mà chưa chọn đáp án)
+                }
+                ds =_chon.Where(p => p.Value).Select(p => p.Key).ToList();
                 if (ds.Count == 0)
                 {
                     BaoLoi(_rdTieuChi.Checked

@@ -275,21 +275,33 @@ CREATE TABLE KHAO_SAT (
     maNhanVien VARCHAR(20) FOREIGN KEY REFERENCES NHAN_VIEN(maNhanVien),
     tieuDe NVARCHAR(200),
     trangThai NVARCHAR(20) CONSTRAINT CK_KHAO_SAT_trangThai CHECK (trangThai IN ('Draft', 'Open', 'Closed')),
-    ngayTao DATETIME
+    ngayTao DATETIME,
+    laSoThich BIT NOT NULL CONSTRAINT DF_KHAO_SAT_laSoThich DEFAULT 0,   -- 1 = bộ "Hồ sơ sở thích" thường trực (không phải khảo sát thường)
+    CONSTRAINT CK_KHAO_SAT_laSoThich CHECK (laSoThich = 0 OR trangThai = 'Open')  -- hồ sơ sở thích luôn mở
 );
+
+-- Chỉ có đúng 1 bộ hồ sơ sở thích
+CREATE UNIQUE INDEX UQ_KHAO_SAT_laSoThich ON KHAO_SAT(laSoThich) WHERE laSoThich = 1;
 
 CREATE TABLE CAU_HOI_KHAO_SAT (
     maCauHoi VARCHAR(20) PRIMARY KEY,
     maKhaoSat VARCHAR(20) FOREIGN KEY REFERENCES KHAO_SAT(maKhaoSat),
     noiDungCauHoi NVARCHAR(500),
-    loaiCauHoi VARCHAR(20) CONSTRAINT CK_CAU_HOI_KHAO_SAT_loaiCauHoi CHECK (loaiCauHoi IN ('Option', 'Text'))
+    loaiCauHoi VARCHAR(20) CONSTRAINT CK_CAU_HOI_KHAO_SAT_loaiCauHoi CHECK (loaiCauHoi IN ('Option', 'Text')),
+    chonNhieu BIT NOT NULL CONSTRAINT DF_CAU_HOI_KHAO_SAT_chonNhieu DEFAULT 0,  -- 1 = câu trắc nghiệm cho chọn nhiều đáp án
+    CONSTRAINT CK_CAU_HOI_KHAO_SAT_chonNhieu CHECK (chonNhieu = 0 OR loaiCauHoi = 'Option')
 );
 
 CREATE TABLE TUY_CHON_CAU_HOI (
     maTuyChon VARCHAR(20) PRIMARY KEY,
     maCauHoi VARCHAR(20) FOREIGN KEY REFERENCES CAU_HOI_KHAO_SAT(maCauHoi),
-    noiDungTuyChon NVARCHAR(255)
+    noiDungTuyChon NVARCHAR(255),
+    maMon VARCHAR(20) NULL FOREIGN KEY REFERENCES MON_AN(maMon)         -- đáp án gắn với 1 món (câu "Món yêu thích" của hồ sơ sở thích)
 );
+
+-- Trong 1 câu hỏi, mỗi món chỉ là 1 đáp án
+CREATE UNIQUE INDEX UQ_TUY_CHON_CAU_HOI_maCauHoi_maMon ON TUY_CHON_CAU_HOI(maCauHoi, maMon)
+    WHERE maCauHoi IS NOT NULL AND maMon IS NOT NULL;
 
 CREATE TABLE DOI_TUONG_KHAO_SAT (
     maDoiTuong VARCHAR(20) PRIMARY KEY,
@@ -320,6 +332,10 @@ CREATE TABLE CAU_TRA_LOI (
     maTuyChon VARCHAR(20) NULL FOREIGN KEY REFERENCES TUY_CHON_CAU_HOI(maTuyChon),
     noiDungTuDien NVARCHAR(MAX)
 );
+
+-- Trong 1 phiếu, mỗi đáp án chỉ được chọn 1 lần (cần cho câu chọn nhiều)
+CREATE UNIQUE INDEX UQ_CAU_TRA_LOI_maPhieuTraLoi_maTuyChon ON CAU_TRA_LOI(maPhieuTraLoi, maTuyChon)
+    WHERE maPhieuTraLoi IS NOT NULL AND maTuyChon IS NOT NULL;
 
 -- 8. Nhân viên trả lời đánh giá của khách (mỗi đánh giá chỉ được trả lời 1 lần)
 CREATE TABLE TRA_LOI_DANH_GIA (

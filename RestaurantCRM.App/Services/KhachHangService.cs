@@ -32,6 +32,12 @@ namespace RestaurantCRM.AdminApp.Services
             return GetAsync<KhachHangChiTietDto>(Base + "/" + Uri.EscapeDataString(maKhachHang));
         }
 
+        /// <summary>Sở thích khách tự khai báo, nhóm theo câu hỏi (câu dị ứng đứng đầu).</summary>
+        public Task<RestaurantCRM.AdminApp.DTOs.KhaoSat.SoThichCuaKhachDto> GetSoThichAsync(string maKhachHang)
+        {
+            return GetAsync<RestaurantCRM.AdminApp.DTOs.KhaoSat.SoThichCuaKhachDto>(Base + "/" + Uri.EscapeDataString(maKhachHang) + "/SoThich");
+        }
+
         public Task<ApiResult> CreateAsync(KhachHangRequest req)
         {
             return PostAsync(Base, req, "Thêm khách hàng thành công.");

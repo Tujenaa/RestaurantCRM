@@ -30,6 +30,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly Button _btnXoaCH;
         private readonly Button _btnXemTruoc;
         private readonly Button _btnDoiTuong;
+        private readonly Button _btnThongKe;
         private readonly Label _lblError = new Label();
         private string _noteText = "";
         private bool _noteWarn;
@@ -96,6 +97,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _btnXemTruoc.Click += async (s, e) => await XemTruocAsync();
             _btnDoiTuong = AddLeftButton("Đối tượng", ButtonSkin.Kind.Ghost);
             _btnDoiTuong.Click += async (s, e) => await DoiTuongAsync();
+            // Hồ sơ sở thích không nằm trong danh sách khảo sát → xem thống kê ngay tại đây
+            _btnThongKe = AddLeftButton("Thống kê", ButtonSkin.Kind.Ghost);
+            _btnThongKe.Visible = false;
+            _btnThongKe.Click += (s, e) =>
+            {
+                if (_ks == null) return;
+                using (var dlg = new ThongKeKhaoSatForm(MaKhaoSat, _ks.TieuDe)) Notify.ShowDialog(dlg, this);
+            };
 
             _txtTieuDe.TextChanged += (s, e) => _lblError.Text = "";
             _btnThemCH.Click += async (s, e) => await ThemCauHoiAsync();
@@ -165,6 +174,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
 
             if (!coKS)
                 SetNote("Nhấn \"Tạo khảo sát\" để lưu tiêu đề, sau đó thêm câu hỏi ngay trong hộp thoại này.", false);
+            else if (_ks.LaSoThich)
+                SetNote("Hồ sơ sở thích · luôn mở cho mọi khách (" + _ks.SoNguoiTraLoi + " khách đã khai báo). Được thêm / sửa dù đã có phiếu; không xóa được đáp án, câu hỏi đã có khách chọn.", false);
             else if (_ks.TrangThaiHienThi == "Đã đóng")
                 SetNote("Khảo sát đã đóng: không thể sửa nội dung câu hỏi. Chỉ còn sửa được tiêu đề.", true);
             else if (_ks.SoNguoiTraLoi > 0)
@@ -181,11 +192,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 foreach (var c in _ks.CauHoi)
                 {
                     string tc = c.LaTracNghiem
-                        ? (c.TuyChon.Count == 0 ? "(chưa có tùy chọn)" : string.Join("  ·  ", c.TuyChon.Select(t => t.NoiDungTuyChon)))
+                        ? (c.TuyChon.Count == 0 ? "(chưa có tùy chọn)" : string.Join("  ·  ", c.TuyChon.Select(t => t.NoiDungTuyChon + (t.NgungBan ? " (ngừng bán)" : ""))))
                         : "Khách tự nhập câu trả lời";
-                    int i = _grid.Rows.Add(stt++, c.NoiDungCauHoi + (c.DaCoTraLoi ? "   (đã có trả lời)" : ""), KhaoSatConst.TenLoai(c.LoaiCauHoi), tc);
+                    string loai = c.LaCauMonYeuThich ? "♥ Món yêu thích"
+                        : KhaoSatConst.TenLoai(c.LoaiCauHoi) + (c.LaTracNghiem && c.ChonNhieu ? " (nhiều)" : "");
+                    int i = _grid.Rows.Add(stt++, c.NoiDungCauHoi + (c.DaCoTraLoi ? "   (đã có trả lời)" : ""), loai, tc);
                     _grid.Rows[i].Tag = c;
-                    if (c.LaTracNghiem && c.TuyChon.Count < 2) _grid.Rows[i].Cells["TuyChon"].Style.ForeColor = ThemeManager.Red;
+                    // Khảo sát thường: trắc nghiệm cần ≥ 2 tùy chọn; hồ sơ sở thích luôn mở nên không cần cảnh báo này
+                    if (!_ks.LaSoThich && c.LaTracNghiem && c.TuyChon.Count < 2) _grid.Rows[i].Cells["TuyChon"].Style.ForeColor = ThemeManager.Red;
                     if (c.MaCauHoi == chonCauHoi) chon = i;
                 }
             }
@@ -225,13 +239,16 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         {
             bool coKS = _ks != null;
             bool dong = coKS && _ks.TrangThaiHienThi == "Đã đóng";
-            bool coPhieu = coKS && _ks.SoNguoiTraLoi > 0;
+            // Hồ sơ sở thích: được thêm / sửa dù đã có phiếu (R3)
+            bool coPhieu = coKS && _ks.SoNguoiTraLoi > 0 && !_ks.LaSoThich;
             var c = SelectedCauHoi();
             _btnThemCH.Enabled = coKS && !dong && !coPhieu;
             _btnSuaCH.Enabled = c != null && !dong && !coPhieu;
             _btnXoaCH.Enabled = c != null && !dong;   // khảo sát đã có phiếu vẫn được xóa câu hỏi chưa ai trả lời
             _btnXemTruoc.Enabled = coKS;
             _btnDoiTuong.Enabled = coKS;
+            _btnDoiTuong.Visible = !(coKS && _ks.LaSoThich);   // hồ sơ sở thích luôn cho mọi khách
+            _btnThongKe.Visible = coKS && _ks.LaSoThich;
             _btnDoiTuong.Text = coKS ? "Đối tượng: " + _ks.DoiTuongHienThi.ToLowerInvariant() : "Đối tượng";
             PageKit.FitButton(_btnDoiTuong, 88);
             _grid.Enabled = coKS;
@@ -291,7 +308,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private async Task ThemCauHoiAsync()
         {
             if (_ks == null) return;
-            using (var dlg = new CauHoiKhaoSatDialog(MaKhaoSat, null))
+            using (var dlg = new CauHoiKhaoSatDialog(MaKhaoSat, null, _ks.LaSoThich, _ks.CauHoi.Any(x => x.LaCauMonYeuThich)))
             {
                 Notify.ShowDialog(dlg, this);
                 if (dlg.SoCauDaLuu > 0)
@@ -307,7 +324,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         {
             if (_ks == null) return null;
             if (_ks.TrangThaiHienThi == "Đã đóng") return LyDoDaDong;
-            if (_ks.SoNguoiTraLoi > 0) return LyDoDaCoPhieu;
+            if (_ks.SoNguoiTraLoi > 0 && !_ks.LaSoThich) return LyDoDaCoPhieu;
             return null;
         }
 
@@ -336,7 +353,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             if (c == null) return;
             var lyDoKhoa = LyDoKhoaSua();
             if (lyDoKhoa != null) { Notify.Warn(this, lyDoKhoa, "Không thể sửa"); return; }
-            using (var dlg = new CauHoiKhaoSatDialog(MaKhaoSat, c))
+            using (var dlg = new CauHoiKhaoSatDialog(MaKhaoSat, c, _ks.LaSoThich, _ks.CauHoi.Any(x => x.LaCauMonYeuThich && x.MaCauHoi != c.MaCauHoi)))
             {
                 Notify.ShowDialog(dlg, this);
                 if (dlg.SoCauDaLuu > 0)

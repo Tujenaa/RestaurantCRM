@@ -278,7 +278,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             const TextFormatFlags One = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding;
             using (var fSmall = new Font(ThemeManager.FontFamily, 8.5F, FontStyle.Bold))
             {
-                string head = "CÂU " + _stt + " · " + (_q.LaTracNghiem ? "TRẮC NGHIỆM" : "TỰ LUẬN");
+                string head = "CÂU " + _stt + " · " + (_q.LaTracNghiem ? "TRẮC NGHIỆM" : "TỰ LUẬN")
+                    + (_q.LaTracNghiem && _q.ChonNhieu ? " · CHỌN NHIỀU, TỔNG CÓ THỂ VƯỢT 100%" : "");
                 TextRenderer.DrawText(g, head, fSmall, new Point(x, y), ThemeManager.Primary, One);
                 string luot = _q.SoLuotTraLoi.ToString("N0") + " lượt trả lời";
                 var sz = TextRenderer.MeasureText(g, luot, fSmall, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);

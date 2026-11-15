@@ -11,5 +11,6 @@ public class AnswerItem
 {
     public string MaCauHoi { get; set; } = "";
     public string? MaTuyChon { get; set; }
+    public List<string>? MaTuyChons { get; set; }
     public string? NoiDungTuDien { get; set; }
 }

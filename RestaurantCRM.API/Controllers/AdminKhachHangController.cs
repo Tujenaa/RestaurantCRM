@@ -15,6 +15,10 @@ namespace RestaurantCRM.API.Controllers
     {
         private static readonly string[] TrangThaiHopLe = KhachHangValidator.TrangThaiHopLe;
 
+        // Ngưỡng "Hay gọi" (tab Món hay gọi): gọi ít nhất 2 đơn VÀ chiếm ít nhất 30% số đơn hoàn tất của khách
+        private const int SoLanHayGoiToiThieu = 2;
+        private const double TyLeHayGoiToiThieu = 30;
+
         private readonly RestaurantCRM.BusinessLogic.Services.IRestaurantService _service;
 
         public AdminKhachHangController(RestaurantCRM.BusinessLogic.Services.IRestaurantService service)
@@ -85,7 +89,8 @@ namespace RestaurantCRM.API.Controllers
                     SoDonHang = k.HoaDon.Count(),
                     TongChiTieu = k.HoaDon.Where(d => d.TrangThai == "Completed").Sum(d => d.TongThanhToan) ?? 0,
                     SoDanhGia = k.DanhGia.Count(),
-                    SoKhaoSatDaTraLoi = k.PhieuTraLoi.Count(),
+                    // Không tính phiếu hồ sơ sở thích (không phải khảo sát)
+                    SoKhaoSatDaTraLoi = k.PhieuTraLoi.Count(p => !(p.MaKhaoSatNavigation != null && p.MaKhaoSatNavigation.LaSoThich)),
                     LichSuDanhGia = k.DanhGia
                         .OrderByDescending(d => d.NgayDanhGia)
                         .Select(d => new
@@ -100,6 +105,7 @@ namespace RestaurantCRM.API.Controllers
                         })
                         .ToList(),
                     LichSuKhaoSat = k.PhieuTraLoi
+                        .Where(p => !(p.MaKhaoSatNavigation != null && p.MaKhaoSatNavigation.LaSoThich))
                         .OrderByDescending(p => p.NgayTraLoi)
                         .Select(p => new
                         {
@@ -127,7 +133,8 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khách hàng.");
             }
 
-            // Sở thích món được suy ra từ số lượng thực mua trong hóa đơn đã hoàn tất.
+            // "Món hay gọi": suy ra từ các đơn đã hoàn tất (không trộn với sở thích khách tự khai).
+            // Gom theo mã món, tên và loại lấy từ MON_AN để món đổi tên không bị tách đôi.
             var chiTietDaMua = await _service.Query<ChiTietHoaDon>()
                 .Where(ct => ct.MaHoaDonNavigation != null
                     && ct.MaHoaDonNavigation.MaKhachHang == id
@@ -136,22 +143,56 @@ namespace RestaurantCRM.API.Controllers
                     && ct.MaMon != null)
                 .Select(ct => new
                 {
-                    ct.MaMon,
-                    TenMon = ct.TenMon ?? (ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : null),
-                    SoLuong = ct.SoLuong ?? 0
+                    ct.MaHoaDon,
+                    MaMon = ct.MaMon!,
+                    // Chỉ dùng tên lưu trên hóa đơn khi món không còn trong MON_AN
+                    TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.TenMon,
+                    TenLoaiMon = ct.MaMonNavigation != null && ct.MaMonNavigation.MaLoaiMonNavigation != null
+                        ? ct.MaMonNavigation.MaLoaiMonNavigation.TenLoaiMon : null,
+                    SoLuong = ct.SoLuong ?? 0,
+                    Ngay = ct.MaHoaDonNavigation!.NgayHoanTat ?? ct.MaHoaDonNavigation.NgayDat
                 })
                 .ToListAsync();
 
+            // Mẫu số: tổng số đơn hoàn tất của khách
+            int soDonHoanTat = await _service.Query<HoaDon>()
+                .CountAsync(d => d.MaKhachHang == id && d.TrangThai == "Completed");
+
+            // Các món khách đã ♥ trong hồ sơ sở thích
+            var monYeuThich = (await _service.Query<CauTraLoi>()
+                .Where(c => c.MaPhieuTraLoiNavigation != null
+                    && c.MaPhieuTraLoiNavigation.MaKhachHang == id
+                    && c.MaPhieuTraLoiNavigation.MaKhaoSatNavigation != null
+                    && c.MaPhieuTraLoiNavigation.MaKhaoSatNavigation.LaSoThich
+                    && c.MaTuyChonNavigation != null && c.MaTuyChonNavigation.MaMon != null)
+                .Select(c => c.MaTuyChonNavigation!.MaMon!)
+                .ToListAsync()).ToHashSet();
+
             var monUaThich = chiTietDaMua
                 .GroupBy(ct => ct.MaMon)
-                .Select(g => new
+                .Select(g =>
                 {
-                    MaMon = g.Key,
-                    TenMon = g.Select(ct => ct.TenMon).FirstOrDefault(ten => !string.IsNullOrWhiteSpace(ten)) ?? g.Key,
-                    SoLuongDaMua = g.Sum(ct => ct.SoLuong)
+                    // Số lần gọi = số đơn có món; gọi nhiều phần trong 1 đơn vẫn tính 1 lần
+                    int soLanGoi = g.Select(ct => ct.MaHoaDon).Distinct().Count();
+                    double tyLe = soDonHoanTat > 0 ? Math.Round(soLanGoi * 100.0 / soDonHoanTat, 1) : 0;
+                    bool hayGoi = soLanGoi >= SoLanHayGoiToiThieu && tyLe >= TyLeHayGoiToiThieu;
+                    return new
+                    {
+                        MaMon = g.Key,
+                        TenMon = g.Select(ct => ct.TenMon).FirstOrDefault(ten => !string.IsNullOrWhiteSpace(ten)) ?? g.Key,
+                        TenLoaiMon = g.Select(ct => ct.TenLoaiMon).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)),
+                        SoLanGoi = soLanGoi,
+                        TyLeDon = tyLe,
+                        SoLuongDaMua = g.Sum(ct => ct.SoLuong),   // tổng số phần, chỉ để tham khảo
+                        LanGanNhat = g.Max(ct => ct.Ngay),
+                        MucDo = hayGoi ? "Hay gọi" : "Đã thử",
+                        YeuThich = monYeuThich.Contains(g.Key)
+                    };
                 })
-                .OrderByDescending(mon => mon.SoLuongDaMua)
-                .ThenBy(mon => mon.TenMon)
+                .OrderByDescending(m => m.MucDo == "Hay gọi")
+                .ThenByDescending(m => m.SoLanGoi)
+                .ThenByDescending(m => m.LanGanNhat)
+                .ThenBy(m => m.TenMon)
                 .ToList();
 
             return Ok(new
@@ -171,8 +212,51 @@ namespace RestaurantCRM.API.Controllers
                 khachHang.LichSuHoaDon,
                 khachHang.LichSuDanhGia,
                 khachHang.LichSuKhaoSat,
+                SoDonHoanTat = soDonHoanTat,
                 MonUaThich = monUaThich
             });
+        }
+
+        // GET: api/AdminKhachHang/{id}/SoThich - Sở thích khách tự khai báo, nhóm theo câu hỏi (câu dị ứng đứng đầu).
+        [HttpGet("{id}/SoThich")]
+        public async Task<IActionResult> GetSoThich(string id)
+        {
+            if (!await _service.Query<KhachHang>().AnyAsync(k => k.MaKhachHang == id))
+                return NotFound("Không tìm thấy khách hàng.");
+
+            var phieu = await _service.Query<PhieuTraLoi>()
+                .Include(p => p.CauTraLoi).ThenInclude(c => c.MaCauHoiNavigation)
+                .Include(p => p.CauTraLoi).ThenInclude(c => c.MaTuyChonNavigation!).ThenInclude(t => t.MaMonNavigation)
+                .FirstOrDefaultAsync(p => p.MaKhachHang == id && p.MaKhaoSatNavigation != null && p.MaKhaoSatNavigation.LaSoThich);
+
+            if (phieu == null)
+                return Ok(new { daKhaiBao = false, ngayCapNhat = (DateTime?)null, cauHoi = new List<object>() });
+
+            var cauHoi = phieu.CauTraLoi
+                .Where(c => c.MaCauHoiNavigation != null)
+                .GroupBy(c => c.MaCauHoiNavigation!)
+                .Select(g => new
+                {
+                    MaCauHoi = g.Key.MaCauHoi,
+                    CauHoi = g.Key.NoiDungCauHoi,
+                    Loai = AdminKhaoSatService.ChuanHoaLoai(g.Key.LoaiCauHoi) ?? g.Key.LoaiCauHoi,
+                    LaDiUng = SoThichService.LaCauDiUng(g.Key.NoiDungCauHoi),
+                    DapAn = AdminKhaoSatService.SapXep(g.Where(c => c.MaTuyChonNavigation != null), c => c.MaTuyChon!)
+                        .Select(c => new
+                        {
+                            c.MaTuyChon,
+                            NoiDung = c.MaTuyChonNavigation!.NoiDungTuyChon,
+                            c.MaTuyChonNavigation.MaMon,
+                            NgungBan = c.MaTuyChonNavigation.MaMonNavigation != null
+                                       && SoThichService.NgungBan(c.MaTuyChonNavigation.MaMonNavigation.TrangThai)
+                        }).ToList(),
+                    NoiDung = g.Where(c => c.MaTuyChon == null).Select(c => c.NoiDungTuDien).FirstOrDefault()
+                })
+                .OrderByDescending(x => x.LaDiUng)
+                .ThenBy(x => x.MaCauHoi.Length).ThenBy(x => x.MaCauHoi, StringComparer.Ordinal)
+                .ToList();
+
+            return Ok(new { daKhaiBao = true, ngayCapNhat = phieu.NgayTraLoi, cauHoi });
         }
 
         // POST: api/AdminKhachHang - Thêm khách hàng mới.
@@ -295,7 +379,11 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy khách hàng.");
             }
 
-            bool hasRelatedData = khachHang.HoaDon.Any() || khachHang.DanhGia.Any() || khachHang.PhieuTraLoi.Any() || khachHang.DoiTuongKhaoSat.Any();
+            // Phiếu hồ sơ sở thích không tính là dữ liệu liên quan (R12)
+            var maBoSoThich = await SoThichService.LayMaBoSoThichAsync(_service);
+            bool hasRelatedData = khachHang.HoaDon.Any() || khachHang.DanhGia.Any()
+                || khachHang.PhieuTraLoi.Any(p => p.MaKhaoSat != maBoSoThich)
+                || khachHang.DoiTuongKhaoSat.Any();
 
             if (hasRelatedData)
             {
@@ -308,6 +396,8 @@ namespace RestaurantCRM.API.Controllers
                 });
             }
 
+            // Khách chỉ có sở thích: xóa câu trả lời và phiếu sở thích trước, rồi xóa khách (cùng 1 lần lưu)
+            await SoThichService.XoaPhieuSoThichAsync(_service, id);
             _service.Remove(khachHang);
             await _service.SaveChangesAsync();
 

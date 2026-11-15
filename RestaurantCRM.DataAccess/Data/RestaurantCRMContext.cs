@@ -105,6 +105,9 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.NoiDungCauHoi)
                 .HasMaxLength(500)
                 .HasColumnName("noiDungCauHoi");
+            entity.Property(e => e.ChonNhieu)
+                .HasDefaultValue(false)
+                .HasColumnName("chonNhieu");
 
             entity.HasOne(d => d.MaKhaoSatNavigation).WithMany(p => p.CauHoiKhaoSat)
                 .HasForeignKey(d => d.MaKhaoSat)
@@ -502,6 +505,9 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.TrangThai)
                 .HasMaxLength(20)
                 .HasColumnName("trangThai");
+            entity.Property(e => e.LaSoThich)
+                .HasDefaultValue(false)
+                .HasColumnName("laSoThich");
 
             entity.HasOne(d => d.MaNhanVienNavigation).WithMany(p => p.KhaoSat)
                 .HasForeignKey(d => d.MaNhanVien)
@@ -928,10 +934,17 @@ public partial class RestaurantCrmContext : DbContext
             entity.Property(e => e.NoiDungTuyChon)
                 .HasMaxLength(255)
                 .HasColumnName("noiDungTuyChon");
+            entity.Property(e => e.MaMon)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("maMon");
 
             entity.HasOne(d => d.MaCauHoiNavigation).WithMany(p => p.TuyChonCauHoi)
                 .HasForeignKey(d => d.MaCauHoi)
                 .HasConstraintName("FK__TUY_CHON___maCau__7F2BE32F");
+
+            entity.HasOne(d => d.MaMonNavigation).WithMany(p => p.TuyChonCauHoi)
+                .HasForeignKey(d => d.MaMon);
         });
 
         modelBuilder.Entity<VaiTro>(entity =>

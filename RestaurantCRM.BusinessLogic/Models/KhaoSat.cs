@@ -15,6 +15,9 @@ public partial class KhaoSat
 
     public DateTime? NgayTao { get; set; }
 
+    /// <summary>true = bộ "Hồ sơ sở thích" (duy nhất, luôn Open); phiếu của khách là hồ sơ sở thích.</summary>
+    public bool LaSoThich { get; set; }
+
     public virtual ICollection<CauHoiKhaoSat> CauHoiKhaoSat { get; set; } = new List<CauHoiKhaoSat>();
 
     public virtual ICollection<DoiTuongKhaoSat> DoiTuongKhaoSat { get; set; } = new List<DoiTuongKhaoSat>();

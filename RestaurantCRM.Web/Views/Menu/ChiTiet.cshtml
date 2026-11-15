@@ -78,6 +78,22 @@
                 </div>
 
                 <h1 class="dish-title">@dish.TenMon</h1>
+                @* Nút ♥ món yêu thích: món ngừng bán chỉ còn bỏ ♥ được, không bật mới *@
+                @if (Model.CoNutYeuThich && (Model.DaYeuThich || !dish.NgungKinhDoanh))
+                {
+                    <form id="favoriteForm" style="margin:-4px 0 12px;">
+                        @Html.AntiForgeryToken()
+                        <button type="button" id="favoriteBtn" class="btn secondary small"
+                                data-ma-mon="@dish.MaMon" data-yeu-thich="@(Model.DaYeuThich ? "true" : "false")"
+                                data-dang-nhap="@(Model.DaDangNhap ? "true" : "false")"
+                                data-login-url="@Url.Action("DangNhap", "TaiKhoan", new { returnUrl = Context.Request.Path + Context.Request.QueryString })"
+                                aria-pressed="@(Model.DaYeuThich ? "true" : "false")">
+                            <span data-heart>@(Model.DaYeuThich ? "♥" : "♡")</span>
+                            <span data-label>@(Model.DaYeuThich ? "Đã yêu thích" : "Yêu thích")</span>
+                        </button>
+                        <small class="muted" id="favoriteMsg" style="margin-left:8px;"></small>
+                    </form>
+                }
 
                 <!-- Price Box -->
                 <div class="dish-price-box">
@@ -362,6 +378,38 @@
 
 @section Scripts {
     <script>
+        // Bật / tắt ♥ món yêu thích (AJAX). Chưa đăng nhập thì chuyển tới trang đăng nhập.
+        (function () {
+            var btn = document.getElementById('favoriteBtn');
+            if (!btn) return;
+            var msg = document.getElementById('favoriteMsg');
+            function hien(on) {
+                btn.dataset.yeuThich = on ? 'true' : 'false';
+                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                btn.querySelector('[data-heart]').textContent = on ? '♥' : '♡';
+                btn.querySelector('[data-label]').textContent = on ? 'Đã yêu thích' : 'Yêu thích';
+            }
+            btn.addEventListener('click', function () {
+                if (btn.dataset.dangNhap !== 'true') { location.href = btn.dataset.loginUrl; return; }
+                var batMoi = btn.dataset.yeuThich !== 'true';
+                var token = document.querySelector('#favoriteForm input[name="__RequestVerificationToken"]').value;
+                var body = new URLSearchParams();
+                body.append('__RequestVerificationToken', token);
+                body.append('yeuThich', batMoi ? 'true' : 'false');
+                btn.disabled = true;
+                fetch('/Menu/YeuThich/' + encodeURIComponent(btn.dataset.maMon), { method: 'POST', body: body })
+                    .then(function (res) {
+                        return res.json().catch(function () { return {}; }).then(function (data) {
+                            if (res.status === 401) { location.href = data.dangNhapUrl || btn.dataset.loginUrl; return; }
+                            if (res.ok) hien(batMoi);
+                            if (msg) msg.textContent = data.message || (res.ok ? '' : 'Không cập nhật được, vui lòng thử lại.');
+                        });
+                    })
+                    .catch(function () { if (msg) msg.textContent = 'Không kết nối được, vui lòng thử lại.'; })
+                    .finally(function () { btn.disabled = false; });
+            });
+        })();
+
         // Nút "Quay lại": về đúng trang vừa xem (giữ bộ lọc, trang, vị trí cuộn).
         // Nếu mở trực tiếp (tab mới/bookmark) thì dùng href dự phòng về Thực đơn theo danh mục.
         document.querySelectorAll('.js-dish-back').forEach(function(back) {

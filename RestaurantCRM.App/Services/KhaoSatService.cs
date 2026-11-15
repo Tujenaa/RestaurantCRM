@@ -73,10 +73,11 @@ namespace RestaurantCRM.AdminApp.Services
 
         // ── Tùy chọn ─────────────────────────────────────────────────────────
 
-        public Task<ApiResult> AddTuyChonAsync(string maKhaoSat, string maCauHoi, string noiDung)
+        /// <param name="maMon">Món gắn với đáp án (chỉ câu "Món yêu thích"), null với đáp án thường.</param>
+        public Task<ApiResult> AddTuyChonAsync(string maKhaoSat, string maCauHoi, string noiDung, string maMon = null)
         {
             return PostAsync(Base + "/" + E(maKhaoSat) + "/CauHoi/" + E(maCauHoi) + "/TuyChon",
-                new TuyChonUpsertRequest { NoiDungTuyChon = noiDung }, "Thêm tùy chọn thành công.");
+                new TuyChonUpsertRequest { NoiDungTuyChon = noiDung, MaMon = maMon }, "Thêm tùy chọn thành công.");
         }
 
         public Task<ApiResult> UpdateTuyChonAsync(string maKhaoSat, string maCauHoi, string maTuyChon, string noiDung)
@@ -117,5 +118,40 @@ namespace RestaurantCRM.AdminApp.Services
         {
             return GetAsync<KhaoSatKetQuaDto>(Base + "/" + E(maKhaoSat) + "/results");
         }
+
+        // ── Hồ sơ sở thích ───────────────────────────────────────────────────
+
+        /// <summary>Mã bộ hồ sơ sở thích, hoặc null nếu chưa tạo.</summary>
+        public async Task<string> GetMaBoSoThichAsync()
+        {
+            System.Net.Http.HttpResponseMessage res;
+            try
+            {
+                res = await Http.GetAsync(Base + "/SoThich");
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException("Không kết nối được API. Chi tiết: " + ex.Message);
+            }
+            if (res.StatusCode == System.Net.HttpStatusCode.NotFound) return null;   // chưa tạo hồ sơ sở thích
+            if (!res.IsSuccessStatusCode) throw new ApiException("Không tải được hồ sơ sở thích từ máy chủ.");
+            var r = await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<BoSoThichDto>(res.Content);
+            return r?.MaKhaoSat;
+        }
+
+        /// <summary>Tạo bộ hồ sơ sở thích (nếu đã có thì API trả bộ hiện có). Mã đọc bằng result.Field("maKhaoSat").</summary>
+        public Task<ApiResult> CreateBoSoThichAsync(string maNhanVien)
+        {
+            var url = Base + "/SoThich" + (string.IsNullOrWhiteSpace(maNhanVien) ? "" : "?maNhanVien=" + E(maNhanVien));
+            return PostAsync(url, new { }, "Đã tạo hồ sơ sở thích.");
+        }
+
+        /// <summary>Đáp án đã khai báo của mọi khách (lọc đối tượng khảo sát, phân tích).</summary>
+        public async Task<List<SoThichKhachHangDto>> GetSoThichKhachHangAsync()
+        {
+            return await GetAsync<List<SoThichKhachHangDto>>(Base + "/SoThich/KhachHang") ?? new List<SoThichKhachHangDto>();
+        }
+
+        private class BoSoThichDto { public string MaKhaoSat { get; set; } }
     }
 }

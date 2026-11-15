@@ -65,6 +65,8 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         public string MaNhanVien { get; set; }
         public int SoNguoiTraLoi { get; set; }
         public int SoDoiTuong { get; set; }
+        /// <summary>Bộ "Hồ sơ sở thích": không đổi trạng thái / xóa / đặt đối tượng; sửa được dù đã có phiếu.</summary>
+        public bool LaSoThich { get; set; }
         public List<CauHoiDto> CauHoi { get; set; } = new List<CauHoiDto>();
 
         public string TrangThaiHienThi { get { return KhaoSatConst.TenTrangThai(TrangThai); } }
@@ -94,6 +96,10 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         public string LoaiCauHoi { get; set; }
         /// <summary>Đã có khách trả lời câu này (không đổi loại / xóa được).</summary>
         public bool DaCoTraLoi { get; set; }
+        /// <summary>Câu trắc nghiệm cho chọn nhiều đáp án.</summary>
+        public bool ChonNhieu { get; set; }
+        /// <summary>Câu "Món yêu thích" của hồ sơ sở thích (đáp án gắn món).</summary>
+        public bool LaCauMonYeuThich { get; set; }
         public List<TuyChonDto> TuyChon { get; set; } = new List<TuyChonDto>();
 
         public bool LaTracNghiem { get { return KhaoSatConst.LaTracNghiem(LoaiCauHoi); } }
@@ -103,6 +109,10 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
     {
         public string MaTuyChon { get; set; }
         public string NoiDungTuyChon { get; set; }
+        public string MaMon { get; set; }
+        public string TenMon { get; set; }
+        public bool NgungBan { get; set; }
+        public bool DaCoNguoiChon { get; set; }
     }
 
     // ── Thống kê (GET api/AdminKhaoSat/{id}/results) ──────────────────────────
@@ -123,6 +133,9 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         public string NoiDungCauHoi { get; set; }
         /// <summary>"TracNghiem" | "TuLuan".</summary>
         public string LoaiCauHoi { get; set; }
+        public bool ChonNhieu { get; set; }
+        /// <summary>Ghi chú hiển thị (vd. "Câu chọn nhiều, tổng có thể vượt 100%.").</summary>
+        public string GhiChu { get; set; }
         public int SoLuotTraLoi { get; set; }
         public List<TuyChonKetQuaDto> KetQuaTN { get; set; }
         public List<TraLoiTuLuanDto> TraLoiTuLuan { get; set; }
@@ -160,6 +173,7 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         public string NoiDungCauHoi { get; set; }
         public string LoaiCauHoi { get; set; }
         public List<string> TuyChons { get; set; } = new List<string>();
+        public bool ChonNhieu { get; set; }
     }
 
     public class KhaoSatUpdateRequest
@@ -172,10 +186,53 @@ namespace RestaurantCRM.AdminApp.DTOs.KhaoSat
         public string NoiDung { get; set; }
         public string LoaiCauHoi { get; set; }
         public List<string> TuyChons { get; set; } = new List<string>();
+        public bool ChonNhieu { get; set; }
+        /// <summary>Câu "Món yêu thích" (chỉ hồ sơ sở thích): đáp án lấy từ MaMons.</summary>
+        public bool LaCauMonYeuThich { get; set; }
+        public List<string> MaMons { get; set; } = new List<string>();
     }
 
     public class TuyChonUpsertRequest
     {
         public string NoiDungTuyChon { get; set; }
+        /// <summary>Món gắn với đáp án (chỉ câu "Món yêu thích").</summary>
+        public string MaMon { get; set; }
+    }
+
+    // ── Hồ sơ sở thích ───────────────────────────────────────────────────────
+
+    /// <summary>Đáp án mà một khách đã khai báo (GET api/AdminKhaoSat/SoThich/KhachHang).</summary>
+    public class SoThichKhachHangDto
+    {
+        public string MaKhachHang { get; set; }
+        public List<string> MaTuyChons { get; set; } = new List<string>();
+        /// <summary>Các câu khách có trả lời (mẫu số % theo từng câu).</summary>
+        public List<string> MaCauHois { get; set; } = new List<string>();
+    }
+
+    /// <summary>Sở thích của 1 khách (GET api/AdminKhachHang/{id}/SoThich).</summary>
+    public class SoThichCuaKhachDto
+    {
+        public bool DaKhaiBao { get; set; }
+        public DateTime? NgayCapNhat { get; set; }
+        public List<SoThichCauHoiDto> CauHoi { get; set; } = new List<SoThichCauHoiDto>();
+    }
+
+    public class SoThichCauHoiDto
+    {
+        public string MaCauHoi { get; set; }
+        public string CauHoi { get; set; }
+        public string Loai { get; set; }
+        public bool LaDiUng { get; set; }
+        public List<SoThichDapAnDto> DapAn { get; set; } = new List<SoThichDapAnDto>();
+        public string NoiDung { get; set; }
+    }
+
+    public class SoThichDapAnDto
+    {
+        public string MaTuyChon { get; set; }
+        public string NoiDung { get; set; }
+        public string MaMon { get; set; }
+        public bool NgungBan { get; set; }
     }
 }

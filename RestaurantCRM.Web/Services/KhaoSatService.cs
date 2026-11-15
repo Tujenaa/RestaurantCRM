@@ -31,8 +31,8 @@ public class KhaoSatService(IHttpClientFactory factory)
         {
             if (a.MaTuyChons.Count > 0)
             {
-                foreach (var t in a.MaTuyChons)
-                    body.Answers.Add(new AnswerItem { MaCauHoi = a.MaCauHoi, MaTuyChon = t });
+                // Mỗi câu 1 phần tử; câu chọn nhiều gửi kèm danh sách đáp án
+                body.Answers.Add(new AnswerItem { MaCauHoi = a.MaCauHoi, MaTuyChons = a.MaTuyChons.ToList() });
             }
             else if (!string.IsNullOrWhiteSpace(a.NoiDungTuDien))
             {
@@ -65,6 +65,59 @@ public class KhaoSatService(IHttpClientFactory factory)
         var res = await client.GetAsync($"/api/KhaoSat/LichSu?maKhachHang={Uri.EscapeDataString(maKhachHang)}");
         res.EnsureSuccessStatusCode();
         return await res.Content.ReadFromJsonAsync<List<LichSuKhaoSatItem>>(Json) ?? new();
+    }
+
+    // ── Hồ sơ sở thích ───────────────────────────────────────────────────
+
+    public async Task<SoThichViewModel> GetSoThichAsync(string maKhachHang)
+    {
+        var client = factory.CreateClient("ApiClient");
+        var res = await client.GetAsync($"/api/KhaoSat/SoThich?maKhachHang={Uri.EscapeDataString(maKhachHang)}");
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<SoThichViewModel>(Json) ?? new SoThichViewModel();
+    }
+
+    public async Task<(bool Ok, string Message)> LuuSoThichAsync(string maKhachHang, SoThichFormInput input)
+    {
+        var body = new
+        {
+            MaKhachHang = maKhachHang,
+            CauTraLoi = input.CauTraLoi.Select(c => new
+            {
+                c.MaCauHoi,
+                MaTuyChons = c.MaTuyChons.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList(),
+                NoiDung = string.IsNullOrWhiteSpace(c.NoiDung) ? null : c.NoiDung.Trim()
+            }).ToList()
+        };
+        var client = factory.CreateClient("ApiClient");
+        var res = await client.PutAsJsonAsync("/api/KhaoSat/SoThich", body, Json);
+        if (res.IsSuccessStatusCode) return (true, "Đã lưu sở thích của bạn.");
+        return (false, await DocLoiAsync(res, "Lưu sở thích thất bại, vui lòng thử lại."));
+    }
+
+    public async Task<MonYeuThichViewModel> GetMonYeuThichAsync(string? maKhachHang)
+    {
+        var client = factory.CreateClient("ApiClient");
+        var url = "/api/KhaoSat/SoThich/MonYeuThich" + (string.IsNullOrEmpty(maKhachHang) ? "" : $"?maKhachHang={Uri.EscapeDataString(maKhachHang)}");
+        var res = await client.GetAsync(url);
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<MonYeuThichViewModel>(Json) ?? new MonYeuThichViewModel();
+    }
+
+    public async Task<(bool Ok, string Message)> DatMonYeuThichAsync(string maKhachHang, string maMon, bool yeuThich)
+    {
+        var client = factory.CreateClient("ApiClient");
+        var res = await client.PutAsJsonAsync($"/api/KhaoSat/SoThich/MonYeuThich/{Uri.EscapeDataString(maMon)}",
+            new { MaKhachHang = maKhachHang, YeuThich = yeuThich }, Json);
+        if (res.IsSuccessStatusCode)
+            return (true, yeuThich ? "Đã thêm vào món yêu thích." : "Đã bỏ khỏi món yêu thích.");
+        return (false, await DocLoiAsync(res, "Không cập nhật được món yêu thích."));
+    }
+
+    private static async Task<string> DocLoiAsync(HttpResponseMessage res, string macDinh)
+    {
+        var err = (await res.Content.ReadAsStringAsync()).Trim().Trim('"');
+        return string.IsNullOrWhiteSpace(err) || err.StartsWith("{") || err.Length > 200 ? macDinh : err;
     }
 
     public async Task<KhaoSatViewModel?> GetByIdAsync(string id, string? maKhachHang = null)

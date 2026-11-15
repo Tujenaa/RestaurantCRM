@@ -28,4 +28,6 @@ public partial class MonAn
     public virtual ICollection<KmTheoSp> KmTheoSp { get; set; } = new List<KmTheoSp>();
 
     public virtual LoaiMon? MaLoaiMonNavigation { get; set; }
+
+    public virtual ICollection<TuyChonCauHoi> TuyChonCauHoi { get; set; } = new List<TuyChonCauHoi>();
 }

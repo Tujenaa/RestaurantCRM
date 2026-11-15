@@ -16,6 +16,7 @@
         </div>
         <button class="@(activeTab == "profile" ? "active" : "")" type="button" data-account="profile">Thông tin cá nhân</button>
         <button class="@(activeTab == "addresses" ? "active" : "")" type="button" data-account="addresses">Địa chỉ giao hàng</button>
+        <a class="side-link" asp-action="SoThich">♥ Sở thích của tôi</a>
         <a class="btn secondary small" asp-action="DangXuat" style="margin-top:14px; width:100%; text-align:center; display:block;">Đăng xuất</a>
     </aside>
     <section class="panel" id="accountPanel">

@@ -1,0 +1,107 @@
+@model SoThichViewModel
+@{
+    ViewData["Title"] = "Sở thích của tôi — Lẩu Phố";
+    Layout = "/Shared/_Layout.cshtml";
+}
+<div class="page-intro">
+    <h1 class="page-title">Sở thích của tôi</h1>
+    <p>Cho nhà hàng biết khẩu vị của bạn để phục vụ tốt hơn.</p>
+</div>
+
+<section class="panel">
+    <a class="text-btn" asp-action="Index">← Về tài khoản</a>
+
+    @if (!Model.CoHoSo || Model.CauHoi.Count == 0)
+    {
+        <div class="notice" style="margin-top:14px;">Nhà hàng chưa mở mục khai báo sở thích. Bạn quay lại sau nhé!</div>
+    }
+    else
+    {
+        @if (Model.DaKhaiBao && Model.NgayCapNhat.HasValue)
+        {
+            <p class="muted" style="margin-top:12px;">Cập nhật lần cuối @Model.NgayCapNhat.Value.ToString("dd/MM/yyyy")</p>
+        }
+        else
+        {
+            <div class="notice" style="margin-top:14px;">
+                Cho nhà hàng biết khẩu vị của bạn để phục vụ tốt hơn. Mọi câu đều không bắt buộc.
+            </div>
+        }
+
+        <form asp-action="SoThich" method="post" data-gui-mot-lan>
+            @Html.AntiForgeryToken()
+            @for (var i = 0; i < Model.CauHoi.Count; i++)
+            {
+                var q = Model.CauHoi[i];
+                <div class="survey-q" style="@(q.LaDiUng ? "border-left:4px solid #c0392b; padding-left:12px;" : "")">
+                    <h4 style="@(q.LaDiUng ? "color:#c0392b;" : "")">@q.NoiDungCauHoi</h4>
+                    <input type="hidden" name="CauTraLoi[@i].MaCauHoi" value="@q.MaCauHoi" />
+
+                    @if (q.IsTuDien)
+                    {
+                        <textarea name="CauTraLoi[@i].NoiDung" rows="3" maxlength="500"
+                                  placeholder="@(q.LaDiUng ? "Ví dụ: dị ứng tôm, cua; không ăn được đậu phộng..." : "Nhập ghi chú của bạn...")">@q.NoiDung</textarea>
+                    }
+                    else if (q.LaMonYeuThich)
+                    {
+                        // Chỉ hiện món khách đang ♥ (danh mục chung có cả món khách khác đã ♥)
+                        var monCuaToi = q.TuyChon.Where(t => t.DaChon).ToList();
+                        @if (monCuaToi.Count == 0)
+                        {
+                            <p class="muted">Bạn chưa có món yêu thích. Bấm ♡ ở trang món ăn để thêm.</p>
+                        }
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px;">
+                            @foreach (var t in monCuaToi)
+                            {
+                                <label class="choice" style="display:flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:12px; padding:8px;">
+                                    <input type="checkbox" name="CauTraLoi[@i].MaTuyChons" value="@t.MaTuyChon" checked="@t.DaChon" />
+                                    <img src="@(string.IsNullOrWhiteSpace(t.DuongDanAnh) ? "/images/default.jpg" : t.DuongDanAnh)" alt=""
+                                         style="width:44px; height:44px; object-fit:cover; border-radius:8px;"
+                                         onerror="this.onerror=null; this.src='/images/default.jpg';" />
+                                    <span>
+                                        @(t.TenMon ?? t.NoiDungTuyChon)
+                                        @if (t.NgungBan)
+                                        {
+                                            <small class="muted">(ngừng bán)</small>
+                                        }
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                        <p class="muted" style="margin-top:6px;">Bỏ chọn để xóa món khỏi danh sách yêu thích. Thêm món mới bằng nút ♡ ở trang món ăn.</p>
+                    }
+                    else if (q.ChonNhieu)
+                    {
+                        <p class="muted">Có thể chọn nhiều đáp án.</p>
+                        foreach (var t in q.TuyChon)
+                        {
+                            <label class="choice">
+                                <input type="checkbox" name="CauTraLoi[@i].MaTuyChons" value="@t.MaTuyChon" checked="@t.DaChon" /> @t.NoiDungTuyChon
+                            </label>
+                        }
+                    }
+                    else
+                    {
+                        <label class="choice">
+                            <input type="radio" name="CauTraLoi[@i].MaTuyChons" value="" checked="@(!q.TuyChon.Any(t => t.DaChon))" /> <span class="muted">Không chọn</span>
+                        </label>
+                        foreach (var t in q.TuyChon)
+                        {
+                            <label class="choice">
+                                <input type="radio" name="CauTraLoi[@i].MaTuyChons" value="@t.MaTuyChon" checked="@t.DaChon" /> @t.NoiDungTuyChon
+                            </label>
+                        }
+                    }
+                </div>
+            }
+
+            <div style="display:flex; gap:10px; margin-top:16px;">
+                <button class="btn" type="submit">Lưu</button>
+                @if (Model.KhachMoi)
+                {
+                    <a class="btn secondary" asp-controller="TrangChu" asp-action="Index">Để sau</a>
+                }
+            </div>
+        </form>
+    }
+</section>

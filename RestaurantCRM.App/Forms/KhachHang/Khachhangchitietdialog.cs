@@ -8,7 +8,10 @@ using RestaurantCRM.AdminApp.Services;
 
 namespace RestaurantCRM.AdminApp.Forms.KhachHang
 {
-    /// <summary>Xem hồ sơ khách hàng, lịch sử tương tác và các món thường mua.</summary>
+    /// <summary>
+    /// Xem hồ sơ khách hàng, lịch sử tương tác, các món hay gọi (suy ra từ đơn hàng)
+    /// và sở thích khách tự khai báo (hồ sơ sở thích).
+    /// </summary>
     public class KhachHangChiTietDialog : CrmDialog
     {
         private readonly KhachHangService _service = new KhachHangService();
@@ -21,6 +24,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly DataGridView _ratings = new DataGridView();
         private readonly DataGridView _surveys = new DataGridView();
         private readonly DataGridView _preferences = new DataGridView();
+        private readonly DataGridView _soThich = new DataGridView();
+        private RestaurantCRM.AdminApp.DTOs.KhaoSat.SoThichCuaKhachDto _st;
         private readonly TabControl _historyTabs = new TabControl();
         private readonly TextBox _txtSearchHistory = new TextBox();
         private readonly PillSearch _searchHistory;
@@ -28,6 +33,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly Label _emptyRatings = EmptyLabel("Khách hàng chưa gửi đánh giá nào.");
         private readonly Label _emptySurveys = EmptyLabel("Khách hàng chưa tham gia khảo sát nào.");
         private readonly Label _emptyPreferences = EmptyLabel("Chưa có dữ liệu món đã mua.");
+        private readonly Label _emptySoThich = EmptyLabel("Khách chưa khai báo sở thích.");
         private readonly Button _btnSua;
         private readonly Button _btnKhoa;
         private readonly Button _btnDoiMatKhau;
@@ -65,7 +71,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _historyTabs.Controls.Add(BuildTab("Đơn hàng", _orders, _emptyOrders));
             _historyTabs.Controls.Add(BuildTab("Đánh giá", _ratings, _emptyRatings));
             _historyTabs.Controls.Add(BuildTab("Khảo sát", _surveys, _emptySurveys));
-            _historyTabs.Controls.Add(BuildTab("Sở thích", _preferences, _emptyPreferences));
+            // "Món hay gọi" = suy ra từ lịch sử đơn; "Sở thích" = khách tự khai báo (không trộn lẫn)
+            _historyTabs.Controls.Add(BuildTab("Món hay gọi", _preferences, _emptyPreferences));
+            _historyTabs.Controls.Add(BuildTab("Sở thích", _soThich, _emptySoThich));
 
             _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ma", HeaderText = "Mã hóa đơn", FillWeight = 22 });
             _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày đặt", FillWeight = 28 });
@@ -80,8 +88,24 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _ratings.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             _surveys.Columns.Add(new DataGridViewTextBoxColumn { Name = "KhaoSat", HeaderText = "Khảo sát", FillWeight = 65 });
             _surveys.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày trả lời", FillWeight = 35 });
-            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mon", HeaderText = "Món ăn", FillWeight = 70 });
-            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "SoLuong", HeaderText = "Số lượng đã mua", FillWeight = 30 });
+            // Món hay gọi: tính theo số đơn hoàn tất có món (không theo số phần)
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mon", HeaderText = "Món", FillWeight = 34 });
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Loai", HeaderText = "Loại món", FillWeight = 20 });
+            _preferences.Columns.Add(SoCol("SoLanGoi", "Số lần gọi", 14));
+            _preferences.Columns.Add(SoCol("TyLe", "Tỷ lệ đơn", 13));
+            _preferences.Columns.Add(SoCol("TongSL", "Tổng SL", 11));
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "GanNhat", HeaderText = "Lần gần nhất", FillWeight = 16 });
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Muc", HeaderText = "Mức", FillWeight = 13 });
+            var cTim = new DataGridViewTextBoxColumn { Name = "Tim", HeaderText = "♥", FillWeight = 6 };
+            cTim.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            cTim.DefaultCellStyle.ForeColor = ThemeManager.Red;
+            cTim.DefaultCellStyle.SelectionForeColor = ThemeManager.Red;
+            cTim.ToolTipText = "Món khách tự khai là yêu thích";
+            _preferences.Columns.Add(cTim);
+            _soThich.Columns.Add(new DataGridViewTextBoxColumn { Name = "CauHoi", HeaderText = "Mục", FillWeight = 32 });
+            _soThich.Columns.Add(new DataGridViewTextBoxColumn { Name = "LuaChon", HeaderText = "Khách đã chọn / ghi chú", FillWeight = 68 });
+            _soThich.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            _soThich.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             Body.Controls.Add(_historyTabs);
 
             _btnSua = AddLeftButton("Sửa thông tin", ButtonSkin.Kind.Secondary);
@@ -129,6 +153,17 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                 return;
             }
             if (IsDisposed || _kh == null) return;
+
+            // Sở thích tự khai báo: lỗi riêng phần này thì vẫn hiện phần còn lại
+            try
+            {
+                _st = await _service.GetSoThichAsync(_ma);
+            }
+            catch (ApiException)
+            {
+                _st = null;
+            }
+            if (IsDisposed) return;
 
             _btnSua.Enabled = _btnKhoa.Enabled = _btnDoiMatKhau.Enabled = true;
             _btnKhoa.Text = _kh.BiKhoa ? "Mở khóa" : "Khóa tài khoản";
@@ -189,12 +224,75 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _emptySurveys.Visible = surveys.Count == 0;
 
             _preferences.Rows.Clear();
-            var preferences = (_kh.MonUaThich ?? new System.Collections.Generic.List<KhachHangMonUaThichDto>())
-                .FindAll(d => UiStyler.MatchesSearch(q, d.TenMon, d.MaMon));
-            foreach (var d in preferences)
-                _preferences.Rows.Add(d.TenMon ?? d.MaMon ?? "Món ăn", d.SoLuongDaMua.ToString("N0"));
-            _historyTabs.TabPages[3].Text = "Sở thích (" + preferences.Count + ")";
+            var tatCaMon = _kh.MonUaThich ?? new System.Collections.Generic.List<KhachHangMonUaThichDto>();
+            var preferences = tatCaMon
+                .FindAll(d => UiStyler.MatchesSearch(q, d.TenMon, d.MaMon, d.TenLoaiMon, d.MucDo));
+            using (var fDam = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold))
+            {
+                foreach (var d in preferences)
+                {
+                    int i = _preferences.Rows.Add(d.TenMon ?? d.MaMon ?? "Món ăn", d.TenLoaiMon ?? "—",
+                        d.SoLanGoi.ToString("N0"), d.TyLeDon.ToString("0.#") + "%", d.SoLuongDaMua.ToString("N0"),
+                        d.LanGanNhat.HasValue ? d.LanGanNhat.Value.ToString("dd/MM/yyyy") : "—",
+                        d.MucDo ?? "", d.YeuThich ? "♥" : "");
+                    var muc = _preferences.Rows[i].Cells["Muc"];
+                    if (d.HayGoi)
+                    {
+                        muc.Style.Font = new Font(fDam, FontStyle.Bold);
+                        muc.Style.ForeColor = muc.Style.SelectionForeColor = ThemeManager.Primary;
+                    }
+                    else muc.Style.ForeColor = ThemeManager.Muted;
+                }
+            }
+            int soHayGoi = tatCaMon.FindAll(d => d.HayGoi).Count;
+            _historyTabs.TabPages[3].Text = "Món hay gọi (" + soHayGoi + " hay gọi / " + tatCaMon.Count + " món · " + _kh.SoDonHoanTat + " đơn hoàn tất)";
             _emptyPreferences.Visible = preferences.Count == 0;
+
+            RenderSoThich(q);
+        }
+
+        /// <summary>Tab "Sở thích": nhóm theo câu hỏi, câu dị ứng / lưu ý tô đỏ và đứng đầu (API đã sắp).</summary>
+        private void RenderSoThich(string q)
+        {
+            _soThich.Rows.Clear();
+            var tab = _historyTabs.TabPages[4];
+            if (_st == null || !_st.DaKhaiBao)
+            {
+                _emptySoThich.Text = _st == null ? "Không tải được sở thích của khách." : "Khách chưa khai báo sở thích.";
+                _emptySoThich.Visible = true;
+                tab.Text = "Sở thích";
+                return;
+            }
+
+            int n = 0;
+            foreach (var c in _st.CauHoi)
+            {
+                var nhan = c.DapAn.ConvertAll(d => (d.NoiDung ?? d.MaMon ?? "") + (d.NgungBan ? " (ngừng bán)" : ""));
+                if (!string.IsNullOrWhiteSpace(c.NoiDung)) nhan.Add(c.NoiDung.Trim());
+                string luaChon = string.Join("  ·  ", nhan);
+                if (!UiStyler.MatchesSearch(q, c.CauHoi, luaChon)) continue;
+
+                int i = _soThich.Rows.Add(c.CauHoi ?? c.MaCauHoi, luaChon);
+                if (c.LaDiUng)
+                {
+                    var row = _soThich.Rows[i];
+                    row.DefaultCellStyle.ForeColor = ThemeManager.Red;
+                    row.DefaultCellStyle.SelectionForeColor = ThemeManager.Red;
+                    row.DefaultCellStyle.Font = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold);
+                }
+                n++;
+            }
+            _emptySoThich.Text = "Không có mục nào khớp từ khóa.";
+            _emptySoThich.Visible = n == 0;
+            tab.Text = "Sở thích" + (_st.NgayCapNhat.HasValue ? " · cập nhật " + _st.NgayCapNhat.Value.ToString("dd/MM/yyyy") : "");
+        }
+
+        private static DataGridViewTextBoxColumn SoCol(string name, string header, float weight)
+        {
+            var c = new DataGridViewTextBoxColumn { Name = name, HeaderText = header, FillWeight = weight };
+            c.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            c.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            return c;
         }
 
         private static Label EmptyLabel(string text)

@@ -11,6 +11,8 @@ namespace RestaurantCRM.API.DTOs
     {
         public string MaCauHoi { get; set; } = null!;
         public string? MaTuyChon { get; set; }
+        /// <summary>Các đáp án được chọn (câu chọn nhiều). Có thể dùng kèm hoặc thay cho <see cref="MaTuyChon"/>.</summary>
+        public List<string>? MaTuyChons { get; set; }
         public string? NoiDungTuDien { get; set; }
     }
 }

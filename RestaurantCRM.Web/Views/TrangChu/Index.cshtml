@@ -93,10 +93,12 @@
     <div class="cta-band">
         <div>
             <h2>Lắng nghe bạn mỗi ngày</h2>
-            <p>Đánh giá món ăn hoặc tham gia khảo sát trải nghiệm dịch vụ.</p>
+            <p>Đánh giá món ăn, cho chúng tôi biết khẩu vị của bạn hoặc tham gia khảo sát trải nghiệm dịch vụ.</p>
         </div>
         <div class="cta-actions">
             <a class="btn secondary" asp-controller="PhanHoi" asp-action="Index">Gửi đánh giá</a>
+            @* Chưa đăng nhập: action SoThich tự chuyển tới đăng nhập rồi quay lại *@
+            <a class="btn secondary" asp-controller="TaiKhoan" asp-action="SoThich">♥ Sở thích</a>
             <a class="btn" asp-controller="KhaoSat" asp-action="Index">Tham gia khảo sát</a>
         </div>
     </div>

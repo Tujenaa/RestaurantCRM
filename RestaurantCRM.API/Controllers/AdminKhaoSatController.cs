@@ -38,7 +38,8 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] string? trangThai)
         {
-            var query = _service.Query<KhaoSat>().AsQueryable();
+            // Bộ hồ sơ sở thích có màn hình riêng, không nằm trong danh sách khảo sát thường
+            var query = _service.Query<KhaoSat>().ChiKhaoSatThuong();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -79,6 +80,7 @@ namespace RestaurantCRM.API.Controllers
             var khaoSat = await _service.Query<KhaoSat>()
                 .Include(k => k.CauHoiKhaoSat)
                     .ThenInclude(c => c.TuyChonCauHoi)
+                        .ThenInclude(t => t.MaMonNavigation)
                 .FirstOrDefaultAsync(k => k.MaKhaoSat == id);
 
             if (khaoSat == null)
@@ -93,6 +95,11 @@ namespace RestaurantCRM.API.Controllers
                 .Select(c => c.MaCauHoi)
                 .Distinct()
                 .ToListAsync();
+            var tuyChonDaChon = (await _service.Query<CauTraLoi>()
+                .Where(c => c.MaTuyChon != null && c.MaCauHoiNavigation != null && c.MaCauHoiNavigation.MaKhaoSat == id)
+                .Select(c => c.MaTuyChon!)
+                .Distinct()
+                .ToListAsync()).ToHashSet();
 
             var result = new
             {
@@ -101,6 +108,7 @@ namespace RestaurantCRM.API.Controllers
                 khaoSat.TrangThai,
                 khaoSat.NgayTao,
                 khaoSat.MaNhanVien,
+                khaoSat.LaSoThich,
                 SoNguoiTraLoi = soPhieu,
                 DaCoPhieu = soPhieu > 0,
                 SoDoiTuong = soDoiTuongKs,
@@ -109,11 +117,17 @@ namespace RestaurantCRM.API.Controllers
                     c.MaCauHoi,
                     c.NoiDungCauHoi,
                     LoaiCauHoi = ChuanHoaLoai(c.LoaiCauHoi) ?? c.LoaiCauHoi,
+                    c.ChonNhieu,
+                    LaCauMonYeuThich = SoThichService.LaCauMonYeuThich(c),
                     DaCoTraLoi = cauHoiDaCoTraLoi.Contains(c.MaCauHoi),
                     TuyChon = SapXep(c.TuyChonCauHoi, t => t.MaTuyChon).Select(t => new
                     {
                         t.MaTuyChon,
-                        t.NoiDungTuyChon
+                        t.NoiDungTuyChon,
+                        t.MaMon,
+                        TenMon = t.MaMonNavigation?.TenMon,
+                        NgungBan = t.MaMonNavigation != null && SoThichService.NgungBan(t.MaMonNavigation.TrangThai),
+                        DaCoNguoiChon = tuyChonDaChon.Contains(t.MaTuyChon)
                     })
                 })
             };
@@ -133,7 +147,7 @@ namespace RestaurantCRM.API.Controllers
             var cauHois = request.CauHois ?? new List<CauHoiCreateRequest>();
             foreach (var ch in cauHois)
             {
-                var loi = KiemTraCauHoi(ch.NoiDungCauHoi, ch.LoaiCauHoi, ch.TuyChons);
+                var loi = AdminKhaoSatService.KiemTraCauHoi(ch.NoiDungCauHoi, ch.LoaiCauHoi, ch.TuyChons, ch.ChonNhieu);
                 if (loi != null) return BadRequest(loi);
             }
 
@@ -162,7 +176,8 @@ namespace RestaurantCRM.API.Controllers
                     MaCauHoi = $"CH{soCH++:D2}",
                     MaKhaoSat = khaoSat.MaKhaoSat,
                     NoiDungCauHoi = reqCauHoi.NoiDungCauHoi.Trim(),
-                    LoaiCauHoi = loai
+                    LoaiCauHoi = loai,
+                    ChonNhieu = loai == TracNghiem && reqCauHoi.ChonNhieu
                 };
                 _service.Add(cauHoi);
 
@@ -211,6 +226,8 @@ namespace RestaurantCRM.API.Controllers
             {
                 return NotFound("Không tìm thấy khảo sát.");
             }
+            if (khaoSat.LaSoThich)
+                return BadRequest(SoThichService.ThongBaoKhongDoiTrangThai);
 
             var moi = ChuanHoaTrangThai(status);
             if (moi == null)
@@ -248,8 +265,10 @@ namespace RestaurantCRM.API.Controllers
             {
                 return NotFound("Không tìm thấy khảo sát.");
             }
+            if (khaoSat.LaSoThich)
+                return BadRequest(SoThichService.ThongBaoKhongXoaDuoc);
 
-            bool hasAnswers = await _service.Query<PhieuTraLoi>().AnyAsync(p => p.MaKhaoSat == id);
+            bool hasAnswers =await _service.Query<PhieuTraLoi>().AnyAsync(p => p.MaKhaoSat == id);
             if (hasAnswers)
             {
                 if (khaoSat.TrangThai == DaDong)
@@ -282,6 +301,8 @@ namespace RestaurantCRM.API.Controllers
         }
 
         // ── CÂU HỎI ──────────────────────────────────────────────────────────
+        // Bộ hồ sơ sở thích (R3): được thêm / sửa câu hỏi, đáp án dù đã có phiếu; vẫn không được xóa đáp án
+        // đã có khách chọn, xóa câu hỏi đã có câu trả lời, đổi loại câu hỏi đã có câu trả lời.
 
         // POST: api/AdminKhaoSat/{id}/CauHoi - Thêm câu hỏi vào khảo sát
         [HttpPost("{id}/CauHoi")]
@@ -293,25 +314,44 @@ namespace RestaurantCRM.API.Controllers
             var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: true);
             if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
 
-            var loi = KiemTraCauHoi(request?.NoiDung, request?.LoaiCauHoi, request?.TuyChons);
-            if (loi != null) return BadRequest(loi);
+            if (request == null) return BadRequest("Dữ liệu câu hỏi không hợp lệ.");
+            bool laCauMon = request.LaCauMonYeuThich;
+            string? loi;
+            List<MonAn> mons = new();
+            if (laCauMon)
+            {
+                (loi, mons) = await KiemTraCauMonYeuThichAsync(khaoSat, null, request);
+                if (loi != null) return BadRequest(loi);
+            }
+            else
+            {
+                loi = AdminKhaoSatService.KiemTraCauHoi(request.NoiDung, request.LoaiCauHoi, request.TuyChons, request.ChonNhieu);
+                if (loi != null) return BadRequest(loi);
+            }
 
-            var loai = ChuanHoaLoai(request!.LoaiCauHoi)!;
+            var loai = laCauMon ? TracNghiem : ChuanHoaLoai(request.LoaiCauHoi)!;
             var maCauHoi = await MaTiepTheoAsync<CauHoiKhaoSat>("CH", c => c.MaCauHoi.StartsWith("CH"), c => c.MaCauHoi);
             _service.Add(new CauHoiKhaoSat
             {
                 MaCauHoi = maCauHoi,
                 MaKhaoSat = id,
                 NoiDungCauHoi = request.NoiDung.Trim(),
-                LoaiCauHoi = loai
+                LoaiCauHoi = loai,
+                ChonNhieu = laCauMon || (loai == TracNghiem && request.ChonNhieu)
             });
 
             if (loai == TracNghiem)
             {
                 int soTC = await SoTiepTheoAsync<TuyChonCauHoi>("TC", t => t.MaTuyChon.StartsWith("TC"), t => t.MaTuyChon);
-                foreach (var nd in LamSachTuyChon(request.TuyChons))
+                if (laCauMon)
                 {
-                    _service.Add(new TuyChonCauHoi { MaTuyChon = $"TC{soTC++:D2}", MaCauHoi = maCauHoi, NoiDungTuyChon = nd });
+                    foreach (var m in mons)
+                        _service.Add(new TuyChonCauHoi { MaTuyChon = $"TC{soTC++:D2}", MaCauHoi = maCauHoi, NoiDungTuyChon = TenDapAnMon(m), MaMon = m.MaMon });
+                }
+                else
+                {
+                    foreach (var nd in LamSachTuyChon(request.TuyChons))
+                        _service.Add(new TuyChonCauHoi { MaTuyChon = $"TC{soTC++:D2}", MaCauHoi = maCauHoi, NoiDungTuyChon = nd });
                 }
             }
 
@@ -319,43 +359,90 @@ namespace RestaurantCRM.API.Controllers
             return Ok(new { message = "Thêm câu hỏi thành công.", MaCauHoi = maCauHoi });
         }
 
-        // PUT: api/AdminKhaoSat/{id}/CauHoi/{cauHoiId} - Sửa câu hỏi (nội dung, loại, danh sách tùy chọn)
-        // Tùy chọn được đối chiếu theo nội dung: giữ tùy chọn trùng, thêm tùy chọn mới, xóa tùy chọn bị bỏ
-        // (không xóa được tùy chọn đã có người chọn).
+        // PUT: api/AdminKhaoSat/{id}/CauHoi/{cauHoiId} - Sửa câu hỏi (nội dung, loại, chọn nhiều, danh sách tùy chọn)
+        // Tùy chọn được đối chiếu theo nội dung (câu món yêu thích: theo mã món): giữ tùy chọn trùng, thêm tùy chọn mới,
+        // xóa tùy chọn bị bỏ (không xóa được tùy chọn đã có người chọn). Đổi chữ một tùy chọn: dùng PUT .../TuyChon/{id}.
         [HttpPut("{id}/CauHoi/{cauHoiId}")]
         public async Task<IActionResult> UpdateCauHoi(string id, string cauHoiId, [FromBody] CauHoiUpsertRequest request)
         {
+            var khaoSat = await _service.FindAsync<KhaoSat>(id);
             var cauHoi = await _service.Query<CauHoiKhaoSat>()
                 .Include(c => c.TuyChonCauHoi)
                 .FirstOrDefaultAsync(c => c.MaCauHoi == cauHoiId && c.MaKhaoSat == id);
 
-            if (cauHoi == null)
+            if (khaoSat == null || cauHoi == null)
                 return NotFound("Không tìm thấy câu hỏi.");
+            if (request == null) return BadRequest("Dữ liệu câu hỏi không hợp lệ.");
 
-            var loi = KiemTraCauHoi(request?.NoiDung, request?.LoaiCauHoi, request?.TuyChons);
-            if (loi != null) return BadRequest(loi);
+            bool laCauMonCu = cauHoi.TuyChonCauHoi.Any(t => t.MaMon != null);
+            bool laCauMon = request.LaCauMonYeuThich;
+            if (laCauMonCu && !laCauMon)
+                return BadRequest("Không thể bỏ vai trò \"Món yêu thích\" của câu hỏi này. Nếu chưa có ai chọn, hãy xóa câu hỏi.");
+
+            string? loi;
+            List<MonAn> mons = new();
+            if (laCauMon)
+            {
+                (loi, mons) = await KiemTraCauMonYeuThichAsync(khaoSat, cauHoiId, request);
+                if (loi != null) return BadRequest(loi);
+            }
+            else
+            {
+                loi = AdminKhaoSatService.KiemTraCauHoi(request.NoiDung, request.LoaiCauHoi, request.TuyChons, request.ChonNhieu);
+                if (loi != null) return BadRequest(loi);
+            }
 
             var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: false);
             if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
 
-            var loaiMoi = ChuanHoaLoai(request!.LoaiCauHoi)!;
+            var loaiMoi = laCauMon ? TracNghiem : ChuanHoaLoai(request.LoaiCauHoi)!;
             var loaiCu = ChuanHoaLoai(cauHoi.LoaiCauHoi);
+            bool chonNhieuMoi = laCauMon || (loaiMoi == TracNghiem && request.ChonNhieu);
             bool daCoTraLoi = await _service.Query<CauTraLoi>().AnyAsync(ct => ct.MaCauHoi == cauHoiId);
             if (daCoTraLoi && loaiMoi != loaiCu)
                 return BadRequest("Câu hỏi đã có người trả lời nên không thể đổi loại câu hỏi.");
 
-            var giuLai = loaiMoi == TracNghiem ? LamSachTuyChon(request.TuyChons) : new List<string>();
+            // Tắt chọn nhiều: không phiếu nào được đang chọn quá 1 đáp án ở câu này
+            if (cauHoi.ChonNhieu && !chonNhieuMoi)
+            {
+                bool coPhieuNhieuDapAn = await _service.Query<CauTraLoi>()
+                    .Where(ct => ct.MaCauHoi == cauHoiId && ct.MaTuyChon != null)
+                    .GroupBy(ct => ct.MaPhieuTraLoi)
+                    .Where(g => g.Count() > 1)
+                    .AnyAsync();
+                if (coPhieuNhieuDapAn)
+                    return BadRequest("Đã có phiếu chọn nhiều hơn 1 đáp án ở câu này nên không thể tắt \"Cho chọn nhiều đáp án\".");
+            }
 
-            // Khảo sát đã có phiếu: không được sửa nội dung câu hỏi hay thêm tùy chọn mới
-            // (vẫn được bỏ tùy chọn chưa ai chọn — đã kiểm tra bên dưới).
+            // Xác định tùy chọn cần xóa / thêm
+            List<TuyChonCauHoi> canXoa;
+            List<TuyChonCauHoi> themMoi = new();
+            if (laCauMon)
+            {
+                var maMonGiu = mons.Select(m => m.MaMon!).ToHashSet();
+                canXoa = cauHoi.TuyChonCauHoi.Where(t => t.MaMon == null || !maMonGiu.Contains(t.MaMon)).ToList();
+                var daCoMon = cauHoi.TuyChonCauHoi.Where(t => t.MaMon != null).Select(t => t.MaMon!).ToHashSet();
+                foreach (var m in mons.Where(m => !daCoMon.Contains(m.MaMon!)))
+                    themMoi.Add(new TuyChonCauHoi { MaCauHoi = cauHoiId, NoiDungTuyChon = TenDapAnMon(m), MaMon = m.MaMon });
+            }
+            else
+            {
+                var giuLai = loaiMoi == TracNghiem ? LamSachTuyChon(request.TuyChons) : new List<string>();
+                canXoa = cauHoi.TuyChonCauHoi.Where(t => !giuLai.Contains((t.NoiDungTuyChon ?? "").Trim())).ToList();
+                var daCo = cauHoi.TuyChonCauHoi.Select(t => (t.NoiDungTuyChon ?? "").Trim()).ToList();
+                foreach (var nd in giuLai.Where(t => !daCo.Contains(t)))
+                    themMoi.Add(new TuyChonCauHoi { MaCauHoi = cauHoiId, NoiDungTuyChon = nd });
+            }
+
+            // Khảo sát thường đã có phiếu: không được sửa nội dung câu hỏi, đổi chọn nhiều hay thêm tùy chọn mới
+            // (vẫn được bỏ tùy chọn chưa ai chọn — kiểm tra bên dưới). Hồ sơ sở thích thì được (R3).
             bool doiNoiDung = (cauHoi.NoiDungCauHoi ?? "").Trim() != request.NoiDung!.Trim();
-            bool themTuyChon = giuLai.Any(t => !cauHoi.TuyChonCauHoi.Any(x => (x.NoiDungTuyChon ?? "").Trim() == t));
-            if (doiNoiDung || themTuyChon)
+            if (doiNoiDung || themMoi.Count > 0 || cauHoi.ChonNhieu != chonNhieuMoi)
             {
                 lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: true);
                 if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
             }
-            var canXoa = cauHoi.TuyChonCauHoi.Where(t => !giuLai.Contains((t.NoiDungTuyChon ?? "").Trim())).ToList();
+
             if (canXoa.Count > 0)
             {
                 var maXoa = canXoa.Select(t => t.MaTuyChon).ToList();
@@ -368,17 +455,19 @@ namespace RestaurantCRM.API.Controllers
                 _service.RemoveRange(canXoa);
             }
 
-            var daCo = cauHoi.TuyChonCauHoi.Select(t => (t.NoiDungTuyChon ?? "").Trim()).ToList();
-            var themMoi = giuLai.Where(t => !daCo.Contains(t)).ToList();
             if (themMoi.Count > 0)
             {
                 int soTC = await SoTiepTheoAsync<TuyChonCauHoi>("TC", t => t.MaTuyChon.StartsWith("TC"), t => t.MaTuyChon);
-                foreach (var nd in themMoi)
-                    _service.Add(new TuyChonCauHoi { MaTuyChon = $"TC{soTC++:D2}", MaCauHoi = cauHoiId, NoiDungTuyChon = nd });
+                foreach (var tc in themMoi)
+                {
+                    tc.MaTuyChon = $"TC{soTC++:D2}";
+                    _service.Add(tc);
+                }
             }
 
             cauHoi.NoiDungCauHoi = request.NoiDung.Trim();
             cauHoi.LoaiCauHoi = loaiMoi;
+            cauHoi.ChonNhieu = chonNhieuMoi;
 
             await _service.SaveChangesAsync();
             return Ok(new { message = "Cập nhật câu hỏi thành công." });
@@ -427,28 +516,57 @@ namespace RestaurantCRM.API.Controllers
 
             if (ChuanHoaLoai(cauHoi.LoaiCauHoi) == TuLuan)
                 return BadRequest("Câu hỏi tự luận không cần tùy chọn.");
-
-            if (request == null || string.IsNullOrWhiteSpace(request.NoiDungTuyChon))
+            if (request == null)
                 return BadRequest("Nội dung tùy chọn không được để trống.");
-            var nd = request.NoiDungTuyChon.Trim();
+
+            bool laCauMon = cauHoi.TuyChonCauHoi.Any(t => t.MaMon != null);
+            var maMon = string.IsNullOrWhiteSpace(request.MaMon) ? null : request.MaMon.Trim();
+            string nd;
+            if (laCauMon)
+            {
+                if (maMon == null)
+                    return BadRequest("Câu \"Món yêu thích\" chỉ nhận đáp án là món ăn. Vui lòng chọn món.");
+                var mon = await _service.Query<MonAn>().FirstOrDefaultAsync(m => m.MaMon == maMon);
+                if (mon == null)
+                    return BadRequest("Không tìm thấy món ăn.");
+                if (cauHoi.TuyChonCauHoi.Any(t => t.MaMon == maMon))
+                    return BadRequest("Món này đã có trong danh sách đáp án.");
+                nd = string.IsNullOrWhiteSpace(request.NoiDungTuyChon) ? TenDapAnMon(mon) : request.NoiDungTuyChon.Trim();
+            }
+            else
+            {
+                if (maMon != null)
+                    return BadRequest("Chỉ câu \"Món yêu thích\" của hồ sơ sở thích mới có đáp án gắn món ăn.");
+                if (string.IsNullOrWhiteSpace(request.NoiDungTuyChon))
+                    return BadRequest("Nội dung tùy chọn không được để trống.");
+                nd = request.NoiDungTuyChon.Trim();
+                if (cauHoi.TuyChonCauHoi.Any(t => (t.NoiDungTuyChon ?? "").Trim() == nd))
+                    return BadRequest("Tùy chọn này đã tồn tại trong câu hỏi.");
+            }
             if (nd.Length > 255)
                 return BadRequest("Nội dung tùy chọn tối đa 255 ký tự.");
-            if (cauHoi.TuyChonCauHoi.Any(t => (t.NoiDungTuyChon ?? "").Trim() == nd))
-                return BadRequest("Tùy chọn này đã tồn tại trong câu hỏi.");
 
             var tuyChon = new TuyChonCauHoi
             {
                 MaTuyChon = await MaTiepTheoAsync<TuyChonCauHoi>("TC", t => t.MaTuyChon.StartsWith("TC"), t => t.MaTuyChon),
                 MaCauHoi = cauHoiId,
-                NoiDungTuyChon = nd
+                NoiDungTuyChon = nd,
+                MaMon = maMon
             };
             _service.Add(tuyChon);
-            await _service.SaveChangesAsync();
+            try
+            {
+                await _service.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (DbErrorHelper.IsUniqueViolation(ex))
+            {
+                return BadRequest("Đáp án vừa được thêm ở nơi khác, vui lòng tải lại và thử lại.");
+            }
 
             return Ok(new { message = "Thêm tùy chọn thành công.", MaTuyChon = tuyChon.MaTuyChon });
         }
 
-        // PUT: api/AdminKhaoSat/{id}/CauHoi/{cauHoiId}/TuyChon/{tuyChonId} - Sửa tùy chọn
+        // PUT: api/AdminKhaoSat/{id}/CauHoi/{cauHoiId}/TuyChon/{tuyChonId} - Sửa chữ của tùy chọn
         [HttpPut("{id}/CauHoi/{cauHoiId}/TuyChon/{tuyChonId}")]
         public async Task<IActionResult> UpdateTuyChon(string id, string cauHoiId, string tuyChonId, [FromBody] TuyChonUpsertRequest request)
         {
@@ -458,6 +576,7 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy câu hỏi.");
 
             var tuyChon = await _service.Query<TuyChonCauHoi>()
+                .Include(t => t.MaMonNavigation)
                 .FirstOrDefaultAsync(t => t.MaTuyChon == tuyChonId && t.MaCauHoi == cauHoiId);
             if (tuyChon == null)
                 return NotFound("Không tìm thấy tùy chọn.");
@@ -465,12 +584,21 @@ namespace RestaurantCRM.API.Controllers
             var lyDoKhoa = await LyDoKhoaNoiDungAsync(id, chanKhiCoPhieu: true);
             if (lyDoKhoa != null) return BadRequest(lyDoKhoa);
 
-            if (request == null || string.IsNullOrWhiteSpace(request.NoiDungTuyChon))
+            if (request == null)
                 return BadRequest("Nội dung tùy chọn không được để trống.");
-            if (request.NoiDungTuyChon.Trim().Length > 255)
+            var maMon = string.IsNullOrWhiteSpace(request.MaMon) ? null : request.MaMon.Trim();
+            if (maMon != null && maMon != tuyChon.MaMon)
+                return BadRequest("Không thể đổi món của đáp án. Hãy thêm đáp án mới cho món khác.");
+
+            string? nd = string.IsNullOrWhiteSpace(request.NoiDungTuyChon) ? null : request.NoiDungTuyChon.Trim();
+            if (nd == null && tuyChon.MaMonNavigation != null)
+                nd = TenDapAnMon(tuyChon.MaMonNavigation);
+            if (nd == null)
+                return BadRequest("Nội dung tùy chọn không được để trống.");
+            if (nd.Length > 255)
                 return BadRequest("Nội dung tùy chọn tối đa 255 ký tự.");
 
-            tuyChon.NoiDungTuyChon = request.NoiDungTuyChon.Trim();
+            tuyChon.NoiDungTuyChon = nd;
             await _service.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật tùy chọn thành công." });
@@ -498,10 +626,91 @@ namespace RestaurantCRM.API.Controllers
             if (daCoLuaChon)
                 return BadRequest("Tùy chọn này đã có người chọn, không thể xóa.");
 
+            // Câu món yêu thích phải còn ít nhất 1 món để giữ vai trò (R4)
+            if (tuyChon.MaMon != null &&
+                !await _service.Query<TuyChonCauHoi>().AnyAsync(t => t.MaCauHoi == cauHoiId && t.MaMon != null && t.MaTuyChon != tuyChonId))
+                return BadRequest("Câu \"Món yêu thích\" phải còn ít nhất 1 món. Hãy thêm món khác trước khi xóa món này.");
+
             _service.Remove(tuyChon);
             await _service.SaveChangesAsync();
 
             return Ok(new { message = "Xóa tùy chọn thành công." });
+        }
+
+        // ── HỒ SƠ SỞ THÍCH ──────────────────────────────────────────────────
+
+        // GET: api/AdminKhaoSat/SoThich - Mã bộ hồ sơ sở thích (404 nếu chưa tạo)
+        [HttpGet("SoThich")]
+        public async Task<IActionResult> GetBoSoThich()
+        {
+            var ma = await SoThichService.LayMaBoSoThichAsync(_service);
+            if (ma == null) return NotFound("Chưa có hồ sơ sở thích.");
+            return Ok(new { MaKhaoSat = ma });
+        }
+
+        // POST: api/AdminKhaoSat/SoThich - Tạo bộ hồ sơ sở thích nếu chưa có (R1). Có rồi thì trả bộ hiện có.
+        [HttpPost("SoThich")]
+        public async Task<IActionResult> CreateBoSoThich([FromQuery] string? maNhanVien)
+        {
+            var daCo = await SoThichService.LayMaBoSoThichAsync(_service);
+            if (daCo != null) return Ok(new { message = "Hồ sơ sở thích đã có sẵn.", MaKhaoSat = daCo });
+
+            string? maNV = string.IsNullOrWhiteSpace(maNhanVien) ? null : maNhanVien.Trim();
+            if (maNV != null && !await _service.Query<NhanVien>().AnyAsync(n => n.MaNhanVien == maNV))
+                maNV = null;
+
+            var khaoSat = new KhaoSat
+            {
+                MaKhaoSat = await MaTiepTheoAsync<KhaoSat>("KS", k => k.MaKhaoSat.StartsWith("KS"), k => k.MaKhaoSat),
+                TieuDe = "Hồ sơ sở thích",
+                MaNhanVien = maNV,
+                TrangThai = DangMo,
+                NgayTao = DateTime.Now,
+                LaSoThich = true
+            };
+            _service.Add(khaoSat);
+            try
+            {
+                await _service.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (DbErrorHelper.IsUniqueViolation(ex))
+            {
+                // Tạo cùng lúc ở 2 nơi: vướng UNIQUE có điều kiện WHERE laSoThich = 1
+                _service.Remove(khaoSat);
+                var ma = await SoThichService.LayMaBoSoThichAsync(_service);
+                if (ma != null) return Ok(new { message = "Hồ sơ sở thích đã có sẵn.", MaKhaoSat = ma });
+                return BadRequest("Không thể tạo hồ sơ sở thích, vui lòng thử lại.");
+            }
+
+            return Ok(new { message = "Đã tạo hồ sơ sở thích.", MaKhaoSat = khaoSat.MaKhaoSat });
+        }
+
+        // GET: api/AdminKhaoSat/SoThich/KhachHang - Đáp án mà từng khách đã khai báo (dùng cho lọc đối tượng, phân tích)
+        [HttpGet("SoThich/KhachHang")]
+        public async Task<IActionResult> GetSoThichKhachHang()
+        {
+            var ds = await _service.Query<CauTraLoi>()
+                .Where(c => c.MaTuyChon != null && c.MaPhieuTraLoiNavigation != null
+                            && c.MaPhieuTraLoiNavigation.MaKhachHang != null
+                            && c.MaPhieuTraLoiNavigation.MaKhaoSatNavigation != null
+                            && c.MaPhieuTraLoiNavigation.MaKhaoSatNavigation.LaSoThich)
+                .Select(c => new { MaKhachHang = c.MaPhieuTraLoiNavigation!.MaKhachHang!, MaTuyChon = c.MaTuyChon!, c.MaCauHoi })
+                .ToListAsync();
+
+            // Khách đã khai báo = có phiếu sở thích (kể cả phiếu chỉ có câu tự luận)
+            var khachCoPhieu = await _service.Query<PhieuTraLoi>()
+                .Where(p => p.MaKhachHang != null && p.MaKhaoSatNavigation != null && p.MaKhaoSatNavigation.LaSoThich)
+                .Select(p => new { MaKhachHang = p.MaKhachHang!, MaCauHois = p.CauTraLoi.Select(c => c.MaCauHoi).Distinct().ToList() })
+                .ToListAsync();
+
+            var theoKhach = ds.GroupBy(d => d.MaKhachHang).ToDictionary(g => g.Key, g => g.Select(x => x.MaTuyChon).Distinct().ToList());
+            return Ok(khachCoPhieu.Select(k => new
+            {
+                k.MaKhachHang,
+                MaTuyChons = theoKhach.GetValueOrDefault(k.MaKhachHang) ?? new List<string>(),
+                // Các câu khách có trả lời (mẫu số % theo từng câu)
+                MaCauHois = k.MaCauHois.Where(m => m != null).ToList()
+            }));
         }
 
         // ── ĐỐI TƯỢNG KHẢO SÁT ──────────────────────────────────────────────
@@ -562,6 +771,8 @@ namespace RestaurantCRM.API.Controllers
             var khaoSat = await _service.FindAsync<KhaoSat>(id);
             if (khaoSat == null)
                 return NotFound("Không tìm thấy khảo sát.");
+            if (khaoSat.LaSoThich)
+                return BadRequest(SoThichService.ThongBaoKhongDatDoiTuong);
             if (khaoSat.TrangThai == DaDong)
                 return BadRequest("Khảo sát đã đóng, không thể thay đổi đối tượng.");
 
@@ -701,14 +912,56 @@ namespace RestaurantCRM.API.Controllers
         /// </summary>
         private async Task<string?> LyDoKhoaNoiDungAsync(string maKhaoSat, bool chanKhiCoPhieu)
         {
-            var trangThai = await _service.Query<KhaoSat>()
+            var ks = await _service.Query<KhaoSat>()
                 .Where(k => k.MaKhaoSat == maKhaoSat)
-                .Select(k => k.TrangThai)
+                .Select(k => new { k.TrangThai, k.LaSoThich })
                 .FirstOrDefaultAsync();
-            if (ChuanHoaTrangThai(trangThai) == DaDong) return ThongBaoDaDong;
+            if (ks == null) return null;
+            if (ChuanHoaTrangThai(ks.TrangThai) == DaDong) return ThongBaoDaDong;
+            // Hồ sơ sở thích là danh mục sống: được thêm / sửa dù đã có phiếu (R3)
+            if (ks.LaSoThich) return null;
             if (chanKhiCoPhieu && await _service.Query<PhieuTraLoi>().AnyAsync(p => p.MaKhaoSat == maKhaoSat))
                 return ThongBaoDaCoPhieu;
             return null;
+        }
+
+        private static string TenDapAnMon(MonAn mon)
+        {
+            var ten = (mon.TenMon ?? mon.MaMon ?? "").Trim();
+            return ten.Length > 255 ? ten.Substring(0, 255) : ten;
+        }
+
+        /// <summary>
+        /// Kiểm tra câu "Món yêu thích" (R4): chỉ ở hồ sơ sở thích, tối đa 1 câu, có ít nhất 1 món hợp lệ.
+        /// Trả về lỗi hoặc danh sách món (giữ thứ tự, bỏ trùng).
+        /// </summary>
+        private async Task<(string? Loi, List<MonAn> Mons)> KiemTraCauMonYeuThichAsync(KhaoSat khaoSat, string? maCauHoiHienTai, CauHoiUpsertRequest request)
+        {
+            var mons = new List<MonAn>();
+            if (!khaoSat.LaSoThich)
+                return ("Chỉ hồ sơ sở thích mới có câu \"Món yêu thích\".", mons);
+
+            var loi = AdminKhaoSatService.KiemTraCauHoi(request.NoiDung, TracNghiem, null, chonNhieu: true, boQuaTuyChon: true);
+            if (loi != null) return (loi, mons);
+
+            bool daCoCauKhac = await _service.Query<CauHoiKhaoSat>()
+                .AnyAsync(c => c.MaKhaoSat == khaoSat.MaKhaoSat && c.MaCauHoi != maCauHoiHienTai
+                               && c.TuyChonCauHoi.Any(t => t.MaMon != null));
+            if (daCoCauKhac)
+                return ("Hồ sơ sở thích đã có câu \"Món yêu thích\". Mỗi hồ sơ chỉ có 1 câu loại này.", mons);
+
+            var maMons = (request.MaMons ?? new List<string>())
+                .Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).Distinct().ToList();
+            if (maMons.Count == 0)
+                return ("Câu \"Món yêu thích\" cần ít nhất 1 món.", mons);
+
+            var timThay = await _service.Query<MonAn>().Where(m => m.MaMon != null && maMons.Contains(m.MaMon)).ToListAsync();
+            var thieu = maMons.FirstOrDefault(m => !timThay.Any(x => x.MaMon == m));
+            if (thieu != null)
+                return ($"Không tìm thấy món \"{thieu}\".", mons);
+
+            mons = maMons.Select(m => timThay.First(x => x.MaMon == m)).ToList();
+            return (null, mons);
         }
 
         /// <summary>Quy đổi trạng thái về giá trị hợp lệ của CSDL (Draft / Open / Closed).</summary>

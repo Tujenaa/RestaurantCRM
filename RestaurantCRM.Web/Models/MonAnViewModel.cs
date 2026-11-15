@@ -85,6 +85,11 @@ public class MonAnChiTietViewModel
     public MonAnViewModel MonAn { get; set; } = new();
     public IReadOnlyList<MonAnViewModel> MonLienQuan { get; set; } = Array.Empty<MonAnViewModel>();
     public IReadOnlyList<PhanHoiItemViewModel> DanhGias { get; set; } = Array.Empty<PhanHoiItemViewModel>();
+
+    /// <summary>Hiện nút ♥ (nhà hàng đã có câu "Món yêu thích").</summary>
+    public bool CoNutYeuThich { get; set; }
+    public bool DaYeuThich { get; set; }
+    public bool DaDangNhap { get; set; }
 }
 
 public class ThemGioHangViewModel

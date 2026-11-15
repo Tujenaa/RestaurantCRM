@@ -17,7 +17,8 @@ GO
 --
 -- Quy mô: 24 khách hàng, 92 hóa đơn (440 dòng chi tiết), 58 đánh giá
 -- (277 dòng chi tiết đánh giá, trong đó 102 món được chấm riêng), 29 câu trả lời đánh giá,
--- 7 khảo sát (30 câu hỏi, 78 đối tượng, 56 phiếu trả lời).
+-- 7 khảo sát (30 câu hỏi, 78 đối tượng, 56 phiếu trả lời) và 1 hồ sơ sở thích KS008
+-- (5 câu hỏi, 22 đáp án, 14 khách đã khai báo, 66 câu trả lời).
 -- 3 đánh giá đã được khách sửa (DG052, DG053, DG054 – DG054 sửa sau khi nhà hàng trả lời).
 --
 -- Quy ước dữ liệu:
@@ -37,6 +38,9 @@ GO
 --  * KHẢO SÁT: khảo sát không có dòng DOI_TUONG_KHAO_SAT là khảo sát cho tất cả khách.
 --    Mỗi khách tối đa 1 phiếu / khảo sát; phiếu trả lời đủ mọi câu trắc nghiệm, tùy chọn đúng câu hỏi;
 --    daHoanThanh = 1 khi khách đã nộp phiếu.
+--  * HỒ SƠ SỞ THÍCH (KHAO_SAT.laSoThich = 1, chỉ 1 bộ, luôn Open, không có DOI_TUONG):
+--    mọi câu đều không bắt buộc; câu chonNhieu = 1 được chọn nhiều đáp án (mỗi đáp án tối đa 1 lần / phiếu);
+--    đáp án có maMon là món yêu thích (♥). Khách sửa thì ghi đè trên chính phiếu, ngayTraLoi = lần sửa gần nhất.
 --
 -- Tình huống dựng sẵn để test:
 --  * KH004, KH011: tài khoản bị khóa (có đơn, đánh giá).
@@ -53,6 +57,14 @@ GO
 --  * Món có dưới 3 lượt chấm riêng (MA001, MA009, MA016, MA019, MA021, MA023, MA024) → "Chưa đủ dữ liệu".
 --  * KS001–KS003: đã đóng, có phiếu.  KS004–KS005: đang mở, giới hạn đối tượng, có phiếu (khóa sửa nội dung).
 --  * KS006: nháp (sửa tự do).  KS007: đang mở cho tất cả khách, chưa có phiếu (còn sửa được).
+--  * KS008 (hồ sơ sở thích): không được hiện trong danh sách khảo sát, thống kê "khảo sát đang mở",
+--    lịch sử khảo sát của khách.
+--      - KH020 khai thích Bò Wagyu, Lẩu Tứ Xuyên nhưng hay gọi Kem dừa → so "Sở thích" với "Món hay gọi".
+--      - KH005 ăn chay; KH006 kiêng hải sản (dị ứng tôm, cua); KH010 dị ứng đậu phộng → cảnh báo dị ứng.
+--      - KH008 chỉ có món ♥; KH017 chỉ có ghi chú; KH004 bị khóa vẫn giữ sở thích.
+--      - Chưa khai báo: KH007, KH011, KH013, KH015, KH016, KH018, KH019, KH021–KH023.
+--      - Món chưa có đáp án ♥ (vd. MA010 Mực ống tươi): bấm ♥ lần đầu → API tự thêm đáp án vào CH034.
+--      - Lọc đối tượng khảo sát "Thích cay" (TC091) → KH001, KH003, KH006, KH012, KH020, KH024.
 -- ============================================================================
 
 SET NOCOUNT ON;
@@ -2396,6 +2408,133 @@ INSERT INTO CAU_TRA_LOI (maCauTraLoi, maPhieuTraLoi, maCauHoi, maTuyChon, noiDun
 ('CTL278','PTL056','CH023','TC077',NULL),
 ('CTL279','PTL056','CH024','TC080',NULL),
 ('CTL280','PTL056','CH025',NULL,N'Voucher dành riêng cho khách quen');
+GO
+
+-- 9. Hồ sơ sở thích khách hàng (KS008, laSoThich = 1): bộ câu hỏi thường trực, luôn mở, khách tự khai và sửa được.
+--    Câu CH031–CH034 cho chọn nhiều (chonNhieu = 1), không bắt buộc. CH034 "Món yêu thích": mỗi đáp án gắn maMon (nút ♥).
+--    PHIEU_TRA_LOI.ngayTraLoi của bộ này = lần khách cập nhật sở thích gần nhất. 14/24 khách đã khai báo.
+
+INSERT INTO KHAO_SAT (maKhaoSat, maNhanVien, tieuDe, trangThai, ngayTao, laSoThich) VALUES
+('KS008','NV05',N'Hồ sơ sở thích khách hàng',N'Open','2026-01-02T08:00:00',1);
+GO
+
+INSERT INTO CAU_HOI_KHAO_SAT (maCauHoi, maKhaoSat, noiDungCauHoi, loaiCauHoi, chonNhieu) VALUES
+('CH031','KS008',N'Bạn thích khẩu vị nào?','Option',1),
+('CH032','KS008',N'Chế độ ăn của bạn','Option',1),
+('CH033','KS008',N'Nguyên liệu bạn thích nhúng lẩu','Option',1),
+('CH034','KS008',N'Món bạn yêu thích','Option',1),
+('CH035','KS008',N'Dị ứng hoặc lưu ý khác khi chế biến','Text',0);
+GO
+
+INSERT INTO TUY_CHON_CAU_HOI (maTuyChon, maCauHoi, noiDungTuyChon, maMon) VALUES
+('TC091','CH031',N'Thích cay',NULL),
+('TC092','CH031',N'Ít cay / không ăn cay',NULL),
+('TC093','CH031',N'Thanh đạm',NULL),
+('TC094','CH031',N'Đậm đà',NULL),
+('TC095','CH032',N'Ăn chay',NULL),
+('TC096','CH032',N'Kiêng hải sản',NULL),
+('TC097','CH032',N'Kiêng thịt bò',NULL),
+('TC098','CH033',N'Thịt bò',NULL),
+('TC099','CH033',N'Hải sản',NULL),
+('TC100','CH033',N'Nấm và rau',NULL),
+('TC101','CH034',N'Lẩu Tứ Xuyên','MA002'),
+('TC102','CH034',N'Lẩu Thái chua cay','MA001'),
+('TC103','CH034',N'Lẩu nấm thanh ngọt','MA003'),
+('TC104','CH034',N'Ba chỉ bò Mỹ','MA005'),
+('TC105','CH034',N'Bò Wagyu A4','MA006'),
+('TC106','CH034',N'Tôm sú tươi','MA008'),
+('TC107','CH034',N'Sò điệp Nhật','MA009'),
+('TC108','CH034',N'Đậu hũ non','MA014'),
+('TC109','CH034',N'Trà đào cam sả','MA017'),
+('TC110','CH034',N'Kem dừa Thái','MA020'),
+('TC111','CH034',N'Combo gia đình','MA022'),
+('TC112','CH034',N'Gỏi cuốn tôm thịt','MA023');
+GO
+
+INSERT INTO PHIEU_TRA_LOI (maPhieuTraLoi, maKhaoSat, maKhachHang, ngayTraLoi) VALUES
+('PTL057','KS008','KH001','2026-02-10T20:15:00'),
+('PTL058','KS008','KH002','2026-03-15T12:40:00'),
+('PTL059','KS008','KH003','2026-04-02T19:05:00'),
+('PTL060','KS008','KH004','2026-02-20T18:30:00'),
+('PTL061','KS008','KH005','2026-05-11T11:20:00'),
+('PTL062','KS008','KH006','2026-06-01T21:00:00'),
+('PTL063','KS008','KH008','2026-07-19T13:10:00'),
+('PTL064','KS008','KH009','2026-08-05T20:45:00'),
+('PTL065','KS008','KH010','2026-09-12T18:00:00'),
+('PTL066','KS008','KH012','2026-10-03T19:30:00'),
+('PTL067','KS008','KH014','2026-10-21T12:15:00'),
+('PTL068','KS008','KH017','2026-11-02T20:20:00'),
+('PTL069','KS008','KH020','2026-11-08T21:40:00'),
+('PTL070','KS008','KH024','2026-11-11T20:00:00');
+GO
+
+INSERT INTO CAU_TRA_LOI (maCauTraLoi, maPhieuTraLoi, maCauHoi, maTuyChon, noiDungTuDien) VALUES
+('CTL281','PTL057','CH031','TC091',NULL),
+('CTL282','PTL057','CH031','TC094',NULL),
+('CTL283','PTL057','CH033','TC098',NULL),
+('CTL284','PTL057','CH033','TC099',NULL),
+('CTL285','PTL057','CH034','TC101',NULL),
+('CTL286','PTL057','CH034','TC104',NULL),
+('CTL287','PTL057','CH034','TC106',NULL),
+('CTL288','PTL058','CH031','TC093',NULL),
+('CTL289','PTL058','CH033','TC100',NULL),
+('CTL290','PTL058','CH034','TC103',NULL),
+('CTL291','PTL058','CH034','TC108',NULL),
+('CTL292','PTL058','CH034','TC109',NULL),
+('CTL293','PTL058','CH035',NULL,N'Không dùng bột ngọt'),
+('CTL294','PTL059','CH031','TC091',NULL),
+('CTL295','PTL059','CH033','TC099',NULL),
+('CTL296','PTL059','CH034','TC102',NULL),
+('CTL297','PTL059','CH034','TC107',NULL),
+('CTL298','PTL059','CH034','TC112',NULL),
+('CTL299','PTL060','CH031','TC092',NULL),
+('CTL300','PTL060','CH033','TC098',NULL),
+('CTL301','PTL060','CH034','TC104',NULL),
+('CTL302','PTL061','CH031','TC093',NULL),
+('CTL303','PTL061','CH032','TC095',NULL),
+('CTL304','PTL061','CH033','TC100',NULL),
+('CTL305','PTL061','CH034','TC103',NULL),
+('CTL306','PTL061','CH034','TC108',NULL),
+('CTL307','PTL061','CH035',NULL,N'Ăn chay trường, xin nấu nồi lẩu riêng'),
+('CTL308','PTL062','CH031','TC091',NULL),
+('CTL309','PTL062','CH032','TC096',NULL),
+('CTL310','PTL062','CH033','TC098',NULL),
+('CTL311','PTL062','CH034','TC101',NULL),
+('CTL312','PTL062','CH034','TC105',NULL),
+('CTL313','PTL062','CH035',NULL,N'Dị ứng tôm, cua'),
+('CTL314','PTL063','CH034','TC111',NULL),
+('CTL315','PTL063','CH034','TC110',NULL),
+('CTL316','PTL064','CH031','TC094',NULL),
+('CTL317','PTL064','CH033','TC098',NULL),
+('CTL318','PTL064','CH033','TC099',NULL),
+('CTL319','PTL064','CH034','TC105',NULL),
+('CTL320','PTL064','CH034','TC107',NULL),
+('CTL321','PTL064','CH034','TC111',NULL),
+('CTL322','PTL065','CH031','TC092',NULL),
+('CTL323','PTL065','CH033','TC099',NULL),
+('CTL324','PTL065','CH034','TC106',NULL),
+('CTL325','PTL065','CH034','TC112',NULL),
+('CTL326','PTL065','CH035',NULL,N'Dị ứng đậu phộng'),
+('CTL327','PTL066','CH031','TC091',NULL),
+('CTL328','PTL066','CH034','TC101',NULL),
+('CTL329','PTL067','CH031','TC093',NULL),
+('CTL330','PTL067','CH031','TC092',NULL),
+('CTL331','PTL067','CH032','TC097',NULL),
+('CTL332','PTL067','CH033','TC099',NULL),
+('CTL333','PTL067','CH033','TC100',NULL),
+('CTL334','PTL067','CH034','TC103',NULL),
+('CTL335','PTL067','CH034','TC106',NULL),
+('CTL336','PTL067','CH034','TC109',NULL),
+('CTL337','PTL068','CH035',NULL,N'Ít dầu mỡ, không cho hành'),
+('CTL338','PTL069','CH031','TC091',NULL),
+('CTL339','PTL069','CH031','TC094',NULL),
+('CTL340','PTL069','CH033','TC098',NULL),
+('CTL341','PTL069','CH034','TC105',NULL),
+('CTL342','PTL069','CH034','TC101',NULL),
+('CTL343','PTL069','CH034','TC110',NULL),
+('CTL344','PTL070','CH031','TC091',NULL),
+('CTL345','PTL070','CH033','TC099',NULL),
+('CTL346','PTL070','CH034','TC102',NULL);
 GO
 
 PRINT N'Đã nạp xong dữ liệu mẫu RestaurantCRM.';

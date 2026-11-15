@@ -146,8 +146,9 @@ namespace RestaurantCRM.API.Controllers
             var soDanhGiaSuaSauPhanHoi = await danhGias.CountAsync(d =>
                 d.NgayCapNhat != null && d.TraLoiDanhGia.Any() &&
                 d.NgayCapNhat > d.TraLoiDanhGia.Max(t => t.NgayGui));
-            var khaoSatDangMo = await _service.Query<KhaoSat>()
-                .CountAsync(k => k.TrangThai == "Đang diễn ra" || k.TrangThai == "Hoạt động" || k.TrangThai == "Active");
+            // CSDL lưu 'Open' (CK_KHAO_SAT_trangThai); không tính bộ hồ sơ sở thích (luôn Open)
+            var khaoSatDangMo = await _service.Query<KhaoSat>().ChiKhaoSatThuong()
+                .CountAsync(k => k.TrangThai == "Open");
 
             return Ok(new
             {

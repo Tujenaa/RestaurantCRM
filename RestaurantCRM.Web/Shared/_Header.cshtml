@@ -1,6 +1,8 @@
 @inject RestaurantCRM.Web.Services.GioHangService CartService
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var isSoThich = currentController == "TaiKhoan" && currentAction == "SoThich";
     var menuPage = Context.Request.Query["menu"].ToString() == "true";
     var isMenu = currentController == "Menu" || menuPage;
     var cartCount = CartService.Get(Context.Session).Items.Sum(item => item.SoLuong);
@@ -29,9 +31,16 @@
             <div class="top-actions">
                 @if (isLoggedIn)
                 {
-                    <a class="header-link" asp-controller="TaiKhoan" asp-action="Index" title="Tài khoản của bạn">
-                        <span class="user-name">@(Context.Session.GetString("HoTen") ?? "Tài khoản")</span>
-                    </a>
+                    @* Menu tài khoản: mở khi rê chuột hoặc bấm (focus-within, dùng được trên màn hình cảm ứng) *@
+                    <div class="account-menu">
+                        <button type="button" class="header-link account-trigger" aria-haspopup="true" title="Tài khoản của bạn">
+                            <span class="user-name">@(Context.Session.GetString("HoTen") ?? "Tài khoản")</span>
+                            <span class="account-caret" aria-hidden="true">▾</span>
+                        </button>
+                        <div class="account-dropdown" role="menu">
+                            <a role="menuitem" asp-controller="TaiKhoan" asp-action="Index">Thông tin tài khoản</a>
+                            <a role="menuitem" class="@(isSoThich ? "active" : "")" asp-controller="TaiKhoan" asp-action="SoThich">♥ Sở thích của tôi</a>                        </div>
+                    </div>
                 }
                 else
                 {
