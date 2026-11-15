@@ -50,6 +50,11 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly CheckBox _chkMonYeuThich = new CheckBox { Text = "Câu \"Món yêu thích\" (đáp án là món ăn)", AutoSize = true };
         private readonly ComboBox _cboMon = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
         private bool _daTaiMon;
+        private List<MonItem> _tatCaMon;   // mọi món đang bán (null = chưa tải xong)
+        private readonly Button _btnThemTatCa;
+        // Khung viền mảnh bo góc của danh sách (UiStyler đổi Panel FixedSingle thành viền mảnh)
+        private readonly Panel _lstFrame = new Panel { BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White, Padding = new Padding(2) };
+        private bool _dangXepCot;
 
         private readonly TextBox _txtNoiDung = new TextBox { Multiline = true, MaxLength = 500, ScrollBars = ScrollBars.None };
         private readonly ComboBox _cboLoai = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -128,7 +133,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _pnlTuyChon.Controls.Add(_btnThemTC);
 
             // Khung viền mảnh bo góc (UiStyler đổi Panel FixedSingle thành viền mảnh)
-            var lstFrame = new Panel { BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White, Padding = new Padding(2) };
+            var lstFrame = _lstFrame;
             lstFrame.SetBounds(0, 72, colX - 10, 188);
             _pnlTuyChon.Controls.Add(lstFrame);
             _lst.Dock = DockStyle.Fill;
@@ -143,6 +148,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _btnXoaTC.Location = new Point(colX, 72 + 46);
             _pnlTuyChon.Controls.Add(_btnSuaTC);
             _pnlTuyChon.Controls.Add(_btnXoaTC);
+            // Câu "Món yêu thích": thêm một lần mọi món đang bán còn thiếu
+            _btnThemTatCa = MakeButton("Thêm tất cả", ButtonSkin.Kind.Secondary, 92);
+            _btnThemTatCa.Location = new Point(colX, 72 + 92);
+            _btnThemTatCa.Visible = false;
+            _pnlTuyChon.Controls.Add(_btnThemTatCa);
+            // Nút tự nới theo chữ / DPI → xếp lại cột nút để không tràn mép phải
+            foreach (var b in CotNut) b.SizeChanged += (s, e) => XepCotNut();
+            XepCotNut();
 
             _lblTuLuan.SetBounds(L, 166, W, 56);
             _lblTuLuan.Text = "Câu hỏi tự luận không cần tùy chọn.\nKhách hàng sẽ nhập câu trả lời vào một ô văn bản; bạn xem các câu trả lời trong phần Thống kê.";
@@ -201,6 +214,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _btnThemTC.Click += (s, e) => ThemTuyChon();
             _btnSuaTC.Click += (s, e) => SuaTuyChon();
             _btnXoaTC.Click += (s, e) => XoaTuyChon();
+            _btnThemTatCa.Click += (s, e) => ThemTatCaMon();
             _lst.DoubleClick += (s, e) => SuaTuyChon();
             _lst.SelectedIndexChanged += (s, e) => UpdateUi();
             _lst.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) { e.Handled = true; XoaTuyChon(); } };
@@ -226,11 +240,73 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             _daTaiMon = true;
             var mons = await new MonAnService().GetAllAsync();
             if (IsDisposed) return;
+            _tatCaMon = mons.Where(m => m.TrangThai && !string.IsNullOrWhiteSpace(m.MaMonAn))
+                .OrderBy(m => m.TenMonAn)
+                .Select(m => new MonItem { Ma = m.MaMonAn, Ten = m.TenMonAn ?? m.MaMonAn })
+                .ToList();
+            if (_tatCaMon.Count == 0) _lblError.Text = "Không tải được danh sách món ăn.";
+            UpdateUi();
+        }
+
+        /// <summary>Món đang bán chưa có trong danh sách đáp án (nguồn cho ô chọn món).</summary>
+        private List<MonItem> MonConThieu()
+        {
+            if (_tatCaMon == null) return new List<MonItem>();
+            var daCo = new HashSet<string>(Items.Where(i => i.MaMon != null).Select(i => i.MaMon));
+            return _tatCaMon.Where(m => !daCo.Contains(m.Ma)).ToList();
+        }
+
+        /// <summary>Đổ lại ô chọn món theo danh sách đáp án hiện tại, giữ món đang chọn nếu còn.</summary>
+        private void LamMoiCboMon()
+        {
+            var dangChon = (_cboMon.SelectedItem as MonItem)?.Ma;
+            var conThieu = MonConThieu();
+            _cboMon.BeginUpdate();
             _cboMon.Items.Clear();
-            foreach (var m in mons.Where(m => m.TrangThai && !string.IsNullOrWhiteSpace(m.MaMonAn)).OrderBy(m => m.TenMonAn))
-                _cboMon.Items.Add(new MonItem { Ma = m.MaMonAn, Ten = m.TenMonAn ?? m.MaMonAn });
-            if (_cboMon.Items.Count > 0) _cboMon.SelectedIndex = 0;
-            else _lblError.Text = "Không tải được danh sách món ăn.";
+            foreach (var m in conThieu) _cboMon.Items.Add(m);
+            _cboMon.EndUpdate();
+            if (conThieu.Count > 0)
+            {
+                int idx = conThieu.FindIndex(m => m.Ma == dangChon);
+                _cboMon.SelectedIndex = idx >= 0 ? idx : 0;
+            }
+            _cboMon.Enabled = conThieu.Count > 0;
+        }
+
+        private void ThemTatCaMon()
+        {
+            var conThieu = MonConThieu();
+            if (conThieu.Count == 0) return;
+            foreach (var m in conThieu) _lst.Items.Add(new OptItem { Text = m.Ten, MaMon = m.Ma });
+            _lst.SelectedIndex = _lst.Items.Count - 1;
+            _lblError.Text = "";
+            UpdateUi();
+        }
+
+        private Button[] CotNut { get { return new[] { _btnThemTC, _btnSuaTC, _btnXoaTC, _btnThemTatCa }; } }
+
+        /// <summary>Cột nút bên phải: cùng độ rộng (theo nút chữ dài nhất), canh sát mép phải; ô nhập / danh sách co theo.</summary>
+        private void XepCotNut()
+        {
+            if (_dangXepCot) return;
+            _dangXepCot = true;
+            try
+            {
+                int W = DlgWidth - Gutter * 2;
+                var nuts = CotNut;
+                int colW = nuts.Max(b => b.Width);
+                foreach (var b in nuts) ButtonSkin.EnableAutoFit(b, colW);
+                colW = nuts.Max(b => b.Width);
+                int colX = W - colW;
+                _btnThemTC.Location = new Point(colX, 24);
+                _btnSuaTC.Location = new Point(colX, 72);
+                _btnXoaTC.Location = new Point(colX, 72 + 46);
+                _btnThemTatCa.Location = new Point(colX, 72 + 92);
+                _txtTuyChonMoi.Width = colX - 10;
+                _cboMon.Width = colX - 10;
+                _lstFrame.Width = colX - 10;
+            }
+            finally { _dangXepCot = false; }
         }
 
         private List<OptItem> Items { get { return _lst.Items.Cast<OptItem>().ToList(); } }
@@ -250,6 +326,19 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             int toiThieu = SoToiThieu;
             _lblSoTC.Text = n + (LaCauMon ? " món" : " tùy chọn") + (n < toiThieu ? " · cần ít nhất " + toiThieu : "");
             _lblSoTC.ForeColor = n < toiThieu ? ThemeManager.Amber : ThemeManager.Muted;
+
+            // Câu món: ô chọn chỉ còn món chưa có; hết món thì khóa Thêm / Thêm tất cả
+            _btnThemTatCa.Visible = LaCauMon;
+            _btnThemTC.Enabled = true;
+            if (LaCauMon && _tatCaMon != null)
+            {
+                LamMoiCboMon();
+                bool conMon = _cboMon.Items.Count > 0;
+                _btnThemTC.Enabled = conMon;
+                _btnThemTatCa.Enabled = conMon;
+                if (!conMon && _tatCaMon.Count > 0) _lblSoTC.Text += " · đã có đủ tất cả món đang bán";
+            }
+            else if (LaCauMon) _btnThemTatCa.Enabled = false;
         }
 
         private void DrawOption(object sender, DrawItemEventArgs e)

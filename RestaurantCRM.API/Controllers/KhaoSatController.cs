@@ -532,17 +532,7 @@ namespace RestaurantCRM.API.Controllers
 
                 // Chưa có đáp án cho món này: tự tạo trong câu "Món yêu thích"
                 if (tuyChon == null)
-                {
-                    var ten = (mon.TenMon ?? maMon).Trim();
-                    tuyChon = new TuyChonCauHoi
-                    {
-                        MaTuyChon = $"TC{await SoThichService.SoTuyChonTiepTheoAsync(_service):D2}",
-                        MaCauHoi = cauMon.MaCauHoi,
-                        NoiDungTuyChon = ten.Length > 255 ? ten.Substring(0, 255) : ten,
-                        MaMon = maMon
-                    };
-                    _service.Add(tuyChon);
-                }
+                    tuyChon = await SoThichService.TaoDapAnMonAsync(_service, cauMon, mon);
                 if (phieu == null)
                 {
                     phieu = new PhieuTraLoi

@@ -68,6 +68,55 @@ namespace RestaurantCRM.API.Services
             return max + 1;
         }
 
+        /// <summary>Nội dung đáp án theo tên món (tối đa 255 ký tự như cột noiDungTuyChon).</summary>
+        public static string TenDapAnMon(MonAn mon)
+        {
+            var ten = (mon.TenMon ?? mon.MaMon).Trim();
+            return ten.Length > 255 ? ten.Substring(0, 255) : ten;
+        }
+
+        /// <summary>Tạo (đánh dấu thêm) đáp án gắn món trong câu "Món yêu thích". Người gọi tự SaveChanges.</summary>
+        public static async Task<TuyChonCauHoi> TaoDapAnMonAsync(IRestaurantService service, CauHoiKhaoSat cauMon, MonAn mon)
+        {
+            var tuyChon = new TuyChonCauHoi
+            {
+                MaTuyChon = $"TC{await SoTuyChonTiepTheoAsync(service):D2}",
+                MaCauHoi = cauMon.MaCauHoi,
+                NoiDungTuyChon = TenDapAnMon(mon),
+                MaMon = mon.MaMon
+            };
+            service.Add(tuyChon);
+            return tuyChon;
+        }
+
+        /// <summary>
+        /// Đồng bộ một món vào câu "Món yêu thích" sau khi thêm / sửa món:
+        ///  - đã có đáp án gắn món → đổi nội dung theo tên món;
+        ///  - chưa có và món đang kinh doanh (món mới hoặc bán lại) → tự thêm đáp án.
+        /// Chưa có hồ sơ sở thích / câu món yêu thích thì bỏ qua. Người gọi tự SaveChanges.
+        /// </summary>
+        public static async Task DongBoMonVaoCauYeuThichAsync(IRestaurantService service, MonAn mon)
+        {
+            var bo = await LayBoSoThichAsync(service);
+            var cauMon = bo == null ? null : TimCauMonYeuThich(bo);
+            if (cauMon == null) return;
+
+            var ten = TenDapAnMon(mon);
+            var dapAns = cauMon.TuyChonCauHoi.Where(t => t.MaMon == mon.MaMon).ToList();
+            if (dapAns.Count > 0)
+            {
+                foreach (var t in dapAns.Where(t => t.NoiDungTuyChon != ten))
+                {
+                    t.NoiDungTuyChon = ten;
+                    service.Update(t);
+                }
+            }
+            else if (DangKinhDoanh(mon.TrangThai))
+            {
+                await TaoDapAnMonAsync(service, cauMon, mon);
+            }
+        }
+
         public static string MaPhieuMoi() => "PTL" + Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper();
         public static string MaCauTraLoiMoi() => "CTL" + Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper();
 

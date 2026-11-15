@@ -260,6 +260,10 @@ namespace RestaurantCRM.API.Controllers
                     stt++;
                 }
 
+                // 3. Món mới đang bán: tự thêm vào đáp án câu "Món yêu thích" của hồ sơ sở thích
+                await RestaurantCRM.API.Services.SoThichService.DongBoMonVaoCauYeuThichAsync(_service, monAn);
+                await _service.SaveChangesAsync();
+
                 await transaction.CommitAsync();
 
                 return CreatedAtAction(nameof(GetMonAn), new { id = maMon }, new
@@ -405,6 +409,9 @@ namespace RestaurantCRM.API.Controllers
                         await _service.SaveChangesAsync();
                     }
                 }
+
+                // 3. Đồng bộ câu "Món yêu thích": đổi tên đáp án theo tên món; món bán lại mà chưa có đáp án thì thêm
+                await RestaurantCRM.API.Services.SoThichService.DongBoMonVaoCauYeuThichAsync(_service, monAn);
 
                 await _service.SaveChangesAsync();
                 await transaction.CommitAsync();
