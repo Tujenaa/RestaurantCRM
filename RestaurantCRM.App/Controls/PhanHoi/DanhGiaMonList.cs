@@ -14,7 +14,7 @@ namespace RestaurantCRM.AdminApp.Controls.PhanHoi
     /// </summary>
     public class DanhGiaMonList : Control
     {
-        private const int Pad = 12, Gap = 6, CardPad = 10;
+        private const int Gap = 6, CardPad = 10;
         private const TextFormatFlags Wrap = TextFormatFlags.WordBreak | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.TextBoxControl;
         private const TextFormatFlags One = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis;
 

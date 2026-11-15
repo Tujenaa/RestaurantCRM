@@ -24,7 +24,6 @@ namespace RestaurantCRM.API.Controllers
         // 1. QUẢN LÝ CHƯƠNG TRÌNH KHUYẾN MÃI (CAMPAIGN)
         // ==============================================================
 
-        [HttpGet]
         [HttpGet("ChuongTrinh")]
         public async Task<IActionResult> GetAllChuongTrinh()
         {
@@ -50,79 +49,6 @@ namespace RestaurantCRM.API.Controllers
                 .ToListAsync();
 
             return Ok(list);
-        }
-
-        [HttpGet("ChuongTrinh/{id}")]
-        public async Task<IActionResult> GetChuongTrinhById(string id)
-        {
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var k = await _service.Query<ChuongTrinhKhuyenMai>()
-                .Include(x => x.KmTheoDonHang)
-                .Include(x => x.KmTheoLoai)
-                    .ThenInclude(l => l.MaLoaiMonNavigation)
-                .Include(x => x.KmTheoSp)
-                    .ThenInclude(sp => sp.MaMonNavigation)
-                .FirstOrDefaultAsync(x => x.MaChuongTrinh == id);
-
-            if (k == null) return NotFound("Không tìm thấy chương trình khuyến mãi.");
-
-            var vDon = k.KmTheoDonHang.Select(v => new
-            {
-                MaKmvoucher = v.MaKMDonHang,
-                v.MaVoucher,
-                v.PhanTramGiam,
-                v.TienGiam,
-                v.GiaTriDonToiThieu,
-                v.GiamToiDa,
-                PhamViApDung = "TOAN_DON",
-                MaLoaiMon = (string?)null,
-                TenLoaiMon = (string?)null,
-                MaMon = (string?)null,
-                TenMon = (string?)null
-            });
-
-            var vLoai = k.KmTheoLoai.Where(v => !string.IsNullOrEmpty(v.MaVoucher)).Select(v => new
-            {
-                MaKmvoucher = v.MaKMLoai,
-                v.MaVoucher,
-                v.PhanTramGiam,
-                v.TienGiam,
-                v.GiaTriDonToiThieu,
-                v.GiamToiDa,
-                PhamViApDung = "THEO_LOAI",
-                v.MaLoaiMon,
-                TenLoaiMon = v.MaLoaiMonNavigation != null ? v.MaLoaiMonNavigation.TenLoaiMon : null,
-                MaMon = (string?)null,
-                TenMon = (string?)null
-            });
-
-            var vMon = k.KmTheoSp.Where(v => !string.IsNullOrEmpty(v.MaVoucher)).Select(v => new
-            {
-                MaKmvoucher = v.MaKmsp,
-                v.MaVoucher,
-                v.PhanTramGiam,
-                v.TienGiam,
-                GiaTriDonToiThieu = (double?)null,
-                v.GiamToiDa,
-                PhamViApDung = "THEO_MON",
-                MaLoaiMon = (string?)null,
-                TenLoaiMon = (string?)null,
-                v.MaMon,
-                TenMon = v.MaMonNavigation != null ? v.MaMonNavigation.TenMon : null
-            });
-
-            var allVouchers = vDon.Concat(vLoai).Concat(vMon).ToList();
-
-            return Ok(new
-            {
-                k.MaChuongTrinh,
-                k.TenChuongTrinh,
-                k.NgayBatDau,
-                k.NgayKetThuc,
-                TrangThai = (k.NgayKetThuc != null && today > k.NgayKetThuc) ? "Đã kết thúc" :
-                            (k.NgayBatDau != null && today < k.NgayBatDau) ? "Chưa diễn ra" : "Đang áp dụng",
-                Vouchers = allVouchers
-            });
         }
 
         [HttpPost("ChuongTrinh")]

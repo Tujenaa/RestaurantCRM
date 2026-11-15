@@ -12,7 +12,6 @@ public class DonHangViewModel
     public decimal TongThanhToan { get; set; }
     public string TrangThai { get; set; } = "";
     public string DiaChiGiao { get; set; } = "";
-    public string HinhThucNhan { get; set; } = "Giao hàng tận nơi";
     public string PhuongThucThanhToan { get; set; } = "COD";
     public List<string> TienTrinh { get; set; } = new();
     public int BuocHienTai { get; set; }
@@ -73,14 +72,7 @@ public class DatHangViewModel
     [Required(ErrorMessage = "Vui lòng chọn tỉnh hoặc thành phố.")]
     public string TinhThanh { get; set; } = "TP. Hồ Chí Minh";
 
-    public string HinhThucNhan { get; set; } = "delivery"; // delivery = Giao hàng tận nơi, pickup = Đến lấy tại nhà hàng
-
-    public string ThoiGianNhan { get; set; } = "Giao sớm nhất có thể";
-
     public string PhuongThucThanhToan { get; set; } = "cod"; // cod = Tiền mặt, transfer = Chuyển khoản
-
-    [StringLength(500)]
-    public string? GhiChu { get; set; }
 
     public string? MaVoucher { get; set; }
 }

@@ -30,8 +30,6 @@ namespace RestaurantCRM.AdminApp.Controls
         private static bool s_collapsed;
         private readonly ToolTip _tip = new ToolTip { InitialDelay = 200 };
 
-        public bool IsCollapsed => s_collapsed;
-
         public void UpdateRole(string role)
         {
             if (_role == role) return;

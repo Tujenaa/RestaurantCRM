@@ -306,7 +306,6 @@ public class GioHangService
                 MaLoaiMon = dish.MaLoaiMon,
                 TenMon = dish.TenMon,
                 DuongDanAnh = dish.DuongDanAnh,
-                BieuTuong = dish.BieuTuong,
                 DonGiaGoc = donGiaGoc,
                 DonGiaSauGiam = donGiaSauGiam,
                 DonGia = donGiaSauGiam,
@@ -473,7 +472,6 @@ public class GioHangService
                         return (false, BuildNotApplicableMessage(voucherInfo, subtotal), 0m);
                     }
 
-                    voucherInfo.LastCalculatedDiscount = realDiscount;
                     session.SetString(VoucherKey, savedCode);
                     session.SetString(VoucherInfoKey, JsonSerializer.Serialize(voucherInfo));
 
@@ -497,11 +495,6 @@ public class GioHangService
         session.Remove(VoucherKey);
         session.Remove(VoucherInfoKey);
         return (false, "Không thể kết nối đến hệ thống kiểm tra voucher hoặc mã không hợp lệ.", 0m);
-    }
-
-    public (bool Success, string Message, decimal Discount) ApplyVoucher(ISession session, string? code, string? customerId = null)
-    {
-        return ApplyVoucherAsync(session, code, customerId).GetAwaiter().GetResult();
     }
 
     public async Task<(bool IsValid, string? ErrorMessage)> CheckCartAvailabilityAsync(IReadOnlyList<GioHangItemViewModel> items)

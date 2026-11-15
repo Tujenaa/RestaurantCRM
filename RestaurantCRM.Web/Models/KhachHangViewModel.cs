@@ -16,9 +16,4 @@ public class KhachHangViewModel
     public DateTime? NgaySinh { get; set; }
     public string? GioiTinh { get; set; }
     public string? DiaChi { get; set; }
-    public string? MatKhau { get; set; }
-    public string? MatKhauXacNhan { get; set; }
-    public string? Tab { get; set; }
-    public int SoDonHang { get; set; }
-    public DateTime NgayThamGia { get; set; } = new(2025, 3, 1);
 }

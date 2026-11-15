@@ -173,51 +173,6 @@ namespace RestaurantCRM.API.Controllers
             return Ok(danhGias);
         }
 
-        // GET: api/AdminDanhGia/{id} - Chi tiết một phản hồi kèm hội thoại
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetDanhGia(string id)
-        {
-            var d = await _service.Query<DanhGia>()
-                .Where(x => x.MaDanhGia == id)
-                .Select(x => new
-                {
-                    x.MaDanhGia,
-                    x.MaKhachHang,
-                    x.MaHoaDon,
-                    x.MaMon,
-                    TenMon = x.MaMonNavigation != null ? x.MaMonNavigation.TenMon : (x.MaMon != null ? x.MaMon : "Đánh giá chung đơn hàng"),
-                    x.SoSao,
-                    x.NoiDung,
-                    x.NgayDanhGia,
-                    x.NgayCapNhat,
-                    HienThi = x.TrangThai,
-                    TenKhachHang = x.MaKhachHangNavigation != null ? x.MaKhachHangNavigation.HoTen : "Khách ẩn danh",
-                    SoDienThoai = x.MaKhachHangNavigation != null ? x.MaKhachHangNavigation.SoDienThoai : null,
-                    TongSoTraLoi = x.TraLoiDanhGia.Count,
-                    x.DaXuLy,
-                    TrangThaiXuLy = x.DaXuLy ? "Đã xử lý" : "Chưa xử lý",
-                    ChiTietMon = x.ChiTietDanhGia.OrderBy(ct => ct.SoSao == null).ThenBy(ct => ct.SoSao).Select(ct => new
-                    {
-                        ct.MaMon,
-                        TenMon = ct.MaMonNavigation != null ? ct.MaMonNavigation.TenMon : ct.MaMon,
-                        ct.SoSao,
-                        ct.NoiDung
-                    }).ToList(),
-                    HoiThoai = x.TraLoiDanhGia.OrderBy(t => t.NgayGui).Select(t => new
-                    {
-                        t.MaTraLoi,
-                        t.NoiDung,
-                        t.NgayGui,
-                        t.MaNhanVien,
-                        NguoiTraLoi = t.MaNhanVienNavigation.HoTen
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync();
-
-            if (d == null) return NotFound("Không tìm thấy phản hồi.");
-            return Ok(d);
-        }
-
         // POST: api/AdminDanhGia/{id}/Reply - Nhân viên trả lời phản hồi
         [HttpPost("{id}/Reply")]
         public async Task<IActionResult> CreateReply(string id, ReplyRequest request)
@@ -331,18 +286,6 @@ namespace RestaurantCRM.API.Controllers
             public bool DaXuLy { get; set; }
         }
 
-        // PUT: api/AdminDanhGia/{id}/DaXem - Đánh dấu đã xem => chuyển sang "Đã xử lý" mà không cần trả lời
-        [HttpPut("{id}/DaXem")]
-        public async Task<IActionResult> DanhDauDaXem(string id)
-        {
-            var danhGia = await _service.FindAsync<DanhGia>(id);
-            if (danhGia == null) return NotFound("Không tìm thấy phản hồi.");
-
-            danhGia.DaXuLy = true;
-            await _service.SaveChangesAsync();
-            return Ok(new { message = "Đã đánh dấu phản hồi là đã xử lý." });
-        }
-
         // DELETE: api/AdminDanhGia/{id}/Reply/{maTraLoi} - Xóa một câu trả lời gửi nhầm
         [HttpDelete("{id}/Reply/{maTraLoi}")]
         public async Task<IActionResult> DeleteReply(string id, string maTraLoi)
@@ -373,24 +316,6 @@ namespace RestaurantCRM.API.Controllers
             await _service.SaveChangesAsync();
 
             return Ok(new { message = request.HienThi ? "Đã hiển thị lại phản hồi." : "Đã ẩn phản hồi.", hienThi = request.HienThi });
-        }
-
-        // DELETE: api/AdminDanhGia/{id} - Ẩn phản hồi khỏi website (Bảo lưu dữ liệu lịch sử phản hồi và câu trả lời)
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDanhGia(string id)
-        {
-            var danhGia = await _service.FindAsync<DanhGia>(id);
-            if (danhGia == null)
-            {
-                return NotFound("Không tìm thấy phản hồi.");
-            }
-
-            // Bảo toàn dữ liệu: chỉ chuyển sang ẩn, giống PUT {id}/TrangThai (ẩn không đổi trạng thái xử lý)
-            danhGia.TrangThai = false;
-            _service.Update(danhGia);
-            await _service.SaveChangesAsync();
-
-            return Ok(new { message = "Đã ẩn phản hồi khỏi website thành công (dữ liệu được lưu trữ an toàn trong hệ thống)." });
         }
     }
 }

@@ -285,7 +285,6 @@ public class GioHangController : Controller
 
         // Chỉ xóa các món đã đặt; món chưa chọn vẫn được giữ lại trong giỏ
         _gioHangService.RemoveItems(HttpContext.Session, orderedItems.Select(x => x.MaMon), orderCustomerId);
-        TempData["DonHangMoi"] = result.OrderId;
 
         var isOnline = string.Equals(model.PhuongThucThanhToan, "transfer", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(model.PhuongThucThanhToan, "online", StringComparison.OrdinalIgnoreCase);

@@ -33,39 +33,4 @@ namespace RestaurantCRM.API.DTOs
         public int? SoLuongToiThieu { get; set; } = 1; // Số lượng món tối thiểu
         public bool? ChoPhepCongDon { get; set; } = true;
     }
-
-    // ================= DTOs CHO KHUYẾN MÃI MÓN ĂN (TỰ ĐỘNG) =================
-    public class KmMonCreateRequest
-    {
-        public string MaChuongTrinh { get; set; } = null!;
-        public string MaMon { get; set; } = null!;
-        public string LoaiGiam { get; set; } = "%"; // "%" hoặc "VND"
-        public double GiaTriGiam { get; set; }
-    }
-
-    // Legacy DTOs để không break code cũ nếu có
-    public class KhuyenMaiCreateRequest
-    {
-        public string? TenChuongTrinh { get; set; }
-        public string? LoaiKhuyenMai { get; set; } // Ví dụ: "Voucher", "GiamGiaMon"
-        public string? LoaiGiam { get; set; } // "%" hoặc "VND"
-        public double? GiaTriGiam { get; set; }
-        public double? GiaTriDonToiThieu { get; set; }
-        public double? GiamToiDa { get; set; }
-        public DateOnly? NgayBatDau { get; set; }
-        public DateOnly? NgayKetThuc { get; set; }
-        public int? SoLuong { get; set; }
-        public List<KhuyenMaiMonRequest>? DanhSachMon { get; set; }
-    }
-
-    public class KhuyenMaiMonRequest
-    {
-        public string MaMon { get; set; } = null!;
-        public int? SoLuongApDung { get; set; }
-    }
-
-    public class KhuyenMaiStatusRequest
-    {
-        public string Status { get; set; } = null!;
-    }
 }

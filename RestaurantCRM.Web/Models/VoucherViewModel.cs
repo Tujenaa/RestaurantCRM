@@ -69,15 +69,6 @@ public class VoucherViewModel
         }
     }
 
-    public bool IsEligible(decimal subtotal)
-    {
-        if (GiaTriDonToiThieu.HasValue && GiaTriDonToiThieu.Value > 0)
-        {
-            return subtotal >= (decimal)GiaTriDonToiThieu.Value;
-        }
-        return true;
-    }
-
     /// <summary>
     /// Kiểm tra voucher theo giỏ hàng thực tế (có xét phạm vi món / loại món).
     /// Trả về null nếu dùng được, ngược lại trả lý do ngắn gọn để hiện cho khách.
@@ -152,5 +143,4 @@ public class AppliedVoucherSessionData
     public string? PhamViApDung { get; set; }
     public string? MaLoaiMon { get; set; }
     public string? MaMon { get; set; }
-    public decimal LastCalculatedDiscount { get; set; }
 }

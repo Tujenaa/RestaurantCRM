@@ -260,11 +260,6 @@ namespace RestaurantCRM.API.Controllers
             return giaSauGiam;
         }
 
-        private bool MonAnExists(string id)
-        {
-            return _service.Query<MonAn>().Any(e => e.MaMon == id);
-        }
-
         private static string RemoveDiacritics(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return text;

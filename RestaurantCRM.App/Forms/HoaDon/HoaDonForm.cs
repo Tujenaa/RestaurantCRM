@@ -117,7 +117,6 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
             _side.AttachButton(btnChiTiet, "Chi tiết ↗");
 
             // Click 1 lần: xem ở khung bên phải; double-click: mở hộp thoại chi tiết
-            dgvHoaDon.CellClick -= dgvHoaDon_CellClick;
             dgvHoaDon.SelectionChanged += (s, e) => ShowSide(SelectedHoaDon());
             dgvHoaDon.CellDoubleClick += dgvHoaDon_CellDoubleClick;
             dgvHoaDon.DataBindingComplete += (s, e) => { ApplyPendingSelection(); ColorGridRows(); };
@@ -454,11 +453,6 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon
         private void btnChiTiet_Click(object sender, EventArgs e)
         {
             OpenChiTietDialog();
-        }
-
-        // Designer vẫn gắn sự kiện này; click 1 lần giờ chỉ xem ở khung bên phải (gỡ trong constructor)
-        private void dgvHoaDon_CellClick(object sender, DataGridViewCellEventArgs e)
-        {
         }
 
         // Double-click vào dòng: mở màn hình xử lý đơn

@@ -66,28 +66,6 @@ namespace RestaurantCRM.API.Controllers
             return Ok(result);
         }
 
-        // GET: api/AdminNhanVien/{id} - Lấy chi tiết nhân viên
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetNhanVien(string id)
-        {
-            var n = await _service.Query<NhanVien>()
-                .Include(x => x.MaVaiTroNavigation)
-                .FirstOrDefaultAsync(x => x.MaNhanVien == id);
-
-            if (n == null) return NotFound("Không tìm thấy nhân viên.");
-
-            return Ok(new NhanVienDto
-            {
-                MaNhanVien = n.MaNhanVien,
-                MaVaiTro = n.MaVaiTro,
-                TenVaiTro = n.MaVaiTroNavigation?.TenVaiTro ?? n.MaVaiTro,
-                TenDangNhap = n.TenDangNhap,
-                HoTen = n.HoTen,
-                TrangThai = n.TrangThai,
-                Permissions = PermissionCatalog.ParsePermissions(n.MaVaiTroNavigation?.MoTa, n.MaVaiTroNavigation?.TenVaiTro)
-            });
-        }
-
         // POST: api/AdminNhanVien - Thêm mới tài khoản nhân viên
         [HttpPost]
         public async Task<IActionResult> CreateNhanVien([FromBody] CreateNhanVienRequest request)

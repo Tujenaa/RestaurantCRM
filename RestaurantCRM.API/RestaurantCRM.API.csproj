@@ -13,14 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Services\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\RestaurantCRM.BusinessLogic\RestaurantCRM.BusinessLogic.csproj" />
     <ProjectReference Include="..\RestaurantCRM.DataAccess\RestaurantCRM.DataAccess.csproj" />
   </ItemGroup>
-
-  <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="   " /></VisualStudio></ProjectExtensions>
 
 </Project>

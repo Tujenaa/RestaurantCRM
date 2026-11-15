@@ -49,35 +49,6 @@ public class PhanHoiService
     }
 
     /// <summary>
-    /// Lấy danh sách đánh giá sắp xếp theo thứ tự mới nhất đến cũ nhất.
-    /// </summary>
-    public async Task<IReadOnlyList<PhanHoiItemViewModel>> GetRecentAsync()
-    {
-        try
-        {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var response = await client.GetAsync("/api/AdminDanhGia");
-            if (response.IsSuccessStatusCode)
-            {
-                var apiReviews = await response.Content.ReadFromJsonAsync<List<ApiDanhGiaDto>>();
-                if (apiReviews != null)
-                {
-                    return apiReviews
-                        .OrderByDescending(x => x.NgayDanhGia ?? DateTime.MinValue)
-                        .Select(MapFromApi)
-                        .ToList();
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("Không thể tải đánh giá từ API ({Message}).", ex.Message);
-        }
-
-        return Array.Empty<PhanHoiItemViewModel>();
-    }
-
-    /// <summary>
     /// Lấy danh sách đánh giá và phản hồi của riêng một món ăn (mới nhất đến cũ nhất)
     /// </summary>
     public async Task<IReadOnlyList<PhanHoiItemViewModel>> GetByMonAnAsync(string maMon)

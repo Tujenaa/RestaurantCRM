@@ -409,11 +409,11 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             using (var fVal = new Font(ThemeManager.FontFamily, 9.5F, FontStyle.Bold))
             {
                 int x0 = 18, colW = (r.Width - x0 * 2) / 4;
-                DrawInfo(g, fCap, fVal, "Số điện thoại", Or(_kh.SoDienThoai), x0, 80, colW - 14);
-                DrawInfo(g, fCap, fVal, "Email", Or(_kh.Email), x0 + colW, 80, colW + colW / 2 - 14);
-                DrawInfo(g, fCap, fVal, "Giới tính", Or(_kh.GioiTinh), x0 + colW * 5 / 2, 80, colW / 2 - 10);
-                DrawInfo(g, fCap, fVal, "Ngày sinh", Or(_kh.NgaySinhHienThi), x0 + colW * 3, 80, colW - 14);
-                DrawInfo(g, fCap, fVal, "Địa chỉ", Or(_kh.DiaChi), x0, 122, r.Width - x0 * 2, true);
+                DrawInfo(g, fCap, fVal, "Số điện thoại", DetailSidePanel.Or(_kh.SoDienThoai), x0, 80, colW - 14);
+                DrawInfo(g, fCap, fVal, "Email", DetailSidePanel.Or(_kh.Email), x0 + colW, 80, colW + colW / 2 - 14);
+                DrawInfo(g, fCap, fVal, "Giới tính", DetailSidePanel.Or(_kh.GioiTinh), x0 + colW * 5 / 2, 80, colW / 2 - 10);
+                DrawInfo(g, fCap, fVal, "Ngày sinh", DetailSidePanel.Or(_kh.NgaySinhHienThi), x0 + colW * 3, 80, colW - 14);
+                DrawInfo(g, fCap, fVal, "Địa chỉ", DetailSidePanel.Or(_kh.DiaChi), x0, 122, r.Width - x0 * 2, true);
             }
         }
 
@@ -431,6 +431,5 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             TextRenderer.DrawText(g, value, fVal, new Rectangle(x, y + 18, w, 20), ThemeManager.Ink, flags);
         }
 
-        private static string Or(string s) { return string.IsNullOrWhiteSpace(s) ? "—" : s; }
     }
 }

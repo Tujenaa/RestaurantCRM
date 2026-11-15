@@ -5,7 +5,7 @@ using RestaurantCRM.Web.Services;
 
 namespace RestaurantCRM.Web.Controllers;
 
-public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoiService, DonHangService donHangService) : Controller
+public class PhanHoiController(PhanHoiService phanHoiService, DonHangService donHangService) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -41,7 +41,9 @@ public class PhanHoiController(MonAnService monAnService, PhanHoiService phanHoi
         var doneOrders = await donHangService.GetOrdersForCustomerAsync(customerId, "done");
         if (doneOrders.Count == 0)
         {
-            TempData["Loi"] = "Bạn chỉ có thể đánh giá sau khi đã có đơn hàng giao hoàn tất tại nhà hàng.";
+            // Trang Đơn hàng không có khung TempData["Loi"] → báo bằng toast chung của layout
+            TempData["ThongBao"] = "Bạn chỉ có thể đánh giá sau khi đã có đơn hàng giao hoàn tất tại nhà hàng.";
+            TempData["IsError"] = true;
             return RedirectToAction("Index", "DonHang");
         }
 

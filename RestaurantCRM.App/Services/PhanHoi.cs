@@ -16,8 +16,6 @@ namespace RestaurantCRM.AdminApp.Services
         public const string LocDaTraLoi = "DaTraLoi";
         public const string LocDaAn = "DaAn";
 
-        private static string E(string s) { return Uri.EscapeDataString(s ?? ""); }
-
         /// <param name="trangThai">TatCa | ChuaTraLoi | DaTraLoi | DaAn (mặc định TatCa).</param>
         public async Task<List<PhanHoiDto>> GetAllAsync(string search = null, string trangThai = LocTatCa, int? soSao = null)
         {
@@ -31,11 +29,6 @@ namespace RestaurantCRM.AdminApp.Services
         {
             return await GetAsync<List<PhanTichDanhGiaMonDto>>(Base + "/PhanTichMon")
                 ?? new List<PhanTichDanhGiaMonDto>();
-        }
-
-        public Task<PhanHoiDto> GetByIdAsync(string maDanhGia)
-        {
-            return GetAsync<PhanHoiDto>(Base + "/" + E(maDanhGia));
         }
 
         /// <summary>Gửi câu trả lời với tư cách nhân viên đang đăng nhập.</summary>
@@ -64,21 +57,10 @@ namespace RestaurantCRM.AdminApp.Services
                 daXuLy ? "Đã chuyển phản hồi sang Đã xử lý." : "Đã chuyển phản hồi về Chưa xử lý.");
         }
 
-        /// <summary>Đánh dấu "Đã xem" => phản hồi chuyển sang Đã xử lý mà không cần trả lời.</summary>
-        public Task<ApiResult> MarkSeenAsync(string maDanhGia)
-        {
-            return PutAsync(Base + "/" + E(maDanhGia) + "/DaXem", new { }, "Đã chuyển phản hồi sang Đã xử lý.");
-        }
-
         public Task<ApiResult> SetVisibleAsync(string maDanhGia, bool hienThi)
         {
             return PutAsync(Base + "/" + E(maDanhGia) + "/TrangThai", new PhanHoiTrangThaiRequest { HienThi = hienThi },
                 hienThi ? "Đã hiển thị lại phản hồi." : "Đã ẩn phản hồi.");
-        }
-
-        public Task<ApiResult> DeleteAsync(string maDanhGia)
-        {
-            return DeleteAsync(Base + "/" + E(maDanhGia), "Đã xóa phản hồi.");
         }
     }
 }

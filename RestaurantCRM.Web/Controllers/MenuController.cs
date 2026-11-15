@@ -109,16 +109,13 @@ public class MenuController : Controller
         var viewModel = new MonAnDanhSachViewModel
         {
             MonAns = pagedDishes,
-            MonNoiBat = availableDishes.Take(4).ToList(),
             DanhSachLoaiMon = categories,
-            LoaiMons = categories.Select(c => c.TenLoaiMon).ToList(),
             LoaiDangChon = loai,
             TenLoaiHienTai = tenLoaiHienTai,
             TuKhoa = q,
             SortDangChon = sort,
             MucGiaDangChon = mucGia,
             ChiKhuyenMai = khuyenMai,
-            MenuMode = true,
             CurrentPage = page,
             PageSize = pageSize,
             TotalDishes = totalDishes,
@@ -129,8 +126,6 @@ public class MenuController : Controller
     }
 
     // Cùng quy tắc tìm kiếm với app (khớp đầu chữ, gõ có dấu thì khớp đúng dấu) – xem SearchHelper
-    internal static string RemoveDiacritics(string? text) => SearchHelper.RemoveDiacritics(text);
-
     internal static bool MatchesSearch(string? query, params string?[] fields) => SearchHelper.MatchesSearch(query, fields);
 
     [HttpGet("ChiTiet/{id}")]

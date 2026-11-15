@@ -23,9 +23,8 @@ public class TaiKhoanController : Controller
     }
 
     [HttpGet]
-    public IActionResult DangNhap([FromQuery] string? returnUrl = null)
+    public IActionResult DangNhap()
     {
-        ViewBag.ReturnUrl = returnUrl;
         return View("Login");
     }
 
@@ -55,8 +54,7 @@ public class TaiKhoanController : Controller
             SoDienThoai = soDienThoai,
             Email = email,
             GioiTinh = "Không muốn tiết lộ",
-            DiaChi = "Chưa cập nhật",
-            SoDonHang = 0
+            DiaChi = "Chưa cập nhật"
         };
 
         try

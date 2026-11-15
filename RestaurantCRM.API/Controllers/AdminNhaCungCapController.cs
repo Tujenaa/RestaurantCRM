@@ -36,18 +36,6 @@ namespace RestaurantCRM.API.Controllers
             return Ok(nhaCungCaps);
         }
 
-        // GET: api/AdminNhaCungCap/{id} - Lấy chi tiết nhà cung cấp
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
-        {
-            var nhaCungCap = await _service.FindAsync<NhaCungCap>(id);
-            if (nhaCungCap == null)
-            {
-                return NotFound("Không tìm thấy nhà cung cấp.");
-            }
-            return Ok(nhaCungCap);
-        }
-
         // POST: api/AdminNhaCungCap - Thêm nhà cung cấp mới
         [HttpPost]
         public async Task<IActionResult> Create(NhaCungCap nhaCungCap)
@@ -63,7 +51,7 @@ namespace RestaurantCRM.API.Controllers
             _service.Add(nhaCungCap);
             await _service.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = nhaCungCap.MaNhaCungCap }, nhaCungCap);
+            return StatusCode(201, nhaCungCap);
         }
 
         // PUT: api/AdminNhaCungCap/{id} - Cập nhật nhà cung cấp

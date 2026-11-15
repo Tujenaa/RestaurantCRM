@@ -11,8 +11,6 @@ namespace RestaurantCRM.AdminApp.Services
     {
         private const string Base = "api/AdminKhaoSat";
 
-        private static string E(string s) { return Uri.EscapeDataString(s ?? ""); }
-
         // ── Khảo sát ─────────────────────────────────────────────────────────
 
         /// <param name="trangThai">"Draft" / "Open" / "Closed" hoặc null để lấy tất cả.</param>
@@ -73,22 +71,10 @@ namespace RestaurantCRM.AdminApp.Services
 
         // ── Tùy chọn ─────────────────────────────────────────────────────────
 
-        /// <param name="maMon">Món gắn với đáp án (chỉ câu "Món yêu thích"), null với đáp án thường.</param>
-        public Task<ApiResult> AddTuyChonAsync(string maKhaoSat, string maCauHoi, string noiDung, string maMon = null)
-        {
-            return PostAsync(Base + "/" + E(maKhaoSat) + "/CauHoi/" + E(maCauHoi) + "/TuyChon",
-                new TuyChonUpsertRequest { NoiDungTuyChon = noiDung, MaMon = maMon }, "Thêm tùy chọn thành công.");
-        }
-
         public Task<ApiResult> UpdateTuyChonAsync(string maKhaoSat, string maCauHoi, string maTuyChon, string noiDung)
         {
             return PutAsync(Base + "/" + E(maKhaoSat) + "/CauHoi/" + E(maCauHoi) + "/TuyChon/" + E(maTuyChon),
                 new TuyChonUpsertRequest { NoiDungTuyChon = noiDung }, "Cập nhật tùy chọn thành công.");
-        }
-
-        public Task<ApiResult> DeleteTuyChonAsync(string maKhaoSat, string maCauHoi, string maTuyChon)
-        {
-            return DeleteAsync(Base + "/" + E(maKhaoSat) + "/CauHoi/" + E(maCauHoi) + "/TuyChon/" + E(maTuyChon), "Đã xóa tùy chọn.");
         }
 
         // ── Đối tượng khảo sát ───────────────────────────────────────────────

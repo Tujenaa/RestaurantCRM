@@ -268,32 +268,6 @@ namespace RestaurantCRM.AdminApp.Forms
 
         // ─────────────── Các control tự vẽ của thanh công cụ ───────────────
 
-        /// <summary>Nút tròn xanh "+" (giống nút nổi trong mẫu).</summary>
-        private class RoundAddButton : Control
-        {
-            private bool _hover;
-            public RoundAddButton()
-            {
-                Cursor = Cursors.Hand;
-                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
-                BackColor = Color.Transparent;
-            }
-            protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
-            protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                var g = e.Graphics;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                int d = Math.Min(Width, Height) - 6;
-                var rc = new Rectangle((Width - d) / 2, 1, d, d);
-                using (var br = new SolidBrush(Color.FromArgb(40, ThemeManager.Primary))) g.FillEllipse(br, rc.X - 1, rc.Y + 3, rc.Width + 2, rc.Height + 2);
-                using (var br = new SolidBrush(_hover ? ThemeManager.PrimaryDark : ThemeManager.Primary)) g.FillEllipse(br, rc);
-                using (var f = ThemeManager.Icon(11F))
-                    TextRenderer.DrawText(g, ThemeManager.Glyph.Add, f, rc, Color.White,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-            }
-        }
-
         /// <summary>Chip lọc theo cột: trắng viền mảnh; khi đang lọc thì nền xanh nhạt + dấu ✕.</summary>
         private class ChipButton : Control
         {
@@ -487,11 +461,6 @@ namespace RestaurantCRM.AdminApp.Forms
                 b.MouseLeave += (s, e) => b.BackColor = ThemeManager.Paper;
             }
             return b;
-        }
-
-        private void ApplySearch()
-        {
-            ApplyAdvancedFilter();
         }
 
         private void ApplyAdvancedFilter()

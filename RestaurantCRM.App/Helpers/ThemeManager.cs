@@ -28,9 +28,7 @@ namespace RestaurantCRM.AdminApp.Helpers
         public static readonly Color Violet = ColorTranslator.FromHtml("#7B6CF6");
         public static readonly Color VioletSoft = ColorTranslator.FromHtml("#F2F0FE");
         public static readonly Color Teal = ColorTranslator.FromHtml("#14A99A");
-        public static readonly Color TealSoft = ColorTranslator.FromHtml("#E8F8F6");
         public static readonly Color Sky = ColorTranslator.FromHtml("#3BA4F5");
-        public static readonly Color SkySoft = ColorTranslator.FromHtml("#EAF5FE");
 
         // ===== Trạng thái (dùng cho pill) =====
         public static readonly Color Green = ColorTranslator.FromHtml("#2DB37A");
@@ -40,19 +38,9 @@ namespace RestaurantCRM.AdminApp.Helpers
         public static readonly Color Amber = ColorTranslator.FromHtml("#E99A2C");
         public static readonly Color AmberSoft = ColorTranslator.FromHtml("#FEF4E4");
 
-        // ===== Sidebar (tối) =====
-        public static readonly Color SidebarBg = ColorTranslator.FromHtml("#0F172A");
-        public static readonly Color SidebarBg2 = ColorTranslator.FromHtml("#1E1B4B");
-        public static readonly Color SidebarText = ColorTranslator.FromHtml("#CBD5E1");
-        public static readonly Color SidebarMuted = ColorTranslator.FromHtml("#64748B");
-        public static readonly Color SidebarHover = ColorTranslator.FromHtml("#1E293B");
-        public static readonly Color SidebarActive = ColorTranslator.FromHtml("#312E81");
-
         // ===== Tên cũ (tương thích ngược) =====
         public static readonly Color Blue = Primary;
-        public static readonly Color Blue2 = PrimarySoft;
         public static readonly Color Purple = Violet;
-        public static readonly Color Purple2 = VioletSoft;
 
         // ===== Font =====
         public const string FontFamily = "Segoe UI";
@@ -240,7 +228,6 @@ namespace RestaurantCRM.AdminApp.Helpers
                 (int)(a.B + (b.B - a.B) * t));
         }
         public static Color Darken(Color c, float amount) { return Blend(c, Color.Black, amount); }
-        public static Color Lighten(Color c, float amount) { return Blend(c, Color.White, amount); }
 
         public static GraphicsPath RoundedRect(Rectangle r, int radius)
         {

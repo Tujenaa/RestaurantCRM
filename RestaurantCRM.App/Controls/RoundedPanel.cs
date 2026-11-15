@@ -6,14 +6,12 @@ using RestaurantCRM.AdminApp.Helpers;
 
 namespace RestaurantCRM.AdminApp.Controls
 {
-    /// <summary>Panel bo góc, khử răng cưa, hỗ trợ nền gradient và viền mảnh.</summary>
+    /// <summary>Panel bo góc, khử răng cưa, nền màu đơn và viền mảnh.</summary>
     public class RoundedPanel : Panel
     {
         private int _radius = 14;
         private Color _fillColor = ThemeManager.Paper;
         private Color _borderColor = ThemeManager.Line;
-        private Color _gradientEnd = Color.Empty;
-        private float _gradientAngle = 0f;
         private int _borderWidth = 1;
 
         public RoundedPanel()
@@ -26,8 +24,6 @@ namespace RestaurantCRM.AdminApp.Controls
         [DefaultValue(14)] public int Radius { get { return _radius; } set { _radius = value; Invalidate(); } }
         public Color FillColor { get { return _fillColor; } set { _fillColor = value; Invalidate(); } }
         public Color BorderColor { get { return _borderColor; } set { _borderColor = value; Invalidate(); } }
-        public Color GradientEnd { get { return _gradientEnd; } set { _gradientEnd = value; Invalidate(); } }
-        public float GradientAngle { get { return _gradientAngle; } set { _gradientAngle = value; Invalidate(); } }
         [DefaultValue(1)] public int BorderWidth { get { return _borderWidth; } set { _borderWidth = value; Invalidate(); } }
 
         private int _shadow = 0;
@@ -54,15 +50,7 @@ namespace RestaurantCRM.AdminApp.Controls
 
             using (var path = ThemeManager.RoundedRect(rect, _radius))
             {
-                if (_gradientEnd != Color.Empty)
-                {
-                    using (var brush = new LinearGradientBrush(rect, _fillColor, _gradientEnd, _gradientAngle))
-                        g.FillPath(brush, path);
-                }
-                else
-                {
-                    using (var brush = new SolidBrush(_fillColor)) g.FillPath(brush, path);
-                }
+                using (var brush = new SolidBrush(_fillColor)) g.FillPath(brush, path);
                 if (_borderWidth > 0 && _borderColor != Color.Empty && _borderColor != Color.Transparent)
                 {
                     using (var pen = new Pen(_borderColor, _borderWidth)) g.DrawPath(pen, path);

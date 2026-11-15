@@ -335,7 +335,6 @@ namespace RestaurantCRM.API.Controllers
                 }
 
                 // Bước 4: Áp dụng Tầng 1 - Khuyến mãi / Voucher theo Món ăn hoặc Loại món (không cộng dồn, bảo vệ giá vốn BOM)
-                bool isPosOrder = !string.IsNullOrEmpty(resolvedMaNhanVien);
                 foreach (var item in request.Items)
                 {
                     var monAn = monAnCache[item.MaMon];

@@ -86,33 +86,18 @@
                 <input asp-for="DatHang.DiaChiGiao" id="diaChiGiaoInput" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required />
                 <span asp-validation-for="DatHang.DiaChiGiao" class="text-danger" style="font-size:12px;"></span>
             </div>
-            <div class="two">
-                <div class="field">
-                    <label asp-for="DatHang.TinhThanh">Tỉnh / Thành phố *</label>
-                    <select asp-for="DatHang.TinhThanh" required>
-                        <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                        <option value="Hà Nội">Hà Nội</option>
-                        <option value="Đà Nẵng">Đà Nẵng</option>
-                        <option value="Cần Thơ">Cần Thơ</option>
-                        <option value="Bình Dương">Bình Dương</option>
-                        <option value="Đồng Nai">Đồng Nai</option>
-                        <option value="Khác">Tỉnh thành khác</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label asp-for="DatHang.ThoiGianNhan">Thời gian giao món</label>
-                    <select asp-for="DatHang.ThoiGianNhan">
-                        <option>Giao sớm nhất có thể (30 - 45 phút)</option>
-                        <option>Giao trong vòng 1 - 2 giờ tới</option>
-                        <option>Hẹn giờ cụ thể (ghi chú thêm bên dưới)</option>
-                    </select>
-                </div>
+            <div class="field">
+                <label asp-for="DatHang.TinhThanh">Tỉnh / Thành phố *</label>
+                <select asp-for="DatHang.TinhThanh" required>
+                    <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                    <option value="Hà Nội">Hà Nội</option>
+                    <option value="Đà Nẵng">Đà Nẵng</option>
+                    <option value="Cần Thơ">Cần Thơ</option>
+                    <option value="Bình Dương">Bình Dương</option>
+                    <option value="Đồng Nai">Đồng Nai</option>
+                    <option value="Khác">Tỉnh thành khác</option>
+                </select>
             </div>
-        </div>
-
-        <div class="field">
-            <label asp-for="DatHang.GhiChu">Ghi chú cho bếp & tài xế</label>
-            <textarea asp-for="DatHang.GhiChu" rows="2" placeholder="Ví dụ: Nước lẩu ít cay, gọi trước khi giao 5 phút, xin thêm sốt chấm..."></textarea>
         </div>
 
         <h3 style="margin-top:24px;">Phương thức thanh toán</h3>

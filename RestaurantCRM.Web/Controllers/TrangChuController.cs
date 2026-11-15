@@ -38,10 +38,8 @@ public class TrangChuController : Controller
             MonAns = all,
             MonNoiBat = monNoiBat,
             DanhSachLoaiMon = categories,
-            LoaiMons = categories.Select(c => c.TenLoaiMon).ToList(),
             LoaiDangChon = loai,
-            TuKhoa = q,
-            MenuMode = false
+            TuKhoa = q
         });
     }
 }

@@ -27,56 +27,6 @@ namespace RestaurantCRM.API.Controllers
             !ks.DoiTuongKhaoSat.Any() ||
             (!string.IsNullOrEmpty(maKhachHang) && ks.DoiTuongKhaoSat.Any(d => d.MaKhachHang == maKhachHang));
 
-        // GET: api/KhaoSat/HienTai?maKhachHang= - Lấy bài khảo sát đang được mở (mà khách được tham gia)
-        [HttpGet("HienTai")]
-        public async Task<IActionResult> GetKhaoSatHienTai([FromQuery] string? maKhachHang)
-        {
-            var dsMo = await _service.Query<KhaoSat>().ChiKhaoSatThuong()
-                .Include(k => k.CauHoiKhaoSat)
-                    .ThenInclude(c => c.TuyChonCauHoi)
-                .Include(k => k.DoiTuongKhaoSat)
-                .Where(k => k.TrangThai == "Open")
-                .OrderByDescending(k => k.NgayTao)
-                .ToListAsync();
-
-            // Bỏ qua khảo sát khách đã nộp phiếu, chỉ trả khảo sát khách chưa làm
-            var daLam = new HashSet<string>();
-            if (!string.IsNullOrEmpty(maKhachHang))
-            {
-                daLam = (await _service.Query<PhieuTraLoi>()
-                        .Where(p => p.MaKhachHang == maKhachHang && p.MaKhaoSat != null)
-                        .Select(p => p.MaKhaoSat!)
-                        .ToListAsync())
-                    .ToHashSet();
-            }
-            var khaoSat = dsMo.FirstOrDefault(k => DuocThamGia(k, maKhachHang) && !daLam.Contains(k.MaKhaoSat));
-
-            if (khaoSat == null)
-            {
-                return NotFound("Không có khảo sát nào đang hoạt động.");
-            }
-
-            var result = new
-            {
-                khaoSat.MaKhaoSat,
-                khaoSat.TieuDe,
-                CauHoi = AdminKhaoSatService.SapXep(khaoSat.CauHoiKhaoSat, c => c.MaCauHoi).Select(c => new
-                {
-                    c.MaCauHoi,
-                    c.NoiDungCauHoi,
-                    c.LoaiCauHoi,
-                    c.ChonNhieu,
-                    TuyChon = AdminKhaoSatService.SapXep(c.TuyChonCauHoi, t => t.MaTuyChon).Select(t => new
-                    {
-                        t.MaTuyChon,
-                        t.NoiDungTuyChon
-                    })
-                })
-            };
-
-            return Ok(result);
-        }
-
         // POST: api/KhaoSat/TraLoi - Nhận phiếu trả lời khảo sát từ khách hàng
         [HttpPost("TraLoi")]
         public async Task<IActionResult> SubmitTraLoi(SurveyAnswerRequest request)

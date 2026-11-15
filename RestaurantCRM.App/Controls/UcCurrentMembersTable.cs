@@ -100,10 +100,4 @@ namespace RestaurantCRM.AdminApp.Controls
             }
         }
     }
-
-    /// <summary>Tên cũ — giữ để tương thích.</summary>
-    public class UcTopMonAnTable : UcTopList { }
-
-    /// <summary>Tên cũ — giữ để tương thích.</summary>
-    public class UcCurrentMembersTable : UcTopList { }
 }

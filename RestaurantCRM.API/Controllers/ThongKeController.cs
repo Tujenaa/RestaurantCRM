@@ -21,33 +21,6 @@ namespace RestaurantCRM.API.Controllers
             _service = service;
         }
 
-        // GET: api/ThongKe/TongQuan - Lấy thống kê tổng quan trong ngày (Đơn, Doanh thu, Khách hàng)
-        [HttpGet("TongQuan")]
-        public async Task<IActionResult> GetTongQuan()
-        {
-            var startOfDay = DateTime.Today;
-            var endOfDay = startOfDay.AddDays(1);
-
-            var hoaDonsHomNay = await _service.Query<HoaDon>()
-                .Where(d => d.NgayDat >= startOfDay && d.NgayDat < endOfDay)
-                .ToListAsync();
-
-            var tongDon = hoaDonsHomNay.Count;
-            
-            var doanhThuHomNay = hoaDonsHomNay
-                .Where(d => d.TrangThai == "Completed" || d.TrangThai == "Hoàn thành")
-                .Sum(d => d.TongThanhToan ?? 0);
-
-            var tongKhachHang = await _service.Query<KhachHang>().CountAsync();
-
-            return Ok(new
-            {
-                TongDonHomNay = tongDon,
-                DoanhThuHomNay = doanhThuHomNay,
-                TongKhachHang = tongKhachHang
-            });
-        }
-
         // GET: api/ThongKe/DoanhThuTheoThang - Lấy dữ liệu vẽ biểu đồ doanh thu theo năm
         [HttpGet("DoanhThuTheoThang")]
         public async Task<IActionResult> GetDoanhThuTheoThang([FromQuery] int nam)
@@ -170,149 +143,6 @@ namespace RestaurantCRM.API.Controllers
                 TongDanhGia = tongDanhGia,
                 SoDanhGiaSuaSauPhanHoi = soDanhGiaSuaSauPhanHoi,
                 KhaoSatDangMo = khaoSatDangMo
-            });
-        }
-
-        // GET: api/ThongKe/BaoCaoDoanhThu - Báo cáo doanh thu & lợi nhuận chuyên sâu theo khoảng ngày
-        [HttpGet("BaoCaoDoanhThu")]
-        public async Task<IActionResult> GetBaoCaoDoanhThu([FromQuery] DateTime? tuNgay, [FromQuery] DateTime? denNgay)
-        {
-            var startDate = (tuNgay ?? DateTime.Today.AddDays(-6)).Date;
-            var endDate = (denNgay ?? DateTime.Today).Date.AddDays(1); // Lấy đến hết ngày kết thúc
-
-            // Lấy tất cả hóa đơn trong khoảng thời gian kèm chi tiết món và định lượng
-            var hoaDons = await _service.Query<HoaDon>()
-                .Include(h => h.ChiTietHoaDon)
-                    .ThenInclude(ct => ct.MaMonNavigation)
-                        .ThenInclude(m => m.DinhLuong)
-                            .ThenInclude(dl => dl.MaNguyenLieuNavigation)
-                .Where(h => h.NgayDat >= startDate && h.NgayDat < endDate)
-                .OrderBy(h => h.NgayDat)
-                .ToListAsync();
-
-            var donHoanThanh = hoaDons.Where(h => h.TrangThai == "Completed" || h.TrangThai == "Hoàn thành").ToList();
-            var donHuy = hoaDons.Where(h => h.TrangThai == "Cancelled" || h.TrangThai == "Đã hủy" || h.TrangThai == "Cancel").ToList();
-            var donDangXuLy = hoaDons.Where(h => !donHoanThanh.Contains(h) && !donHuy.Contains(h)).ToList();
-
-            // 1. Doanh thu thực thu
-            double tongDoanhThu = donHoanThanh.Sum(h => h.TongThanhToan ?? 0);
-
-            // 2. Tiền hàng niêm yết (Gross Sales)
-            double tongTienHangGoc = donHoanThanh.Sum(h => h.ChiTietHoaDon.Sum(ct => ((ct.DonGiaGoc ?? ct.DonGiaSauGiam ?? 0) * (ct.SoLuong ?? 1))));
-
-            // 3. Tiền giảm giá theo món & Voucher
-            double tongTienGiamMon = donHoanThanh.Sum(h => h.ChiTietHoaDon.Sum(ct => ct.TienGiamMon ?? 0));
-            double tongTienGiamVoucher = donHoanThanh.Sum(h => h.TienGiamVoucher ?? 0);
-            double tongGiamGia = tongTienGiamMon + tongTienGiamVoucher;
-
-            // 4. Tính giá vốn nguyên liệu (COGS) của các đơn hoàn tất
-            double tongGiaVon = 0;
-            var monAnStats = new Dictionary<string, (string TenMon, int SoLuong, double DoanhThu, double GiaVon)>();
-
-            foreach (var hd in donHoanThanh)
-            {
-                foreach (var ct in hd.ChiTietHoaDon)
-                {
-                    var mon = ct.MaMonNavigation;
-                    int sl = ct.SoLuong ?? 1;
-                    double doanhThuMon = ct.ThanhTien ?? ((ct.DonGiaSauGiam ?? ct.DonGiaGoc ?? 0) * sl);
-
-                    double giaVon1Mon = 0;
-                    if (mon != null && mon.DinhLuong.Any())
-                    {
-                        giaVon1Mon = mon.DinhLuong.Sum(dl => (double)dl.SoLuongCan * (dl.MaNguyenLieuNavigation?.GiaNhapGanNhat ?? 0));
-                    }
-                    double giaVonChiTiet = giaVon1Mon * sl;
-                    tongGiaVon += giaVonChiTiet;
-
-                    string maMon = ct.MaMon ?? "Khac";
-                    string tenMon = ct.TenMon ?? (mon?.TenMon ?? "Không xác định");
-                    if (monAnStats.ContainsKey(maMon))
-                    {
-                        var cur = monAnStats[maMon];
-                        monAnStats[maMon] = (tenMon, cur.SoLuong + sl, cur.DoanhThu + doanhThuMon, cur.GiaVon + giaVonChiTiet);
-                    }
-                    else
-                    {
-                        monAnStats[maMon] = (tenMon, sl, doanhThuMon, giaVonChiTiet);
-                    }
-                }
-            }
-
-            double loiNhuanGop = tongDoanhThu - tongGiaVon;
-            double tyLeLoiNhuan = tongDoanhThu > 0 ? (loiNhuanGop / tongDoanhThu) * 100 : 0;
-            int soDonHoanThanh = donHoanThanh.Count;
-            double giaTriDonTb = soDonHoanThanh > 0 ? tongDoanhThu / soDonHoanThanh : 0;
-
-            // 5. Thống kê theo ngày để vẽ biểu đồ
-            var daysCount = (endDate.Date - startDate.Date).Days;
-            var doanhThuTheoNgay = new List<object>();
-
-            for (int i = 0; i < daysCount; i++)
-            {
-                var curDate = startDate.AddDays(i);
-                var nextDate = curDate.AddDays(1);
-                var donTrongNgay = donHoanThanh.Where(h => h.NgayDat >= curDate && h.NgayDat < nextDate).ToList();
-
-                double dtNgay = donTrongNgay.Sum(h => h.TongThanhToan ?? 0);
-                int soDonNgay = donTrongNgay.Count;
-
-                string thuStr = curDate.DayOfWeek switch
-                {
-                    DayOfWeek.Monday => "T2",
-                    DayOfWeek.Tuesday => "T3",
-                    DayOfWeek.Wednesday => "T4",
-                    DayOfWeek.Thursday => "T5",
-                    DayOfWeek.Friday => "T6",
-                    DayOfWeek.Saturday => "T7",
-                    DayOfWeek.Sunday => "CN",
-                    _ => ""
-                };
-
-                doanhThuTheoNgay.Add(new
-                {
-                    Ngay = curDate.ToString("yyyy-MM-dd"),
-                    NgayHienThi = curDate.ToString("dd/MM"),
-                    Thu = thuStr,
-                    DoanhThu = dtNgay,
-                    SoDon = soDonNgay
-                });
-            }
-
-            // 6. Top món sinh lời & doanh thu cao nhất
-            var topMon = monAnStats.Values
-                .OrderByDescending(x => x.DoanhThu)
-                .Take(10)
-                .Select(x => new
-                {
-                    x.TenMon,
-                    x.SoLuong,
-                    x.DoanhThu,
-                    x.GiaVon,
-                    LoiNhuan = x.DoanhThu - x.GiaVon,
-                    TyLeLai = x.DoanhThu > 0 ? Math.Round(((x.DoanhThu - x.GiaVon) / x.DoanhThu) * 100, 1) : 0
-                })
-                .ToList();
-
-            return Ok(new
-            {
-                TuNgay = startDate.ToString("yyyy-MM-dd"),
-                DenNgay = endDate.AddDays(-1).ToString("yyyy-MM-dd"),
-                TongDoanhThu = Math.Round(tongDoanhThu, 0),
-                TongTienHangGoc = Math.Round(tongTienHangGoc, 0),
-                TongTienGiamMon = Math.Round(tongTienGiamMon, 0),
-                TongTienGiamVoucher = Math.Round(tongTienGiamVoucher, 0),
-                TongGiamGia = Math.Round(tongGiamGia, 0),
-                TongGiaVon = Math.Round(tongGiaVon, 0),
-                LoiNhuanGop = Math.Round(loiNhuanGop, 0),
-                TyLeLoiNhuan = Math.Round(tyLeLoiNhuan, 1),
-                TongDonHang = hoaDons.Count,
-                DonHoanThanh = soDonHoanThanh,
-                DonHuy = donHuy.Count,
-                DonDangXuLy = donDangXuLy.Count,
-                GiaTriDonTb = Math.Round(giaTriDonTb, 0),
-                DoanhThuTheoNgay = doanhThuTheoNgay,
-                TopMonBanChay = topMon
             });
         }
 
@@ -652,8 +482,6 @@ namespace RestaurantCRM.API.Controllers
                 double mNam2 = ctMon.Where(c => c.MaHoaDonNavigation.NgayDat.Value.Year == nam2)
                                     .Sum(c => (c.ThanhTien ?? ((c.DonGiaSauGiam ?? c.DonGiaGoc ?? 0) * (c.SoLuong ?? 1))) * ((c.MaHoaDonNavigation != null && (c.MaHoaDonNavigation.TongTienHang ?? 0) > 0 && c.MaHoaDonNavigation.TongThanhToan.HasValue) ? (c.MaHoaDonNavigation.TongThanhToan.Value / c.MaHoaDonNavigation.TongTienHang.Value) : 1.0));
                 double mNam3 = mTongNamNay;
-
-                double tongDoanhThuMon = mNam1 + mNam2 + mNam3;
 
                 bangMonAn.Add(new DongMonAnDoanhThuDto
                 {

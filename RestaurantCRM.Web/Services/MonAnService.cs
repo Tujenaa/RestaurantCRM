@@ -179,8 +179,6 @@ public class MonAnService
             loaiTen = name;
         }
 
-        string icon = GuessIcon(dto.TenMon, loaiTen);
-        string tone = GuessTone(loaiTen);
         string tag = dto.SoLuong <= 0 ? "Tạm hết" : "";
 
         string img = dto.DuongDanAnh ?? "";
@@ -205,42 +203,12 @@ public class MonAnService
             DonGiaSauGiam = (decimal)(dto.DonGiaSauGiam ?? dto.DonGia ?? 0),
             SoLuong = dto.SoLuong ?? 0,
             TrangThai = dto.TrangThai ?? "InStock",
-            BieuTuong = icon,
             Tag = tag,
-            Tone = tone,
             DiemDanhGiaTrungBinh = 0,
             SoLuongDanhGia = 0
         };
     }
 
-    private static string GuessIcon(string? name, string? category)
-    {
-        var text = $"{name} {category}".ToLower();
-        if (text.Contains("bò")) return "🥩";
-        if (text.Contains("heo")) return "🥓";
-        if (text.Contains("gà")) return "🍗";
-        if (text.Contains("tôm")) return "🍤";
-        if (text.Contains("hải sản")) return "🐙";
-        if (text.Contains("lẩu")) return "🥘";
-        if (text.Contains("rau")) return "🥬";
-        if (text.Contains("nấm")) return "🍄";
-        if (text.Contains("mì") || text.Contains("bún")) return "🍜";
-        if (text.Contains("trà") || text.Contains("nước") || text.Contains("cam")) return "🍹";
-        if (text.Contains("chè") || text.Contains("tráng miệng")) return "🍧";
-        return "🍲";
-    }
-
-    private static string GuessTone(string? category)
-    {
-        var text = (category ?? "").ToLower();
-        if (text.Contains("thịt") || text.Contains("nước lẩu")) return "red";
-        if (text.Contains("rau") || text.Contains("nấm")) return "green";
-        return "gold";
-    }
-
-    // Synchronous helpers for compatibility with GioHangService
-    public IReadOnlyList<MonAnViewModel> GetAll() => _cachedDishes.Where(d => d.ConHang).ToList();
-    public IReadOnlyList<string> GetCategories() => _cachedCategoryMap.Values.ToList();
     public MonAnViewModel? Find(string id)
     {
         var item = _cachedDishes.FirstOrDefault(x => string.Equals(x.MaMon, id, StringComparison.OrdinalIgnoreCase));

@@ -49,8 +49,6 @@ public class PhanHoiViewModel
 {
     // Ngữ cảnh đơn hàng và món ăn
     public string? MaDonHang { get; set; }
-    public string? MaMon { get; set; }
-    public string CheDoDanhGia { get; set; } = "DonHang";
 
     [Range(1, 5, ErrorMessage = "Vui lòng chọn từ 1 đến 5 sao.")]
     public int DanhGia { get; set; } = 5;
@@ -64,7 +62,6 @@ public class PhanHoiViewModel
     // Dữ liệu hiển thị
     public DonHangViewModel? DonHangHienTai { get; set; }
     public IReadOnlyList<DonHangViewModel> DonHangs { get; set; } = Array.Empty<DonHangViewModel>();
-    public IReadOnlyList<MonAnViewModel> MonAns { get; set; } = Array.Empty<MonAnViewModel>();
     public IReadOnlyList<PhanHoiItemViewModel> PhanHois { get; set; } = Array.Empty<PhanHoiItemViewModel>();
 }
 

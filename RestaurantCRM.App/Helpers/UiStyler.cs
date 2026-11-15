@@ -17,6 +17,14 @@ namespace RestaurantCRM.AdminApp.Helpers
     /// </summary>
     public static class UiStyler
     {
+        /// <summary>Bật DoubleBuffered (thuộc tính protected) cho control, ví dụ DataGridView, để cuộn không nháy.</summary>
+        public static void EnableDoubleBuffered(Control control)
+        {
+            typeof(Control).InvokeMember("DoubleBuffered",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
+                null, control, new object[] { true });
+        }
+
         public const string NoStyleTag = "nostyle";
 
         private static readonly ConditionalWeakTable<Control, object> _styled = new ConditionalWeakTable<Control, object>();
@@ -487,14 +495,6 @@ namespace RestaurantCRM.AdminApp.Helpers
                 }
             }
             return sb.ToString().Normalize(NormalizationForm.FormC);
-        }
-
-        /// <summary>
-        /// Kiểm tra một trường văn bản có khớp từ khóa hay không (cùng quy tắc với <see cref="MatchesSearch"/>).
-        /// </summary>
-        public static bool ContainsUnaccented(string source, string query)
-        {
-            return MatchesSearch(query, source);
         }
 
         /// <summary>

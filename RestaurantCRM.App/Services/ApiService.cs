@@ -60,6 +60,9 @@ namespace RestaurantCRM.AdminApp.Services
             Http = http ?? _shared.Value;
         }
 
+        /// <summary>Mã hóa một đoạn đường dẫn / tham số truy vấn (null coi như chuỗi rỗng).</summary>
+        protected static string E(string s) { return Uri.EscapeDataString(s ?? ""); }
+
         protected async Task<T> GetAsync<T>(string url)
         {
             HttpResponseMessage res;

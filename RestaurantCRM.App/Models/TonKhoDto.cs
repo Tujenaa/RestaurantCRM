@@ -50,12 +50,4 @@ namespace RestaurantCRM.AdminApp.Models {
             CanhBao == "HetHang" ? "Hết hàng" :
             CanhBao == "SapHet" ? "Sắp hết hàng" : "Còn hàng";
     }
-
-    public class DieuChinhTonKhoDto {
-        [JsonPropertyName("soLuongMoi")]
-        public decimal SoLuongMoi { get; set; }
-
-        [JsonPropertyName("ghiChu")]
-        public string GhiChu { get; set; }
-    }
 }

@@ -133,7 +133,7 @@
            toast((result && result.message) ? result.message : 'Đã thêm món vào giỏ hàng.');
            if (result && result.cartCount !== undefined) {
                const count = Number(result.cartCount) || 0;
-               document.querySelectorAll('.cart-count, .count, #headerCartCount').forEach(el => {
+               document.querySelectorAll('.cart-count, #headerCartCount').forEach(el => {
                    el.textContent = count;
                    el.classList.toggle('is-empty', count === 0);
                    el.classList.remove('bump');
@@ -150,7 +150,7 @@
            toast('Có lỗi xảy ra, không thể thêm vào giỏ.');
         }
       } catch (e) {
-        toast('Đã thêm món vào giỏ hàng.'); // Fallback if redirect happened
+        toast('Không kết nối được máy chủ, vui lòng thử lại.', true);
       }
     }
   });

@@ -44,24 +44,4 @@ namespace RestaurantCRM.API.DTOs
         public double GiaNhapGanNhat { get; set; }
         public double ThanhTienGiaVon => (double)SoLuongCan * GiaNhapGanNhat;
     }
-
-    public class MonAnResponseDto
-    {
-        public string MaMon { get; set; } = null!;
-        public string TenMon { get; set; } = null!;
-        public string? MaLoaiMon { get; set; }
-        public string? TenLoaiMon { get; set; }
-        public double DonGia { get; set; }
-        public string? MoTa { get; set; }
-        public string? DuongDanAnh { get; set; }
-        public string TrangThai { get; set; } = "InStock";
-
-        // Giá vốn ước tính dựa trên định lượng và giá nhập gần nhất
-        public double GiaVonUocTinh { get; set; }
-
-        // Số suất ăn tối đa có thể làm từ tồn kho nguyên liệu hiện có
-        public int SoSuatKhaDung { get; set; }
-
-        public List<DinhLuongDetailDto> DinhLuong { get; set; } = new();
-    }
 }

@@ -14,9 +14,7 @@ public class MonAnViewModel
     public decimal DonGiaSauGiam { get; set; }
     public int SoLuong { get; set; } = 0;
     public string TrangThai { get; set; } = "InStock"; // InStock, OutOfStock, Active, Discontinued
-    public string BieuTuong { get; set; } = "🍲";
     public string Tag { get; set; } = "";
-    public string Tone { get; set; } = "";
     public double DiemDanhGiaTrungBinh { get; set; } = 0;
     public int SoLuongDanhGia { get; set; } = 0;
 
@@ -61,14 +59,12 @@ public class MonAnDanhSachViewModel
     public IReadOnlyList<MonAnViewModel> MonAns { get; set; } = Array.Empty<MonAnViewModel>();
     public IReadOnlyList<MonAnViewModel> MonNoiBat { get; set; } = Array.Empty<MonAnViewModel>();
     public IReadOnlyList<LoaiMonItemViewModel> DanhSachLoaiMon { get; set; } = Array.Empty<LoaiMonItemViewModel>();
-    public IReadOnlyList<string> LoaiMons { get; set; } = Array.Empty<string>();
     public string? LoaiDangChon { get; set; }
     public string? TenLoaiHienTai { get; set; }
     public string? TuKhoa { get; set; }
     public string? SortDangChon { get; set; }
     public string? MucGiaDangChon { get; set; }
     public bool ChiKhuyenMai { get; set; }
-    public bool MenuMode { get; set; }
 
     // Thuộc tính phân trang (Pagination)
     public int CurrentPage { get; set; } = 1;

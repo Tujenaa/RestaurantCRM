@@ -23,16 +23,6 @@ namespace RestaurantCRM.AdminApp.Services.KhuyenMai
         public MarginHealth Health { get; set; }
         public string WarningText { get; set; }
         public string LaiGopDisplayText { get; set; }
-
-        public static VoucherMarginResult CreateEmpty()
-        {
-            return new VoucherMarginResult
-            {
-                Health = MarginHealth.Empty,
-                WarningText = "Vui lòng chọn món ăn để xem dự tính giá sau giảm.",
-                LaiGopDisplayText = "0 đ"
-            };
-        }
     }
 
     /// <summary>

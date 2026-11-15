@@ -9,7 +9,6 @@ public class GioHangItemViewModel
     public string? MaLoaiMon { get; set; }
     public string TenMon { get; set; } = "";
     public string DuongDanAnh { get; set; } = "/images/default.jpg";
-    public string BieuTuong { get; set; } = "🍲";
 
     // Đơn giá gốc chưa giảm
     public decimal DonGiaGoc { get; set; }
@@ -77,7 +76,6 @@ public class GioHangViewModel
 public class GioHangPageViewModel
 {
     public GioHangViewModel GioHang { get; set; } = new();
-    public DatHangViewModel DatHang { get; set; } = new();
     public List<VoucherViewModel> AvailableVouchers { get; set; } = new();
 }
 

@@ -626,24 +626,5 @@ namespace RestaurantCRM.AdminApp.Controls
             // Độ rộng tính theo chữ thật và tự cập nhật khi font / chữ / DPI thay đổi
             ButtonSkin.EnableAutoFit(b, min);
         }
-
-        /// <summary>Kiểu chung cho một form nhập liệu / hộp thoại.</summary>
-        public static void StyleDialog(Form dlg, Label title = null, Label subtitle = null, Button primary = null, Button cancel = null)
-        {
-            dlg.BackColor = Color.White;
-            if (title != null)
-            {
-                title.Text = SkinUtil.CleanText(title.Text);
-                title.Font = new Font(ThemeManager.FontFamily, 14F, FontStyle.Bold);
-                title.ForeColor = ThemeManager.Ink; title.BackColor = Color.Transparent; title.UseMnemonic = false;
-            }
-            if (subtitle != null)
-            {
-                subtitle.Font = new Font(ThemeManager.FontFamily, 8.5F);
-                subtitle.ForeColor = ThemeManager.Muted; subtitle.BackColor = Color.Transparent;
-            }
-            if (primary != null) ButtonSkin.SetKind(primary, ButtonSkin.Kind.Primary);
-            if (cancel != null) ButtonSkin.SetKind(cancel, ButtonSkin.Kind.Secondary);
-        }
     }
 }

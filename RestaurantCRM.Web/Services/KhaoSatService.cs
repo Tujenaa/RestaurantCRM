@@ -10,15 +10,6 @@ public class KhaoSatService(IHttpClientFactory factory)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public async Task<KhaoSatViewModel?> GetHienTaiAsync()
-    {
-        var client = factory.CreateClient("ApiClient");
-        var res = await client.GetAsync("/api/KhaoSat/HienTai");
-        if (res.StatusCode == HttpStatusCode.NotFound) return null;
-        res.EnsureSuccessStatusCode();
-        return await res.Content.ReadFromJsonAsync<KhaoSatViewModel>(Json);
-    }
-
     public async Task<(bool Ok, string Message)> GuiAsync(string maKhachHang, GuiPhieuTraLoiViewModel model)
     {
         var body = new SurveyAnswerRequest

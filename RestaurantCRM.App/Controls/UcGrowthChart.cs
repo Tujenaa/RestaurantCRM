@@ -235,7 +235,4 @@ namespace RestaurantCRM.AdminApp.Controls
             }
         }
     }
-
-    /// <summary>Tên cũ — giữ để tương thích.</summary>
-    public class UcGrowthChart : UcLineChart { }
 }

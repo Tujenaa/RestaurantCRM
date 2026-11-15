@@ -28,9 +28,6 @@ namespace RestaurantCRM.API.Services
         public static Task<string?> LayMaBoSoThichAsync(IRestaurantService service) =>
             service.Query<KhaoSat>().Where(k => k.LaSoThich).Select(k => (string?)k.MaKhaoSat).FirstOrDefaultAsync();
 
-        public static Task<bool> LaBoSoThichAsync(IRestaurantService service, string maKhaoSat) =>
-            service.Query<KhaoSat>().AnyAsync(k => k.MaKhaoSat == maKhaoSat && k.LaSoThich);
-
         /// <summary>Câu "Món yêu thích" (R4): trắc nghiệm, chọn nhiều, có đáp án gắn món.</summary>
         public static bool LaCauMonYeuThich(CauHoiKhaoSat c) =>
             AdminKhaoSatService.ChuanHoaLoai(c.LoaiCauHoi) == AdminKhaoSatService.TracNghiem
@@ -71,7 +68,7 @@ namespace RestaurantCRM.API.Services
         /// <summary>Nội dung đáp án theo tên món (tối đa 255 ký tự như cột noiDungTuyChon).</summary>
         public static string TenDapAnMon(MonAn mon)
         {
-            var ten = (mon.TenMon ?? mon.MaMon).Trim();
+            var ten = (mon.TenMon ?? mon.MaMon ?? "").Trim();
             return ten.Length > 255 ? ten.Substring(0, 255) : ten;
         }
 

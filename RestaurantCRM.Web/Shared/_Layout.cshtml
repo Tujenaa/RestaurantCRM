@@ -54,7 +54,7 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     @if (TempData["ThongBao"] is string notifyMsg)
     {
-        var isErr = TempData["IsError"] as bool? == true || string.Equals(TempData["ThongBaoLoai"]?.ToString(), "error", StringComparison.OrdinalIgnoreCase);
+        var isErr = TempData["IsError"] as bool? == true;
         <script>
             (function() {
                 var msg = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(notifyMsg));

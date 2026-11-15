@@ -604,7 +604,6 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
         private const string LocCanXuLy = "Cần xử lý";
         private const string LocSuaSauPhanHoi = "Khách sửa sau phản hồi";
 
-        private static bool Has(string s, string q) { return s != null && s.ToLowerInvariant().Contains(q); }
         private static string Sao(int n) { n = Math.Max(0, Math.Min(5, n)); return new string('★', n) + new string('☆', 5 - n); }
 
         /// <summary>Ngày có nằm trong khoảng của bộ lọc Thời gian không (1 Hôm nay, 2 7 ngày qua, 3 30 ngày qua, 4 Tháng này).</summary>

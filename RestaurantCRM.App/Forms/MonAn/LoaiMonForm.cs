@@ -204,66 +204,6 @@ namespace RestaurantCRM.AdminApp.Forms.MonAn
             }
         }
 
-        private string GeneratePrefixFromTen(string tenLoaiMon)
-        {
-            if (string.IsNullOrWhiteSpace(tenLoaiMon)) return "LM";
-            string unaccented = RemoveAccents(tenLoaiMon).Trim().ToUpper();
-            var words = unaccented.Split(new[] { ' ', ',', '-', '_', '&', '+', '/', '\\', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length == 0) return "LM";
-
-            if (words.Length == 1)
-            {
-                return words[0].Length > 6 ? words[0].Substring(0, 6) : words[0];
-            }
-
-            if (words.Contains("LAU")) return "LAU";
-
-            if (words.Length == 2)
-            {
-                string combined = string.Concat(words);
-                if (combined == "DOUONG") return "DU";
-                if (combined == "TRANGMIENG") return "TM";
-                if (combined == "KHAIVI") return "KV";
-            }
-
-            string first = words[0];
-            if (first.Length >= 2 && first.Length <= 5) return first;
-
-            string acronym = string.Concat(words.Select(w => w[0]));
-            if (acronym.Length >= 2 && acronym.Length <= 5) return acronym;
-
-            return words[0].Length > 5 ? words[0].Substring(0, 5) : words[0];
-        }
-
-        private string RemoveAccents(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return string.Empty;
-            string[] vietnameseSigns = new string[]
-            {
-                "aAeEoOuUiIdDyY",
-                "áàạảãâấầậẩẫăắằặẳẵ",
-                "ÁÀẠẢÃÂẤẦẬẨẪĂẮẰẶẲẴ",
-                "éèẹẻẽêếềệểễ",
-                "ÉÈẸẺẼÊẾỀỆỂỄ",
-                "óòọỏõôốồộổỗơớờợởỡ",
-                "ÓÒỌỎÕÔỐỒỘỔỖƠỚỜỢỞỠ",
-                "úùụủũưứừựửữ",
-                "ÚÙỤỦŨƯỨỪỰỬỮ",
-                "íìịỉĩ",
-                "ÍÌỊỈĨ",
-                "đ",
-                "Đ",
-                "ýỳỵỷỹ",
-                "ÝỲỴỶỸ"
-            };
-            for (int i = 1; i < vietnameseSigns.Length; i++)
-            {
-                for (int j = 0; j < vietnameseSigns[i].Length; j++)
-                    text = text.Replace(vietnameseSigns[i][j], vietnameseSigns[0][i - 1]);
-            }
-            return text;
-        }
-
         private void dgvLoaiMon_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvLoaiMon.SelectedRows.Count > 0)

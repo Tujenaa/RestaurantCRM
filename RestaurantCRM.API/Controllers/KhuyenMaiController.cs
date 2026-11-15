@@ -623,60 +623,6 @@ namespace RestaurantCRM.API.Controllers
 
         }
 
-
-
-        // GET: api/KhuyenMai/GiamGiaMon - Lấy danh sách khuyến mãi món hợp lệ
-
-        [HttpGet("GiamGiaMon")]
-
-        public async Task<IActionResult> GetGiamGiaMon()
-
-        {
-
-            var today = DateOnly.FromDateTime(DateTime.Now);
-
-
-
-            var giamGiaMons = await _service.Query<KmTheoSp>()
-
-                .Include(k => k.MaChuongTrinhNavigation)
-
-                .Where(k => k.MaChuongTrinhNavigation != null 
-
-                         && ((k.PhanTramGiam.HasValue && k.PhanTramGiam > 0) || (k.TienGiam.HasValue && k.TienGiam > 0))
-
-                         && (k.MaChuongTrinhNavigation.NgayBatDau == null || k.MaChuongTrinhNavigation.NgayBatDau <= today)
-
-                         && (k.MaChuongTrinhNavigation.NgayKetThuc == null || k.MaChuongTrinhNavigation.NgayKetThuc >= today))
-
-                .Select(k => new
-
-                {
-
-                    k.MaKmsp,
-
-                    TenChuongTrinh = k.MaChuongTrinhNavigation.TenChuongTrinh,
-
-                    k.PhanTramGiam,
-
-                    k.TienGiam,
-
-                    k.MaChuongTrinhNavigation.NgayBatDau,
-
-                    k.MaChuongTrinhNavigation.NgayKetThuc,
-
-                    k.MaMon
-
-                })
-
-                .ToListAsync();
-
-
-
-            return Ok(giamGiaMons);
-
-        }
-
     }
 
 }

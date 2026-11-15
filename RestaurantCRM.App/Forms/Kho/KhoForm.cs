@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
@@ -42,7 +41,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
 
             // 1. Chống chớp giật màn hình (Flickering): Kích hoạt DoubleBuffering cho Form và DataGridView
             this.DoubleBuffered = true;
-            EnableDoubleBuffered(dgvKho);
+            UiStyler.EnableDoubleBuffered(dgvKho);
 
             // 2. Tắt AutoGenerateColumns và liên kết qua BindingSource
             dgvKho.AutoGenerateColumns = false;
@@ -107,13 +106,6 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
 
             contextMenu.Items.AddRange(new ToolStripItem[] { mnuQuanLyNL, mnuSua });
             dgvKho.ContextMenuStrip = contextMenu;
-        }
-
-        private static void EnableDoubleBuffered(Control control)
-        {
-            typeof(Control).InvokeMember("DoubleBuffered",
-                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
-                null, control, new object[] { true });
         }
 
         private async void KhoForm_Load(object sender, EventArgs e)

@@ -34,53 +34,7 @@ namespace RestaurantCRM.BusinessLogic.Services
             return text;
         }
 
-        public static string GeneratePrefixFromTenLoaiMon(string tenLoaiMon)
-        {
-            if (string.IsNullOrWhiteSpace(tenLoaiMon)) return "LM";
-
-            string unaccented = RemoveVietnameseAccents(tenLoaiMon).Trim().ToUpper();
-            var words = unaccented.Split(new[] { ' ', ',', '-', '_', '&', '+', '/', '\\', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length == 0) return "LM";
-
-            // Nếu 1 từ (ví dụ "Lẩu" -> "LAU", "Rau" -> "RAU", "Mì" -> "MI")
-            if (words.Length == 1)
-            {
-                return words[0].Length > 6 ? words[0].Substring(0, 6) : words[0];
-            }
-
-            // Nếu có chứa từ "LAU" -> ưu tiên "LAU"
-            if (words.Contains("LAU"))
-            {
-                return "LAU";
-            }
-
-            // Nếu 2 từ ngắn thông dụng: "DO UONG" -> "DU", "TRANG MIENG" -> "TM", "KHAI VI" -> "KV"
-            if (words.Length == 2)
-            {
-                string combined = string.Concat(words);
-                if (combined == "DOUONG") return "DU";
-                if (combined == "TRANGMIENG") return "TM";
-                if (combined == "KHAIVI") return "KV";
-            }
-
-            // Nếu từ đầu tiên có ý nghĩa và độ dài 2-5 ký tự (ví dụ: "THIT", "VIEN", "RAU", "MI")
-            string first = words[0];
-            if (first.Length >= 2 && first.Length <= 5)
-            {
-                return first;
-            }
-
-            // Rút gọn chữ cái đầu
-            string acronym = string.Concat(words.Select(w => w[0]));
-            if (acronym.Length >= 2 && acronym.Length <= 5)
-            {
-                return acronym;
-            }
-
-            return words[0].Length > 5 ? words[0].Substring(0, 5) : words[0];
-        }
-
-        public static async Task<string> GenerateMaLoaiMonAsync(IRestaurantService service, string? tenLoaiMon = null)
+        public static async Task<string> GenerateMaLoaiMonAsync(IRestaurantService service)
         {
             const string prefix = "LM";
             var codes = await service.ListAsync<LoaiMon, string>(
@@ -105,12 +59,7 @@ namespace RestaurantCRM.BusinessLogic.Services
             return $"{prefix}{nextNum:D3}";
         }
 
-        public static Task<string> GenerateMaLoaiMonAsync(IRestaurantService service)
-        {
-            return GenerateMaLoaiMonAsync(service, null);
-        }
-
-        public static async Task<string> GenerateMaMonAnAsync(IRestaurantService service, string? maLoaiMon = null)
+        public static async Task<string> GenerateMaMonAnAsync(IRestaurantService service)
         {
             const string prefix = "MA";
 
@@ -134,11 +83,6 @@ namespace RestaurantCRM.BusinessLogic.Services
                 nextNum++;
             }
             return $"{prefix}{nextNum:D3}";
-        }
-
-        public static Task<string> GenerateMaMonAnAsync(IRestaurantService service)
-        {
-            return GenerateMaMonAnAsync(service, null);
         }
 
         public static async Task<string> GenerateMaNhaCungCapAsync(IRestaurantService service)

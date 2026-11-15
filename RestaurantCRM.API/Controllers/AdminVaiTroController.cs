@@ -91,37 +91,6 @@ namespace RestaurantCRM.API.Controllers
             return Ok(result);
         }
 
-        // GET: api/AdminVaiTro/{id} - Chi tiết vai trò
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetVaiTro(string id)
-        {
-            var v = await _service.Query<VaiTro>()
-                .Include(x => x.NhanVien)
-                .Include(x => x.VaiTroQuyen)
-                .FirstOrDefaultAsync(x => x.MaVaiTro == id);
-
-            if (v == null) return NotFound("Không tìm thấy vai trò.");
-
-            List<string> perms;
-            if (v.VaiTroQuyen != null && v.VaiTroQuyen.Count > 0)
-            {
-                perms = v.VaiTroQuyen.Select(x => x.MaQuyen).Distinct().ToList();
-            }
-            else
-            {
-                perms = PermissionCatalog.ParsePermissions(v.MoTa, v.TenVaiTro);
-            }
-
-            return Ok(new VaiTroDto
-            {
-                MaVaiTro = v.MaVaiTro,
-                TenVaiTro = v.TenVaiTro,
-                MoTa = v.MoTa,
-                SoLuongNhanVien = v.NhanVien.Count,
-                Permissions = perms
-            });
-        }
-
         // POST: api/AdminVaiTro - Tạo vai trò mới
         [HttpPost]
         public async Task<IActionResult> CreateVaiTro([FromBody] SaveVaiTroRequest request)

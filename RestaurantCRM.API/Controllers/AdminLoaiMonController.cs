@@ -23,27 +23,13 @@ namespace RestaurantCRM.API.Controllers
             return await _service.Query<LoaiMon>().OrderByDescending(l => l.MaLoaiMon).ToListAsync();
         }
 
-        // GET: api/AdminLoaiMon/{id} - Lấy thông tin chi tiết một loại món.
-        [HttpGet("{id}")]
-        public async Task<ActionResult<LoaiMon>> GetLoaiMon(string id)
-        {
-            var loaiMon = await _service.FindAsync<LoaiMon>(id);
-
-            if (loaiMon == null)
-            {
-                return NotFound("Không tìm thấy loại món.");
-            }
-
-            return loaiMon;
-        }
-
         // POST: api/AdminLoaiMon - Thêm một loại món mới.
         [HttpPost]
         public async Task<ActionResult<LoaiMon>> PostLoaiMon(LoaiMon loaiMon)
         {
             if (string.IsNullOrWhiteSpace(loaiMon.MaLoaiMon))
             {
-                loaiMon.MaLoaiMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaLoaiMonAsync(_service, loaiMon.TenLoaiMon);
+                loaiMon.MaLoaiMon = await RestaurantCRM.BusinessLogic.Services.CodeGenerator.GenerateMaLoaiMonAsync(_service);
             }
             else
             {
@@ -57,7 +43,7 @@ namespace RestaurantCRM.API.Controllers
             _service.Add(loaiMon);
             await _service.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetLoaiMon), new { id = loaiMon.MaLoaiMon }, loaiMon);
+            return StatusCode(201, loaiMon);
         }
 
         // PUT: api/AdminLoaiMon/{id} - Cập nhật thông tin loại món.

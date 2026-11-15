@@ -98,39 +98,5 @@
 @section Scripts {
     <partial name="/Shared/_ValidationScriptsPartial.cshtml" />
     <script src="~/js/cham-mon.js" asp-append-version="true"></script>
-    <script>
-        const ratingLabels = {
-            1: 'Rất không hài lòng',
-            2: 'Chưa hài lòng',
-            3: 'Bình thường',
-            4: 'Hài lòng',
-            5: 'Rất hài lòng'
-        };
-
-        const stars = document.querySelectorAll('#ratingStars button');
-        const hiddenInput = document.getElementById('DanhGia');
-        const label = document.getElementById('ratingLabel');
-
-        stars.forEach(star => {
-            star.addEventListener('click', function () {
-                const val = parseInt(this.getAttribute('data-rating'));
-                hiddenInput.value = val;
-                if (label && ratingLabels[val]) {
-                    label.textContent = ratingLabels[val];
-                }
-                stars.forEach((s, idx) => {
-                    if (idx < val) {
-                        s.style.color = '#f59e0b';
-                        s.classList.add('on');
-                    } else {
-                        s.style.color = '#d1d5db';
-                        s.classList.remove('on');
-                    }
-                });
-                if (window.ChamMon) window.ChamMon.dongBoTheoDiemChung(val);
-            });
-        });
-
-    </script>
 }
 

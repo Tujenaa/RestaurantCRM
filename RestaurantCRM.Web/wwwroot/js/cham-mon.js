@@ -2,7 +2,7 @@
 // - Món chưa chấm riêng: hiển thị mờ, sao đi theo sao chung, nhãn "Theo điểm chung"; khi lưu là "không đánh giá ".
 // - Bấm sao của món hoặc gõ nhận xét: món thành "chấm riêng", thôi đồng bộ theo sao chung.
 // - Nút "Dùng điểm chung": bỏ chấm riêng, xóa nhận xét, sao quay lại theo sao chung.
-// Trang gọi window.ChamMon.dongBoTheoDiemChung(soSao) mỗi khi khách đổi sao chung.
+// Sao chung (#ratingStars) gọi window.ChamMon.dongBoTheoDiemChung(soSao) mỗi khi khách đổi sao (khối cuối file).
 (function () {
     'use strict';
 
@@ -89,4 +89,39 @@
     } else {
         khoiTao();
     }
+})();
+
+// Sao chung của đơn (#ratingStars) trên trang Đánh giá và Chỉnh sửa đánh giá.
+(function () {
+    const ratingLabels = {
+        1: 'Rất không hài lòng',
+        2: 'Chưa hài lòng',
+        3: 'Bình thường',
+        4: 'Hài lòng',
+        5: 'Rất hài lòng'
+    };
+
+    const stars = document.querySelectorAll('#ratingStars button');
+    const hiddenInput = document.getElementById('DanhGia');
+    const label = document.getElementById('ratingLabel');
+
+    stars.forEach(star => {
+        star.addEventListener('click', function () {
+            const val = parseInt(this.getAttribute('data-rating'));
+            hiddenInput.value = val;
+            if (label && ratingLabels[val]) {
+                label.textContent = ratingLabels[val];
+            }
+            stars.forEach((s, idx) => {
+                if (idx < val) {
+                    s.style.color = '#f59e0b';
+                    s.classList.add('on');
+                } else {
+                    s.style.color = '#d1d5db';
+                    s.classList.remove('on');
+                }
+            });
+            if (window.ChamMon) window.ChamMon.dongBoTheoDiemChung(val);
+        });
+    });
 })();

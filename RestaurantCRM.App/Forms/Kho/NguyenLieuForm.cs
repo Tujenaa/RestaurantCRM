@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Helpers;
@@ -39,7 +38,7 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
             _scopes.Changed += (s, e) => FilterData();
 
             this.DoubleBuffered = true;
-            EnableDoubleBuffered(dgvNguyenLieu);
+            UiStyler.EnableDoubleBuffered(dgvNguyenLieu);
 
             dgvNguyenLieu.AutoGenerateColumns = false;
             dgvNguyenLieu.AllowUserToResizeColumns = true;
@@ -105,13 +104,6 @@ namespace RestaurantCRM.AdminApp.Forms.Kho
                 SecondaryActions = new[] { btnSua },
                 DangerActions = new[] { btnNgungNhap, _btnXoa }
             });
-        }
-
-        private static void EnableDoubleBuffered(Control control)
-        {
-            typeof(Control).InvokeMember("DoubleBuffered",
-                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
-                null, control, new object[] { true });
         }
 
         private void SetupContextMenu()
