@@ -17,7 +17,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
     /// Chọn đối tượng khảo sát:
     ///  - Tất cả khách hàng (khảo sát công khai, không lưu dòng DOI_TUONG_KHAO_SAT nào);
     ///  - Theo tiêu chí (giới tính, độ tuổi, sở thích khách tự khai) — áp dụng tại thời điểm lưu thành danh sách khách cụ thể.
-    ///    Các tiêu chí kết hợp AND; tiêu chí sở thích khớp khi khách đã chọn ít nhất 1 trong các đáp án được tick;
+    ///    Các tiêu chí kết hợp AND; tiêu chí sở thích: trong cùng câu khớp 1 trong các đáp án được tick (OR),
+    ///    giữa các câu có tick thì phải khớp tất cả (AND);
     ///  - Chọn bất kỳ khách hàng nào.
     /// Khách đã trả lời khảo sát luôn nằm trong danh sách và không bỏ chọn được.
     /// </summary>
@@ -49,7 +50,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private readonly Button _btnApDung;
 
         // Tiêu chí "Theo sở thích" (hồ sơ sở thích)
-        private readonly CheckBox _chkSoThich = new CheckBox { Text = "Theo sở thích (khớp ≥ 1 đáp án):", AutoSize = true };
+        private readonly CheckBox _chkSoThich = new CheckBox { Text = "Theo sở thích:", AutoSize = true };
         private readonly Button _btnChonSoThich;
         private readonly Label _lblSoThich = new Label { AutoSize = false, AutoEllipsis = true, UseMnemonic = false };
         private readonly List<DapAnSoThich> _dapAnSoThich = new List<DapAnSoThich>();
@@ -59,7 +60,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
         private class DapAnSoThich
         {
             public string MaTuyChon;
-            public string Nhan;   // "Câu hỏi: Đáp án"
+            public string MaCauHoi;
+            public string CauHoi;  // nội dung câu hỏi
+            public string DapAn;   // nội dung đáp án
+            public string Nhan;    // "Câu hỏi: Đáp án"
             public override string ToString() { return Nhan; }
         }
 
@@ -266,7 +270,14 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                     {
                         if (!c.LaTracNghiem) continue;
                         foreach (var t in c.TuyChon)
-                            _dapAnSoThich.Add(new DapAnSoThich { MaTuyChon = t.MaTuyChon, Nhan = c.NoiDungCauHoi + ": " + t.NoiDungTuyChon });
+                            _dapAnSoThich.Add(new DapAnSoThich
+                            {
+                                MaTuyChon = t.MaTuyChon,
+                                MaCauHoi = c.MaCauHoi,
+                                CauHoi = c.NoiDungCauHoi,
+                                DapAn = t.NoiDungTuyChon,
+                                Nhan = c.NoiDungCauHoi + ": " + t.NoiDungTuyChon
+                            });
                     }
                     foreach (var k in tKhach.Result)
                         if (!string.IsNullOrEmpty(k.MaKhachHang))
@@ -281,7 +292,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             if (IsDisposed) return;
             bool co = _dapAnSoThich.Count > 0;
             if (!co) _chkSoThich.Checked = false;
-            _chkSoThich.Text = co ? "Theo sở thích (khớp ≥ 1 đáp án):" : "Theo sở thích (chưa có hồ sơ sở thích)";
+            _chkSoThich.Text = co ? "Theo sở thích:" : "Theo sở thích (chưa có hồ sơ sở thích)";
             CapNhatNhanSoThich();
         }
 
@@ -290,8 +301,12 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             bool co = _dapAnSoThich.Count > 0;
             _chkSoThich.Enabled = co && !_chiXem;
             _btnChonSoThich.Enabled = co && !_chiXem && _chkSoThich.Checked;
-            var nhan = _dapAnSoThich.Where(d => _tcSoThichDaChon.Contains(d.MaTuyChon)).Select(d => d.Nhan).ToList();
-            _lblSoThich.Text = nhan.Count == 0 ? (_chkSoThich.Checked ? "Chưa chọn đáp án nào" : "") : string.Join("; ", nhan);
+            // Nhóm theo câu (giữ thứ tự trong bộ câu hỏi): "Khẩu vị: Thích cay, Đậm đà · Nguyên liệu: Hải sản"
+            var nhan = _dapAnSoThich.Where(d => _tcSoThichDaChon.Contains(d.MaTuyChon))
+                .GroupBy(d => d.MaCauHoi)
+                .Select(g => g.First().CauHoi + ": " + string.Join(", ", g.Select(d => d.DapAn)))
+                .ToList();
+            _lblSoThich.Text = nhan.Count == 0 ? (_chkSoThich.Checked ? "Chưa chọn đáp án nào" : "") : string.Join(" · ", nhan);
             _lblSoThich.ForeColor = _chkSoThich.Checked && nhan.Count == 0 ? ThemeManager.Amber : ThemeManager.Ink2;
         }
 
@@ -314,7 +329,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             public List<string> DaChon { get; private set; } = new List<string>();
 
             public ChonSoThichDialog(List<DapAnSoThich> dapAns, HashSet<string> daChon)
-                : base("Chọn đáp án sở thích", "Khách khớp khi đã chọn ít nhất 1 trong các đáp án được tick.", 560, 360, "Chọn")
+                : base("Chọn đáp án sở thích", "Cùng câu: khớp 1 trong các đáp án · Khác câu: phải khớp tất cả", 560, 360, "Chọn")
             {
                 _lst.SetBounds(Gutter, 4, 560 - Gutter * 2, 340);
                 _lst.Font = new Font(ThemeManager.FontFamily, 9.5F);
@@ -374,11 +389,15 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
                 var tuoi = TinhTuoi(k);
                 if (!tuoi.HasValue || tuoi.Value < tu || tuoi.Value > den) return false;
             }
-            // Theo sở thích (AND với các tiêu chí trên): đã chọn ít nhất 1 trong các đáp án được tick
+            // Theo sở thích (AND với các tiêu chí trên): gom đáp án đã tick theo câu;
+            // cùng câu khớp 1 trong các đáp án (OR), mọi câu có tick đều phải khớp (AND)
             if (_chkSoThich.Checked)
             {
                 HashSet<string> cuaKhach;
-                if (!_soThichKhach.TryGetValue(k.MaKhachHang, out cuaKhach) || !cuaKhach.Overlaps(_tcSoThichDaChon)) return false;
+                if (!_soThichKhach.TryGetValue(k.MaKhachHang, out cuaKhach)) return false;
+                var theoCau = _dapAnSoThich.Where(d => _tcSoThichDaChon.Contains(d.MaTuyChon)).GroupBy(d => d.MaCauHoi);
+                foreach (var cau in theoCau)
+                    if (!cau.Any(d => cuaKhach.Contains(d.MaTuyChon))) return false;
             }
             return true;
         }

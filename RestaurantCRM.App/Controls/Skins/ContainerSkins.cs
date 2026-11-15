@@ -111,6 +111,8 @@ namespace RestaurantCRM.AdminApp.Controls
                 if (p.BackColor == SystemColors.Control || p.BackColor == Color.Transparent) p.BackColor = SkinUtil.Backdrop(tc);
             }
             tc.SelectedIndexChanged += (s, e) => bar.Invalidate();
+            // Tên tab có thể đổi sau khi gắn (vd. số đếm "Đơn hàng (6)"): vẽ lại thanh pill
+            foreach (TabPage p in tc.TabPages) p.TextChanged += (s, e) => bar.Invalidate();
         }
 
         private class SegmentBar : Control

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using RestaurantCRM.AdminApp.Controls;
 using RestaurantCRM.AdminApp.DTOs.KhachHang;
@@ -34,6 +36,10 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
         private readonly Label _emptySurveys = EmptyLabel("Khách hàng chưa tham gia khảo sát nào.");
         private readonly Label _emptyPreferences = EmptyLabel("Chưa có dữ liệu món đã mua.");
         private readonly Label _emptySoThich = EmptyLabel("Khách chưa khai báo sở thích.");
+        // Thanh lọc tab "Món hay gọi"
+        private readonly CheckBox _chkChiHayGoi = new CheckBox { Text = "Chỉ món hay gọi", Checked = true, AutoSize = true, Margin = new Padding(4, 5, 12, 0) };
+        private readonly Label _lblGhiChuHayGoi = new Label { AutoSize = true, UseMnemonic = false, Margin = new Padding(0, 8, 0, 0) };
+        private readonly ToolTip _tip = new ToolTip();
         private readonly Button _btnSua;
         private readonly Button _btnKhoa;
         private readonly Button _btnDoiMatKhau;
@@ -72,7 +78,24 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _historyTabs.Controls.Add(BuildTab("Đánh giá", _ratings, _emptyRatings));
             _historyTabs.Controls.Add(BuildTab("Khảo sát", _surveys, _emptySurveys));
             // "Món hay gọi" = suy ra từ lịch sử đơn; "Sở thích" = khách tự khai báo (không trộn lẫn)
-            _historyTabs.Controls.Add(BuildTab("Món hay gọi", _preferences, _emptyPreferences));
+            var tabMon = BuildTab("Món hay gọi", _preferences, _emptyPreferences);
+            _lblGhiChuHayGoi.ForeColor = ThemeManager.Muted;
+            _tip.SetToolTip(_chkChiHayGoi, "Hay gọi = gọi ≥ 2 lần và ≥ 30% số đơn hoàn tất");
+            Disposed += (s, e) => _tip.Dispose();
+            _chkChiHayGoi.CheckedChanged += (s, e) => RenderHistoryTabs();
+            var barHayGoi = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                BackColor = Color.White,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight
+            };
+            barHayGoi.Controls.Add(_chkChiHayGoi);
+            barHayGoi.Controls.Add(_lblGhiChuHayGoi);
+            // Thêm sau lưới để thanh nằm trên, lưới chiếm phần còn lại
+            tabMon.Controls.Add(barHayGoi);
+            _historyTabs.Controls.Add(tabMon);
             _historyTabs.Controls.Add(BuildTab("Sở thích", _soThich, _emptySoThich));
 
             _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ma", HeaderText = "Mã hóa đơn", FillWeight = 22 });
@@ -90,11 +113,11 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _surveys.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày trả lời", FillWeight = 35 });
             // Món hay gọi: tính theo số đơn hoàn tất có món (không theo số phần)
             _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mon", HeaderText = "Món", FillWeight = 34 });
-            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Loai", HeaderText = "Loại món", FillWeight = 20 });
-            _preferences.Columns.Add(SoCol("SoLanGoi", "Số lần gọi", 14));
-            _preferences.Columns.Add(SoCol("TyLe", "Tỷ lệ đơn", 13));
-            _preferences.Columns.Add(SoCol("TongSL", "Tổng SL", 11));
-            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "GanNhat", HeaderText = "Lần gần nhất", FillWeight = 16 });
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Loai", HeaderText = "Loại món", FillWeight = 18 });
+            _preferences.Columns.Add(SoCol("SoLanGoi", "Lần gọi", 12));
+            _preferences.Columns.Add(SoCol("TyLe", "% đơn", 11));
+            _preferences.Columns.Add(SoCol("TongSL", "SL", 9));
+            _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "GanNhat", HeaderText = "Gần nhất", FillWeight = 14 });
             _preferences.Columns.Add(new DataGridViewTextBoxColumn { Name = "Muc", HeaderText = "Mức", FillWeight = 13 });
             var cTim = new DataGridViewTextBoxColumn { Name = "Tim", HeaderText = "♥", FillWeight = 6 };
             cTim.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -107,6 +130,8 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _soThich.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             _soThich.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             Body.Controls.Add(_historyTabs);
+            // Dải tab mặc định -> thanh pill giống các màn khác
+            TabSkin.Attach(_historyTabs);
 
             _btnSua = AddLeftButton("Sửa thông tin", ButtonSkin.Kind.Secondary);
             _btnKhoa = AddLeftButton("Khóa tài khoản", ButtonSkin.Kind.Secondary);
@@ -224,9 +249,21 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _emptySurveys.Visible = surveys.Count == 0;
 
             _preferences.Rows.Clear();
-            var tatCaMon = _kh.MonUaThich ?? new System.Collections.Generic.List<KhachHangMonUaThichDto>();
-            var preferences = tatCaMon
-                .FindAll(d => UiStyler.MatchesSearch(q, d.TenMon, d.MaMon, d.TenLoaiMon, d.MucDo));
+            var tatCaMon = _kh.MonUaThich ?? new List<KhachHangMonUaThichDto>();
+            int soDon = _kh.SoDonHoanTat;
+            int soHayGoi = tatCaMon.Count(d => d.HayGoi);
+
+            // Món gọi ≥ 2 lần thì khách chắc chắn có ≥ 2 đơn: không cần hằng số riêng cho ngưỡng số đơn
+            _chkChiHayGoi.Visible = soHayGoi > 0;
+            bool chiHayGoi = soHayGoi > 0 && _chkChiHayGoi.Checked;
+
+            if (soDon == 0) _lblGhiChuHayGoi.Text = "";
+            else if (soDon < 2) _lblGhiChuHayGoi.Text = $"Chưa đủ dữ liệu ({soDon} đơn)";
+            else if (soHayGoi == 0) _lblGhiChuHayGoi.Text = "Chưa có món gọi lặp lại";
+            else _lblGhiChuHayGoi.Text = $"{soHayGoi}/{tatCaMon.Count} món · {soDon} đơn";
+
+            var preferences = tatCaMon.FindAll(d => (!chiHayGoi || d.HayGoi)
+                && UiStyler.MatchesSearch(q, d.TenMon, d.MaMon, d.TenLoaiMon, d.MucDo));
             using (var fDam = new Font(ThemeManager.FontFamily, 9F, FontStyle.Bold))
             {
                 foreach (var d in preferences)
@@ -244,9 +281,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
                     else muc.Style.ForeColor = ThemeManager.Muted;
                 }
             }
-            int soHayGoi = tatCaMon.FindAll(d => d.HayGoi).Count;
-            _historyTabs.TabPages[3].Text = "Món hay gọi (" + soHayGoi + " hay gọi / " + tatCaMon.Count + " món · " + _kh.SoDonHoanTat + " đơn hoàn tất)";
+            _emptyPreferences.Text = tatCaMon.Count == 0 ? "Chưa có dữ liệu món đã mua." : "Không tìm thấy món";
             _emptyPreferences.Visible = preferences.Count == 0;
+            _historyTabs.TabPages[3].Text = $"Món hay gọi ({soHayGoi})";
 
             RenderSoThich(q);
         }

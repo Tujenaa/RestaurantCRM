@@ -428,6 +428,7 @@ namespace RestaurantCRM.API.Controllers
                 .Include(m => m.KmTheoSp)
                 .Include(m => m.DinhLuong)
                 .Include(m => m.TuyChonCauHoi)
+                    .ThenInclude(t => t.CauTraLoi)
                 .FirstOrDefaultAsync(m => m.MaMon == id);
 
             if (monAn == null)
@@ -435,32 +436,53 @@ namespace RestaurantCRM.API.Controllers
                 return NotFound("Không tìm thấy món ăn để xóa.");
             }
 
-            // Món nằm trong danh mục "Món yêu thích" của hồ sơ sở thích (FK TUY_CHON_CAU_HOI.maMon) cũng là dữ liệu lịch sử
-            bool hasHistory = monAn.ChiTietHoaDon.Any() || monAn.DanhGia.Any() || monAn.KmTheoSp.Any() || monAn.TuyChonCauHoi.Any();
-            if (hasHistory)
+            using var transaction = await _service.BeginTransactionAsync();
+            try
             {
-                if (monAn.TrangThai == "Discontinued")
+                // Đáp án "Món yêu thích" tự tạo khi khách ♥ mà chưa ai chọn (khách đã bỏ ♥): dọn trước, không tính là lịch sử
+                var dapAnKhongDung = monAn.TuyChonCauHoi.Where(t => !t.CauTraLoi.Any()).ToList();
+                if (dapAnKhongDung.Any())
                 {
-                    return BadRequest("Món ăn này đã ở trạng thái 'Ngừng kinh doanh' và có dữ liệu lịch sử liên quan (hóa đơn bán/đánh giá/món yêu thích của khách). Hệ thống bảo lưu toàn bộ dữ liệu lịch sử và không xóa khỏi cơ sở dữ liệu.");
+                    _service.RemoveRange(dapAnKhongDung);
                 }
 
-                // Tự động chuyển sang trạng thái Ngừng kinh doanh
-                monAn.TrangThai = "Discontinued";
-                _service.Update(monAn);
+                // Đáp án "Món yêu thích" đã có khách chọn (FK TUY_CHON_CAU_HOI.maMon) vẫn là dữ liệu lịch sử
+                bool hasHistory = monAn.ChiTietHoaDon.Any() || monAn.DanhGia.Any() || monAn.KmTheoSp.Any()
+                                  || monAn.TuyChonCauHoi.Any(t => t.CauTraLoi.Any());
+                if (hasHistory)
+                {
+                    if (monAn.TrangThai == "Discontinued")
+                    {
+                        await _service.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                        return BadRequest("Món ăn này đã ở trạng thái 'Ngừng kinh doanh' và có dữ liệu lịch sử liên quan (hóa đơn bán/đánh giá/món yêu thích của khách). Hệ thống bảo lưu toàn bộ dữ liệu lịch sử và không xóa khỏi cơ sở dữ liệu.");
+                    }
+
+                    // Tự động chuyển sang trạng thái Ngừng kinh doanh
+                    monAn.TrangThai = "Discontinued";
+                    _service.Update(monAn);
+                    await _service.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return Ok(new { Message = "Món ăn đã phát sinh dữ liệu lịch sử (hóa đơn bán hàng/đánh giá/món yêu thích của khách). Hệ thống đã tự động chuyển món sang trạng thái 'Ngừng kinh doanh' để bảo toàn dữ liệu." });
+                }
+
+                // Nếu chưa từng phát sinh dữ liệu: xóa định lượng và xóa vĩnh viễn món ăn
+                if (monAn.DinhLuong.Any())
+                {
+                    _service.RemoveRange(monAn.DinhLuong);
+                }
+                _service.Remove(monAn);
                 await _service.SaveChangesAsync();
+                await transaction.CommitAsync();
 
-                return Ok(new { Message = "Món ăn đã phát sinh dữ liệu lịch sử (hóa đơn bán hàng/đánh giá/món yêu thích của khách). Hệ thống đã tự động chuyển món sang trạng thái 'Ngừng kinh doanh' để bảo toàn dữ liệu." });
+                return Ok(new { Message = "Đã xóa vĩnh viễn món ăn khỏi hệ thống." });
             }
-
-            // Nếu chưa từng phát sinh dữ liệu: xóa định lượng và xóa vĩnh viễn món ăn
-            if (monAn.DinhLuong.Any())
+            catch (Exception ex)
             {
-                _service.RemoveRange(monAn.DinhLuong);
+                await transaction.RollbackAsync();
+                return StatusCode(500, $"Lỗi khi xóa món ăn: {ex.Message}");
             }
-            _service.Remove(monAn);
-            await _service.SaveChangesAsync();
-
-            return Ok(new { Message = "Đã xóa vĩnh viễn món ăn khỏi hệ thống." });
         }
     }
 }
