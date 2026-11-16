@@ -64,7 +64,10 @@ namespace RestaurantCRM.AdminApp.DTOs.KhachHang
         public int? SoSao { get; set; }
         public string NoiDung { get; set; }
         public DateTime? NgayDanhGia { get; set; }
+        public DateTime? NgayCapNhat { get; set; }
         public bool HienThi { get; set; }
+        /// <summary>Ngày khách sửa gần nhất, chưa sửa thì ngày gửi (dùng để sắp xếp).</summary>
+        public DateTime? NgayHoatDong { get { return NgayCapNhat ?? NgayDanhGia; } }
     }
 
     public class KhachHangKhaoSatDto

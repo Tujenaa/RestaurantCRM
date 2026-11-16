@@ -102,11 +102,17 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày đặt", FillWeight = 28 });
             _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "Tien", HeaderText = "Tổng tiền", FillWeight = 26 });
             _orders.Columns.Add(new DataGridViewTextBoxColumn { Name = "TT", HeaderText = "Trạng thái", FillWeight = 24 });
-            _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "Ngay", HeaderText = "Ngày đánh giá", FillWeight = 25 });
+            // Giá trị ô là DateTime (ngày sửa gần nhất, chưa sửa thì ngày gửi) để bấm tiêu đề sắp xếp đúng theo ngày
+            _ratings.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Ngay", HeaderText = "Ngày đánh giá", FillWeight = 25,
+                ToolTipText = "Ngày gửi; ✎ = ngày khách sửa gần nhất"
+            });
             _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mon", HeaderText = "Món ăn", FillWeight = 28 });
             _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sao", HeaderText = "Số sao", FillWeight = 14 });
             _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "NoiDung", HeaderText = "Nội dung", FillWeight = 60 });
             _ratings.Columns.Add(new DataGridViewTextBoxColumn { Name = "HienThi", HeaderText = "Trạng thái", FillWeight = 18 });
+            _ratings.CellFormatting += FormatNgayDanhGia;
             _ratings.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             _ratings.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             _surveys.Columns.Add(new DataGridViewTextBoxColumn { Name = "KhaoSat", HeaderText = "Khảo sát", FillWeight = 65 });
@@ -206,6 +212,22 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             RenderHistoryTabs();
         }
 
+        // Cột Ngày của tab Đánh giá: ô giữ DateTime để sắp xếp, hiển thị "✎ " nếu khách đã sửa
+        private void FormatNgayDanhGia(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || _ratings.Columns[e.ColumnIndex].Name != "Ngay") return;
+            var d = _ratings.Rows[e.RowIndex].Tag as KhachHangDanhGiaDto;
+            if (!(e.Value is DateTime))
+            {
+                e.Value = "—";
+            }
+            else
+            {
+                e.Value = (d != null && d.NgayCapNhat.HasValue ? "✎ " : "") + ((DateTime)e.Value).ToString("dd/MM/yyyy HH:mm");
+            }
+            e.FormattingApplied = true;
+        }
+
         private void RenderHistoryTabs()
         {
             if (_kh == null) return;
@@ -222,18 +244,26 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             _emptyOrders.Visible = list.Count == 0;
 
             _ratings.Rows.Clear();
+            // Mới nhất trước: ngày khách sửa gần nhất (chưa sửa thì ngày gửi); bấm tiêu đề cột để xếp theo điều kiện khác
             var reviews = (_kh.LichSuDanhGia ?? new System.Collections.Generic.List<KhachHangDanhGiaDto>())
-                .FindAll(d => UiStyler.MatchesSearch(q, d.TenMon, d.NoiDung, (d.SoSao ?? 0).ToString() + " sao",
-                    d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : ""));
+                .Where(d => UiStyler.MatchesSearch(q, d.TenMon, d.NoiDung, (d.SoSao ?? 0).ToString() + " sao",
+                    d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "",
+                    d.NgayCapNhat.HasValue ? d.NgayCapNhat.Value.ToString("dd/MM/yyyy HH:mm") : ""))
+                .OrderByDescending(d => d.NgayHoatDong ?? DateTime.MinValue)
+                .ToList();
             foreach (var d in reviews)
             {
                 int stars = Math.Max(0, Math.Min(5, d.SoSao ?? 0));
-                _ratings.Rows.Add(
-                    d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("dd/MM/yyyy HH:mm") : "—",
+                int i = _ratings.Rows.Add(
+                    (object)d.NgayHoatDong,
                     string.IsNullOrWhiteSpace(d.TenMon) ? "Đánh giá dịch vụ" : d.TenMon,
                     stars > 0 ? new string('★', stars) + " " + stars + "/5" : "—",
                     string.IsNullOrWhiteSpace(d.NoiDung) ? "(Không có nhận xét bằng chữ)" : d.NoiDung,
                     d.HienThi ? "Hiển thị" : "Đã ẩn");
+                _ratings.Rows[i].Tag = d;
+                _ratings.Rows[i].Cells["Ngay"].ToolTipText =
+                    "Gửi lúc " + (d.NgayDanhGia.HasValue ? d.NgayDanhGia.Value.ToString("HH:mm dd/MM/yyyy") : "—")
+                    + (d.NgayCapNhat.HasValue ? "\nSửa lần cuối lúc " + d.NgayCapNhat.Value.ToString("HH:mm dd/MM/yyyy") : "");
             }
             _historyTabs.TabPages[1].Text = "Đánh giá (" + reviews.Count + ")";
             _emptyRatings.Visible = reviews.Count == 0;

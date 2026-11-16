@@ -91,8 +91,9 @@ namespace RestaurantCRM.API.Controllers
                     SoDanhGia = k.DanhGia.Count(),
                     // Không tính phiếu hồ sơ sở thích (không phải khảo sát)
                     SoKhaoSatDaTraLoi = k.PhieuTraLoi.Count(p => !(p.MaKhaoSatNavigation != null && p.MaKhaoSatNavigation.LaSoThich)),
+                    // Mới nhất trước: ngày khách sửa gần nhất, chưa sửa thì ngày gửi
                     LichSuDanhGia = k.DanhGia
-                        .OrderByDescending(d => d.NgayDanhGia)
+                        .OrderByDescending(d => d.NgayCapNhat ?? d.NgayDanhGia)
                         .Select(d => new
                         {
                             d.MaDanhGia,
@@ -101,6 +102,7 @@ namespace RestaurantCRM.API.Controllers
                             d.SoSao,
                             d.NoiDung,
                             d.NgayDanhGia,
+                            d.NgayCapNhat,
                             HienThi = d.TrangThai
                         })
                         .ToList(),
