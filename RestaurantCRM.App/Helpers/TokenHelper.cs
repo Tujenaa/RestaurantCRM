@@ -8,15 +8,9 @@ namespace RestaurantCRM.AdminApp.Helpers {
         public static List<string> CurrentRoles { get; set; } = new List<string>();
         public static HashSet<string> Permissions { get; set; } = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
 
+        // Chỉ xét quyền thật được cấp trong VAI_TRO_QUYEN (không ngoại lệ theo vai trò)
         public static bool HasPermission(string code) {
-            if (CurrentRoles != null && CurrentRoles.Exists(r => 
-                string.Equals(r, "Admin", System.StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(r, "Hệ thống", System.StringComparison.OrdinalIgnoreCase))) {
-                return true;
-            }
-            if (Permissions == null || Permissions.Count == 0) return false;
-            if (Permissions.Contains("*") || Permissions.Contains("ALL")) return true;
-            return Permissions.Contains(code);
+            return Permissions != null && Permissions.Contains(code);
         }
 
         public static bool HasAnyPermission(params string[] codes) {

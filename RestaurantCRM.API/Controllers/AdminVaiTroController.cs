@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.API.DTOs;
-using RestaurantCRM.API.Helpers;
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.BusinessLogic.Services;
 
@@ -22,38 +21,19 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("Permissions")]
         public async Task<IActionResult> GetAvailablePermissions()
         {
-            try
-            {
-                var dbPermissions = await _service.Query<Quyen>()
-                    .OrderBy(q => q.NhomQuyen)
-                    .ThenBy(q => q.MaQuyen)
-                    .ToListAsync();
+            // Danh mục quyền chỉ lấy từ bảng QUYEN
+            var dbPermissions = await _service.Query<Quyen>()
+                .OrderBy(q => q.NhomQuyen)
+                .ThenBy(q => q.MaQuyen)
+                .ToListAsync();
 
-                if (dbPermissions != null && dbPermissions.Count > 0)
-                {
-                    return Ok(dbPermissions.Select(p => new PermissionDefinitionDto
-                    {
-                        Code = p.MaQuyen,
-                        Name = p.TenQuyen,
-                        Group = p.NhomQuyen,
-                        Description = p.MoTa ?? ""
-                    }).ToList());
-                }
-            }
-            catch
+            return Ok(dbPermissions.Select(p => new PermissionDefinitionDto
             {
-                // Fallback nếu bảng QUYEN chưa được khởi tạo
-            }
-
-            var result = PermissionCatalog.AllPermissions.Select(p => new PermissionDefinitionDto
-            {
-                Code = p.Code,
-                Name = p.Name,
-                Group = p.Group,
-                Description = p.Description
-            }).ToList();
-
-            return Ok(result);
+                Code = p.MaQuyen,
+                Name = p.TenQuyen,
+                Group = p.NhomQuyen,
+                Description = p.MoTa ?? ""
+            }).ToList());
         }
 
         // GET: api/AdminVaiTro - Danh sách vai trò kèm số lượng nhân viên và permissions
@@ -66,26 +46,14 @@ namespace RestaurantCRM.API.Controllers
                 .OrderBy(v => v.MaVaiTro)
                 .ToListAsync();
 
-            var result = vaiTros.Select(v =>
+            var result = vaiTros.Select(v => new VaiTroDto
             {
-                List<string> perms;
-                if (v.VaiTroQuyen != null && v.VaiTroQuyen.Count > 0)
-                {
-                    perms = v.VaiTroQuyen.Select(x => x.MaQuyen).Distinct().ToList();
-                }
-                else
-                {
-                    perms = PermissionCatalog.ParsePermissions(v.MoTa, v.TenVaiTro);
-                }
-
-                return new VaiTroDto
-                {
-                    MaVaiTro = v.MaVaiTro,
-                    TenVaiTro = v.TenVaiTro,
-                    MoTa = v.MoTa,
-                    SoLuongNhanVien = v.NhanVien.Count,
-                    Permissions = perms
-                };
+                MaVaiTro = v.MaVaiTro,
+                TenVaiTro = v.TenVaiTro,
+                MoTa = v.MoTa,
+                SoLuongNhanVien = v.NhanVien.Count,
+                // Quyền chỉ lấy từ VAI_TRO_QUYEN; không có dòng nào thì không có quyền nào
+                Permissions = v.VaiTroQuyen?.Select(q => q.MaQuyen).Distinct().ToList() ?? new List<string>()
             }).ToList();
 
             return Ok(result);
@@ -111,7 +79,7 @@ namespace RestaurantCRM.API.Controllers
             {
                 MaVaiTro = ma,
                 TenVaiTro = request.TenVaiTro.Trim(),
-                MoTa = PermissionCatalog.FormatPermissions(request.Permissions)
+                MoTa = string.IsNullOrWhiteSpace(request.MoTa) ? null : request.MoTa.Trim()
             };
 
             _service.Add(entity);
@@ -145,7 +113,11 @@ namespace RestaurantCRM.API.Controllers
             if (entity == null) return NotFound("Không tìm thấy vai trò cần cập nhật.");
 
             entity.TenVaiTro = request.TenVaiTro.Trim();
-            entity.MoTa = PermissionCatalog.FormatPermissions(request.Permissions);
+            // Cột mô tả giữ đúng nghĩa: chỉ đổi khi client gửi mô tả mới
+            if (request.MoTa != null)
+            {
+                entity.MoTa = string.IsNullOrWhiteSpace(request.MoTa) ? null : request.MoTa.Trim();
+            }
 
             // Đồng bộ quan hệ trong bảng VAI_TRO_QUYEN
             var existingPerms = entity.VaiTroQuyen.ToList();

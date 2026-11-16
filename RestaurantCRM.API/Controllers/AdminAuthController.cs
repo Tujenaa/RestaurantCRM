@@ -34,15 +34,8 @@ namespace RestaurantCRM.API.Controllers
                     return BadRequest("Tài khoản đã bị khóa hoặc ngừng hoạt động.");
                 }
 
-                List<string> perms;
-                if (nhanVien.MaVaiTroNavigation?.VaiTroQuyen != null && nhanVien.MaVaiTroNavigation.VaiTroQuyen.Count > 0)
-                {
-                    perms = nhanVien.MaVaiTroNavigation.VaiTroQuyen.Select(q => q.MaQuyen).Distinct().ToList();
-                }
-                else
-                {
-                    perms = PermissionCatalog.ParsePermissions(nhanVien.MaVaiTroNavigation?.MoTa, nhanVien.MaVaiTroNavigation?.TenVaiTro);
-                }
+                // Quyền chỉ lấy từ VAI_TRO_QUYEN; không có dòng nào thì không có quyền nào
+                var perms = nhanVien.MaVaiTroNavigation?.VaiTroQuyen?.Select(q => q.MaQuyen).Distinct().ToList() ?? new List<string>();
 
                 return Ok(new
                 {

@@ -10,6 +10,7 @@ namespace RestaurantCRM.API.DTOs
         public string FileSizeFormatted { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public string? Note { get; set; }
+        public string BackupType { get; set; } = "Thủ công"; // "Tự động" (_Auto_) hoặc "Thủ công" (_Backup_)
     }
 
     public class CreateBackupRequest

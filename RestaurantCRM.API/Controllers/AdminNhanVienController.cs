@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RestaurantCRM.API.DTOs;
-using RestaurantCRM.API.Helpers;
 using RestaurantCRM.BusinessLogic.Models;
 using RestaurantCRM.BusinessLogic.Services;
 using System.Security.Cryptography;
@@ -27,6 +26,7 @@ namespace RestaurantCRM.API.Controllers
         {
             var query = _service.Query<NhanVien>()
                 .Include(n => n.MaVaiTroNavigation)
+                    .ThenInclude(v => v!.VaiTroQuyen)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -60,7 +60,8 @@ namespace RestaurantCRM.API.Controllers
                 TenDangNhap = n.TenDangNhap,
                 HoTen = n.HoTen,
                 TrangThai = n.TrangThai,
-                Permissions = PermissionCatalog.ParsePermissions(n.MaVaiTroNavigation?.MoTa, n.MaVaiTroNavigation?.TenVaiTro)
+                // Quyền chỉ lấy từ VAI_TRO_QUYEN, giống lúc đăng nhập
+                Permissions = n.MaVaiTroNavigation?.VaiTroQuyen?.Select(q => q.MaQuyen).Distinct().ToList() ?? new List<string>()
             }).ToList();
 
             return Ok(result);

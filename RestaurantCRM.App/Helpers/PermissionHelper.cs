@@ -1,12 +1,6 @@
 namespace RestaurantCRM.AdminApp.Helpers {
     public static class PermissionHelper {
         public static bool CanOpen(string role, string module) {
-            if (role == "Hệ thống" || role == "Admin" || UserSession.CurrentRoles.Contains("Hệ thống") || UserSession.CurrentRoles.Contains("Admin")) {
-                if (module == "Tài khoản") return UserSession.HasPermission("ADMIN_ACCOUNT");
-                if (module == "Vai trò & phân quyền") return UserSession.HasPermission("ADMIN_ROLE");
-                if (module == "Sao lưu dữ liệu") return UserSession.HasPermission("ADMIN_BACKUP");
-            }
-
             switch (module) {
                 case "Tài khoản": return UserSession.HasPermission("ADMIN_ACCOUNT");
                 case "Vai trò & phân quyền": return UserSession.HasPermission("ADMIN_ROLE");

@@ -20,7 +20,7 @@ namespace RestaurantCRM.API.Controllers
         public AdminBackupController(IConfiguration config)
         {
             _config = config;
-            // Cấu hình đường dẫn chính xác vào thư mục Database\Backups của Solution
+            // Dùng chung thư mục Database\Backups với script backup_daily.ps1
             string configuredPath = _config["BackupSettings:Folder"];
             if (!string.IsNullOrWhiteSpace(configuredPath))
             {
@@ -29,7 +29,7 @@ namespace RestaurantCRM.API.Controllers
             else
             {
                 // Tìm thư mục gốc chứa RestaurantCRM.sln
-                var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                var dir = new DirectoryInfo(AppContext.BaseDirectory);
                 while (dir != null && !System.IO.File.Exists(Path.Combine(dir.FullName, "RestaurantCRM.sln")))
                 {
                     dir = dir.Parent;
@@ -41,7 +41,7 @@ namespace RestaurantCRM.API.Controllers
                 }
                 else
                 {
-                    _backupFolder = @"D:\HTTT Doanh Nghiep\RestaurantCRM\Database\Backups";
+                    _backupFolder = Path.Combine(AppContext.BaseDirectory, "Backups");
                 }
             }
 
@@ -79,7 +79,8 @@ namespace RestaurantCRM.API.Controllers
                         FileSizeBytes = f.Length,
                         FileSizeFormatted = FormatBytes(f.Length),
                         CreatedAt = f.CreationTime,
-                        Note = GetNoteForFile(f.FullName)
+                        Note = GetNoteForFile(f.FullName),
+                        BackupType = f.Name.Contains("_Auto_", StringComparison.OrdinalIgnoreCase) ? "Tự động" : "Thủ công"
                     })
                     .ToList();
 
@@ -148,6 +149,10 @@ namespace RestaurantCRM.API.Controllers
             {
                 return BadRequest("Tên file sao lưu không được để trống.");
             }
+            if (!IsSafeBackupName(request.FileName))
+            {
+                return BadRequest(InvalidNameMessage);
+            }
 
             string filePath = Path.Combine(_backupFolder, request.FileName);
             if (!System.IO.File.Exists(filePath))
@@ -203,6 +208,11 @@ namespace RestaurantCRM.API.Controllers
         [HttpGet("download/{fileName}")]
         public IActionResult DownloadBackup(string fileName)
         {
+            if (!IsSafeBackupName(fileName))
+            {
+                return BadRequest(InvalidNameMessage);
+            }
+
             string filePath = Path.Combine(_backupFolder, fileName);
             if (!System.IO.File.Exists(filePath))
             {
@@ -217,6 +227,11 @@ namespace RestaurantCRM.API.Controllers
         [HttpDelete("{fileName}")]
         public IActionResult DeleteBackup(string fileName)
         {
+            if (!IsSafeBackupName(fileName))
+            {
+                return BadRequest(InvalidNameMessage);
+            }
+
             try
             {
                 string filePath = Path.Combine(_backupFolder, fileName);
@@ -237,6 +252,16 @@ namespace RestaurantCRM.API.Controllers
             {
                 return BadRequest("Không thể xóa file sao lưu: " + ex.Message);
             }
+        }
+
+        private const string InvalidNameMessage = "Tên file sao lưu không hợp lệ.";
+
+        // Chỉ chấp nhận tên file thuần (không thư mục, không "..") và đuôi .bak
+        private static bool IsSafeBackupName(string? fileName)
+        {
+            return !string.IsNullOrWhiteSpace(fileName)
+                && Path.GetFileName(fileName) == fileName
+                && string.Equals(Path.GetExtension(fileName), ".bak", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GetNoteForFile(string filePath)

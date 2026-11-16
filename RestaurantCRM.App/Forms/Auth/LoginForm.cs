@@ -317,27 +317,18 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
             List<string> roles = new List<string>();
             var perms = result.Permissions ?? new List<string>();
 
-            bool isAdmin = String.Equals(result.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
-                           String.Equals(result.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
-                           String.Equals(result.Role, "Quản lý", StringComparison.OrdinalIgnoreCase) ||
-                           String.Equals(result.Role, "Hệ thống", StringComparison.OrdinalIgnoreCase) ||
-                           perms.Contains("ADMIN_ACCOUNT") || perms.Contains("ADMIN_ROLE") ||
-                           perms.Contains("*") || perms.Contains("ALL");
+            // Chỉ xét quyền thật (VAI_TRO_QUYEN), không xét tên vai trò
+            bool isAdmin = perms.Exists(p => p.StartsWith("ADMIN_", StringComparison.OrdinalIgnoreCase));
 
-            bool hasSale = isAdmin ||
-                           String.Equals(result.Role, "sale", StringComparison.OrdinalIgnoreCase) ||
-                           String.Equals(result.Role, "Bán hàng", StringComparison.OrdinalIgnoreCase) ||
-                           String.Equals(result.Role, "Vận Hành", StringComparison.OrdinalIgnoreCase) ||
-                           String.Equals(result.Role, "Vận hành", StringComparison.OrdinalIgnoreCase) ||
-                           perms.Exists(p => p.StartsWith("ORDER_") || p.StartsWith("MENU_") || p.StartsWith("PROMO_") || p.StartsWith("INVENTORY_") || p.StartsWith("IMPORT_") || p.StartsWith("INGREDIENT_") || p.StartsWith("REPORT_"));
+            bool hasSale = perms.Exists(p => p.StartsWith("ORDER_", StringComparison.OrdinalIgnoreCase) ||
+                                             p.StartsWith("MENU_", StringComparison.OrdinalIgnoreCase) ||
+                                             p.StartsWith("PROMO_", StringComparison.OrdinalIgnoreCase) ||
+                                             p.StartsWith("INVENTORY_", StringComparison.OrdinalIgnoreCase) ||
+                                             p.StartsWith("IMPORT_", StringComparison.OrdinalIgnoreCase) ||
+                                             p.StartsWith("INGREDIENT_", StringComparison.OrdinalIgnoreCase) ||
+                                             p.StartsWith("REPORT_", StringComparison.OrdinalIgnoreCase));
 
-            bool hasCrm = isAdmin ||
-                          String.Equals(result.Role, "crm", StringComparison.OrdinalIgnoreCase) ||
-                          String.Equals(result.Role, "CRM", StringComparison.OrdinalIgnoreCase) ||
-                          String.Equals(result.Role, "Khách hàng", StringComparison.OrdinalIgnoreCase) ||
-                          String.Equals(result.Role, "khách hàng", StringComparison.OrdinalIgnoreCase) ||
-                          String.Equals(result.Role, "Nhân viên CSKH", StringComparison.OrdinalIgnoreCase) ||
-                          perms.Exists(p => p.StartsWith("CRM_"));
+            bool hasCrm = perms.Exists(p => p.StartsWith("CRM_", StringComparison.OrdinalIgnoreCase));
 
             if (isAdmin) roles.Add("Hệ thống");
             if (hasSale) roles.Add("Vận Hành");
@@ -345,7 +336,8 @@ namespace RestaurantCRM.AdminApp.Forms.Auth
 
             if (roles.Count == 0)
             {
-                roles.Add(!string.IsNullOrWhiteSpace(result.Role) ? ThemeManager.DisplayWorkspaceName(result.Role) : "Vận Hành");
+                ShowError("Tài khoản chưa được cấp quyền nào. Vui lòng liên hệ quản trị viên.");
+                return;
             }
 
             Username = result.UserInfo.Username;
