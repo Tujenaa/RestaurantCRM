@@ -156,7 +156,7 @@ namespace RestaurantCRM.AdminApp.Forms.TaiKhoan
             using (var dlg = new Form())
             {
                 dlg.Text = isNew ? "Thêm Tài Khoản Nhân Viên Mới" : $"Chỉnh Sửa Tài Khoản - {model?.HoTen} ({model?.MaNhanVien})";
-                dlg.Size = new Size(540, 520);
+                dlg.Size = new Size(540, 484);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dlg.MaximizeBox = false;
@@ -179,15 +179,7 @@ namespace RestaurantCRM.AdminApp.Forms.TaiKhoan
 
                 int y = 14;
 
-                // Mã NV
-                var lblMa = new Label { Text = "Mã nhân viên (để trống để tự sinh):", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
-                y += 20;
-                var txtMa = new TextBox { Location = new Point(24, y), Width = 470, Font = new Font("Segoe UI", 9.5F), Text = model?.MaNhanVien ?? "", ReadOnly = !isNew, BackColor = !isNew ? Color.FromArgb(241, 245, 249) : Color.White };
-                pnlBody.Controls.Add(lblMa);
-                pnlBody.Controls.Add(txtMa);
-                y += 36;
-
-                // Họ tên
+                // Họ tên (mã nhân viên do hệ thống tự sinh, hiện trên tiêu đề khi sửa)
                 var lblHoTen = new Label { Text = "Họ và tên nhân viên (*):", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
                 y += 20;
                 var txtHoTen = new TextBox { Location = new Point(24, y), Width = 470, Font = new Font("Segoe UI", 9.5F), Text = model?.HoTen ?? "" };
@@ -291,11 +283,13 @@ namespace RestaurantCRM.AdminApp.Forms.TaiKhoan
                         if (isNew)
                         {
                             string pass = txtPass?.Text?.Trim() ?? "123456";
-                            string maNV = txtMa.Text.Trim();
-                            var res = await _taiKhoanService.CreateAsync(maNV, hoTen, username, pass, maVaiTro, trangThai);
+                            var res = await _taiKhoanService.CreateAsync(hoTen, username, pass, maVaiTro, trangThai);
                             if (res.Success)
                             {
-                                MessageBox.Show("Thêm mới tài khoản nhân viên thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                string msgOk = string.IsNullOrEmpty(res.MaNhanVien)
+                                    ? "Thêm mới tài khoản nhân viên thành công!"
+                                    : $"Thêm mới tài khoản nhân viên thành công!\nMã nhân viên: {res.MaNhanVien}";
+                                MessageBox.Show(msgOk,"Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                                 dlg.DialogResult = DialogResult.OK;
                                 dlg.Close();
                             }

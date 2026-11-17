@@ -83,24 +83,20 @@ namespace RestaurantCRM.API.Controllers
                 return BadRequest($"Tên đăng nhập '{request.TenDangNhap}' đã tồn tại.");
             }
 
-            // Tự sinh mã NV nếu không cung cấp
-            string maNV = request.MaNhanVien?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(maNV))
+            // Mã NV luôn do hệ thống tự sinh: số lớn nhất trong các mã NVxx hiện có + 1
+            var existingCodes = await _service.Query<NhanVien>()
+                .Where(n => n.MaNhanVien.StartsWith("NV"))
+                .Select(n => n.MaNhanVien)
+                .ToListAsync();
+            int next = existingCodes
+                .Select(c => int.TryParse(c.Substring(2), out var num) ? num : 0)
+                .DefaultIfEmpty(0)
+                .Max() + 1;
+            string maNV = $"NV{next:D2}";
+            while (await _service.Query<NhanVien>().AnyAsync(n => n.MaNhanVien == maNV))
             {
-                var count = await _service.Query<NhanVien>().CountAsync();
-                maNV = $"NV{(count + 1):D2}";
-                while (await _service.Query<NhanVien>().AnyAsync(n => n.MaNhanVien == maNV))
-                {
-                    count++;
-                    maNV = $"NV{(count + 1):D2}";
-                }
-            }
-            else
-            {
-                if (await _service.Query<NhanVien>().AnyAsync(n => n.MaNhanVien == maNV))
-                {
-                    return BadRequest($"Mã nhân viên '{maNV}' đã tồn tại.");
-                }
+                next++;
+                maNV = $"NV{next:D2}";
             }
 
             // Băm mật khẩu dạng MD5 khớp hệ thống hiện tại

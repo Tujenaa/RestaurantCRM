@@ -13,7 +13,6 @@ namespace RestaurantCRM.API.DTOs
 
     public class CreateNhanVienRequest
     {
-        public string? MaNhanVien { get; set; }
         public string MaVaiTro { get; set; } = null!;
         public string TenDangNhap { get; set; } = null!;
         public string MatKhau { get; set; } = null!;

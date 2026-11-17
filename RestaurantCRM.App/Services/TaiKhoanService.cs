@@ -63,13 +63,13 @@ namespace RestaurantCRM.AdminApp.Services
             }
         }
 
-        public async Task<(bool Success, string Message)> CreateAsync(string maNV, string hoTen, string username, string password, string maVaiTro, string trangThai)
+        // Mã nhân viên do server tự sinh; trả về mã mới khi thành công
+        public async Task<(bool Success, string Message, string MaNhanVien)> CreateAsync(string hoTen, string username, string password, string maVaiTro, string trangThai)
         {
             try
             {
                 var payload = new Dictionary<string, string>
                 {
-                    { "MaNhanVien", maNV },
                     { "HoTen", hoTen },
                     { "TenDangNhap", username },
                     { "MatKhau", password },
@@ -81,12 +81,22 @@ namespace RestaurantCRM.AdminApp.Services
                 var resp = await _http.PostAsync("/api/AdminNhanVien", content);
                 var msg = await resp.Content.ReadAsStringAsync();
 
-                if (resp.IsSuccessStatusCode) return (true, "Tạo tài khoản nhân viên thành công.");
-                return (false, string.IsNullOrWhiteSpace(msg) ? "Lỗi xử lý API" : msg);
+                if (resp.IsSuccessStatusCode)
+                {
+                    string maNV = null;
+                    try
+                    {
+                        var obj = _serializer.Deserialize<Dictionary<string, object>>(msg);
+                        if (obj != null && obj.TryGetValue("maNhanVien", out var v)) maNV = v?.ToString();
+                    }
+                    catch { }
+                    return (true, "Tạo tài khoản nhân viên thành công.", maNV);
+                }
+                return (false, string.IsNullOrWhiteSpace(msg) ? "Lỗi xử lý API" : msg, null);
             }
             catch (Exception ex)
             {
-                return (false, ex.Message);
+                return (false, ex.Message, null);
             }
         }
 
