@@ -80,6 +80,7 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             this.Load += async (s, e) =>
             {
                 await InitData();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API: không bật timer
                 _autoRefreshTimer.Start();
             };
 
@@ -152,9 +153,11 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
             try
             {
                 _allLoaiMon = await _loaiMonService.GetAllAsync() ?? new List<LoaiMonDto>();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
                 _menuBuilder.PopulateCategories(_allLoaiMon);
 
                 var list = await _monAnService.GetAllAsync() ?? new List<MonAnDto>();
+                if (IsDisposed) return;
                 _allMonAn = list.Where(m => m.TrangThaiRaw != "Discontinued" && m.TrangThaiRaw != "Inactive").ToList();
 
                 try
@@ -162,11 +165,13 @@ namespace RestaurantCRM.AdminApp.Forms.BanHang
                     _allVouchers = await _khuyenMaiService.GetVoucherListAsync() ?? new List<VoucherDto>();
                 }
                 catch { }
+                if (IsDisposed) return;
 
                 RefreshView();
             }
             catch (Exception ex)
             {
+                if (IsDisposed) return;
                 MessageBox.Show(this, "Không thể tải dữ liệu thực đơn: " + ex.Message, "Lỗi tải dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

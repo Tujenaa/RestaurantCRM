@@ -400,6 +400,8 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             try
             {
                 _all = await _service.GetAllAsync(null, PhanHoiService.LocTatCa);
+                // Form đã bị đóng (chuyển module) trong lúc chờ API thì dừng, lưới đã Dispose không còn cột
+                if (IsDisposed || _grid.IsDisposed) return;
                 // Bỏ tick những đánh giá không còn hoặc đã được xử lý (ở nơi khác)
                 var conCho = new HashSet<string>(_all.Where(x => !x.LaDaXuLy).Select(x => x.MaDanhGia));
                 _daChon.RemoveWhere(ma => !conCho.Contains(ma));
@@ -408,8 +410,9 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             }
             catch (ApiException ex)
             {
+                if (IsDisposed) return;
                 _lblCount.Text = "Không tải được dữ liệu";
-                if (!IsDisposed) Notify.Error(this, ex.Message, "Lỗi tải danh sách phản hồi");
+                Notify.Error(this, ex.Message, "Lỗi tải danh sách phản hồi");
             }
             finally
             {
@@ -420,15 +423,15 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
 
         private void UpdateKpis()
         {
-            var coSao = _all.Where(d => d.SoSao.HasValue && d.SoSao > 0).ToList();
             _kTong.Text = "Tổng phản hồi: " + _all.Count.ToString("N0");
             _kCho.Text = "Cần xử lý: " + _all.Count(d => !d.LaDaXuLy).ToString("N0");
-            _kDiem.Text = "Điểm trung bình: " + (coSao.Count == 0 ? "—" : coSao.Average(d => d.SoSao.Value).ToString("0.0") + " / 5");
             _kAn.Text = "Cần chú ý: " + _all.Count(d => d.CanChuY && !d.LaDaXuLy).ToString("N0");
         }
 
         private void ApplyFilter(string chonMa = null)
         {
+            // Chốt chặn: form/lưới đã Dispose (đóng module khi đang tải) thì không vẽ lại
+            if (IsDisposed || _grid.IsDisposed || _grid.Columns.Count == 0) return;
             _hoverCard.HideCard();
             if (chonMa == null) chonMa = SelectedDto()?.MaDanhGia;
             string q = (_txtSearch.Text ?? "").Trim();
@@ -470,6 +473,11 @@ namespace RestaurantCRM.AdminApp.Forms.PhanHoi
             .OrderBy(d => d.LaDaXuLy ? 2 : (d.CanChuY ? 0 : 1))
             .ThenByDescending(d => d.NgayHoatDong ?? DateTime.MinValue)
             .ToList();
+
+            // Điểm trung bình theo đúng danh sách đang lọc (bỏ đánh giá không chấm sao), kèm số lượt được tính
+            var coSao = list.Where(d => d.SoSao.HasValue && d.SoSao > 0).ToList();
+            _kDiem.Text = "Điểm trung bình: " + (coSao.Count == 0 ? "—"
+                : coSao.Average(d => d.SoSao.Value).ToString("0.0") + " / 5 (" + coSao.Count.ToString("N0") + " lượt)");
 
             _dangVeLuoi = true;
             _grid.SuspendLayout();

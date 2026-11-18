@@ -175,13 +175,15 @@ namespace RestaurantCRM.AdminApp.Forms.KhachHang
             try
             {
                 _all = await _service.GetAllAsync();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
                 UpdateKpis();
                 ApplyFilter(chonMa);
             }
             catch (ApiException ex)
             {
+                if (IsDisposed) return;
                 _lblCount.Text = "Không tải được dữ liệu";
-                if (!IsDisposed) Notify.Error(this, ex.Message, "Lỗi tải danh sách khách hàng");
+                Notify.Error(this, ex.Message, "Lỗi tải danh sách khách hàng");
             }
             finally
             {

@@ -3,7 +3,7 @@ Học phần: Hệ thống thông tin doanh nghiệp (Mã HP: 841065)
 Giáo viên hướng dẫn: Lê Nhị Lãm Thúy
 
 Nhóm: 9
-Đề tài: Hệ thống quản lý bán hàng quan hệ khách hàng chuỗi nhà hàng lẩu
+Đề tài: Hệ thống quản lý quan hệ khách hàng chuỗi nhà hàng lẩu
 
 THÀNH VIÊN NHÓM
 STT  MSSV         Họ tên                     Tỷ lệ tham gia

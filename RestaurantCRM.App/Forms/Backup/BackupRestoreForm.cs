@@ -334,6 +334,7 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
             try
             {
                 _backups = await _backupService.GetAllAsync() ?? new List<BackupItemModel>();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
 
                 long totalBytes = 0;
                 foreach (var b in _backups)
@@ -356,6 +357,7 @@ namespace RestaurantCRM.AdminApp.Forms.Backup
             }
             catch (Exception ex)
             {
+                if (IsDisposed) return;
                 MessageBox.Show("Lỗi khi nạp dữ liệu sao lưu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

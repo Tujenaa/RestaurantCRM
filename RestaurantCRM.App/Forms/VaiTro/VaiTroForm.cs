@@ -34,6 +34,7 @@ namespace RestaurantCRM.AdminApp.Forms.VaiTro
             this.Load += async (s, e) =>
             {
                 await LoadPermissionsCatalog();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
                 await LoadData();
             };
         }
@@ -48,6 +49,7 @@ namespace RestaurantCRM.AdminApp.Forms.VaiTro
             try
             {
                 _allRoles = await _service.GetAllAsync();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
                 var rows = new List<object[]>();
                 foreach (var r in _allRoles)
                 {
@@ -77,6 +79,7 @@ namespace RestaurantCRM.AdminApp.Forms.VaiTro
             }
             catch (Exception ex)
             {
+                if (IsDisposed) return;
                 MessageBox.Show("Lỗi khi tải danh sách vai trò: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

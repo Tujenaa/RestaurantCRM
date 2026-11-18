@@ -98,6 +98,27 @@ namespace RestaurantCRM.AdminApp.Forms.HoaDon {
                 HeaderText = "Ghi Chú & Chi Tiết Xử Lý",
                 Width = 450
             });
+
+            ApplyGridStyle(dgvChiTiet);
+            ApplyGridStyle(dgvLichSu);
+        }
+
+        // Header không bị tô xanh khi ô đầu được focus, dòng chọn dùng nền xanh nhạt + chữ tối,
+        // và không tự chọn sẵn dòng đầu tiên sau khi bind dữ liệu.
+        private static void ApplyGridStyle(DataGridView dgv) {
+            var header = dgv.ColumnHeadersDefaultCellStyle;
+            header.SelectionBackColor = header.BackColor;
+            header.SelectionForeColor = header.ForeColor;
+
+            dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            dgv.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
+            dgv.GridColor = Color.FromArgb(226, 232, 240);
+            dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+
+            dgv.DataBindingComplete += (s, e) => {
+                dgv.ClearSelection();
+                dgv.CurrentCell = null;
+            };
         }
 
         private async void HoaDonDialog_Load(object sender, EventArgs e) {

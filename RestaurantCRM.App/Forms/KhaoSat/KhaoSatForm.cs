@@ -147,6 +147,7 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             try
             {
                 _all = await _service.GetAllAsync();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
                 _kTong.Text = "Tổng khảo sát: " + _all.Count.ToString("N0");
                 _kMo.Text = "Đang mở: " + _all.Count(k => k.DangMo).ToString("N0");
                 _kNhap.Text = "Bản nháp: " + _all.Count(k => k.LaNhap).ToString("N0");
@@ -155,8 +156,9 @@ namespace RestaurantCRM.AdminApp.Forms.KhaoSat
             }
             catch (ApiException ex)
             {
+                if (IsDisposed) return;
                 _lblCount.Text = "Không tải được dữ liệu";
-                if (!IsDisposed) Notify.Error(this, ex.Message, "Lỗi tải danh sách khảo sát");
+                Notify.Error(this, ex.Message, "Lỗi tải danh sách khảo sát");
             }
             finally
             {

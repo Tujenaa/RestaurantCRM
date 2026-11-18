@@ -37,6 +37,7 @@ namespace RestaurantCRM.AdminApp.Forms.TaiKhoan
             this.Load += async (s, e) =>
             {
                 await LoadRoles();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
                 await LoadData();
             };
         }
@@ -51,6 +52,7 @@ namespace RestaurantCRM.AdminApp.Forms.TaiKhoan
             try
             {
                 _allEmployees = await _taiKhoanService.GetAllAsync();
+                if (IsDisposed) return; // form đã đóng trong lúc chờ API
                 var rows = new List<object[]>();
                 foreach (var nv in _allEmployees)
                 {
@@ -73,6 +75,7 @@ namespace RestaurantCRM.AdminApp.Forms.TaiKhoan
             }
             catch (Exception ex)
             {
+                if (IsDisposed) return;
                 MessageBox.Show("Lỗi khi tải dữ liệu tài khoản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
